@@ -1,7 +1,15 @@
 # Worklog — Phase 1: Walking Skeleton
 
-Status: Stage 2 checkpoint pushed for PR review; Stage 3 waits for merge approval
+Status: Branch pushed; PR not created; awaiting owner PR review and merge
 Branch: phase-1-walking-skeleton
+
+PR state: `phase-1-walking-skeleton` is pushed to origin. PR is NOT yet
+created; only the GitHub `/pull/new` link exists. The OWNER creates and
+reviews the PR himself:
+https://github.com/mesropyananushavan/rest-v2/pull/new/phase-1-walking-skeleton
+
+CI status: green after end-of-day CI fix. Run:
+https://github.com/mesropyananushavan/rest-v2/actions/runs/29590252242
 
 ## Plan
 - [x] Stage 1: Laravel 13 scaffold, module skeletons (Tenancy/Identity/Menu),
@@ -40,6 +48,11 @@ Branch: phase-1-walking-skeleton
   resource ids. Gates green: Pint pass, PHPStan pass, focused
   TenantIsolationTest 6 passed / 27 assertions, full Pest 15 passed /
   87 assertions.
+- 2026-07-17: End-of-day CI fix complete. Branch
+  `phase-1-walking-skeleton` is pushed; PR is not created. Current state:
+  Stage 2 checkpoint approved, tenant isolation tests extended
+  (TenantIsolationTest 6 tests / 27 assertions), logging foundation done.
+  GitHub Actions CI is green at run 29590252242.
 
 ## Gotchas / known issues
 - Host PHP is 8.1 — never run PHP on host, docker/make only.
@@ -61,7 +74,14 @@ Branch: phase-1-walking-skeleton
 - Tenant isolation tests must cover reads, writes, creates, deletes, and
   HTTP resource access. Every new resourceful route in Stage 3+ needs a
   tenant isolation test proving foreign tenant IDs return 404.
+- npm lock desync cause/fix: `package-lock.json` was missing optional
+  `@emnapi/*` entries required by Rolldown/Vite under Node 24 in CI,
+  so `npm ci` failed before quality checks. Fix was to regenerate/sync
+  the lockfile and include the required `@emnapi/core` and
+  `@emnapi/runtime` entries; local `npm ci` and CI `npm ci` now pass.
+- CI Pest requires an application key. `phpunit.xml` now sets a static
+  testing-only `APP_KEY` so GitHub Actions can run Feature tests without
+  a local `.env`.
 
 ## Next steps
-Await PR review and merge approval for `phase-1-walking-skeleton`; Stage 3
-starts only after merge approval.
+Awaiting owner: PR review and merge to main. Do NOT start Stage 3, do NOT create new branches, do NOT touch main. After the owner confirms the merge, create branch phase-1-stage-3 from fresh main and begin Stage 3 (menu vertical slice) per the Phase 1 task prompt and BLUEPRINT section 9.
