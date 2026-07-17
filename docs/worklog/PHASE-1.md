@@ -1,6 +1,6 @@
 # Worklog — Phase 1: Walking Skeleton
 
-Status: Stage 2 checkpoint complete; pre-Stage-3 isolation hardening complete
+Status: Stage 2 checkpoint pushed for PR review; Stage 3 waits for merge approval
 Branch: phase-1-walking-skeleton
 
 ## Plan
@@ -63,5 +63,5 @@ Branch: phase-1-walking-skeleton
   tenant isolation test proving foreign tenant IDs return 404.
 
 ## Next steps
-Push `phase-1-walking-skeleton` for PR review; Stage 3 starts only after
-merge approval.
+Await PR review and merge approval for `phase-1-walking-skeleton`; Stage 3
+starts only after merge approval.
