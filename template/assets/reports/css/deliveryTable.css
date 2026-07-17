@@ -1,0 +1,208 @@
+.filterButton {
+  line-height: 1;
+}
+
+@media (max-width: 1160px) {
+  .showByShift {
+    margin-bottom: 0;
+  }
+}
+
+form > .row {
+  padding-right: 15px;
+}
+
+.buttonsLine > button {
+  margin-inline: 5px !important;
+}
+
+.header_filter.header2,
+.food_date_print {
+  padding-right: 0;
+}
+
+.template-body[data-page="reports-delivery.html"],
+.template-body[data-page="reports-delivery.html"] #container,
+.template-body[data-page="reports-delivery.html"] #main-content {
+  overflow-x: visible;
+  background: #fff;
+}
+
+body.template-body[data-page="reports-delivery.html"] {
+  overflow-x: auto !important;
+}
+
+.template-body[data-page="reports-delivery.html"] #main-content {
+  overflow: visible !important;
+}
+
+.template-body[data-page="reports-delivery.html"] .wrapper {
+  display: block !important;
+  width: auto !important;
+  max-width: none !important;
+  overflow: visible !important;
+  padding: 76px 15px 0;
+  background: #fff;
+}
+
+.template-body[data-page="reports-delivery.html"] #main-content,
+.template-body.sidebar-open[data-page="reports-delivery.html"] #main-content {
+  max-width: none;
+}
+
+.reports-delivery-page {
+  max-width: 100%;
+  overflow: visible;
+}
+
+.reports-delivery-page > .row > .col-xs-12 > .panel {
+  max-width: 100%;
+  margin-bottom: 0;
+  overflow: visible;
+  border: 0;
+  box-shadow: none;
+}
+
+.reports-delivery-page > .row > .col-xs-12 > .panel > .panel-body {
+  padding: 15px 0 0;
+}
+
+.delivery-filter-form {
+  margin-bottom: 26px;
+}
+
+.delivery-filter-form > .row {
+  display: block;
+  margin-right: 0;
+  margin-left: 0;
+}
+
+.delivery-filter-form > .row::before,
+.delivery-filter-form > .row::after {
+  display: table;
+  content: " ";
+}
+
+.delivery-filter-form > .row::after {
+  clear: both;
+}
+
+.delivery-filter-form .header_filter {
+  width: 50% !important;
+}
+
+.reports-delivery-tools {
+  margin-bottom: 15px;
+}
+
+.reports-delivery-tools .col-sm-6:first-child {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reports-delivery-tools .printButton,
+.reports-delivery-tools .excelButton {
+  display: inline-flex;
+}
+
+.reports-delivery-tools .btn img {
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+  vertical-align: -4px;
+}
+
+.reports-delivery-search {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.reports-delivery-search label {
+  margin-bottom: 0;
+}
+
+.reports-delivery-search .form-control {
+  display: inline-block;
+  width: 280px;
+}
+
+.reports-delivery-page .grid-view,
+.reports-delivery-page .table-responsive {
+  width: 100%;
+  max-width: 100%;
+  overflow: visible !important;
+}
+
+.reports-delivery-table {
+  table-layout: auto;
+  width: 100% !important;
+  min-width: 1580px !important;
+  margin-top: 15px;
+  background: #fff;
+}
+
+.reports-delivery-table th,
+.reports-delivery-table td {
+  height: 41px;
+  vertical-align: middle !important;
+}
+
+.reports-delivery-table td {
+  white-space: nowrap;
+}
+
+.reports-delivery-table thead tr:first-child th {
+  font-weight: 700;
+  color: #000;
+}
+
+.reports-delivery-table .column-search input {
+  height: 34px;
+}
+
+.reports-delivery-table tfoot th {
+  background: #f4f4f4;
+  font-weight: 700;
+}
+
+.reports-delivery-grid-bottom {
+  margin-right: 0;
+  margin-left: 0;
+}
+
+.reports-delivery-grid-bottom .dataTables_info {
+  padding-top: 8px;
+}
+
+.reports-delivery-grid-bottom .pagination {
+  float: right;
+  margin: 10px 0 0;
+}
+
+.reports-delivery-page .sort-arrows {
+  float: right;
+  color: #c7c7c7;
+  font-size: 18px;
+}
+
+.delivery-hidden-col {
+  display: none !important;
+}
+
+@media (max-width: 767px) {
+  .delivery-filter-form .header_filter {
+    width: 100% !important;
+  }
+
+  .reports-delivery-search {
+    justify-content: flex-start;
+    margin-top: 12px;
+  }
+
+  .reports-delivery-search .form-control {
+    width: 100%;
+  }
+}

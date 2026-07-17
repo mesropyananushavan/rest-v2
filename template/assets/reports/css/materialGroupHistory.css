@@ -1,0 +1,320 @@
+.template-body[data-page="reports-material-group-history.html"],
+.template-body[data-page="reports-material-group-history.html"] #container,
+.template-body[data-page="reports-material-group-history.html"] #main-content {
+  overflow-x: visible;
+  background: #fff;
+}
+
+body.template-body[data-page="reports-material-group-history.html"] {
+  overflow-x: auto !important;
+}
+
+.template-body[data-page="reports-material-group-history.html"] #main-content {
+  overflow: visible !important;
+}
+
+.template-body[data-page="reports-material-group-history.html"] .wrapper {
+  display: block !important;
+  width: auto !important;
+  max-width: none !important;
+  overflow: visible !important;
+  padding: 76px 15px 0;
+  background: #fff;
+}
+
+.template-body[data-page="reports-material-group-history.html"] #main-content,
+.template-body.sidebar-open[data-page="reports-material-group-history.html"] #main-content {
+  max-width: none;
+}
+
+.reports-material-group-history-page {
+  max-width: 100%;
+  overflow: visible;
+}
+
+.reports-material-group-history-page > .row {
+  margin-right: 0;
+  margin-left: 0;
+}
+
+.reports-material-group-history-page > .row > .col-xs-12 {
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.reports-material-group-history-page .panel {
+  max-width: 100%;
+  margin-bottom: 0;
+  overflow: visible;
+  border: 0;
+  box-shadow: none;
+}
+
+.reports-material-group-history-page .panel-body {
+  padding: 15px 0 0;
+  overflow: visible;
+}
+
+.reports-material-group-history-page .panel-body > div:not(.row) {
+  overflow: visible !important;
+}
+
+.material-group-filter-form {
+  margin-bottom: 15px;
+}
+
+.material-group-filter-form > .row {
+  display: block;
+  margin-right: -15px;
+  margin-left: -15px;
+}
+
+.material-group-filter-form > .row::before,
+.material-group-filter-form > .row::after {
+  display: table;
+  content: " ";
+}
+
+.material-group-filter-form > .row::after {
+  clear: both;
+}
+
+.material-group-filter-form .header_filter {
+  width: 50% !important;
+}
+
+.material-group-excel-toolbar {
+  margin-top: 20px;
+  margin-bottom: 15px;
+}
+
+.material-group-excel-toolbar .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.material-group-excel-toolbar img {
+  width: 18px;
+  height: 18px;
+}
+
+#toolPager {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#toolPager > select {
+  display: inline-block;
+  width: 76px;
+  height: 32px;
+}
+
+.material-group-table-container {
+  width: 100%;
+  overflow: visible !important;
+}
+
+.reports-material-group-history-page .grid-view {
+  width: 100%;
+  max-width: 100%;
+  overflow: visible !important;
+}
+
+.material-group-filter-row {
+  background: #ffffff;
+}
+
+.material-group-header-row {
+  background: #e5e5e5;
+}
+
+.material-group-history-table {
+  table-layout: auto;
+  width: 100% !important;
+  min-width: 1240px !important;
+  margin-top: 15px;
+  border-collapse: separate;
+  border-spacing: 0 6px;
+  background: #fff;
+}
+
+.material-group-history-table th,
+.material-group-history-table td {
+  height: 41px;
+  white-space: nowrap;
+  vertical-align: middle !important;
+}
+
+.material-group-history-table .filters input,
+.material-group-history-table .filters select {
+  min-width: 150px;
+  height: 34px;
+  padding: 4px 8px;
+}
+
+.material-group-accordion-row-hidden {
+  display: none;
+}
+
+.material-group-documents-header {
+  min-width: 150px;
+}
+
+.material-group-history-table tbody .material-group-summary-row {
+  cursor: pointer;
+  outline: none;
+}
+
+.material-group-history-table tbody .material-group-summary-row > td {
+  background: #ffffff;
+  transition: background-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.material-group-history-table tbody .material-group-summary-row:hover > td,
+.material-group-history-table tbody .material-group-summary-row:focus > td {
+  background: #f5f9ff !important;
+}
+
+.material-group-history-table tbody .material-group-summary-row td:first-child {
+  position: relative;
+  padding-left: 44px;
+}
+
+.material-group-history-table tbody .material-group-summary-row td:first-child::before {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  width: 20px;
+  height: 20px;
+  font-weight: 700;
+  line-height: 18px;
+  color: #4f6a86;
+  text-align: center;
+  content: ">";
+  background: #fff;
+  border: 1px solid #c5d2df;
+  border-radius: 50%;
+  transform: translateY(-50%);
+}
+
+.material-group-history-table tbody .material-group-accordion-row > td {
+  padding: 0 16px 14px;
+  background: linear-gradient(180deg, #f8fafc 0%, #f0f4f8 100%);
+  border-top: 0;
+}
+
+.material-group-accordion-wrapper {
+  display: none;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #dde6ef;
+  border-radius: 8px;
+}
+
+.material-group-accordion-loader,
+.material-group-accordion-empty {
+  margin: 0;
+  padding: 14px 16px;
+  color: #666;
+}
+
+.material-group-documents-btn {
+  min-width: 115px;
+  white-space: nowrap;
+}
+
+.material-group-grid-bottom {
+  margin-right: 0;
+  margin-left: 0;
+}
+
+.material-group-grid-bottom .summary {
+  padding-top: 18px;
+}
+
+.material-group-grid-bottom .pagination {
+  float: right;
+  margin: 10px 0 0;
+}
+
+.reports-material-group-history-page .sort-arrows {
+  float: right;
+  color: #c7c7c7;
+  font-size: 18px;
+}
+
+.material-group-documents-modal .modal-dialog {
+  width: 94%;
+  max-width: 1080px;
+}
+
+.material-group-documents-modal .modal-content {
+  overflow: hidden;
+  border: 0;
+  border-radius: 14px;
+  box-shadow: 0 18px 42px rgba(17, 39, 65, 0.35);
+}
+
+.material-group-documents-modal .modal-header {
+  padding: 16px 20px;
+  color: #000;
+  border-bottom: 0;
+}
+
+.material-group-modal-title-main {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.material-group-modal-subtitle {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #000;
+}
+
+.material-group-documents-modal .modal-body {
+  max-height: 72vh;
+  padding: 18px;
+  overflow-y: auto;
+  background: #f3f7fc;
+}
+
+.material-group-documents-modal .modal-footer {
+  padding: 12px 16px;
+  background: #fff;
+  border-top: 1px solid #dce6f2;
+}
+
+.material-group-documents-table {
+  margin-bottom: 0;
+  overflow: hidden;
+  background: #fff;
+  border-radius: 8px;
+}
+
+.material-group-documents-table > thead > tr > th {
+  font-weight: 700;
+  color: #1f4f88;
+  background: #ebf3fd;
+  border-color: #d7e4f3;
+}
+
+.material-group-document-link {
+  font-weight: 700;
+  color: #1f5f9b;
+  text-decoration: none;
+  border-bottom: 1px dashed #1f5f9b;
+}
+
+@media (max-width: 767px) {
+  .material-group-filter-form .header_filter {
+    width: 100% !important;
+  }
+}

@@ -1,0 +1,234 @@
+.template-body[data-page="analysis-top-passive.html"],
+.template-body[data-page="analysis-top-passive.html"] #container,
+.template-body[data-page="analysis-top-passive.html"] #main-content {
+  overflow-x: hidden;
+  background: #fff;
+}
+
+.template-body[data-page="analysis-top-passive.html"] .wrapper {
+  overflow: visible !important;
+  padding: 76px 15px 0;
+  background: #fff;
+}
+
+.analysis-top-passive-page {
+  max-width: 100%;
+  overflow: visible;
+}
+
+.analysis-top-passive-page > .row {
+  margin-right: 0;
+  margin-left: 0;
+}
+
+.analysis-top-passive-tabs-panel,
+.analysis-top-passive-table-panel {
+  margin-bottom: 15px;
+  overflow: visible;
+  border: 0;
+  box-shadow: none;
+}
+
+.analysis-top-passive-tabs-panel {
+  margin-top: 0;
+}
+
+.analysis-top-passive-tabs-panel .panel-heading {
+  padding-inline: 0 !important;
+  background: #fff;
+}
+
+.analysis-top-passive-tabs-panel .menuButtonsContainer {
+  border-bottom: 1px solid #ddd;
+}
+
+.analysis-top-passive-tabs-panel .menuButtonsContainer > li > a {
+  min-width: 156px;
+  padding: 10px 18px;
+  color: #555;
+  text-align: center;
+  background: #f5f5f5;
+  border: 0;
+  border-radius: 4px 4px 0 0;
+}
+
+.analysis-top-passive-tabs-panel .menuButtonsContainer > li:not(.active) > a:hover,
+.analysis-top-passive-tabs-panel .menuButtonsContainer > li:not(.active) > a:focus {
+  color: #333 !important;
+  text-decoration: none;
+  background: #eeeeee !important;
+  border: 0 !important;
+}
+
+.analysis-top-passive-tabs-panel .menuButtonsContainer > li.active > a,
+.analysis-top-passive-tabs-panel .menuButtonsContainer > li.active > a:hover,
+.analysis-top-passive-tabs-panel .menuButtonsContainer > li.active > a:focus {
+  color: #fff !important;
+  background: #ef5038 !important;
+  border: 0 !important;
+}
+
+.analysis-top-passive-filter-wrap {
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.analysis-top-passive-filter-form {
+  margin-bottom: 66px;
+}
+
+.analysis-top-passive-filter-form > #noPadL {
+  padding-right: 0 !important;
+}
+
+.analysis-top-passive-filter-form .input-large {
+  width: 66.66666667%;
+}
+
+.analysis-top-passive-filter-form .quantityInput,
+.analysis-top-passive-filter-form .dpd1,
+.analysis-top-passive-filter-form .dpd2 {
+  text-align: center;
+  background-color: #fff !important;
+}
+
+.analysis-top-passive-filter-form .quantityInput[name="qty"] {
+  border: 1px solid #c0c0c0;
+  border-right: 0;
+  border-radius: 4px 0 0 4px;
+}
+
+.analysis-top-passive-filter-form .dpd1 {
+  border-left: 0 !important;
+}
+
+.analysis-top-passive-filter-form .filterButton {
+  line-height: 1;
+}
+
+.analysis-top-passive-table-panel .panel-body {
+  padding: 15px 0 0;
+  overflow: visible;
+}
+
+.analysis-top-passive-tools {
+  margin-right: 0;
+  margin-bottom: 16px;
+  margin-left: 0;
+}
+
+.analysis-top-passive-tools .col-sm-6:first-child {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 0;
+}
+
+.analysis-top-passive-tools .col-sm-6:last-child {
+  padding-right: 0;
+}
+
+.analysis-top-passive-tools .printButton,
+.analysis-top-passive-tools .excelButton {
+  display: inline-flex;
+  align-items: center;
+}
+
+.analysis-top-passive-tools .btn img {
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+}
+
+.analysis-top-passive-search {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.analysis-top-passive-search label {
+  margin-bottom: 0;
+  font-weight: 400;
+}
+
+.analysis-top-passive-search .form-control {
+  display: inline-block;
+  width: 280px;
+}
+
+.analysis-top-passive-page .grid-view,
+.analysis-top-passive-page .table-responsive {
+  width: 100%;
+  max-width: 100%;
+  overflow: visible !important;
+}
+
+.analysis-top-passive-table {
+  width: 100% !important;
+  margin-top: 15px;
+  background: #fff;
+}
+
+.analysis-top-passive-table th,
+.analysis-top-passive-table td {
+  height: 41px;
+  vertical-align: middle !important;
+  white-space: nowrap;
+}
+
+.analysis-top-passive-table thead tr:first-child th {
+  font-weight: 700;
+  color: #000;
+  background: #fff;
+}
+
+.analysis-top-passive-table .column-search input {
+  min-width: 130px;
+  height: 34px;
+}
+
+.analysis-top-passive-grid-bottom {
+  margin-right: 0;
+  margin-left: 0;
+}
+
+.analysis-top-passive-grid-bottom .dataTables_info {
+  padding-top: 18px;
+}
+
+.analysis-top-passive-grid-bottom .pagination {
+  float: right;
+  margin: 10px 0 0;
+}
+
+.analysis-top-passive-page .sort-arrows {
+  float: right;
+  color: #c7c7c7;
+  font-size: 18px;
+}
+
+.top-passive-hidden-col {
+  display: none !important;
+}
+
+@media (max-width: 992px) {
+  .analysis-top-passive-filter-form .input-large {
+    width: 100%;
+  }
+}
+
+@media (max-width: 767px) {
+  .analysis-top-passive-tools .col-sm-6:last-child {
+    padding-left: 0;
+  }
+
+  .analysis-top-passive-search {
+    justify-content: flex-start;
+    margin-top: 12px;
+  }
+
+  .analysis-top-passive-search .form-control {
+    width: 100%;
+  }
+}

@@ -1,0 +1,496 @@
+html {
+  height: 100%;
+}
+
+.template-body[data-page="reserve.html"],
+.template-body[data-page="reserve-history.html"] {
+  width: calc(100vw - 15px);
+  background: #fff;
+  overflow-x: hidden;
+}
+
+.template-body[data-page="reserve.html"] #main-content,
+.template-body[data-page="reserve-history.html"] #main-content {
+  background: #fff;
+  overflow-x: hidden;
+}
+
+.template-body[data-page="reserve.html"] #main-content .wrapper,
+.template-body[data-page="reserve-history.html"] #main-content .wrapper {
+  margin-top: 60px;
+  padding: 15px;
+  background: #fff;
+  overflow: visible !important;
+}
+
+.reserve-page {
+  overflow: auto;
+  background: white;
+}
+
+.reserve-page .calendars {
+  display: flex;
+  justify-content: space-around;
+  gap: 15px;
+  padding-top: 18px;
+}
+
+.reserve-page .calendars .panel {
+  width: 100%;
+  max-width: 334px;
+  min-height: 225px;
+  margin: 15px 0 0;
+  margin-bottom: 0 !important;
+  background: #2e2e2e;
+}
+
+.reserve-page .calendars .panel-body.special {
+  padding: 15px;
+}
+
+.reserve-calendar-wrap {
+  max-width: 334px;
+}
+
+.reserve-calendar {
+  width: 100%;
+  margin-top: 10px;
+  color: #fff;
+  text-align: center;
+  border-collapse: collapse;
+  font-family: Tahoma, sans-serif;
+  font-size: 20px;
+  line-height: 1.2em;
+}
+
+.reserve-calendar thead td {
+  height: auto;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.reserve-calendar .font-40px {
+  font-size: 40px;
+}
+
+.reserve-calendar tbody td {
+  width: 14.285%;
+  min-width: 36px !important;
+  height: 46px;
+  color: #fff;
+  position: relative;
+  font-size: 20px;
+}
+
+.reserve-calendar .weekdays td {
+  color: #d7d7d7;
+  font-weight: 600;
+}
+
+.reserve-calendar td.muted {
+  color: #777;
+}
+
+.reserve-calendar td.reserved {
+  background: #fff;
+  border-radius: 50%;
+  color: #000;
+  font-weight: 400;
+  margin: 1px !important;
+  min-width: 36px;
+  width: 39px;
+  height: 39px;
+  position: relative;
+}
+
+.reserve-calendar td.reserved span {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ff6c60;
+  color: white;
+  font-size: 11px;
+  position: absolute;
+  right: -2px;
+  top: -2px;
+}
+
+.reserve-page .calendars > section.panel thead td > i {
+  transition-duration: 120ms;
+}
+
+.reserve-page .calendars > section.panel thead td > i::before {
+  display: none;
+}
+
+.reserve-page .calendars > section.panel thead td:first-child > i::after {
+  content: "<";
+  font-size: 25px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.reserve-page .calendars > section.panel thead td:last-child > i::after {
+  content: ">";
+  font-size: 25px;
+  font-weight: 700;
+  color: #fff;
+  transition-duration: 120ms;
+}
+
+.reserve-page .calendars > section.panel thead td > i:hover::after {
+  color: #FFB9AE !important;
+}
+
+.reserve-calendar thead > tr > td:first-child {
+  transform: translate(40px, -7px) scale(0.7, 1.5);
+  display: flex;
+}
+
+.reserve-calendar thead > tr > td:last-child {
+  transform: translate(-20px, -7px) scale(0.7, 1.5);
+  display: flex;
+}
+
+.reserve-page .order_btns_ {
+  margin: 30px 0 14px;
+  padding-inline: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.reserve-page .order_btns_ button,
+.reserve-page .order_btns_ a {
+  width: 33%;
+  margin: 0 !important;
+}
+
+.reserve-page .order_btns_ img {
+  width: 14px;
+  margin-right: 5px;
+}
+
+.reserve-excel {
+  margin-left: 10px;
+  margin-bottom: 16px;
+}
+
+.reserve-excel .btn {
+  padding: 6px 12px;
+}
+
+.reserve-excel img {
+  width: 14px;
+  margin-right: 4px;
+}
+
+.reserve-page #reserve-grid-wrapper {
+  clear: both;
+  padding-top: 4px;
+}
+
+.reserve-page #reserve-history-grid-wrapper {
+  clear: both;
+  padding-top: 4px;
+}
+
+.reserve-page #reserve-grid-wrapper > .row {
+  width: 100%;
+  margin-inline: 0;
+  display: flex;
+  justify-content: space-between;
+}
+
+.reserve-page #reserve-history-grid-wrapper > .row {
+  width: 100%;
+  margin-inline: 0;
+  display: flex;
+  justify-content: space-between;
+}
+
+.reserve-page #reserve-grid-wrapper > .row::before,
+.reserve-page #reserve-grid-wrapper > .row::after {
+  display: none;
+}
+
+.reserve-page #reserve-history-grid-wrapper > .row::before,
+.reserve-page #reserve-history-grid-wrapper > .row::after {
+  display: none;
+}
+
+.reserve-page #reserve-grid-wrapper > .row > div {
+  padding-inline: 0 !important;
+}
+
+.reserve-page #reserve-history-grid-wrapper > .row > div {
+  padding-inline: 0 !important;
+}
+
+.reserve-page .dataTables_length,
+.reserve-page .dataTables_filter {
+  padding: 0 0 15px;
+}
+
+.reserve-page .dataTables_length label,
+.reserve-page .dataTables_filter label {
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.reserve-page .dataTables_length select {
+  width: 64px;
+  height: 32px;
+  margin: 0 10px;
+}
+
+.reserve-page .dataTables_filter {
+  float: right;
+  position: relative;
+  top: 0;
+}
+
+.reserve-page .dataTables_filter label input {
+  width: 180px;
+  margin-left: 10px;
+}
+
+.reserve-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.reserve-page #reserveGridTable {
+  min-width: 1420px;
+  margin-bottom: 0;
+  background: #fff;
+}
+
+.reserve-page #reserveHistoryGridTable {
+  min-width: 1180px;
+  margin-bottom: 0;
+  background: #fff;
+}
+
+.reserve-page #reserveGridTable th,
+.reserve-page #reserveGridTable td {
+  padding: 9px 8px;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 14px;
+}
+
+.reserve-page #reserveHistoryGridTable th,
+.reserve-page #reserveHistoryGridTable td {
+  padding: 9px 8px;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 14px;
+}
+
+.reserve-page #reserveGridTable thead tr {
+  background: #fff;
+}
+
+.reserve-page #reserveHistoryGridTable thead tr {
+  background: #fff;
+}
+
+.reserve-page #reserveGridTable .filters td {
+  background: #fff;
+}
+
+.reserve-page #reserveHistoryGridTable .filters td {
+  background: #fff;
+}
+
+.reserve-page #reserveGridTable .filters input {
+  width: 100%;
+  height: 34px;
+}
+
+.reserve-page #reserveHistoryGridTable .filters input {
+  width: 100%;
+  height: 34px;
+}
+
+.reserve-page #reserveHistoryGridTable .filters select {
+  width: 150px;
+  height: 34px;
+}
+
+.reserve-page #reserveHistoryGridTable th.cogs {
+  color: navy;
+  font-size: 25px;
+}
+
+.reserve-page #reserveGridTable tbody tr {
+  cursor: pointer;
+}
+
+.reserve-page #reserveHistoryGridTable tbody tr {
+  cursor: pointer;
+}
+
+.reserve-page #reserveGridTable tbody tr:hover {
+  background-color: #DADADA;
+}
+
+.reserve-page #reserveHistoryGridTable tbody tr:hover {
+  background-color: #DADADA;
+}
+
+.reserve-page .inTableButtonsContainer {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+}
+
+.reserve-page .inTableIconButton {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+}
+
+.reserve-page .dataTables_info {
+  padding: 15px 0;
+}
+
+.reserve-page .dataTables_paginate {
+  float: right;
+  padding: 15px 0;
+  margin: 0;
+}
+
+.reserve-page .dataTables_paginate ul {
+  margin: 0;
+}
+
+.reserve-page .dataTables_paginate li.active a {
+  background: #65cea7;
+  border-color: #65cea7;
+  color: #fff;
+}
+
+.reserve-page #datetimeContainer {
+  border: 1px solid;
+  border-radius: 5px;
+  overflow: auto;
+  padding: 1px;
+}
+
+.reserve-page .datetimeMin {
+  margin: 0;
+  padding: 0;
+}
+
+.reserve-page .datetimeMin input {
+  border: none;
+  border-radius: 0;
+}
+
+.reserve-page #timepicker {
+  border-left: 1px solid;
+}
+
+.reserve-history-page {
+  padding-top: 0;
+}
+
+.reserve-history-page .panel_back_btn {
+  min-height: 60px;
+  margin: 0 0 20px;
+  position: relative;
+}
+
+.reserve-history-page .panel_back_btn .panel-heading {
+  position: relative;
+  min-height: 60px;
+  display: block !important;
+  background: #fff;
+  padding: 10px 15px;
+}
+
+.reserve-history-page .panel_back_btn .panel-heading::before,
+.reserve-history-page .panel_back_btn .panel-heading::after {
+  display: none !important;
+}
+
+.reserve-history-page .back {
+  position: absolute;
+  top: 10px;
+  left: 15px;
+  display: block;
+  padding: 8px 13px;
+  color: #fff;
+  text-decoration: none;
+}
+
+.reserve-history-page .check_date {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  display: flex !important;
+  align-items: center;
+}
+
+.reserve-history-page .check_date #datetimeContainer {
+  max-width: 227px;
+  width: 227px;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.reserve-history-page .datetimeMin {
+  width: 100%;
+}
+
+.reserve-history-page .check_date .btn {
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+
+.reserve-history-page .reserve-history-grid-top {
+  display: block !important;
+  margin-top: 0;
+}
+
+.reserve-history-page .reserve-history-grid-top::before,
+.reserve-history-page .reserve-history-grid-top::after {
+  display: table !important;
+}
+
+.reserve-history-page .reserve-history-grid-top::after {
+  clear: both;
+}
+
+@media (max-width: 1040px) {
+  .reserve-page .calendars > *:nth-child(2),
+  .reserve-page .calendars > *:nth-child(3) {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .reserve-page .order_btns_ {
+    display: block;
+  }
+
+  .reserve-page .order_btns_ button,
+  .reserve-page .order_btns_ a {
+    width: 100%;
+    margin-bottom: 8px !important;
+  }
+
+  .reserve-page #reserve-grid-wrapper > .row {
+    display: block;
+  }
+
+  .reserve-page .dataTables_filter {
+    float: none;
+    top: 0;
+  }
+}

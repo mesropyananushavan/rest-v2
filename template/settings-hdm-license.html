@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="hy">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+  <title>ՀԴՄ լիցենզիա - SMARTREST template</title>
+  <link rel="shortcut icon" href="assets/img/common/favicon.png">
+  <link href="assets/common/css/bootstrap.css" rel="stylesheet">
+  <link href="assets/common/css/bootstrap-reset.css" rel="stylesheet">
+  <link href="assets/font-awesome/css/font-awesome.css" rel="stylesheet">
+  <link href="assets/common/css/font-awesome-4.7.0.css" rel="stylesheet">
+  <link href="assets/common/css/style.css" rel="stylesheet">
+  <link href="assets/common/css/new_style.css" rel="stylesheet">
+  <link href="assets/common/css/style-responsive.css" rel="stylesheet">
+  <link href="assets/common/css/headerStyles.css" rel="stylesheet">
+  
+  
+  <link href="assets/main/css/main.css" rel="stylesheet">
+  
+  <link href="assets/rooms_tables/css/rooms_tables_index.css" rel="stylesheet">
+  <link href="assets/rooms_tables/css/tables.css" rel="stylesheet">
+  <link href="assets/rooms_tables/css/new_style.css" rel="stylesheet">
+  
+  
+  
+  <link href="assets/store/css/store.css" rel="stylesheet">
+  <link href="assets/reports/css/reports.css" rel="stylesheet">
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  <link href="assets/template.css" rel="stylesheet">
+  
+  
+  
+  
+  
+  
+</head>
+<body class="template-body" data-page="settings-hdm-license.html">
+<section id="container">
+  <header class="header white-bg" style="padding-bottom:5px">
+    <div class="sidebar-toggle-box">
+      <div data-url="#" class="icon-reorder tooltips"></div>
+    </div>
+    <a href="index.html" id="main-logo" class="logo dont-show mec_625">
+      <img class="main-logo" width="219" src="/static/img/common/logo_new.png" alt="SMARTREST">
+    </a>
+    <div class="nav notify-row" id="top_menu">
+      <ul class="nav top-menu smart-header-actions" style="margin-top: 6px; display: flex; align-items: center">
+        <li id="header_inbox_bar" class="dropdown">
+          <a style="color: #2e2e2e" id="mutq_elq_ico" class="dropdown-toggle fa fa-user" data-toggle="dropdown" title="Ներկա-բացակա">
+            <span class="badge bg-important" title="Ներկա անձնակազմ">12</span>
+          </a>
+          <ul class="dropdown-menu extended inbox">
+            <div class="notify-arrow notify-arrow-red"></div>
+            <li><p class="red">Անձնակազմի մուտք / ելք</p></li>
+            <li><input id="card_key" onclick="event.stopPropagation();" data-url="#" type="text" class="form-control sm-input" autofocus=""></li>
+            <li><a href="#"><span class="photo"><img alt="avatar" src="/static/img/common/avatar1_small.jpg"></span><span class="subject"><span class="message" style="color:#5cb85c;font-weight:bold;margin-top:-4px">09:18</span><span class="from">Արամ Սարգսյան</span><span class="time"></span></span><span class="message">Մատուցող</span></a></li>
+            <li><a href="#"><span class="photo"><img alt="avatar" src="/static/img/common/avatar1_small.jpg"></span><span class="subject"><span class="message" style="color:#5cb85c;font-weight:bold;margin-top:-4px">10:04 <span style="color:#000">-</span> <span style="color:#d43f3a">18:21</span></span><span class="from">Նարե Մկրտչյան</span><span class="time"></span></span><span class="message">Գանձապահ</span></a></li>
+          </ul>
+        </li>
+        <li id="header_notification_bar" class="dropdown">
+          <a style="color: #2e2e2e" class="dropdown-toggle fa fa-file" title="Հաշվետվություն / Հերթափոխի ավարտ" data-toggle="dropdown"></a>
+          <ul class="dropdown-menu extended notification">
+            <div class="notify-arrow notify-arrow-green"></div>
+            <li><p class="green">Հաշվետվություն / Օրվա վերջ</p></li>
+            <li><input id="admin_pass" autocomplete="off" onclick="event.stopPropagation();" data-url="#" type="text" class="form-control sm-input" placeholder="Ադմինիստրատիվ մուտք"></li>
+            <li><a href="#" style="white-space: normal"><button id="print_hashvetvutyun" data-url="#" class="btn btn-danger col-xs-12" data-toast="Հաշվետվությունը ուղարկվեց տպման">Տպել հաշվետվություն</button><div style="clear:both; margin-bottom:5px"></div><i style="color:#f5b400" class="icon-info-sign"></i> Տպել օրվա ընդհանուր կատարած առևտորի հաշվետվությունը</a></li>
+            <li><a href="#" style="white-space: normal"><button id="break_point" data-url="#" class="btn btn-info col-xs-12 hashv_orvaverj" data-toggle="modal" data-target="#dayEndModal">Օրվա վերջ</button><div style="clear:both; margin-bottom:5px"></div><i style="color:#f5b400" class="icon-info-sign"></i> Օրվա վաճառքն ու չեքերի քանակը զրոյացնել</a></li>
+            <li><a href="#" style="white-space: normal"><button id="printCashBoxReport" class="btn btn-warning col-xs-12" data-url="#">Դրամարկղի Հաշվետվություն</button><div style="clear:both; margin-bottom:5px"></div><i style="color:#f5b400" class="icon-info-sign"></i> Հերթափոխի դրամարկղի օրվա հաշվետվություն</a></li>
+          </ul>
+        </li>
+        <li><a href="client-screen.html" target="_blank"><img src="/static/img/icons/visitorsPage.svg" title="Հաճախորդի էկրան" alt=""></a></li>
+        <li><a href="service-system.html"><img src="/static/img/icons/serviceSystem.svg" aria-hidden="true" title="Սպասման համակարգ" alt=""></a></li>
+        <li><a href="fast-food-handler.html"><img src="/static/img/icons/readyOrders.svg" aria-hidden="true" title="Պատրաստի պատվերներ" alt=""></a></li>
+        <li class="dropdown" id="incoming_order" data-site="#">
+          <article id="notification_sound"></article>
+          <a data-toggle="dropdown" class="dropdown-toggle"><i style="color: #2e2e2e" class="fa fa-bell" aria-hidden="true" title="Պատվերներ/Կանչեր"></i><span class="badge bg-important" title="Պատվերներ/Կանչեր">3</span></a>
+          <ul class="dropdown-menu extended notification"><div class="notify-arrow notify-arrow-red"></div><li><p class="red">Պատվերներ/Կանչեր</p></li><li class="notification-item"><a class="border-warning" href="#">Սեղան 4 սպասարկում է կանչում</a></li></ul>
+        </li>
+        <li class="dropdown" id="table_reserve">
+          <a data-toggle="dropdown" class="dropdown-toggle"><img src="/static/img/icons/calendar.svg" aria-hidden="true" title="Ամրագրված սեղաններ" alt=""><span class="badge bg-warning bg-pulse" title="Ամրագրված սեղաններ">2</span></a>
+          <ul class="dropdown-menu extended reserve"><div class="notify-arrow notify-arrow-yellow"></div><li><p class="yellow">Ամրագրված սեղաններ</p></li><li class="notification-item"><a class="border-warning" href="reserve.html"><span class="label label-warning"><i class="icon-calendar"></i></span> Սեղան 8 / Main Hall <span class="pull-right">12ր.</span></a></li><li><a href="reserve.html">Տեսնել բոլորը</a></li></ul>
+        </li>
+        <li class="dropdown" id="birthdays">
+          <a data-toggle="dropdown" class="dropdown-toggle"><i class="icon-gift"></i><span class="badge bg-warning bg-pulse" title="Ծնունդներ">1</span></a>
+          <ul class="dropdown-menu extended reserve"><div class="notify-arrow notify-arrow-yellow"></div><li><p class="yellow">Ծնունդներ</p></li><li class="notification-item"><a class="border-warning" href="clients.html"><span class="label label-warning"><i class="icon-gift"></i></span><span class="pull-right">Անի (29)</span></a></li></ul>
+        </li>
+        <li class="dropdown" id="table_ecommerce" data-wav_path="/static/img/common" data-href="#">
+          <a data-toggle="dropdown" class="dropdown-toggle"><img src="/static/img/icons/delivery_header.png" width="22" alt=""><span class="badge bg-warning bg-pulse" id="ecOrderCount" title="Առցանց պատվերներ">4</span></a>
+          <ul class="dropdown-menu extended reserve" id="ecommerceNotificationList"><div class="notify-arrow notify-arrow-yellow"></div><li><p class="yellow">Առցանց պատվերներ</p></li><li class="notification-item"><a class="border-warning" href="ecommerce.html">#1024 2026-07-02 14:20</a></li><li class="see-all"><a href="ecommerce.html">Տեսնել բոլորը</a></li></ul>
+        </li>
+        <li class="dropdown mt-05" id="alert-error" data-site-url="#">
+          <a class="dropdown-toggle" href="rooms-invisible-orders.html"><img title="Ընթացիկ հաշիվներ" style="width: 18px" src="/static/img/icons/order-icon.png" alt=""><span class="badge bg-important" title="Ընթացիկ հաշիվներ" data-badge>5</span></a>
+        </li>
+      </ul>
+    </div>
+    <div class="top-nav ">
+      <ul class="nav pull-right top-menu new_top_menu">
+        <li class="dropdown language lang_mob">
+          <a data-close-others="true" data-hover="dropdown" data-toggle="dropdown" class="dropdown-toggle" href="#"><img src="/static/img/flags/hy.png" alt="hy"><span class="username"></span><b class="caret"></b></a>
+          <ul class="dropdown-menu" id="dropDownLanguage" data-lang="hy">
+    <li><a href="#"><img src="/static/img/flags/hy.png" alt=""> Հայերեն</a></li>
+    <li><a href="#"><img src="/static/img/flags/en.png" alt=""> English</a></li>
+    <li><a href="#"><img src="/static/img/flags/ru.png" alt=""> Русский</a></li>
+  </ul>
+        </li>
+        <li class="dropdown language lang_desk" id="lang">
+          <a data-close-others="true" data-hover="dropdown" data-toggle="dropdown" class="dropdown-toggle" href="#"><img src="/static/img/flags/hy.png" alt="hy"><span class="username"></span><b class="caret"></b></a>
+          <ul class="dropdown-menu">
+    <li><a href="#"><img src="/static/img/flags/hy.png" alt=""> Հայերեն</a></li>
+    <li><a href="#"><img src="/static/img/flags/en.png" alt=""> English</a></li>
+    <li><a href="#"><img src="/static/img/flags/ru.png" alt=""> Русский</a></li>
+  </ul>
+        </li>
+        <li class="license_new"><a href="#" title="լիցենզը լրանում է 27 օրից"><img src="/static/assets/main/image/lice.png" alt=""></a></li>
+        <li class="dropdown">
+          <a data-toggle="dropdown" class="dropdown-toggle company_name" href="#"><img alt="" src="/static/img/common/avatar1_small.jpg"><span class="username">SMART REST (ADMIN)</span><b class="caret"></b></a>
+          <ul class="dropdown-menu extended logout">
+            <div class="log-arrow-up"></div>
+            <li style="width:47%" class="float-left"><a href="profile.html"><i class="icon-suitcase"></i> Պրոֆիլ</a></li>
+            <li><a href="#"><i class="icon-key"></i> Ելք համակարգից</a></li>
+          </ul>
+        </li>
+        <li class="information"><a href="#" data-toggle="modal" data-target="#helperModal"><i class="fa fa-question" aria-hidden="true"></i></a></li>
+      </ul>
+    </div>
+  </header>
+  <aside><div id="sidebar" class="nav-collapse"><ul class="sidebar-menu" id="nav-accordion"><li class=" ">
+      <a href="ai-generator.html" data-page="ai-generator.html" class="">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="16" height="16" rx="1.52381" fill="#D9D9D9"/><path d="M11.0411 11.7617H9.12444L8.36254 9.77958H4.87444L4.1542 11.7617H2.28516L5.68397 3.03553H7.54706L11.0411 11.7617ZM7.79706 8.30934L6.59468 5.07124L5.41611 8.30934H7.79706ZM11.928 11.7617V3.03553H13.6899V11.7617H11.928Z" fill="#2E2E2E"/></svg><span>AI support</span><span class="badge badge-danger sidebar-new-badge">New</span>
+      </a>
+      
+    </li>
+<li class=" ">
+      <a href="index.html" data-page="index.html" class="">
+        <i class="fa fa-folder"></i><span>Տեղեկատու</span>
+      </a>
+      
+    </li>
+<li class="sub-menu ">
+      <a href="fast-food.html" data-page="fast-food.html" class="dcjq-parent">
+        <i class="fa fa-cutlery"></i><span>Արագ սնունդ</span><span class="dcjq-icon"></span>
+      </a>
+      <ul class="sub"><li><a href="fast-food-history.html" data-page="fast-food-history.html" class="">Պատմություն</a></li><li><a href="fast-food-handler.html" data-page="fast-food-handler.html" class="">Պատրաստի պատվերներ</a></li></ul>
+    </li>
+<li class=" ">
+      <a href="incoming-orders.html" data-page="incoming-orders.html" class="">
+        <i class="fa fa-bell"></i><span>Հաճախորդի պատվեր</span>
+      </a>
+      
+    </li>
+<li class="sub-menu ">
+      <a href="rooms-tables.html" data-page="rooms-tables.html" class="dcjq-parent">
+        <i class="fa fa-cutlery"></i><span>Սրահներ / Սեղաններ</span><span class="dcjq-icon"></span>
+      </a>
+      <ul class="sub"><li><a href="rooms-hall.html" data-page="rooms-hall.html" class="">Կարգավորումներ</a></li><li><a href="rooms-printer-error.html" data-page="rooms-printer-error.html" class="">Կտրոններ</a></li><li><a href="rooms-fiscal-error.html" data-page="rooms-fiscal-error.html" class="">Հդմ Կտրոններ</a></li><li><a href="rooms-invisible-orders.html" data-page="rooms-invisible-orders.html" class="">Ընթացիկ հաշիվներ</a></li><li><a href="reserve.html" data-page="reserve.html" class="">Սեղանի ամրագրում</a></li><li><a href="rooms-kitchen.html" data-page="rooms-kitchen.html" class="">Խոհարարի էկրան</a></li></ul>
+    </li>
+<li class="sub-menu ">
+      <a href="cash.html" data-page="cash.html" class="dcjq-parent">
+        <i class="fa fa-money"></i><span>cash</span><span class="dcjq-icon"></span>
+      </a>
+      <ul class="sub"><li><a href="cash.html" data-page="cash.html" class="">Դրամարկղ</a></li><li><a href="cash-totalized.html" data-page="cash-totalized.html" class="">Ընդհանրացված</a></li><li><a href="cash-settings.html" data-page="cash-settings.html" class="">Դրամարկղի կարգավորումներ</a></li><li><a href="expense-types.html" data-page="expense-types.html" class="">Ծախսերի տեսակներ</a></li></ul>
+    </li>
+<li class="sub-menu ">
+      <a href="reports.html" data-page="reports.html" class="dcjq-parent">
+        <i class="fa fa-file-text-o"></i><span>reports</span><span class="dcjq-icon"></span>
+      </a>
+      <ul class="sub"><li><a href="reports.html" data-page="reports.html" class="">Ընդհանուր</a></li><li><a href="reports-tables-history.html" data-page="reports-tables-history.html" class="">Սեղանների պատմություն</a></li><li><a href="reports-delivery.html" data-page="reports-delivery.html" class="">Առաքումների պատմություն</a></li><li><a href="reports-moved-tables.html" data-page="reports-moved-tables.html" class="">Տեղափոխված սեղաններ</a></li><li><a href="reports-moved-items.html" data-page="reports-moved-items.html" class="">Տեղափոխված ապրանքներ</a></li><li><a href="reports-food.html" data-page="reports-food.html" class="">Առևտուր</a></li><li><a href="reports-combo.html" data-page="reports-combo.html" class="">Փաթեթներ</a></li><li><a href="reports-ingredients.html" data-page="reports-ingredients.html" class="">Հումքեր</a></li><li><a href="reports-material-group-history.html" data-page="reports-material-group-history.html" class="">Խմբի պատմություն</a></li><li><a href="reports-logs.html" data-page="reports-logs.html" class="">Գործ. պատմություն</a></li></ul>
+    </li>
+<li class="sub-menu ">
+      <a href="analysis-planning.html" data-page="analysis-planning.html" class="dcjq-parent">
+        <i class="fa fa-bar-chart"></i><span>analysis</span><span class="dcjq-icon"></span>
+      </a>
+      <ul class="sub"><li><a href="analysis-planning.html" data-page="analysis-planning.html" class="">Պլանավորում</a></li><li><a href="analysis-top-passive.html" data-page="analysis-top-passive.html" class="">Թոփ/պասիվ վաճառք</a></li><li><a href="analysis-order-statistics.html" data-page="analysis-order-statistics.html" class="">Պատվերների ստատիստիկա</a></li><li><a href="analysis-sales-statistics.html" data-page="analysis-sales-statistics.html" class="">Վաճառքի ստատիստիկա</a></li></ul>
+    </li>
+<li class="sub-menu ">
+      <a href="store.html" data-page="store.html" class="dcjq-parent">
+        <i class="fa fa-archive"></i><span>store</span><span class="dcjq-icon"></span>
+      </a>
+      <ul class="sub"><li><a href="store.html" data-page="store.html" class="">Պահեստներ</a></li><li><a href="store-material-category.html" data-page="store-material-category.html" class="">Խմբեր</a></li><li><a href="store-items.html" data-page="store-items.html" class="">Հումքեր</a></li><li><a href="store-documents.html" data-page="store-documents.html" class="">Փաստաթղթեր</a></li><li><a href="store-balance.html" data-page="store-balance.html" class="">Մնացորդներ</a></li><li><a href="store-timeline.html" data-page="store-timeline.html" class="">Հումքի շարժ</a></li><li><a href="store-history.html" data-page="store-history.html" class="">Պատմություն</a></li><li><a href="store-sum.html" data-page="store-sum.html" class="">Մնացորդների հաշվ.</a></li></ul>
+    </li>
+<li class="sub-menu ">
+      <a href="menu.html" data-page="menu.html" class="dcjq-parent">
+        <i class="fa fa-book"></i><span>menu</span><span class="dcjq-icon"></span>
+      </a>
+      <ul class="sub"><li><a href="menu.html" data-page="menu.html" class="">Մենյուի բաժիններ</a></li><li><a href="menu-day.html" data-page="menu-day.html" class="">Օրվա մենյու</a></li><li><a href="menu-suspend.html" data-page="menu-suspend.html" class="">Կասեցնել</a></li><li><a href="menu-frozen.html" data-page="menu-frozen.html" class="">Սառեցված ապրանքներ</a></li></ul>
+    </li>
+<li class="sub-menu ">
+      <a href="company.html" data-page="company.html" class="dcjq-parent">
+        <i class="fa fa-briefcase"></i><span>Ընկերություններ</span><span class="dcjq-icon"></span>
+      </a>
+      <ul class="sub"><li><a href="company.html" data-page="company.html" class="">Մատակարարներ</a></li><li><a href="company-expenses.html" data-page="company-expenses.html" class="">Պարտքեր</a></li></ul>
+    </li>
+<li class="sub-menu ">
+      <a href="clients.html" data-page="clients.html" class="dcjq-parent">
+        <i class="fa fa-users"></i><span>Հաճախորդներ</span><span class="dcjq-icon"></span>
+      </a>
+      <ul class="sub"><li><a href="clients.html" data-page="clients.html" class="">Հաճախորդներ</a></li><li><a href="clients-expenses.html" data-page="clients-expenses.html" class="">Պարտքեր</a></li><li><a href="clients-cards-page.html" data-page="clients-cards-page.html" class="">Քարտեր</a></li><li><a href="clients-cards.html" data-page="clients-cards.html" class="">Քարտերի պատմություն</a></li><li><a href="clients-response-settings.html" data-page="clients-response-settings.html" class="">Արձագանքների տեսակներ</a></li><li><a href="clients-response.html" data-page="clients-response.html" class="">Հաճախորդների արձագանքներ</a></li><li><a href="clients-unserved.html" data-page="clients-unserved.html" class="">Չսպասարկված հաճախորդներ</a></li><li><a href="clients-complaints.html" data-page="clients-complaints.html" class="">Հաճախորդների բողոքներ</a></li></ul>
+    </li>
+<li class="sub-menu ">
+      <a href="staff.html" data-page="staff.html" class="dcjq-parent">
+        <i class="fa fa-male"></i><span>staff</span><span class="dcjq-icon"></span>
+      </a>
+      <ul class="sub"><li><a href="staff.html" data-page="staff.html" class="">Անձնակազմ</a></li><li><a href="staff-expenses.html" data-page="staff-expenses.html" class="">Աշխ. պարտքեր</a></li><li><a href="staff-present.html" data-page="staff-present.html" class="">Ներկայություն</a></li><li><a href="staff-salary-types.html" data-page="staff-salary-types.html" class="">Աշխատավարձի տիպ</a></li><li><a href="staff-salary-values.html" data-page="staff-salary-values.html" class="">Աշխատավարձի սահմանում</a></li></ul>
+    </li>
+<li class=" ">
+      <a href="present.html" data-page="present.html" class="">
+        <i class="fa fa-check-square-o"></i><span>Աշխատավարձի սահմանում</span>
+      </a>
+      
+    </li>
+<li class="sub-menu active">
+      <a href="settings.html" data-page="settings.html" class="dcjq-parent active">
+        <i class="fa fa-cog"></i><span>Կարգավորումներ</span><span class="dcjq-icon"></span>
+      </a>
+      <ul class="sub"><li><a href="settings.html" data-page="settings.html" class="">Ընդհանուր</a></li><li><a href="settings-users.html" data-page="settings-users.html" class="">Օգտատերեր</a></li><li><a href="settings-checks-place.html" data-page="settings-checks-place.html" class="">Պատրաստման վայրեր</a></li><li><a href="settings-sms.html" data-page="settings-sms.html" class="">SMS Շաբլոններ</a></li><li><a href="settings-hdm-license.html" data-page="settings-hdm-license.html" class="activated">ՀԴՄ լիցենզիա</a></li><li><a href="settings-hdm.html" data-page="settings-hdm.html" class="">ՀԴՄ կարգավորումներ</a></li><li><a href="settings-fiscal.html" data-page="settings-fiscal.html" class="">ՀԴՄ կարգավորումներ(նոր)</a></li><li><a href="settings-meal-types.html" data-page="settings-meal-types.html" class="">Սննդատեսակներ</a></li><li><a href="settings-branch.html" data-page="settings-branch.html" class="">Մասնաճյուղեր</a></li><li><a href="settings-user-branch.html" data-page="settings-user-branch.html" class="">Կցել մասնաճյուղեր</a></li><li><a href="settings-archive-db.html" data-page="settings-archive-db.html" class="">Բազայի արխիվացում</a></li></ul>
+    </li>
+<li class="sub-menu ">
+      <a href="admin-settings.html" data-page="admin-settings.html" class="dcjq-parent">
+        <i class="fa fa-cog"></i><span>Ադմինիստրատիվ</span><span class="dcjq-icon"></span>
+      </a>
+      <ul class="sub"><li><a href="admin-settings.html" data-page="admin-settings.html" class="">Ընդհանուր</a></li><li><a href="admin-super.html" data-page="admin-super.html" class="">Սուպեր ադմին</a></li><li><a href="admin-device.html" data-page="admin-device.html" class="">Սարքի կարգավորումներ</a></li><li><a href="admin-printer-monitoring.html" data-page="admin-printer-monitoring.html" class="">Տպիչի մոնիտորինգ</a></li><li><a href="admin-profiles-bonus.html" data-page="admin-profiles-bonus.html" class="">Բոնուս քարտի մասնաճյուղեր</a></li><li><a href="admin-queue-jobs.html" data-page="admin-queue-jobs.html" class="">Հերթի աշխատանքի պատմություն</a></li><li><a href="admin-hints.html" data-page="admin-hints.html" class="">Հուշումների էջ</a></li></ul>
+    </li>
+<li class=" ">
+      <a href="client-screen.html" data-page="client-screen.html" class="">
+        <i class="fa fa-desktop"></i><span>Հաճախորդի էկրան</span>
+      </a>
+      
+    </li>
+<li class=" ">
+      <a href="hidden-popups.html" data-page="hidden-popups.html" class="">
+        <i class="fa fa-eye-slash"></i><span>Hidden / Popups</span>
+      </a>
+      
+    </li></ul></div></aside>
+  <section id="main-content" class=""><section class="wrapper"><div class="settings-hdm-license-page">
+    <section class="panel settings-hdm-license-outer-panel">
+      <div class="panel-body">
+        <div class="row">
+          <div class="col-lg-12 pad_320">
+            <section class="panel settings-hdm-license-panel">
+              <div class="panel-body pad_320">
+                <div class="adv-table">
+                  <button href="#addClient" data-toggle="modal" type="button" class="btn btn-success m-bot-10 settings-hdm-license-add-btn"><img src="assets/img/icons/plusIcon.svg" alt=""> Ավելացնել լիցենզիա</button><br>
+                  <div class="settings-hdm-license-toolbar">
+                    <label>Ցույց տալ <select class="form-control input-sm"><option selected>10</option><option>25</option><option>50</option></select> գրառում</label>
+                    <a class="dt-button buttons-excel buttons-html5 ExcelButton" tabindex="0"><span><button class="btn btn-primary excelButton" type="button"><img src="assets/img/icons/ExcelLogo.svg" alt=""> Excel</button></span></a>
+                  </div>
+                  <table class="table table-striped table-bordered" id="clientGridTable">
+                    <thead>
+                      <tr><th>profile_nic</th><th>url</th><th>license_key</th><th>comment</th><th class="cogs"><i class="fa fa-cogs" aria-hidden="true"></i></th></tr>
+                      <tr class="filters"><td><input type="text" class="form-control"></td><td><input type="text" class="form-control"></td><td><input type="text" class="form-control"></td><td><input type="text" class="form-control"></td><td></td></tr>
+                    </thead>
+                    <tbody><tr data-id="1">
+      <td>998</td><td>https://taxservice.smartrest.local/api</td><td>LIC-998-2026-A1B2</td><td>Հիմնական մասնաճյուղ</td>
+      <td class="cog_btns_td"><div class="flexBtns"><a href="#editClient" data-toggle="modal" class="btn btn-warning btn-xs btn_edit inTableIconButton"><i class="fa fa-edit"></i></a></div></td>
+    </tr><tr data-id="2">
+      <td>998</td><td>https://cloud2.rst.am/hdm</td><td>LIC-998-BAR-4431</td><td>Բար / երկրորդ սարք</td>
+      <td class="cog_btns_td"><div class="flexBtns"><a href="#editClient" data-toggle="modal" class="btn btn-warning btn-xs btn_edit inTableIconButton"><i class="fa fa-edit"></i></a></div></td>
+    </tr><tr data-id="3">
+      <td>998</td><td>https://fiscal.smartrest.am</td><td>LIC-998-DELIVERY-09</td><td>Առաքման ՀԴՄ</td>
+      <td class="cog_btns_td"><div class="flexBtns"><a href="#editClient" data-toggle="modal" class="btn btn-warning btn-xs btn_edit inTableIconButton"><i class="fa fa-edit"></i></a></div></td>
+    </tr></tbody>
+                  </table>
+                  <div class="settings-hdm-license-footer"><div>Ցուցադրված է 1-ից 3-ը 3 տողից</div><div class="settings-hdm-license-pagination"><button class="btn btn-default btn-sm disabled">Նախորդը</button><button class="btn btn-danger btn-sm active">1</button><button class="btn btn-default btn-sm disabled">Հաջորդը</button></div></div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </section>
+    <div id="addClient" class="modal fade form-horizontal editModal settings-hdm-license-modal" role="dialog"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal">&times;</button><h4 class="modal-title">Ավելացնել</h4></div><div class="modal-body"><div class="form-group"><label class="control-label col-sm-4">URl:</label><div class="col-sm-8"><input type="text" required class="form-control data" name="url"></div></div><div class="form-group"><label class="control-label col-sm-4">Comment:</label><div class="col-sm-8"><input type="text" required class="form-control data" name="comment"></div></div><div class="form-group"><label class="control-label col-sm-4">License key:</label><div class="col-sm-8"><input type="text" required class="form-control data" name="license_key"></div></div><input type="hidden" class="form-control data" name="profile_nic" value="998"></div><div class="modal-footer"><button type="button" class="btn btn-default pull-left" data-dismiss="modal">Փակել</button><button class="btn btn-warning pull-right" type="button" data-table="hdm_license">Հաստատել</button></div></div></div></div>
+    <div id="editClient" class="modal fade form-horizontal editModal settings-hdm-license-modal" role="dialog"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal">&times;</button><h4 class="modal-title">Փոփոխել</h4></div><div class="modal-body"><div class="form-group"><label class="control-label col-sm-4">URl:</label><div class="col-sm-8"><input type="text" required class="form-control data" name="url" value="https://taxservice.smartrest.local/api"></div></div><div class="form-group"><label class="control-label col-sm-4">Comment:</label><div class="col-sm-8"><input type="text" required class="form-control data" name="comment" value="Հիմնական մասնաճյուղ"></div></div><div class="form-group"><label class="control-label col-sm-4">License key:</label><div class="col-sm-8"><input type="text" required class="form-control data" name="license_key" value="LIC-998-2026-A1B2"></div></div></div><div class="modal-footer"><button type="button" class="btn btn-default pull-left" data-dismiss="modal">Փակել</button><button class="btn btn-warning pull-right" type="button" data-table="hdm_license">Հաստատել</button></div></div></div></div>
+  </div></section></section>
+</section>
+<div class="template-toast"></div>
+<div id="dayEndModal" class="modal fade" role="dialog"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button class="close" data-dismiss="modal">&times;</button><h4 class="modal-title">Օրվա վերջ</h4></div><div class="modal-body"><p>Օրվա վաճառքն ու չեքերի քանակը զրոյացնել։</p><input class="form-control sm-input" placeholder="Ադմինիստրատիվ մուտք"></div><div class="modal-footer"><button class="btn btn-default pull-left" data-dismiss="modal">Փակել</button><button class="btn btn-danger">Հաստատել</button></div></div></div></div>
+<div id="waiterPinModal" class="modal fade" role="dialog"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button class="close" data-dismiss="modal">&times;</button><h4 class="modal-title">Մատուցողի ակտիվացում</h4></div><div class="modal-body text-center"><p style="font-size:19px">Մուտքագրեք Ձեր քարտի ID-ն</p><input type="password" class="form-control sm-input" style="width:250px;text-align:center;margin:10px auto" placeholder="Գաղտնաբառ"></div><div class="modal-footer"><button class="btn btn-default pull-left" data-dismiss="modal">Փակել</button><button class="btn btn-success">Հաստատել</button></div></div></div></div>
+<div id="discountModal" class="modal fade" role="dialog"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button class="close" data-dismiss="modal">&times;</button><h4 class="modal-title">Զեղչել</h4></div><div class="modal-body"><label>Զեղչ %</label><input id="orderDiscountInput" class="form-control" value="10"></div><div class="modal-footer"><button class="btn btn-default pull-left" data-dismiss="modal">Փակել</button><button id="applyOrderDiscount" class="btn btn-warning">Հաստատել</button></div></div></div></div>
+<div id="saleProductModal" class="modal fade" role="dialog"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button class="close" data-dismiss="modal">&times;</button><h4 class="modal-title">Ապրանքի զեղչ</h4></div><div class="modal-body"><input id="productDiscountInput" class="form-control" placeholder="Զեղչ %"></div><div class="modal-footer"><button class="btn btn-default pull-left" data-dismiss="modal">Փակել</button><button id="applyProductDiscount" class="btn btn-success">Հաստատել</button></div></div></div></div>
+<div id="clientModal" class="modal fade" role="dialog"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button class="close" data-dismiss="modal">&times;</button><h4 class="modal-title">Ընտրել հաճախորդին</h4></div><div class="modal-body"><input id="clientNameInput" class="form-control" placeholder="Անուն / հեռախոս"></div><div class="modal-footer"><button class="btn btn-default pull-left" data-dismiss="modal">Փակել</button><button id="applyClientName" class="btn btn-primary">Պահպանել</button></div></div></div></div>
+<div id="prepaymentModal" class="modal fade" role="dialog"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button class="close" data-dismiss="modal">&times;</button><h4 class="modal-title">Կանխավճար</h4></div><div class="modal-body"><input id="prepaymentInput" class="form-control" value="5000"></div><div class="modal-footer"><button class="btn btn-default pull-left" data-dismiss="modal">Փակել</button><button id="applyPrepayment" class="btn btn-primary">Պահպանել</button></div></div></div></div>
+<div id="closeOrderModal" class="modal fade" role="dialog"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h4 class="modal-title">Հաստատել և փակել</h4></div><div class="modal-body"><p>Փակե՞լ սեղանի պատվերը։</p></div><div class="modal-footer"><button class="btn btn-default pull-left" data-dismiss="modal">Փակել</button><button id="confirmCloseOrder" class="btn btn-info">Հաստատել</button></div></div></div></div>
+<div id="zeroCloseModal" class="modal fade" role="dialog"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h4 class="modal-title">Զրոյացնել և փակել</h4></div><div class="modal-body"><p>Գործողությունը կփակի հաշիվը առանց գումարի։</p></div><div class="modal-footer"><button class="btn btn-default pull-left" data-dismiss="modal">Փակել</button><button id="confirmZeroCloseOrder" class="btn btn-danger">Հաստատել</button></div></div></div></div>
+<div id="addModal" class="modal fade form-horizontal addModal" role="dialog"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button class="close" data-dismiss="modal">&times;</button><h4 class="modal-title">Ավելացնել</h4></div><div class="modal-body"><input class="form-control" placeholder="Անվանում"></div><div class="modal-footer"><button class="btn btn-default pull-left" data-dismiss="modal">Փակել</button><button class="btn btn-success">Հաստատել</button></div></div></div></div>
+<div id="editModal" class="modal fade form-horizontal editModal" role="dialog"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button class="close" data-dismiss="modal">&times;</button><h4 class="modal-title">Փոփոխել</h4></div><div class="modal-body"><input class="form-control" value="Demo"></div><div class="modal-footer"><button class="btn btn-default pull-left" data-dismiss="modal">Փակել</button><button class="btn btn-warning">Հաստատել</button></div></div></div></div>
+<div id="deleteModal" class="modal fade deleteModal" role="dialog"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h4 class="modal-title">Ջնջել</h4></div><div class="modal-body"><p>Ջնջե՞լ նշված տողը</p></div><div class="modal-footer"><button class="btn btn-default pull-left" data-dismiss="modal">Փակել</button><button class="btn btn-danger">Հաստատել</button></div></div></div></div>
+<div id="deleteDocContModal" class="modal fade" role="dialog"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h4 class="modal-title">Ջնջել հումքը</h4></div><div class="modal-body">Ջնջե՞լ նշված հումքը փաստաթղթից։</div><div class="modal-footer"><button class="btn btn-default pull-left" data-dismiss="modal">Փակել</button><button class="btn btn-danger">Հաստատել</button></div></div></div></div>
+<div id="editDocContModal" class="modal fade form-horizontal" role="dialog"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button class="close" data-dismiss="modal">&times;</button><h4 class="modal-title">Փոփոխել</h4></div><div class="modal-body"><input class="form-control" value="Լոլիկ"><input class="form-control" value="28" style="margin-top:8px"></div><div class="modal-footer"><button class="btn btn-default pull-left" data-dismiss="modal">Փակել</button><button class="btn btn-warning">Հաստատել</button></div></div></div></div>
+<div id="balanceErrorModal" class="modal fade" role="dialog"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button class="close" data-dismiss="modal">&times;</button><h4 class="modal-title">Անբավարար մնացորդներ</h4></div><div class="modal-body"><table class="table table-bordered"><thead><tr><th>Material</th><th>Deficit</th><th>Products</th></tr></thead><tbody><tr><td>Սուրճ</td><td>2</td><td>Լատե</td></tr></tbody></table></div><div class="modal-footer"><button class="btn btn-default pull-left" data-dismiss="modal">Փակել</button></div></div></div></div>
+<div id="setStaffModal" class="modal fade" role="dialog"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button class="close" data-dismiss="modal">&times;</button><h4 class="modal-title">Վաճառող</h4></div><div class="modal-body"><select id="setStaffSelect" class="form-control"><option>Արամ Սարգսյան</option><option>Նարե Մկրտչյան</option><option>Գոռ Մարտիրոսյան</option></select></div><div class="modal-footer"><button class="btn btn-default pull-left" data-dismiss="modal">Փակել</button><button id="applySetStaff" class="btn btn-success">Հաստատել</button></div></div></div></div>
+<div id="userModal" class="modal fade" role="dialog"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button class="close" data-dismiss="modal">&times;</button><h4 class="modal-title">Օգտատեր</h4></div><div class="modal-body"><input class="form-control" value="waiter01"></div><div class="modal-footer"><button class="btn btn-default pull-left" data-dismiss="modal">Փակել</button><button class="btn btn-success">Պահպանել</button></div></div></div></div>
+<div id="helperModal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true"><div class="modal-dialog" role="document"><div class="modal-content"><div class="modal-body"><button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button><div><h1>SOON</h1></div></div></div></div></div>
+<div id="welcomeClientModal" class="modal fade" role="dialog"><div class="modal-dialog"><div class="modal-content text-center"><div class="modal-body"><img src="assets/img/icons/clientWelcome.png" alt="" style="max-width:180px"><h2>Բարի գալուստ</h2><button class="btn btn-success" data-dismiss="modal">Սկսել</button></div></div></div></div>
+<div id="waitCheckClientModal" class="modal fade" role="dialog"><div class="modal-dialog"><div class="modal-content text-center"><div class="modal-body"><img src="assets/img/icons/wait_check.png" alt="" style="max-width:120px"><h2>Սպասեք հաշիվը</h2><button class="btn btn-warning" data-dismiss="modal">Փակել</button></div></div></div></div>
+<script src="assets/common/js/jquery.js"></script>
+<script src="assets/common/js/bootstrap.min.js"></script>
+
+<script src="assets/template.js"></script>
+
+</body>
+</html>

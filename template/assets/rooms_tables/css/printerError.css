@@ -1,0 +1,353 @@
+html {
+  height: 100%;
+}
+
+.template-body[data-page="rooms-printer-error.html"] {
+  background: #fff;
+  overflow-x: hidden;
+}
+
+.template-body[data-page="rooms-printer-error.html"] #main-content {
+  background: #fff;
+  overflow-x: hidden;
+}
+
+.template-body[data-page="rooms-printer-error.html"] #main-content .wrapper {
+  margin-top: 60px;
+  padding: 15px;
+  background: #fff;
+  overflow: visible !important;
+}
+
+.rooms-printer-error-page .pageTitle {
+  margin: 0 0 10px;
+  color: #2e2e2e;
+  font-size: 30px;
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+.rooms-printer-error-page .p_e_header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.rooms-printer-error-page .p_e_header .myPanel {
+  width: 100%;
+  margin-right: 0 !important;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  background: transparent;
+  border: 0;
+}
+
+.rooms-printer-error-page .menuButtonsContainer {
+  width: 100%;
+  display: flex;
+  border-bottom: 1px solid #ddd;
+}
+
+.rooms-printer-error-page .menuButtonsContainer::before,
+.rooms-printer-error-page .menuButtonsContainer::after {
+  display: none;
+}
+
+.rooms-printer-error-page .menuButtonsContainer .active {
+  margin-right: 0 !important;
+}
+
+.rooms-printer-error-page .p_e_header .nav-tabs .notPrintedButton,
+.rooms-printer-error-page .p_e_header .nav-tabs .printedButton,
+.rooms-printer-error-page .p_e_header .nav-tabs .fiscalButton {
+  min-width: 120px;
+  padding: 10px 19px;
+  background: #f3f3f3;
+  color: #2e2e2e;
+  cursor: pointer;
+  transition-duration: 120ms;
+  text-align: center;
+}
+
+.rooms-printer-error-page .p_e_header .nav-tabs li.active .notPrintedButton,
+.rooms-printer-error-page .p_e_header .nav-tabs li.active .printedButton,
+.rooms-printer-error-page .p_e_header .nav-tabs li.active .fiscalButton {
+  background: #EF5038 !important;
+  color: #ffffff;
+}
+
+.rooms-printer-error-page .p_e_header .nav-tabs li:not(.active) .notPrintedButton:hover,
+.rooms-printer-error-page .p_e_header .nav-tabs li:not(.active) .printedButton:hover,
+.rooms-printer-error-page .p_e_header .nav-tabs li:not(.active) .fiscalButton:hover {
+  background: #FFB9AE !important;
+  color: #2e2e2e !important;
+}
+
+.rooms-printer-error-page .printAndCancelButtons {
+  min-width: 313px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.rooms-printer-error-page .printAllButton,
+.rooms-printer-error-page .cancelAllButton {
+  margin-bottom: 0;
+  padding: 10px 19px;
+  border-radius: 4px;
+  font-weight: 400;
+  line-height: 20px;
+  transition-duration: 120ms;
+}
+
+.rooms-printer-error-page .dataTables_wrapper {
+  overflow: visible;
+}
+
+.rooms-printer-error-page #DataTables_Table_0_wrapper > .row {
+  width: calc(100vw - 304px);
+  margin-left: 0;
+  margin-right: 0;
+  display: flex;
+  justify-content: space-between;
+  transition-duration: 300ms;
+}
+
+.rooms-printer-error-page #DataTables_Table_0_wrapper > .row:nth-child(2) > div {
+  padding-left: 0;
+}
+
+.rooms-printer-error-page #DataTables_Table_0_wrapper > .row::before,
+.rooms-printer-error-page #DataTables_Table_0_wrapper > .row::after {
+  display: none;
+}
+
+.rooms-printer-error-page #DataTables_Table_0_wrapper > .row > .col-sm-6 {
+  padding-inline: 0 !important;
+}
+
+.rooms-printer-error-page #DataTables_Table_0_wrapper .dataTables_length,
+.rooms-printer-error-page #DataTables_Table_0_wrapper .dataTables_filter {
+  padding-top: 0;
+}
+
+.rooms-printer-error-page #DataTables_Table_0_wrapper .dataTables_length {
+  padding-left: 0;
+}
+
+.rooms-printer-error-page #DataTables_Table_0_wrapper > .row label {
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.rooms-printer-error-page div.dataTables_wrapper div.dataTables_length select {
+  width: 64px;
+  height: 32px;
+  margin-left: 10px;
+  margin-right: 10px;
+  padding-right: 10px;
+}
+
+.rooms-printer-error-page div.dataTables_wrapper div.dataTables_filter {
+  padding-right: 0;
+}
+
+.rooms-printer-error-page #DataTables_Table_0_filter {
+  transform: translateX(-15px);
+}
+
+.rooms-printer-error-page div.dataTables_wrapper div.dataTables_filter input {
+  width: 120px;
+  margin-left: 8px;
+  transition: width 120ms;
+}
+
+.rooms-printer-error-page .myTable {
+  width: 100% !important;
+  margin-top: 8px;
+  background: #fff;
+}
+
+.rooms-printer-error-page .myTable th,
+.rooms-printer-error-page .myTable td {
+  padding: 10px 8px;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 14px;
+}
+
+.rooms-printer-error-page .myTable th {
+  color: #2e2e2e;
+  font-weight: 600;
+}
+
+.rooms-printer-error-page .myTable td:last-child {
+  min-width: 170px;
+}
+
+.rooms-printer-error-page #DataTables_Table_0_wrapper > .row:last-child,
+.rooms-printer-error-page #DataTables_Table_0_wrapper > .row:last-child .col-sm-5,
+.rooms-printer-error-page #DataTables_Table_0_info {
+  padding-left: 0;
+}
+
+.rooms-printer-error-page .dataTables_info {
+  padding: 15px 0;
+}
+
+.rooms-printer-error-page .dataTables_paginate {
+  float: right;
+  padding: 15px 0;
+  margin: 0;
+}
+
+.rooms-printer-error-page .dataTables_paginate ul {
+  margin: 0;
+}
+
+.rooms-printer-error-page .dataTables_paginate li a {
+  color: #797979;
+}
+
+.rooms-printer-error-page .dataTables_paginate li.active a {
+  background: #65cea7;
+  border-color: #65cea7;
+  color: #fff;
+}
+
+.rooms-printer-error-page .filterLine {
+  width: 100%;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 20px;
+  text-align: center;
+}
+
+.rooms-printer-error-page .filterInputContainer {
+  display: flex;
+}
+
+.rooms-printer-error-page .datePicker {
+  padding: 5px 10px;
+  text-align: center;
+}
+
+.rooms-printer-error-page .inputsDivider {
+  width: 30px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
+.rooms-printer-error-page #dateFiltrationButton {
+  width: 15%;
+  background-color: #F05139;
+  border: none;
+  border-radius: 5px;
+  outline: none;
+  color: #ffffff;
+  font-weight: 500;
+  transition-duration: 120ms;
+  cursor: pointer;
+}
+
+.rooms-printer-error-page #dateFiltrationButton:hover {
+  background-color: #bd412d;
+}
+
+.rooms-printer-error-page .tp1,
+.rooms-printer-error-page .tp2 {
+  border-top: 1px solid #c0c0c0 !important;
+  border-bottom: 1px solid #c0c0c0 !important;
+  text-align: center;
+}
+
+.rooms-printer-error-page .tp1 {
+  border-left: 1px solid #c0c0c0 !important;
+  border-radius: 4px 0 0 4px;
+}
+
+.rooms-printer-error-page .tp2 {
+  border-right: 1px solid #c0c0c0 !important;
+  border-radius: 0 4px 4px 0;
+}
+
+@media (max-width: 1160px) {
+  .rooms-printer-error-page #DataTables_Table_0_wrapper > .row {
+    width: calc(100vw - 30px);
+  }
+}
+
+@media (max-width: 795px) {
+  .rooms-printer-error-page .p_e_header .myPanel {
+    display: block;
+  }
+
+  .rooms-printer-error-page .printAndCancelButtons {
+    position: static;
+    min-width: 0;
+    margin-top: 10px;
+    justify-content: flex-start;
+  }
+
+  .rooms-printer-error-page #DataTables_Table_0_wrapper > .row:first-child {
+    margin-bottom: 45px;
+  }
+
+  .rooms-printer-error-page div.dataTables_wrapper div.dataTables_filter {
+    display: flex;
+    align-items: center;
+    position: relative;
+  }
+
+  .rooms-printer-error-page div.dataTables_wrapper div.dataTables_filter input {
+    width: 30px;
+    color: transparent;
+    background-image: url("/static/img/icons/search.svg");
+    background-repeat: no-repeat;
+    background-position: 8px 8px;
+  }
+
+  .rooms-printer-error-page div.dataTables_wrapper div.dataTables_filter input:focus {
+    width: 120px;
+    color: #2e2e2e;
+    background: none;
+  }
+}
+
+@media (max-width: 442px) {
+  .rooms-printer-error-page .p_e_header .nav-tabs {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .rooms-printer-error-page .p_e_header .nav-tabs .notPrintedButton,
+  .rooms-printer-error-page .p_e_header .nav-tabs .printedButton,
+  .rooms-printer-error-page .p_e_header .nav-tabs .fiscalButton {
+    width: 90px !important;
+    padding-inline: 0 !important;
+    border-radius: 4px !important;
+  }
+
+  .rooms-printer-error-page .p_e_header .nav-tabs .fiscalButton {
+    min-width: 120px;
+  }
+
+  .rooms-printer-error-page .printAllButton,
+  .rooms-printer-error-page .cancelAllButton {
+    border-radius: 4px;
+  }
+}
+
+@media (max-width: 380px) {
+  .rooms-printer-error-page .p_e_header .nav-tabs .notPrintedButton,
+  .rooms-printer-error-page .p_e_header .nav-tabs .printedButton {
+    min-width: unset;
+  }
+
+  .rooms-printer-error-page .p_e_header .nav-tabs .fiscalButton {
+    min-width: 120px;
+  }
+}

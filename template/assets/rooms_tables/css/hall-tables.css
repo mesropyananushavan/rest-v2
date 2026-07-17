@@ -1,0 +1,302 @@
+body,
+html {
+  overflow-x: hidden;
+}
+
+.template-body[data-page="rooms-hall-tables.html"] {
+  background: #fff;
+  overflow-x: hidden !important;
+}
+
+.template-body[data-page="rooms-hall-tables.html"] #container,
+.template-body[data-page="rooms-hall-tables.html"] .hall-tables-page,
+.template-body[data-page="rooms-hall-tables.html"] .hall-tables-page > .row,
+.template-body[data-page="rooms-hall-tables.html"] .hall-tables-page > .row > .col-lg-12 {
+  max-width: 100%;
+  overflow-x: hidden !important;
+}
+
+.template-body[data-page="rooms-hall-tables.html"] #main-content {
+  background: #fff;
+  overflow-x: hidden !important;
+}
+
+.template-body[data-page="rooms-hall-tables.html"] .wrapper {
+  display: block;
+  width: auto;
+  padding-top: 75px;
+  padding-inline: 15px;
+  background: #fff;
+  overflow-x: hidden !important;
+}
+
+.hall-tables-page > .row {
+  margin-inline: -15px;
+}
+
+.hall-tables-panel {
+  border: 0;
+  border-radius: 0;
+  background: #fff;
+  box-shadow: none;
+}
+
+.hall-tables-panel > .panel-heading {
+  padding: 0;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px;
+  background: transparent;
+  border-bottom: 0;
+  text-align: left !important;
+}
+
+.hall-tables-panel > .panel-heading h2 {
+  margin: 10px 0;
+  color: #2e2e2e;
+  font-size: 30px;
+  font-weight: 400;
+  line-height: 1.1;
+  vertical-align: middle;
+}
+
+.hall-tables-panel > .panel-heading > div {
+  flex: 0 0 auto !important;
+  display: block !important;
+  margin-left: 10px;
+}
+
+.hall-tables-panel > .panel-heading .btn-success {
+  min-width: 0;
+  padding: 6px 12px;
+  border-color: #78CD51;
+  background: #78CD51;
+}
+
+.hall-tables-page .panel-body {
+  padding: 0;
+  background: #fff;
+}
+
+.hall-tables-page .adv-table {
+  overflow-x: hidden;
+}
+
+.hall-tables-page .dataTables_wrapper {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.hall-tables-page .dataTables_length,
+.hall-tables-page .dataTables_filter {
+  padding: 15px 0;
+}
+
+.hall-tables-page .dataTables_length {
+  float: left;
+}
+
+.hall-tables-page .dataTables_filter {
+  float: right;
+  width: 45%;
+}
+
+.hall-tables-page .dataTables_filter label {
+  width: 100%;
+  line-height: 33px;
+  font-weight: 400;
+}
+
+.hall-tables-page .dataTables_filter input {
+  float: right;
+  width: 78%;
+  height: 34px;
+  margin-left: 10px;
+  padding: 6px 12px;
+  border: 1px solid #e2e2e4;
+  border-radius: 4px;
+}
+
+.hall-tables-page .dataTables_length label {
+  font-weight: 400;
+}
+
+.hall-tables-page .dataTables_length select {
+  width: 65px;
+  margin: 0 10px;
+  padding: 5px 8px;
+  display: inline-block;
+  border: 1px solid #e2e2e4;
+  border-radius: 4px;
+}
+
+.hall-tables-page .table_v {
+  clear: both;
+  width: 100% !important;
+  min-width: 0;
+  table-layout: fixed;
+  margin-bottom: 0;
+}
+
+.hall-tables-page .table_v thead tr th,
+.hall-tables-page .table_v tbody tr td {
+  padding: 11px 6px;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hall-tables-page .table_v th:nth-child(1),
+.hall-tables-page .table_v td:nth-child(1) {
+  width: 10%;
+}
+
+.hall-tables-page .table_v th:nth-child(2),
+.hall-tables-page .table_v td:nth-child(2) {
+  width: 18%;
+}
+
+.hall-tables-page .table_v th:nth-child(3),
+.hall-tables-page .table_v td:nth-child(3),
+.hall-tables-page .table_v th:nth-child(4),
+.hall-tables-page .table_v td:nth-child(4),
+.hall-tables-page .table_v th:nth-child(5),
+.hall-tables-page .table_v td:nth-child(5),
+.hall-tables-page .table_v th:nth-child(6),
+.hall-tables-page .table_v td:nth-child(6),
+.hall-tables-page .table_v th:nth-child(7),
+.hall-tables-page .table_v td:nth-child(7) {
+  width: 12%;
+}
+
+.hall-tables-page .table_v th:nth-child(8),
+.hall-tables-page .table_v td:nth-child(8) {
+  width: 12%;
+}
+
+.hall-tables-page .table_v thead tr th {
+  border-bottom: 1px solid #ddd;
+  color: #2e2e2e;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.hall-tables-page .table_v thead tr th:first-child,
+.hall-tables-page .table_v tbody tr td:first-child {
+  text-align: left;
+  padding-left: 30px;
+}
+
+.hall-tables-page .table_v thead img {
+  height: 25px;
+  margin-right: 4px;
+}
+
+.hall-tables-page .table_v tbody tr.green {
+  background: #a9d96c !important;
+}
+
+.hall-tables-page .table_v tbody tr.yellow {
+  background: #FCB322 !important;
+}
+
+.hall-tables-page .table_v tbody tr.blue {
+  background: #57c8f2 !important;
+}
+
+.hall-tables-page .table_v tbody tr.red {
+  background: #ff6c60 !important;
+}
+
+.hall-tables-page .table-ok {
+  color: #4D6C25;
+}
+
+.hall-tables-page .dataTables_info {
+  float: left;
+  padding: 15px 15px 15px 0;
+}
+
+.hall-tables-page .dataTables_paginate {
+  float: right;
+  padding: 15px 0 15px 15px;
+  margin: 0;
+}
+
+.hall-tables-page .dataTables_paginate ul {
+  margin: 0;
+}
+
+.hall-tables-page .dataTables_paginate li a {
+  color: #797979;
+}
+
+.hall-tables-page .dataTables_paginate li.active a {
+  background: #65cea7;
+  border-color: #65cea7;
+  color: #fff;
+}
+
+.hall-tables-page .inTableButtonsContainer {
+  display: flex;
+  justify-content: center;
+}
+
+.hall-tables-page .inTableIconButton {
+  width: 26px;
+  height: 26px;
+  margin-inline: 3px;
+  padding: 0;
+  border: 1px solid #fff !important;
+  display: grid;
+  place-items: center;
+}
+
+.hall-tables-page .inTableIconButton img {
+  width: 14px;
+  height: 14px;
+}
+
+#add_room_table .modal-body label {
+  width: 100%;
+  margin-bottom: 0;
+}
+
+#add_room_table .modal-dialog,
+#del_room_table .modal-dialog {
+  width: 480px !important;
+}
+
+#add_room_table .modal-body .col-lg-8 {
+  width: 100%;
+  margin-top: 2px;
+  margin-bottom: 5px;
+}
+
+#add_room_table .mustBeLine {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#add_room_table .mustBeLine > div {
+  width: 100%;
+}
+
+@media (max-width: 767px) {
+  .hall-tables-panel > .panel-heading {
+    text-align: left;
+  }
+
+  .hall-tables-panel > .panel-heading > div {
+    display: block;
+    margin: 10px 0 0;
+  }
+}

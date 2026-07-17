@@ -1,0 +1,12 @@
+tr.bg-success {
+  background: rgba(120, 205, 81, 0.86);
+  color: #fff;
+}
+
+.td-name {
+  font-size: 20px;
+}
+
+tr, tr input {
+  font-size: 15px !important;
+}

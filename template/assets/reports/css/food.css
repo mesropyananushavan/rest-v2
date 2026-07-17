@@ -1,0 +1,237 @@
+#DataTables_Table_0_wrapper {
+  overflow: visible;
+}
+
+#toolPager {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#toolPager > select {
+  display: inline-block;
+  width: 76px;
+  height: 32px;
+}
+
+.template-body[data-page="reports-food.html"],
+.template-body[data-page="reports-food.html"] #container,
+.template-body[data-page="reports-food.html"] #main-content {
+  overflow-x: visible;
+  background: #fff;
+}
+
+body.template-body[data-page="reports-food.html"] {
+  overflow-x: auto !important;
+}
+
+.template-body[data-page="reports-food.html"] #main-content {
+  overflow: visible !important;
+}
+
+.template-body[data-page="reports-food.html"] .wrapper {
+  display: block !important;
+  width: auto !important;
+  max-width: none !important;
+  overflow: visible !important;
+  padding: 76px 15px 0;
+  background: #fff;
+}
+
+.template-body[data-page="reports-food.html"] #main-content,
+.template-body.sidebar-open[data-page="reports-food.html"] #main-content {
+  max-width: none;
+}
+
+.reports-food-page {
+  max-width: 100%;
+  overflow: visible;
+}
+
+.reports-food-page > .row {
+  margin-right: 0 !important;
+  margin-left: 0 !important;
+}
+
+.reports-food-shell {
+  max-width: 100%;
+  margin-bottom: 0;
+  padding-right: 0 !important;
+  padding-left: 0 !important;
+  overflow: visible;
+  border: 0;
+  box-shadow: none;
+}
+
+.reports-food-shell > header.panel-heading {
+  margin-bottom: 0;
+  padding-right: 0 !important;
+  padding-left: 0 !important;
+  background: #fff;
+}
+
+.reports-food-inner {
+  padding-right: 0 !important;
+  padding-left: 0 !important;
+}
+
+.reports-food-inner > .panel {
+  overflow: visible;
+  border: 0;
+  box-shadow: none;
+}
+
+.reports-food-inner > .panel > .panel-body {
+  padding: 15px 0 0;
+}
+
+.food-filter-form {
+  margin-bottom: 20px;
+}
+
+.food-filter-form > .row {
+  display: block;
+  margin-right: 0;
+  margin-left: 0;
+}
+
+.food-filter-form > .row::before,
+.food-filter-form > .row::after {
+  display: table;
+  content: " ";
+}
+
+.food-filter-form > .row::after {
+  clear: both;
+}
+
+.food-filter-form .header_filter {
+  width: 50% !important;
+}
+
+.reports-food-buttons {
+  margin-right: 0;
+  margin-bottom: 15px;
+  margin-left: 0;
+}
+
+.reports-food-buttons .col-xs-12 {
+  display: flex;
+  gap: 10px;
+  min-height: 60px;
+  padding-right: 0;
+  padding-left: 0;
+  align-items: flex-start;
+}
+
+.reports-food-buttons .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reports-food-buttons .btn img,
+.reports-food-grid-tools .btn img {
+  width: 18px;
+  height: 18px;
+}
+
+.reports-food-grid-tools {
+  margin-right: 0;
+  margin-bottom: 15px;
+  margin-left: 0;
+}
+
+.reports-food-grid-tools .col-md-6 {
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.reports-food-grid-tools .globalSearchBlock {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.reports-food-grid-tools .globalSearchBlock .form-control {
+  width: 280px;
+}
+
+.reports-food-page .grid-view {
+  width: 100%;
+  max-width: 100%;
+  overflow: visible !important;
+}
+
+.reports-food-table {
+  table-layout: auto;
+  width: 100% !important;
+  min-width: 1580px !important;
+  margin-top: 15px;
+  background: #fff;
+}
+
+.reports-food-table th,
+.reports-food-table td {
+  height: 41px;
+  vertical-align: middle !important;
+  white-space: nowrap;
+}
+
+.reports-food-table thead tr:first-child th {
+  font-weight: 700;
+  color: #000;
+  background: lightgrey;
+}
+
+.reports-food-table .filters td {
+  background: #fff;
+}
+
+.reports-food-table .filters input {
+  width: 150px;
+  height: 34px;
+}
+
+.reports-food-table tfoot td {
+  font-weight: 700;
+  background: #f4f4f4;
+}
+
+.reports-food-grid-bottom {
+  margin-right: 0;
+  margin-left: 0;
+}
+
+.reports-food-grid-bottom .summary {
+  padding-top: 18px;
+}
+
+.reports-food-grid-bottom .pagination {
+  float: right;
+  margin: 10px 0 0;
+}
+
+.reports-food-page .sort-arrows {
+  float: right;
+  color: #c7c7c7;
+  font-size: 18px;
+}
+
+@media (max-width: 767px) {
+  .food-filter-form .header_filter {
+    width: 100% !important;
+  }
+
+  .reports-food-buttons .col-xs-12 {
+    flex-wrap: wrap;
+  }
+
+  .reports-food-grid-tools .globalSearchBlock {
+    justify-content: flex-start;
+    margin-top: 12px;
+  }
+
+  .reports-food-grid-tools .globalSearchBlock .form-control {
+    width: 100%;
+  }
+}

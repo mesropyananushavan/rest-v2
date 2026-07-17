@@ -1,0 +1,2213 @@
+#main-content > .wrapper > .row {
+  margin-left: 10px;
+}
+#main-content > .wrapper > .row > div.clearfix {
+  padding-inline: 0;
+}
+.addNewStore {
+  transition-duration: 120ms;
+}
+.storesContainer {
+  width: 100%;
+  height: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-gap: 10px;
+}
+.storeContainer {
+  width: 100%;
+  height: 80px;
+  border-radius: 6px;
+  background: #F3F3F3;
+  display: flex;
+  align-items: center;justify-content: space-between;
+}
+.storeTitle {
+  margin: 0;
+  display: grid;
+  place-items: center;
+}
+.storeTitle > a {
+  color: #EF5038;
+  font-weight: 700;
+  font-size: 22px;
+  text-transform: capitalize;
+}
+.buttonsGroup {
+  height: 100%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.buttonsGroup button {
+  width: 26px;
+  height: 26px;
+  margin: 2px 0;
+  transition-duration: 120ms;
+}
+
+@media (max-width: 800px) {
+  .storesContainer {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 540px) {
+  .storesContainer {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+#addModal label { width: 100%; }
+#addModal .form-group > div { width: 100%; }
+
+.template-body[data-page="store.html"] #main-content,
+.template-body[data-page="store.html"] #container {
+  overflow-x: hidden;
+  background: #fff;
+}
+
+.template-body[data-page="store.html"] .wrapper {
+  overflow: visible !important;
+  padding: 76px 15px 0;
+  background: #fff;
+}
+
+.template-body[data-page="store.html"] .store-page > .row {
+  margin-right: 0 !important;
+  margin-left: 0 !important;
+}
+
+.template-body[data-page="store.html"] .store-page > .row > div.clearfix {
+  padding-inline: 0;
+}
+
+.template-body[data-page="store.html"] .addNewStore {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.template-body[data-page="store.html"] .addNewStore img {
+  width: 14px;
+  height: 14px;
+}
+
+.template-body[data-page="store.html"] .storeContainer {
+  margin-bottom: 10px;
+}
+
+.template-body[data-page="store.html"] .storeTitle {
+  flex: 1;
+  padding-left: 16px;
+  text-align: center;
+}
+
+.template-body[data-page="store.html"] .btnsUl > li {
+  padding: 0 20px;
+}
+
+.template-body[data-page="store.html"] .buttonsGroup button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.template-body[data-page="store.html"] .buttonsGroup button img {
+  max-width: 14px;
+  max-height: 14px;
+}
+
+.template-body[data-page="store.html"] #storeAddModal label,
+.template-body[data-page="store.html"] #storeEditModal label,
+.template-body[data-page="store.html"] #storeAddModal .form-group > div,
+.template-body[data-page="store.html"] #storeEditModal .form-group > div {
+  width: 100%;
+}
+
+@media (max-width: 540px) {
+  .template-body[data-page="store.html"] .btnsUl {
+    flex-direction: row !important;
+  }
+
+  .template-body[data-page="store.html"] .btnsUl li {
+    margin: 0 5px;
+    padding: 0;
+  }
+
+  .template-body[data-page="store.html"] .storesContainer {
+    flex-direction: column;
+  }
+
+  .template-body[data-page="store.html"] .storeContainer {
+    width: 98% !important;
+  }
+}
+
+.template-body[data-page="store-material-category.html"] #main-content,
+.template-body[data-page="store-material-category.html"] #container {
+  overflow-x: hidden;
+  background: #fff;
+}
+
+.template-body[data-page="store-material-category.html"] .wrapper {
+  overflow: visible !important;
+  padding: 76px 15px 0;
+  background: #fff;
+}
+
+.template-body[data-page="store-material-category.html"] .store-material-category-page > .row {
+  margin-right: 0 !important;
+  margin-left: 0 !important;
+}
+
+.store-material-category-actions {
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.store-material-category-actions .addNewCategory {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.store-material-category-actions .addNewCategory img {
+  width: 14px;
+  height: 14px;
+}
+
+.store-material-category-excel-form {
+  display: inline-block;
+  padding-bottom: 15px;
+}
+
+.store-material-category-excel {
+  margin-left: 10px;
+  color: #fff !important;
+  background: #33C481 !important;
+  border-color: #33C481 !important;
+}
+
+.template-body[data-page="store-material-category.html"] .color-generator {
+  padding-right: 5px;
+  padding-left: 5px;
+}
+
+.template-body[data-page="store-material-category.html"] .color-generator .panel {
+  margin-bottom: 10px;
+  border: 0;
+  box-shadow: none;
+}
+
+.groups_items {
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  background: #f3f3f3;
+  border-radius: 6px;
+}
+
+.groups_items p {
+  flex: 1;
+  margin: 0;
+  color: #EF5038;
+  font-size: 22px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.editAndDeleteButtons {
+  display: flex;
+  flex-direction: column;
+}
+
+.editAndDeleteButtons > button {
+  width: 28px;
+  height: 28px;
+  margin: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.editAndDeleteButtons > button img {
+  max-width: 14px;
+  max-height: 14px;
+}
+
+.template-body[data-page="store-material-category.html"] #storeCategoryAddModal label,
+.template-body[data-page="store-material-category.html"] #storeCategoryEditModal label,
+.template-body[data-page="store-material-category.html"] #storeCategoryAddModal .form-group > div,
+.template-body[data-page="store-material-category.html"] #storeCategoryEditModal .form-group > div {
+  width: 100%;
+}
+
+.template-body[data-page="store-items.html"] #main-content,
+.template-body[data-page="store-items.html"] #container {
+  overflow-x: hidden;
+  background: #fff;
+}
+
+.template-body[data-page="store-items.html"] .wrapper {
+  overflow: visible !important;
+  padding: 76px 15px 0;
+  background: #fff;
+}
+
+.template-body[data-page="store-items.html"] .store-items-page > .row {
+  margin-right: 0 !important;
+  margin-left: 0 !important;
+}
+
+.template-body[data-page="store-items.html"] .store-items-top-actions {
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.template-body[data-page="store-items.html"] .addNewMaterial {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.template-body[data-page="store-items.html"] .addNewMaterial img {
+  width: 14px;
+  height: 14px;
+}
+
+.template-body[data-page="store-items.html"] .store-items-not-used {
+  clear: both;
+  margin: 0 0 12px;
+  color: #555;
+}
+
+.template-body[data-page="store-items.html"] .store-items-not-used input {
+  margin: 0 5px 0 0;
+  vertical-align: middle;
+}
+
+.template-body[data-page="store-items.html"] .store-items-not-used label {
+  margin-bottom: 0;
+  color: #000;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.template-body[data-page="store-items.html"] .store-items-panel {
+  clear: both;
+  margin-bottom: 0;
+  border: 0;
+  box-shadow: none;
+}
+
+.template-body[data-page="store-items.html"] .store-items-panel > .panel-body {
+  padding: 15px 0 0;
+}
+
+.template-body[data-page="store-items.html"] .excelButton {
+  margin-left: 10px;
+}
+
+.template-body[data-page="store-items.html"] .excelButton .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+}
+
+.template-body[data-page="store-items.html"] .excelButton img,
+.template-body[data-page="store-items.html"] .excelInTable img {
+  width: 14px;
+  height: 14px;
+}
+
+.template-body[data-page="store-items.html"] .store-items-page-size {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 34px;
+  margin-bottom: 10px;
+}
+
+.template-body[data-page="store-items.html"] .store-items-page-size select {
+  width: auto;
+  min-width: 90px;
+  height: 32px;
+  padding: 5px 10px;
+}
+
+.template-body[data-page="store-items.html"] .store-items-page-summary {
+  color: #000;
+  font-weight: 400;
+}
+
+.template-body[data-page="store-items.html"] .store-items-page-summary b {
+  font-weight: 700;
+}
+
+.template-body[data-page="store-items.html"] .grid-view {
+  overflow: visible !important;
+}
+
+.template-body[data-page="store-items.html"] .store-items-table {
+  margin-bottom: 8px;
+  background: #fff;
+}
+
+.template-body[data-page="store-items.html"] .store-items-table th,
+.template-body[data-page="store-items.html"] .store-items-table td {
+  height: 41px;
+  padding: 8px;
+  color: #333;
+  vertical-align: middle !important;
+  white-space: nowrap;
+}
+
+.template-body[data-page="store-items.html"] .store-items-table th {
+  font-weight: 700;
+}
+
+.template-body[data-page="store-items.html"] .store-items-table a.asc,
+.template-body[data-page="store-items.html"] .store-items-table a.desc {
+  white-space: nowrap;
+}
+
+.template-body[data-page="store-items.html"] .store-items-table a.asc:after,
+.template-body[data-page="store-items.html"] .store-items-table a.desc:after {
+  margin-left: 5px;
+  vertical-align: middle;
+}
+
+.template-body[data-page="store-items.html"] .store-items-table a.asc:after {
+  content: "▲";
+}
+
+.template-body[data-page="store-items.html"] .store-items-table a.desc:after {
+  content: "▼";
+}
+
+.template-body[data-page="store-items.html"] .store-items-table .filters input {
+  height: 34px;
+  padding: 6px 8px;
+}
+
+.template-body[data-page="store-items.html"] .inTableButtonsContainer {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.template-body[data-page="store-items.html"] .inTableIconButton {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+.template-body[data-page="store-items.html"] .inTableIconButton img {
+  max-width: 14px;
+  max-height: 14px;
+}
+
+.template-body[data-page="store-items.html"] .open-semi-finished-modal {
+  height: 28px;
+  padding: 4px 8px;
+}
+
+.template-body[data-page="store-items.html"] .store-items-grid-footer {
+  margin-right: 0;
+  margin-left: 0;
+}
+
+.template-body[data-page="store-items.html"] .store-items-grid-footer .summary {
+  padding-top: 8px;
+  color: #555;
+}
+
+.template-body[data-page="store-items.html"] .store-items-grid-footer .pagination {
+  float: right;
+  margin: 0 0 10px;
+}
+
+.template-body[data-page="store-items.html"] #storeItemAddModal .modal-dialog,
+.template-body[data-page="store-items.html"] #storeItemEditModal .modal-dialog {
+  width: 850px;
+}
+
+.template-body[data-page="store-items.html"] #storeItemAddModal .modal-body,
+.template-body[data-page="store-items.html"] #storeItemEditModal .modal-body {
+  padding: 38px 20px 15px;
+  overflow: visible;
+}
+
+.template-body[data-page="store-items.html"] #storeItemAddModal .modal-body > .form-group,
+.template-body[data-page="store-items.html"] #storeItemEditModal .modal-body > .form-group {
+  margin-right: 0;
+  margin-left: 0;
+  margin-bottom: 22px;
+}
+
+.template-body[data-page="store-items.html"] #storeItemAddModal .modal-body > .form-group > label,
+.template-body[data-page="store-items.html"] #storeItemEditModal .modal-body > .form-group > label {
+  width: 100%;
+  padding: 0;
+  margin-bottom: 4px;
+  color: #000;
+  font-weight: 400;
+  text-align: left;
+}
+
+.template-body[data-page="store-items.html"] #storeItemAddModal .modal-body > .form-group > .col-sm-9,
+.template-body[data-page="store-items.html"] #storeItemEditModal .modal-body > .form-group > .col-sm-9 {
+  width: 100%;
+  padding: 0;
+}
+
+.template-body[data-page="store-items.html"] #storeItemAddModal .form-control,
+.template-body[data-page="store-items.html"] #storeItemEditModal .form-control {
+  height: 34px;
+}
+
+.template-body[data-page="store-items.html"] #storeItemAddModal .store-item-switch-row,
+.template-body[data-page="store-items.html"] #storeItemEditModal .store-item-switch-row {
+  margin-bottom: 24px;
+}
+
+.template-body[data-page="store-items.html"] #storeItemAddModal .store-item-switch-row .m-bot15,
+.template-body[data-page="store-items.html"] #storeItemEditModal .store-item-switch-row .m-bot15 {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0;
+}
+
+.template-body[data-page="store-items.html"] #storeItemAddModal .store-item-switch-row label,
+.template-body[data-page="store-items.html"] #storeItemEditModal .store-item-switch-row label {
+  width: auto;
+  padding: 0;
+  margin: 0 130px 0 0;
+  color: #000;
+  font-weight: 400;
+  text-align: left;
+}
+
+.template-body[data-page="store-items.html"] #storeItemAddModal .store-item-switch-row .col-lg-9,
+.template-body[data-page="store-items.html"] #storeItemEditModal .store-item-switch-row .col-lg-9 {
+  width: auto;
+  padding: 0;
+}
+
+.template-body[data-page="store-items.html"] #storeItemAddModal .switch-square,
+.template-body[data-page="store-items.html"] #storeItemEditModal .switch-square {
+  position: relative;
+  width: 80px;
+  height: 29px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 14px;
+  color: #fff;
+  font-weight: 700;
+  background: #bdc3c7;
+  border-radius: 4px;
+  -webkit-mask: none !important;
+  mask: none !important;
+}
+
+.template-body[data-page="store-items.html"] #storeItemAddModal .switch-square:before,
+.template-body[data-page="store-items.html"] #storeItemEditModal .switch-square:before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 30px;
+  height: 29px;
+  background: #8c99a5;
+  border-radius: 4px 0 0 4px;
+}
+
+.template-body[data-page="store-items.html"] #storeItemAddModal .switch-square:after,
+.template-body[data-page="store-items.html"] #storeItemEditModal .switch-square:after {
+  content: "Ոչ";
+}
+
+.template-body[data-page="store-items.html"] #storeItemAddModal .switch-square input,
+.template-body[data-page="store-items.html"] #storeItemEditModal .switch-square input {
+  display: none;
+}
+
+.template-body[data-page="store-items.html"] #storeItemAddModal .tableInputs,
+.template-body[data-page="store-items.html"] #storeItemEditModal .tableInputs {
+  display: grid;
+  grid-template-columns: repeat(5, 110px) 104px;
+  align-items: flex-end;
+  column-gap: 20px;
+  margin-right: 0;
+  margin-left: 0;
+  margin-bottom: 14px;
+}
+
+.template-body[data-page="store-items.html"] #storeItemAddModal .tableInputs:before,
+.template-body[data-page="store-items.html"] #storeItemAddModal .tableInputs:after,
+.template-body[data-page="store-items.html"] #storeItemEditModal .tableInputs:before,
+.template-body[data-page="store-items.html"] #storeItemEditModal .tableInputs:after {
+  display: none;
+  content: none;
+}
+
+.template-body[data-page="store-items.html"] #storeItemAddModal .tableInputs > div,
+.template-body[data-page="store-items.html"] #storeItemEditModal .tableInputs > div {
+  width: auto;
+  float: none;
+  padding: 0;
+}
+
+.template-body[data-page="store-items.html"] #storeItemAddModal .tableInputs label,
+.template-body[data-page="store-items.html"] #storeItemEditModal .tableInputs label {
+  display: block;
+  min-height: 34px;
+  margin: 0 0 5px;
+  color: #000;
+  font-weight: 700;
+  text-align: center;
+}
+
+.template-body[data-page="store-items.html"] #storeItemAddModal .tableInputs select,
+.template-body[data-page="store-items.html"] #storeItemEditModal .tableInputs select,
+.template-body[data-page="store-items.html"] #storeItemAddModal .tableInputs input,
+.template-body[data-page="store-items.html"] #storeItemEditModal .tableInputs input {
+  width: 110px;
+}
+
+.template-body[data-page="store-items.html"] #storeItemAddModal .tableInputs button,
+.template-body[data-page="store-items.html"] #storeItemEditModal .tableInputs button {
+  width: 104px;
+  height: 34px;
+  min-width: 0;
+  padding-right: 8px;
+  padding-left: 8px;
+}
+
+.template-body[data-page="store-items.html"] .store-item-content-table {
+  margin-top: 10px;
+}
+
+.template-body[data-page="store-items.html"] #storeItemCompositionModal .modal-dialog {
+  width: 610px;
+}
+
+.template-body[data-page="store-items.html"] #storeItemCompositionModal .modal-content {
+  overflow: hidden;
+}
+
+.template-body[data-page="store-items.html"] #storeItemCompositionModal .modal-header {
+  min-height: 56px;
+  padding: 17px 15px;
+  border-bottom: 1px solid #e5e5e5;
+  background: #f7f7f7;
+  border-radius: 6px 6px 0 0;
+}
+
+.template-body[data-page="store-items.html"] #storeItemCompositionModal .modal-title {
+  margin: 0;
+  color: #333;
+  font-size: 18px;
+  font-weight: 400;
+}
+
+.template-body[data-page="store-items.html"] #storeItemCompositionModal .modal-body {
+  padding: 30px 20px 0;
+}
+
+.template-body[data-page="store-items.html"] #storeItemCompositionModal .finalMassContainer {
+  min-height: 61px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding: 10px 15px 10px 12px;
+  background: #f3f3f3;
+}
+
+.template-body[data-page="store-items.html"] #storeItemCompositionModal .finalMassContainer label {
+  max-width: 315px;
+  margin-bottom: 0;
+  color: #000;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.template-body[data-page="store-items.html"] #storeItemCompositionModal .inputContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.template-body[data-page="store-items.html"] #storeItemCompositionModal #finalMassOfItem {
+  width: 80px;
+  height: 27px;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 0;
+  text-align: right;
+}
+
+.template-body[data-page="store-items.html"] #storeItemCompositionModal .measureUnit {
+  color: #000;
+}
+
+.template-body[data-page="store-items.html"] #storeItemCompositionModal .prepack_content {
+  display: grid;
+  grid-template-columns: 140px 140px 140px 36px;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.template-body[data-page="store-items.html"] #storeItemCompositionModal .prepack_content .form-control {
+  width: 100%;
+  height: 34px;
+  display: block;
+  margin-bottom: 0;
+  padding: 6px 12px;
+}
+
+.template-body[data-page="store-items.html"] #storeItemCompositionModal .add-semi-finished-content {
+  width: 36px;
+  height: 36px;
+  margin-top: 0;
+  padding: 5px 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+}
+
+.template-body[data-page="store-items.html"] .store-item-composition-table {
+  width: 100%;
+  table-layout: fixed;
+  margin-top: 0;
+  margin-bottom: 50px;
+}
+
+.template-body[data-page="store-items.html"] .store-item-composition-table th,
+.template-body[data-page="store-items.html"] .store-item-composition-table td {
+  height: 43px;
+  padding: 8px 6px;
+  color: #000;
+  vertical-align: middle !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.template-body[data-page="store-items.html"] .store-item-composition-table th {
+  font-weight: 700;
+}
+
+.template-body[data-page="store-items.html"] .store-item-composition-table th:nth-child(1),
+.template-body[data-page="store-items.html"] .store-item-composition-table td:nth-child(1) {
+  width: 11%;
+}
+
+.template-body[data-page="store-items.html"] .store-item-composition-table th:nth-child(2),
+.template-body[data-page="store-items.html"] .store-item-composition-table td:nth-child(2) {
+  width: 25%;
+}
+
+.template-body[data-page="store-items.html"] .store-item-composition-table th:nth-child(3),
+.template-body[data-page="store-items.html"] .store-item-composition-table td:nth-child(3) {
+  width: 24%;
+}
+
+.template-body[data-page="store-items.html"] .store-item-composition-table th:nth-child(4),
+.template-body[data-page="store-items.html"] .store-item-composition-table td:nth-child(4) {
+  width: 13%;
+}
+
+.template-body[data-page="store-items.html"] .store-item-composition-table th:nth-child(5),
+.template-body[data-page="store-items.html"] .store-item-composition-table td:nth-child(5) {
+  width: 18%;
+}
+
+.template-body[data-page="store-items.html"] .store-item-composition-table th:nth-child(6),
+.template-body[data-page="store-items.html"] .store-item-composition-table td:nth-child(6) {
+  width: 7%;
+  text-align: center;
+}
+
+.template-body[data-page="store-items.html"] .store-item-composition-table .btn-danger {
+  width: 24px;
+  height: 24px;
+  padding: 2px 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.template-body[data-page="store-items.html"] #storeItemCompositionModal .modal-footer {
+  padding: 0 20px 20px;
+  border-top: 0;
+}
+
+.template-body[data-page="store-items.html"] #storeItemCompositionModal .modal-footer .btn {
+  min-width: 74px;
+}
+
+@media (max-width: 767px) {
+  .template-body[data-page="store-items.html"] .store-items-grid-footer .pagination {
+    float: none;
+  }
+
+  .template-body[data-page="store-items.html"] .inTableButtonsContainer {
+    flex-wrap: wrap;
+  }
+}
+
+.template-body[data-page="store-documents.html"] {
+  overflow-x: auto !important;
+}
+
+.template-body[data-page="store-documents.html"] #DataTables_Table_0_wrapper {
+  overflow: visible;
+}
+
+.template-body[data-page="store-documents.html"] #main-content,
+.template-body[data-page="store-documents.html"] #container {
+  overflow: visible !important;
+  background: #fff;
+}
+
+.template-body[data-page="store-documents.html"] .wrapper {
+  overflow: visible !important;
+  padding: 76px 0 0;
+  background: #fff;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-page > .row {
+  margin-right: 0 !important;
+  margin-left: 0 !important;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-header {
+  display: block;
+  width: 100%;
+  padding-right: 0;
+  padding-left: 0;
+  min-height: 49px;
+  margin-bottom: 0;
+}
+
+.template-body[data-page="store-documents.html"] .addNewDocument {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  float: left !important;
+  margin-left: 15px;
+  margin-bottom: 15px;
+}
+
+.template-body[data-page="store-documents.html"] .addNewDocument img {
+  width: 14px;
+  height: 14px;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-date-form {
+  float: right !important;
+  margin: 0;
+}
+
+.template-body[data-page="store-documents.html"] #noPadL {
+  padding-inline: 0 !important;
+}
+
+.template-body[data-page="store-documents.html"] .header_filter {
+  width: 575px;
+  max-width: 575px;
+  float: right !important;
+  padding-right: 0;
+}
+
+.template-body[data-page="store-documents.html"] .header_filter .form-control,
+.template-body[data-page="store-documents.html"] .header_filter .input-group-addon,
+.template-body[data-page="store-documents.html"] .header_filter .btn {
+  height: 34px;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-panel {
+  clear: both;
+  width: 100%;
+  margin-bottom: 0;
+  border: 0;
+  box-shadow: none;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-panel > .panel-body {
+  padding: 0;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-type-filter {
+  margin-bottom: 10px;
+  color: #fff;
+  background: #bfc5cb;
+  border-color: #bfc5cb;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-datatable-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 15px;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-export-buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-export-buttons .btn {
+  min-width: 83px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-export-buttons img {
+  width: 14px;
+  height: 14px;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-search label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: #000;
+  font-weight: 700;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-search input {
+  width: 176px;
+  height: 30px;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-table {
+  width: 100%;
+  min-width: 1345px;
+  table-layout: fixed;
+  margin-bottom: 0;
+  background: #fff;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-table th,
+.template-body[data-page="store-documents.html"] .store-documents-table td {
+  height: 41px;
+  padding: 8px 10px;
+  color: #333;
+  vertical-align: middle !important;
+  white-space: normal;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-table th {
+  color: #000;
+  font-weight: 700;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-table th:nth-child(1),
+.template-body[data-page="store-documents.html"] .store-documents-table td:nth-child(1) {
+  width: 76px;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-table th:nth-child(2),
+.template-body[data-page="store-documents.html"] .store-documents-table td:nth-child(2) {
+  width: 116px;
+  font-weight: 700;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-table th:nth-child(3),
+.template-body[data-page="store-documents.html"] .store-documents-table td:nth-child(3) {
+  width: 170px;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-table th:nth-child(4),
+.template-body[data-page="store-documents.html"] .store-documents-table td:nth-child(4) {
+  width: 156px;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-table th:nth-child(5),
+.template-body[data-page="store-documents.html"] .store-documents-table td:nth-child(5) {
+  width: 160px;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-table th:nth-child(6),
+.template-body[data-page="store-documents.html"] .store-documents-table td:nth-child(6) {
+  width: 190px;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-table th:nth-child(7),
+.template-body[data-page="store-documents.html"] .store-documents-table td:nth-child(7) {
+  width: 205px;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-table th:nth-child(8),
+.template-body[data-page="store-documents.html"] .store-documents-table td:nth-child(8) {
+  width: 118px;
+  font-weight: 700;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-table th:nth-child(9),
+.template-body[data-page="store-documents.html"] .store-documents-table td:nth-child(9) {
+  width: 82px;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-table th:nth-child(10),
+.template-body[data-page="store-documents.html"] .store-documents-table td:nth-child(10) {
+  width: 200px;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-table .filters td {
+  padding: 8px 10px;
+  background: #f7f7f7;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-column-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-column-filter input {
+  height: 34px;
+  min-width: 0;
+  padding: 6px 12px;
+}
+
+.template-body[data-page="store-documents.html"] .sort-arrows {
+  color: #c5c5c5;
+  font-size: 18px;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-table .success > td {
+  background-color: #dff0d8;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-table .danger > td {
+  background-color: #f2dede;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-grid-footer {
+  min-width: 1345px;
+  margin: 12px 0 0;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-grid-footer .dataTables_info {
+  padding-top: 8px;
+  color: #000;
+  font-weight: 700;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-grid-footer .pagination {
+  float: right;
+  margin: 0 0 10px;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-grid-footer .pagination ul {
+  margin: 0;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-grid-footer .pagination ul > li > a {
+  padding: 6px 12px;
+  color: #777;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-grid-footer .pagination ul > li.active > a {
+  color: #fff;
+  background: #ef5038;
+  border-color: #ef5038;
+}
+
+.template-body[data-page="store-documents.html"] .inTableButtonsContainer {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.template-body[data-page="store-documents.html"] .inTableIconButton {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+.template-body[data-page="store-documents.html"] .inTableIconButton img {
+  max-width: 14px;
+  max-height: 14px;
+}
+
+.template-body[data-page="store-documents.html"] #storeDocumentAddModal .modal-body,
+.template-body[data-page="store-documents.html"] #storeDocumentEditModal .modal-body {
+  padding: 20px;
+}
+
+.template-body[data-page="store-documents.html"] #storeDocumentAddModal .form-group,
+.template-body[data-page="store-documents.html"] #storeDocumentEditModal .form-group {
+  margin-right: 0;
+  margin-left: 0;
+}
+
+.template-body[data-page="store-documents.html"] #storeDocumentAddModal .form-group > *,
+.template-body[data-page="store-documents.html"] #storeDocumentEditModal .form-group > * {
+  width: 100%;
+  padding-right: 0;
+  padding-left: 0;
+  text-align: left;
+}
+
+.template-body[data-page="store-documents.html"] #storeDocumentAddModal label,
+.template-body[data-page="store-documents.html"] #storeDocumentEditModal label {
+  margin-bottom: 5px;
+  color: #000;
+  font-weight: 400;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-filter-body label {
+  margin-left: 5px;
+  color: #000;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.template-body[data-page="store-documents.html"] .store-documents-filter-body > div {
+  margin-top: 8px;
+}
+
+@media (max-width: 991px) {
+  .template-body[data-page="store-documents.html"] .header_filter {
+    width: 100%;
+    max-width: none;
+    margin-bottom: 10px;
+  }
+
+  .template-body[data-page="store-documents.html"] .store-documents-table th,
+  .template-body[data-page="store-documents.html"] .store-documents-table td {
+    white-space: normal;
+  }
+}
+
+.template-body[data-page="store-balance.html"] {
+  overflow-x: auto !important;
+}
+
+.template-body[data-page="store-balance.html"] #main-content,
+.template-body[data-page="store-balance.html"] #container {
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+}
+
+.template-body[data-page="store-balance.html"] .wrapper {
+  min-width: 1240px;
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+}
+
+.template-body[data-page="store-balance.html"] .store-balance-page > .row {
+  margin-left: 0;
+  margin-right: 0;
+  overflow: visible !important;
+}
+
+.template-body[data-page="store-balance.html"] .store-balance-panel {
+  position: relative;
+  overflow: visible !important;
+  padding: 0 0 15px !important;
+}
+
+.template-body[data-page="store-balance.html"] #sidebar > ul > li.active > a.active {
+  color: #ef5038 !important;
+}
+
+.template-body[data-page="store-balance.html"] .store-balance-panel .panel-heading {
+  padding-left: 0;
+  border-bottom: none;
+  position: sticky;
+  top: 76px;
+  z-index: 1;
+  background: #fff;
+}
+
+.template-body[data-page="store-balance.html"] .grayBackground {
+  width: 100vw;
+  height: 46px;
+  background: #f3f3f3;
+  position: absolute;
+  top: -16px;
+  left: -15px;
+  z-index: 0;
+}
+
+.template-body[data-page="store-balance.html"] .menuButtonsContainer {
+  width: 100%;
+  height: 42px;
+  padding: 4px 4px 10px 4px;
+  border-radius: 8px;
+  background: #fff;
+  overflow-x: visible;
+  overflow-y: hidden;
+  box-sizing: content-box;
+  position: relative;
+  z-index: 2;
+  white-space: nowrap;
+}
+
+.template-body[data-page="store-balance.html"] .menuButtonsContainer::-webkit-scrollbar {
+  display: none;
+  height: 0;
+}
+
+.template-body[data-page="store-balance.html"] .menuButtonsContainer::-webkit-scrollbar-thumb {
+  background: #c0c0c0;
+  border-radius: 4px;
+}
+
+.template-body[data-page="store-balance.html"] .store-balance-tabs > li {
+  float: none;
+  display: inline-block;
+}
+
+.template-body[data-page="store-balance.html"] .store-balance-tabs > li > a {
+  color: #555;
+  padding: 9px 16px;
+}
+
+.template-body[data-page="store-balance.html"] .store-balance-tabs > li.active > a,
+.template-body[data-page="store-balance.html"] .store-balance-tabs > li.active > a:hover,
+.template-body[data-page="store-balance.html"] .store-balance-tabs > li.active > a:focus {
+  background: #ef5038;
+  color: #fff !important;
+}
+
+.template-body[data-page="store-balance.html"] .store-balance-filters {
+  display: block;
+  margin: 47px 0 0;
+}
+
+.template-body[data-page="store-balance.html"] .store-balance-category {
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.template-body[data-page="store-balance.html"] .store-balance-category .form-control {
+  height: 34px;
+}
+
+.template-body[data-page="store-balance.html"] .store-balance-filter-row {
+  margin: 15px 0 16px;
+}
+
+.template-body[data-page="store-balance.html"] .store-balance-filter-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.template-body[data-page="store-balance.html"] .store-balance-filter-buttons .btn.active {
+  background: #bfc6cb;
+  border-color: #bfc6cb;
+  color: #fff;
+}
+
+.template-body[data-page="store-balance.html"] .store-balance-datatable-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  margin: 0 0 16px;
+}
+
+.template-body[data-page="store-balance.html"] .store-balance-export-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.template-body[data-page="store-balance.html"] .store-balance-export-buttons img {
+  width: 16px;
+  margin-right: 4px;
+  vertical-align: -3px;
+}
+
+.template-body[data-page="store-balance.html"] .store-balance-search label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0;
+  font-weight: normal;
+}
+
+.template-body[data-page="store-balance.html"] .store-balance-search input {
+  width: 210px;
+  height: 31px;
+  display: inline-block;
+}
+
+.template-body[data-page="store-balance.html"] .store-balance-table-body {
+  padding: 0;
+  overflow: visible;
+}
+
+.template-body[data-page="store-balance.html"] .storeBalanceTable {
+  min-width: 1180px;
+  margin-bottom: 0;
+  background: #fff;
+}
+
+.template-body[data-page="store-balance.html"] .storeBalanceTable th,
+.template-body[data-page="store-balance.html"] .storeBalanceTable td {
+  vertical-align: middle !important;
+  white-space: normal;
+  font-size: 12px;
+  padding: 9px 8px;
+}
+
+.template-body[data-page="store-balance.html"] .storeBalanceTable th {
+  background: #f7f7f7;
+  color: #333;
+  line-height: 1.25;
+}
+
+.template-body[data-page="store-balance.html"] .storeBalanceTable .filters td {
+  padding: 4px;
+}
+
+.template-body[data-page="store-balance.html"] .storeBalanceTable .filters input {
+  height: 28px;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+.template-body[data-page="store-balance.html"] .storeBalanceTable tfoot th {
+  background: #fff8e5;
+  font-weight: 700;
+}
+
+.template-body[data-page="store-balance.html"] .inTableIconButton {
+  width: 26px;
+  height: 24px;
+  padding: 2px 4px;
+}
+
+.template-body[data-page="store-balance.html"] .inTableIconButton img {
+  width: 14px;
+  height: 14px;
+}
+
+@media (max-width: 767px) {
+  .template-body[data-page="store-balance.html"] .wrapper {
+    min-width: 1040px;
+  }
+
+  .template-body[data-page="store-balance.html"] .store-balance-datatable-bar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+.template-body[data-page="store-history.html"] {
+  background: #f1f2f7;
+  overflow-x: auto !important;
+}
+
+.template-body[data-page="store-history.html"] #main-content,
+.template-body[data-page="store-history.html"] #container {
+  background: #f1f2f7;
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+}
+
+.template-body[data-page="store-history.html"] .wrapper {
+  min-width: 2140px;
+  padding: 76px 15px 15px;
+  background: #f1f2f7;
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+}
+
+.template-body[data-page="store-history.html"] .store-history-page {
+  min-height: calc(100vh - 91px);
+}
+
+.template-body[data-page="store-history.html"] .store-history-panel {
+  min-width: 2110px;
+  min-height: calc(100vh - 91px);
+  margin-bottom: 0;
+  border: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .08);
+  background: #fff;
+}
+
+.template-body[data-page="store-history.html"] .store-history-panel > .panel-body {
+  padding: 0;
+  background: #fff;
+}
+
+.template-body[data-page="store-history.html"] .store-history-filter-form {
+  padding: 0 0 16px;
+}
+
+.template-body[data-page="store-history.html"] .store-history-filter-form .row {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.template-body[data-page="store-history.html"] .header_filter {
+  margin-bottom: 15px;
+  padding-left: 0;
+}
+
+.template-body[data-page="store-history.html"] .header1 {
+  padding-right: 15px;
+}
+
+.template-body[data-page="store-history.html"] .header2 {
+  display: flex;
+  align-items: stretch;
+  padding-right: 0;
+}
+
+.template-body[data-page="store-history.html"] .header_filter .form-control,
+.template-body[data-page="store-history.html"] .header_filter .input-group-addon,
+.template-body[data-page="store-history.html"] .header_filter .btn {
+  height: 34px;
+}
+
+.template-body[data-page="store-history.html"] .header2 > .bootstrap-timepicker {
+  flex: 0 1 190px;
+  width: 190px;
+}
+
+.template-body[data-page="store-history.html"] .header2 .timepicker-24 {
+  width: 145px;
+}
+
+.template-body[data-page="store-history.html"] .header2 .inputsDivider {
+  width: 38px;
+  min-width: 38px;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.template-body[data-page="store-history.html"] .button-time-icon {
+  background-color: #f3f3f3;
+  color: #2e2e2e;
+}
+
+.template-body[data-page="store-history.html"] .filterButton {
+  margin-left: 10px !important;
+  border-radius: 4px !important;
+  background: #ef5038;
+  border-color: #ef5038;
+}
+
+.template-body[data-page="store-history.html"] .food_date_print {
+  display: flex;
+  align-items: stretch;
+  width: calc(100vw - 304px);
+  max-width: 100%;
+  padding: 0;
+  margin-bottom: 15px;
+}
+
+.template-body[data-page="store-history.html"] .food_date_print .form-control,
+.template-body[data-page="store-history.html"] .food_date_print .btn {
+  height: 34px;
+}
+
+.template-body[data-page="store-history.html"] .food_date_print .form-control {
+  flex: 1 1 auto;
+  min-width: 420px;
+}
+
+.template-body[data-page="store-history.html"] .smart-select {
+  border-radius: 0 !important;
+}
+
+.template-body[data-page="store-history.html"] .buttonsLine {
+  display: flex;
+  width: auto;
+}
+
+.template-body[data-page="store-history.html"] .showByShift,
+.template-body[data-page="store-history.html"] .printReport {
+  min-width: 238px;
+  white-space: nowrap;
+}
+
+.template-body[data-page="store-history.html"] .showByShift {
+  color: #fff;
+  background: #bfc5cb;
+  border-color: #bfc5cb;
+}
+
+.template-body[data-page="store-history.html"] .printReport {
+  border-radius: 0 4px 4px 0 !important;
+}
+
+.template-body[data-page="store-history.html"] .store-history-datatable-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  width: calc(100vw - 304px);
+  max-width: 100%;
+  margin: 0 0 18px;
+  clear: both;
+  box-sizing: border-box;
+}
+
+.template-body[data-page="store-history.html"] .store-history-page-size {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #000;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.template-body[data-page="store-history.html"] .store-history-page-size label {
+  margin: 0;
+}
+
+.template-body[data-page="store-history.html"] .store-history-page-size select {
+  width: 90px;
+  height: 34px;
+}
+
+.template-body[data-page="store-history.html"] .store-history-export-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.template-body[data-page="store-history.html"] .store-history-export-buttons .btn {
+  min-width: 83px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.template-body[data-page="store-history.html"] .store-history-export-buttons img {
+  width: 14px;
+  height: 14px;
+}
+
+.template-body[data-page="store-history.html"] .store-history-search label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: #000;
+  font-weight: 700;
+}
+
+.template-body[data-page="store-history.html"] .store-history-search input {
+  width: 176px;
+  height: 30px;
+}
+
+.template-body[data-page="store-history.html"] .store-history-table-wrap {
+  display: inline-block;
+  min-width: 100%;
+  overflow: visible;
+  background: #fff;
+}
+
+.template-body[data-page="store-history.html"] .store-history-table {
+  min-width: 2110px;
+  margin-bottom: 0;
+  background: #fff;
+}
+
+.template-body[data-page="store-history.html"] .store-history-table th,
+.template-body[data-page="store-history.html"] .store-history-table td {
+  height: 41px;
+  padding: 8px 10px;
+  vertical-align: middle !important;
+  white-space: nowrap;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.template-body[data-page="store-history.html"] .store-history-table th {
+  color: #000;
+  font-weight: 700;
+  text-align: center;
+  background: lightgrey;
+}
+
+.template-body[data-page="store-history.html"] .store-history-table .filters td {
+  position: relative;
+  background: #fff;
+}
+
+.template-body[data-page="store-history.html"] .store-history-table .filters input,
+.template-body[data-page="store-history.html"] .store-history-table .filters select {
+  width: 150px;
+  height: 34px;
+  padding: 6px 10px;
+  color: #555;
+  background: #fff;
+  border: 1px solid #d8d8d8;
+  border-radius: 4px;
+}
+
+.template-body[data-page="store-history.html"] .store-history-table .sort-arrows {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #bbb;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.template-body[data-page="store-history.html"] .store-history-table a {
+  color: #337ab7;
+}
+
+@media (max-width: 1160px) {
+  .template-body[data-page="store-history.html"] .food_date_print,
+  .template-body[data-page="store-history.html"] .store-history-datatable-bar {
+    width: calc(100vw - 30px);
+  }
+}
+
+.template-body[data-page="store-sum.html"] {
+  background: #f1f2f7;
+  overflow-x: hidden !important;
+}
+
+.template-body[data-page="store-sum.html"] #main-content,
+.template-body[data-page="store-sum.html"] #container {
+  background: #f1f2f7;
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+}
+
+.template-body[data-page="store-sum.html"] .wrapper {
+  min-width: 0;
+  padding: 76px 15px 15px;
+  background: #f1f2f7;
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+}
+
+.template-body[data-page="store-sum.html"] .store-sum-page {
+  min-height: calc(100vh - 91px);
+}
+
+.template-body[data-page="store-sum.html"] .store-sum-panel {
+  width: 100%;
+  min-height: calc(100vh - 91px);
+  margin-bottom: 0;
+  border: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .08);
+  background: #fff;
+}
+
+.template-body[data-page="store-sum.html"] .store-sum-panel > .panel-body {
+  padding: 0;
+  background: #fff;
+}
+
+.template-body[data-page="store-sum.html"] .store-sum-filter-form {
+  padding: 0 0 16px;
+}
+
+.template-body[data-page="store-sum.html"] .store-sum-tables {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.template-body[data-page="store-sum.html"] .store-sum-filter-row {
+  display: flex;
+  flex-wrap: nowrap;
+  column-gap: 30px;
+  align-items: start;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.template-body[data-page="store-sum.html"] .store-sum-filter-row:before,
+.template-body[data-page="store-sum.html"] .store-sum-filter-row:after {
+  display: none;
+}
+
+.template-body[data-page="store-sum.html"] .header_filter {
+  display: flex;
+  align-items: stretch;
+  margin-bottom: 15px;
+  padding: 0;
+  float: none;
+  width: auto;
+  max-width: none;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.template-body[data-page="store-sum.html"] .header_filter .form-control,
+.template-body[data-page="store-sum.html"] .header_filter .input-group-addon,
+.template-body[data-page="store-sum.html"] .header_filter .btn {
+  height: 36px;
+}
+
+.template-body[data-page="store-sum.html"] .header_filter > .form-control {
+  width: auto !important;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.template-body[data-page="store-sum.html"] .header_filter > .bootstrap-timepicker {
+  display: flex;
+  flex: 0 0 300px;
+  width: 300px;
+  min-width: 300px;
+}
+
+.template-body[data-page="store-sum.html"] .header_filter .timepicker-24 {
+  width: 255px;
+}
+
+.template-body[data-page="store-sum.html"] .header1 > .bootstrap-timepicker {
+  flex-basis: 385px;
+  width: 385px;
+  min-width: 385px;
+}
+
+.template-body[data-page="store-sum.html"] .header1 .timepicker-24 {
+  width: 340px;
+}
+
+.template-body[data-page="store-sum.html"] .header_filter .inputsDivider {
+  width: 38px;
+  min-width: 38px;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.template-body[data-page="store-sum.html"] .button-time-icon {
+  background-color: #f3f3f3;
+  color: #2e2e2e;
+}
+
+.template-body[data-page="store-sum.html"] .filterButton {
+  width: 145px;
+  height: 36px;
+  margin-left: 20px !important;
+  border-radius: 4px !important;
+  background: #ef5038;
+  border-color: #ef5038;
+}
+
+.template-body[data-page="store-sum.html"] .store-sum-submit-group {
+  display: block;
+  flex: 0 0 165px;
+  width: 165px;
+}
+
+.template-body[data-page="store-sum.html"] .store-sum-column {
+  box-sizing: border-box;
+  padding: 0 15px 0 0;
+}
+
+.template-body[data-page="store-sum.html"] .store-sum-column + .store-sum-column {
+  padding: 0 0 0 15px;
+  border-left: 1px solid rgba(0, 0, 0, 0.23);
+}
+
+.template-body[data-page="store-sum.html"] .store-sum-table {
+  width: 100%;
+  margin-bottom: 0;
+  color: rgba(0, 0, 0, 0.71);
+  font-size: 15px;
+  font-weight: 500;
+  background: #fff;
+}
+
+.template-body[data-page="store-sum.html"] .store-sum-table th,
+.template-body[data-page="store-sum.html"] .store-sum-table td {
+  height: 42px;
+  padding: 9px 12px;
+  vertical-align: middle !important;
+  white-space: nowrap;
+}
+
+.template-body[data-page="store-sum.html"] .store-sum-table th {
+  color: #000;
+  font-weight: 700;
+  background: #fff;
+  border-bottom: 2px solid #ddd;
+}
+
+.template-body[data-page="store-sum.html"] .store-sum-table a {
+  color: #337ab7;
+}
+
+@media (max-width: 767px) {
+  .template-body[data-page="store-sum.html"] .wrapper {
+    min-width: 0;
+  }
+}
+
+.template-body[data-page="store-timeline.html"] {
+  background: #f1f2f7;
+  overflow-x: auto !important;
+}
+
+.template-body[data-page="store-timeline.html"] #main-content,
+.template-body[data-page="store-timeline.html"] #container {
+  background: #f1f2f7;
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+}
+
+.template-body[data-page="store-timeline.html"] .wrapper {
+  background: #f1f2f7;
+  min-width: 1860px;
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+}
+
+.template-body[data-page="store-timeline.html"] .store-timeline-page > .row {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.template-body[data-page="store-timeline.html"] .store-timeline-panel {
+  position: relative;
+  width: calc(100% - 15px) !important;
+  min-width: 1980px;
+  min-height: calc(100vh - 91px);
+  padding: 0 0 15px !important;
+  overflow: visible;
+  background: #fff;
+}
+
+.template-body[data-page="store-timeline.html"] #sidebar {
+  z-index: 100;
+}
+
+.template-body[data-page="store-timeline.html"] #sidebar > ul > li.active > a.active {
+  color: #ef5038 !important;
+}
+
+.template-body[data-page="store-timeline.html"] .store-timeline-panel .panel-heading {
+  padding-inline: 0 !important;
+  padding-left: 0;
+  border-bottom: none;
+  background: transparent;
+}
+
+.template-body[data-page="store-timeline.html"] .grayBackground {
+  display: none;
+}
+
+.template-body[data-page="store-timeline.html"] .menuButtonsContainer {
+  width: 100%;
+  height: 42px;
+  padding: 4px 4px 10px 4px;
+  border-radius: 8px;
+  background: #fff;
+  overflow-x: auto;
+  overflow-y: hidden;
+  box-sizing: content-box;
+  position: relative;
+  z-index: 10;
+  white-space: nowrap;
+}
+
+.template-body[data-page="store-timeline.html"] .menuButtonsContainer::-webkit-scrollbar {
+  height: 8px;
+}
+
+.template-body[data-page="store-timeline.html"] .menuButtonsContainer::-webkit-scrollbar-thumb {
+  background: #c0c0c0;
+  border-radius: 4px;
+}
+
+.template-body[data-page="store-timeline.html"] .store-timeline-tabs > li {
+  float: none;
+  display: inline-block;
+}
+
+.template-body[data-page="store-timeline.html"] .store-timeline-tabs > li > a {
+  color: #555;
+  padding: 9px 16px;
+}
+
+.template-body[data-page="store-timeline.html"] .store-timeline-tabs > li.active > a,
+.template-body[data-page="store-timeline.html"] .store-timeline-tabs > li.active > a:hover,
+.template-body[data-page="store-timeline.html"] .store-timeline-tabs > li.active > a:focus {
+  background: #ef5038;
+  color: #fff !important;
+}
+
+.template-body[data-page="store-timeline.html"] .store-timeline-filter {
+  padding: 0;
+}
+
+.template-body[data-page="store-timeline.html"] .store-timeline-filter .row {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.template-body[data-page="store-timeline.html"] .store-timeline-filter .row > div {
+  margin-bottom: 15px;
+}
+
+.template-body[data-page="store-timeline.html"] .store-timeline-filter .row > div:nth-child(2) {
+  padding-right: 0;
+}
+
+.template-body[data-page="store-timeline.html"] .dpd1,
+.template-body[data-page="store-timeline.html"] .dpd2 {
+  background-color: #fff !important;
+}
+
+.template-body[data-page="store-timeline.html"] .timeIcon1,
+.template-body[data-page="store-timeline.html"] .timeIcon2 {
+  background-color: #f3f3f3;
+  color: #2e2e2e;
+}
+
+.template-body[data-page="store-timeline.html"] .store-timeline-time-filter {
+  display: flex;
+  align-items: stretch;
+  width: 50%;
+  float: left;
+}
+
+.template-body[data-page="store-timeline.html"] .store-timeline-time-filter > .bootstrap-timepicker {
+  flex: 0 1 190px;
+  width: 190px;
+}
+
+.template-body[data-page="store-timeline.html"] .store-timeline-time-filter .form-control {
+  width: 145px;
+}
+
+.template-body[data-page="store-timeline.html"] .store-timeline-time-filter .inputsDivider {
+  width: 38px;
+  min-width: 38px;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.template-body[data-page="store-timeline.html"] .filterButton {
+  margin-left: 10px !important;
+  border-radius: 4px !important;
+  background: #ef5038;
+  border-color: #ef5038;
+}
+
+.template-body[data-page="store-timeline.html"] .store-timeline-datatable-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  width: calc(100vw - 304px);
+  max-width: 100%;
+  padding: 0;
+  margin: 0 0 10px;
+  clear: both;
+  box-sizing: border-box;
+}
+
+.template-body[data-page="store-timeline.html"] .store-timeline-export-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.template-body[data-page="store-timeline.html"] .store-timeline-export-buttons img {
+  width: 16px;
+  margin-right: 4px;
+  vertical-align: -3px;
+}
+
+.template-body[data-page="store-timeline.html"] .store-timeline-search label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0;
+  font-weight: normal;
+}
+
+.template-body[data-page="store-timeline.html"] .store-timeline-search input {
+  width: 210px;
+  height: 31px;
+  display: inline-block;
+}
+
+.template-body[data-page="store-timeline.html"] .store-timeline-table-body {
+  display: inline-block;
+  min-width: 100%;
+  padding: 0;
+  overflow: visible;
+  background: #fff;
+}
+
+.template-body[data-page="store-timeline.html"] .store-timeline-table-scroll {
+  display: inline-block;
+  min-width: 100%;
+  overflow-x: visible;
+  overflow-y: visible;
+  background: #fff;
+}
+
+.template-body[data-page="store-timeline.html"] .storeTimelineTable {
+  min-width: 1980px;
+  margin-bottom: 0;
+  background: #fff;
+}
+
+.template-body[data-page="store-timeline.html"] .storeTimelineTable td {
+  vertical-align: middle !important;
+  white-space: nowrap;
+  font-size: 12px;
+  padding: 8px;
+}
+
+.template-body[data-page="store-timeline.html"] .storeTimelineTable th {
+  vertical-align: bottom !important;
+  white-space: normal;
+  text-align: center;
+  font-size: 13px;
+  padding: 10px 8px;
+}
+
+.template-body[data-page="store-timeline.html"] .storeTimelineTable th {
+  background: #f7f7f7;
+  color: #333;
+  line-height: 1.25;
+}
+
+.template-body[data-page="store-timeline.html"] .store-timeline-filters th {
+  position: relative;
+  padding: 12px 20px 12px 10px;
+  background: #ddd;
+}
+
+.template-body[data-page="store-timeline.html"] .store-timeline-filters input {
+  height: 34px;
+  padding: 6px 10px;
+  color: #555;
+  background: #fff;
+  border: 1px solid #d8d8d8;
+  border-radius: 4px;
+  font-size: 13px;
+  text-align: center;
+}
+
+.template-body[data-page="store-timeline.html"] .store-timeline-sort-icon {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #bbb;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.template-body[data-page="store-timeline.html"] .storeTimelineTable tfoot th {
+  background: #fff8e5;
+  font-weight: 700;
+}
+
+.template-body[data-page="store-timeline.html"] .storeTimelineTable .total-sum {
+  text-align: right;
+}
+
+@media (max-width: 767px) {
+  .template-body[data-page="store-timeline.html"] .store-timeline-datatable-bar,
+  .template-body[data-page="store-timeline.html"] .store-timeline-time-filter {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .template-body[data-page="store-timeline.html"] .filterButton {
+    margin-left: 0 !important;
+  }
+}
+
+@media (max-width: 1160px) {
+  .template-body[data-page="store-timeline.html"] .store-timeline-datatable-bar {
+    width: calc(100vw - 30px);
+  }
+}
+
+.template-body[data-page="item.html"] .store-item-detail-page {
+  padding: 0 0 25px;
+}
+
+.template-body[data-page="item.html"] {
+  overflow-x: auto !important;
+}
+
+.template-body[data-page="item.html"] #main-content,
+.template-body[data-page="item.html"] #container {
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+}
+
+.template-body[data-page="item.html"] .wrapper {
+  min-width: 1240px;
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+}
+
+.template-body[data-page="item.html"] .store-item-detail-page,
+.template-body[data-page="item.html"] .store-item-detail-page > .panel,
+.template-body[data-page="item.html"] .store-item-history-panel,
+.template-body[data-page="item.html"] .store-item-history-panel .panel-body {
+  overflow: visible !important;
+}
+
+.template-body[data-page="item.html"] .store-item-detail-page > .panel,
+.template-body[data-page="item.html"] .store-item-history-panel {
+  border: 0;
+  box-shadow: none;
+}
+
+.template-body[data-page="item.html"] .invoice-list {
+  margin-bottom: 0;
+}
+
+.template-body[data-page="item.html"] .information_title img,
+.template-body[data-page="item.html"] .stock-balances-title img,
+.template-body[data-page="item.html"] .assortment-title img {
+  width: 22px;
+}
+
+.template-body[data-page="item.html"] .information_body,
+.template-body[data-page="item.html"] .stock-balances-body,
+.template-body[data-page="item.html"] .assortment-body {
+  min-height: 180px;
+}
+
+.template-body[data-page="item.html"] .assortment-body [data-item-assortment],
+.template-body[data-page="item.html"] .assortment-body [data-item-semi-finished] {
+  display: block !important;
+}
+
+.template-body[data-page="item.html"] .assortment-body [data-item-assortment] > div,
+.template-body[data-page="item.html"] .assortment-body [data-item-semi-finished] > div {
+  display: flex !important;
+}
+
+.template-body[data-page="item.html"] .state-overview section {
+  min-height: 100px;
+}
+
+.template-body[data-page="item.html"] .store-item-history-panel .panel-body {
+  padding: 15px;
+}
+
+.template-body[data-page="item.html"] .store-item-filter-form {
+  margin-bottom: 0;
+}
+
+.template-body[data-page="item.html"] .store-item-filter-form:before,
+.template-body[data-page="item.html"] .store-item-filter-form:after {
+  content: " ";
+  display: table;
+}
+
+.template-body[data-page="item.html"] .store-item-filter-form:after {
+  clear: both;
+}
+
+.template-body[data-page="item.html"] .store-item-filter-form .input-large {
+  margin-bottom: 12px;
+}
+
+.template-body[data-page="item.html"] .store-item-filter-form .form-control {
+  height: 34px;
+}
+
+.template-body[data-page="item.html"] .button-time-icon {
+  height: 34px;
+}
+
+.template-body[data-page="item.html"] .store-item-grid-actions {
+  margin-top: 8px;
+  margin-bottom: 14px;
+}
+
+.template-body[data-page="item.html"] .store-item-grid-actions .excelButton {
+  margin-left: 10px;
+}
+
+.template-body[data-page="item.html"] .store-item-grid-actions img {
+  width: 16px;
+  margin-right: 4px;
+  vertical-align: -3px;
+}
+
+.template-body[data-page="item.html"] .store-item-grid {
+  clear: both;
+  overflow-x: visible !important;
+  width: 100%;
+}
+
+.template-body[data-page="item.html"] .store-item-grid .summary {
+  margin-bottom: 8px;
+  color: #555;
+}
+
+.template-body[data-page="item.html"] .store-item-history-table {
+  margin-bottom: 0;
+  background: #fff;
+  min-width: 1120px;
+}
+
+.template-body[data-page="item.html"] .store-item-history-table th,
+.template-body[data-page="item.html"] .store-item-history-table td {
+  vertical-align: middle !important;
+  white-space: nowrap;
+  font-size: 12px;
+  padding: 8px;
+}
+
+.template-body[data-page="item.html"] .store-item-history-table th {
+  background: lightgrey;
+  color: #333;
+}
+
+.template-body[data-page="item.html"] .store-item-history-table .filters td {
+  background: #fff;
+  padding: 4px;
+}
+
+.template-body[data-page="item.html"] .store-item-history-table .filters input {
+  height: 28px;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+.template-body[data-page="item.html"] .store-item-history-table tfoot td {
+  font-weight: 700;
+  text-align: right;
+}

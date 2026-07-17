@@ -1,0 +1,103 @@
+html,
+.template-body[data-page="rooms-kitchen.html"],
+.template-body[data-page="rooms-kitchen.html"] #container {
+  background: #fff;
+}
+
+.template-body[data-page="rooms-kitchen.html"] #container > aside {
+  display: none;
+}
+
+.template-body[data-page="rooms-kitchen.html"] #main-content {
+  margin-left: 0;
+  background: #fff;
+}
+
+.template-body[data-page="rooms-kitchen.html"] #main-content > .wrapper {
+  padding: 76px 15px 15px;
+  background: #fff;
+}
+
+.rooms-kitchen-page {
+  background: #fff;
+}
+
+.rooms-kitchen-page .kitchen-orders-row {
+  margin-right: -10px;
+  margin-left: -10px;
+}
+
+.rooms-kitchen-page .kitchen-order-col {
+  padding-right: 10px;
+  padding-left: 10px;
+}
+
+.rooms-kitchen-page .kitchen-order .panel {
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .14);
+}
+
+.rooms-kitchen-page .user-heading.alt {
+  padding: 14px 15px;
+  background: #2e2e2e;
+}
+
+.rooms-kitchen-page .user-heading.alt h1 {
+  margin: 0;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.rooms-kitchen-page table.sortable {
+  margin-bottom: 0;
+}
+
+.rooms-kitchen-page table.sortable thead td {
+  color: #2e2e2e;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+  vertical-align: middle;
+  background: #fff;
+  border-bottom: 1px solid #ddd;
+}
+
+.rooms-kitchen-page table.sortable tbody td {
+  font-size: 17px;
+  vertical-align: middle !important;
+  border-top: 1px solid rgba(255, 255, 255, .4);
+}
+
+.rooms-kitchen-page table.sortable tbody tr.default td {
+  background: #f7f7f7;
+  color: #777;
+}
+
+.rooms-kitchen-page table.sortable .input-group {
+  min-width: 135px;
+}
+
+.rooms-kitchen-page .duration {
+  height: 34px;
+  color: #2e2e2e;
+  font-size: 16px;
+  text-align: center;
+}
+
+.rooms-kitchen-page .done {
+  color: #fff !important;
+  cursor: pointer;
+}
+
+.rooms-kitchen-page .kitchen-extra-row td {
+  color: #2e2e2e;
+  background: #fff;
+  font-size: 15px;
+}
+
+.rooms-kitchen-page .warnEm-infinite td {
+  color: #fff;
+}

@@ -1,0 +1,440 @@
+#eMarkModal {
+    width: 100%;
+    height: 100%;
+
+    scale: 0 0;
+
+    background-color: #2e2e2e77;
+    backdrop-filter: blur(0);
+
+    display: grid;
+    place-items: center;
+
+    position: fixed;
+    top: 0;
+    left: 0;
+
+    z-index: 10000;
+    transition-duration: 300ms;
+    will-change: scale, opacity, backdrop-filter;
+}
+#eMarkModal.open,
+#orderDetailsModal.open
+{
+    scale: 1 1;
+    opacity: 1;
+    backdrop-filter: blur(5px);
+}
+
+#eMarkModal > .modalWindow {
+    width: 40%;
+    height: 60%;
+
+    background-color: #ffffff;
+
+    border-radius: 15px;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+
+    overflow: hidden;
+}
+#eMarkModal .modalHeaderContainer {
+    width: 100%;
+    padding: 15px 5% 0 5%;
+
+    background-color: #efefef;
+
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 5%;
+}
+.productTabButton {
+    padding: 20px 0 5px 0;
+
+    border: none;
+    outline: none;
+
+    background-color: transparent;
+
+    color: #2e2e2e;
+
+    position: relative;
+    transition-duration: 300ms;
+}
+.productTabButton::after {
+    content: '';
+    width: 100%;
+    height: 2px;
+    scale: 0 1;
+
+    border-radius: 1px;
+    background-color: #F05139;
+
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    transition-duration: 300ms;
+}
+.productTabButton.active::after,
+.productTabButton:hover::after { scale: 1 1; }
+.inButtonCounter {
+    width: 22px;
+    height: 22px;
+
+    border-radius: 50%;
+    border: 1px solid #F05139;
+
+    display: grid;
+    place-items: center;
+    color: #F05139;
+
+    position: absolute;
+    right: 0;
+    top: 0;
+    translate: 85% 15%;
+}
+.inButtonCounter.done {
+    background-color: transparent !important;
+    border: 1px solid #c0c0c0;
+}
+.productTabButton.active > .inButtonCounter{
+    background-color: #F05139;
+    color: #ffffff;
+}
+#eMarkModal .modalContentContainer {
+    width: 100%;
+    height: 65%;
+    padding-inline: 3%;
+}
+.eMarksContainer {
+    width: 100%;
+    height: 100%;
+
+    display: none;
+
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+.eMarksContainer.active {
+    display: block;
+}
+.eMarkInputContainer {
+    margin: 8px 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+.inputNumber {
+    width: 30px;
+    aspect-ratio: 1;
+
+    border: 1px solid #c0c0c0;
+    border-radius: 50%;
+
+    color: #2e2e2e;
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+
+    display: grid;
+    place-items: center;
+}
+.eMarkInput {
+    width: calc(100% - 76px);
+    height: 30px;
+    padding-inline: 8px;
+
+    background-color: #f3f3f3;
+
+    border: 1px solid #c0c0c0;
+    outline: none;
+    border-radius: 4px;
+
+    color: #404040;
+}
+.inputClearButton {
+    width: 30px;
+    aspect-ratio: 1;
+
+    border: none;
+    border-radius: 2px;
+
+    background-color: #F05139;
+
+    display: grid;
+    place-items: center;
+
+    cursor: pointer;
+    transition-duration: 250ms;
+}
+.inputClearButton:hover { background-color: #b03e2b; }
+.modalFooterContainer {
+    width: 100%;
+    height: 15%;
+    padding-inline: 3%;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.eMarkModalCloseButton,
+.eMarkModalSubmitButton {
+    padding: 8px 20px;
+
+    background-color: #c0c0c0;
+
+    border: none;
+    border-radius: 5px;
+
+    color: #ffffff;
+
+    cursor: pointer;
+    transition-duration: 300ms;
+}
+.eMarkModalCloseButton { background-color: #c0c0c0; }
+.eMarkModalSubmitButton:not([disabled]) { background-color: #78CD51; }
+.eMarkModalCloseButton:hover { background-color: #8f8f8f; }
+.eMarkModalSubmitButton[disabled] { background-color: #8f8f8f; }
+.eMarkModalSubmitButton:not([disabled]):hover { background-color: #64a843; }
+
+
+#eMarkModal > input.safetyInput { width: 0; height: 0; opacity: 0; scale: 0 0; position: fixed; left: 100vw; top: 100vh;}
+
+
+#orderDetailsModal {
+    width: 100%;
+    height: 100%;
+
+    scale: 0 0;
+    opacity: 0;
+
+    background-color: #2e2e2e77;
+    backdrop-filter: blur(0);
+
+    display: grid;
+    place-items: center;
+
+    position: fixed;
+    top: 0;
+    left: 0;
+
+    z-index: 10000;
+    transition: opacity 300ms, scale 0ms;
+    transition-delay: 250ms;
+    will-change: scale, opacity, backdrop-filter;
+}
+#orderDetailsModal.open { transition-delay: 0ms; }
+#orderDetailsModal > .modalWindow {
+    width: 40%;
+    height: 60%;
+    scale: 0 0;
+
+    background-color: #ffffff;
+
+    border-radius: 15px;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition-duration: 300ms;
+
+    overflow: hidden;
+}
+#orderDetailsModal.open > .modalWindow { scale: 1 1; }
+#orderDetailsModal .modalHeaderContainer {
+    width: 100%;
+
+    background-color: #efefef;
+
+    overflow-x: auto;
+}
+#orderDetailsModal .tabButtonsContainer {
+    padding-inline: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+}
+
+.tabButton {
+    max-width: 200px;
+    padding: 15px 0 10px 0;
+
+    color: #b9b9b9;
+    font-size: 15px;
+    font-weight: 700;
+    white-space: nowrap;
+
+    position: relative;
+
+    cursor: pointer;
+    text-transform: capitalize;
+    transition-duration: 200ms;
+
+    overflow-x: hidden;
+    text-overflow: ellipsis;
+}
+.tabButton::after {
+    content: '';
+    width: 100%;
+    height: 4px;
+
+    background-color: #F05139;
+
+    border-radius: 1px;
+
+    position: absolute;
+    left: 0;
+    bottom: 0;
+
+    scale: 0 1;
+    translate: -50% 0;
+
+    transition-duration: 200ms;
+}
+.tabButton:hover,
+.tabButton.active { color: #2e2e2e; }
+.tabButton.active::after {
+    scale: 1 1;
+    translate: 0 0;
+}
+#orderDetailsModal .modalContentContainer {
+    width: 100%;
+    height: 75%;
+    padding-inline: 3%;
+}
+.tabsContainer {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+}
+.itemsTab {
+    width: 100%;
+    height: 95%;
+    display: none;
+}
+.itemsTab.active { display: block; }
+
+.itemContainer {
+    width: 100%;
+    min-height: 100px;
+    margin-top: 10px;
+    padding: 10px 10px 10px 55px;
+
+    background-color: #f3f3f3;
+
+    border-radius: 8px;
+
+    display: flex;
+    align-items: center;
+    position: relative;
+
+    overflow: hidden;
+}
+.inTabItemNumber {
+    width: 45px;
+    height: 100%;
+    background-color: #c0c0c0;
+    display: grid;
+    place-items: center;
+
+    color: #ffffff;
+    font-size: 35px;
+
+    position: absolute;
+    left: 0;
+}
+.commentComponentContainer {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.ingredientButton,
+.commentButton {
+    margin: 2px;
+    padding: 5px 10px;
+
+    border: none;
+    border-radius: 5px;
+
+    color: #ffffff;
+    position: relative;
+    transition-duration: 100ms;
+}
+.ingredientButton { background-color: #4a4949; }
+.commentButton { background-color: #F05139; }
+.ingredientButton::before {
+    content: '';
+
+    width: 100%;
+    height: 1px;
+
+    background-color: #ffffff;
+    position: absolute;
+    top: 50%;
+    left: 0;
+    opacity: 0;
+}
+.ingredientButton.removed,
+.ingredientButton:hover { background-color: #626262; }
+.commentButton:hover { background-color: #c9442e; }
+.ingredientButton.removed::before { opacity: 1; }
+
+.commentInputContainer {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.commentInput {
+    width: calc(100% - 70px);
+    height: 35px;
+    margin-inline: 10px;
+    padding-inline: 10px;
+
+    border: 1px solid #b2b2b2;
+    border-radius: 4px;
+}
+.deletionButton {
+    width: 35px;
+    aspect-ratio: 1;
+
+    background-color: #ff6c60;
+
+    border: none;
+    border-radius: 3px;
+
+    display: grid;
+    place-items: center;
+
+    transition-duration: 100ms;
+    cursor: pointer;
+}
+.deletionButton:hover { background-color: #c9442e;}
+#orderDetailsModal .modalCloseButton,
+#orderDetailsModal .modalSubmitButton {
+    width: 30%;
+    padding: 5px 0;
+
+    border: none;
+    border-radius: 5px;
+
+    color: #ffffff;
+    font-size: 15px;
+
+    transition-duration: 100ms;
+    cursor: pointer;
+}
+#orderDetailsModal .modalCloseButton { background-color: #bec3c7; }
+#orderDetailsModal .modalCloseButton:hover { background-color: #8c8c91; }
+#orderDetailsModal .modalSubmitButton { background-color: #78CD51; }
+#orderDetailsModal .modalSubmitButton:hover { background-color: #5fa241; }

@@ -1,0 +1,220 @@
+.template-body[data-page="reports-ingredients.html"],
+.template-body[data-page="reports-ingredients.html"] #container,
+.template-body[data-page="reports-ingredients.html"] #main-content {
+  overflow-x: visible;
+  background: #fff;
+}
+
+body.template-body[data-page="reports-ingredients.html"] {
+  overflow-x: auto !important;
+}
+
+.template-body[data-page="reports-ingredients.html"] #main-content {
+  overflow: visible !important;
+}
+
+.template-body[data-page="reports-ingredients.html"] .wrapper {
+  display: block !important;
+  width: auto !important;
+  max-width: none !important;
+  overflow: visible !important;
+  padding: 76px 15px 0;
+  background: #fff;
+}
+
+.template-body[data-page="reports-ingredients.html"] #main-content,
+.template-body.sidebar-open[data-page="reports-ingredients.html"] #main-content {
+  max-width: none;
+}
+
+.reports-ingredients-page {
+  max-width: 100%;
+  overflow: visible;
+}
+
+.reports-ingredients-page > .row {
+  margin-right: 0 !important;
+  margin-left: 0 !important;
+}
+
+.reports-ingredients-page > .row > .col-xs-12 {
+  padding-right: 0 !important;
+  padding-left: 0 !important;
+}
+
+.reports-ingredients-panel {
+  max-width: 100%;
+  margin-bottom: 0;
+  overflow: visible;
+  border: 0;
+  box-shadow: none;
+}
+
+.reports-ingredients-panel > header.panel-heading {
+  margin-bottom: 0;
+  padding-right: 0 !important;
+  padding-left: 0 !important;
+  background: #fff;
+}
+
+.reports-ingredients-category {
+  width: auto;
+  max-width: none;
+  margin: 0 0 15px !important;
+  padding: 0 !important;
+}
+
+.reports-ingredients-category #materialCategoryFilter {
+  display: block;
+  width: 100%;
+  margin: 0;
+}
+
+.reports-ingredients-panel > .panel-body {
+  padding: 0;
+  overflow: visible;
+}
+
+.ingredients-filter-form {
+  margin-bottom: 15px;
+}
+
+.ingredients-filter-form > .row {
+  display: block;
+  margin-right: -15px;
+  margin-left: -15px;
+}
+
+.ingredients-filter-form > .row::before,
+.ingredients-filter-form > .row::after {
+  display: table;
+  content: " ";
+}
+
+.ingredients-filter-form > .row::after {
+  clear: both;
+}
+
+.ingredients-filter-form .header_filter {
+  width: 50% !important;
+}
+
+.reports-ingredients-tools {
+  margin-right: 0;
+  margin-bottom: 15px;
+  margin-left: 0;
+}
+
+.reports-ingredients-tools .col-sm-6:first-child {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 0;
+}
+
+.reports-ingredients-tools .col-sm-6:last-child {
+  padding-right: 0;
+}
+
+.reports-ingredients-tools .printButton,
+.reports-ingredients-tools .excelButton {
+  display: inline-flex;
+  align-items: center;
+}
+
+.reports-ingredients-tools .btn img {
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+}
+
+.reports-ingredients-search {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.reports-ingredients-search label {
+  margin-bottom: 0;
+}
+
+.reports-ingredients-search .form-control {
+  display: inline-block;
+  width: 280px;
+}
+
+.reports-ingredients-page .grid-view,
+.reports-ingredients-page .table-responsive {
+  width: 100%;
+  max-width: 100%;
+  overflow: visible !important;
+}
+
+.reports-ingredients-table {
+  table-layout: auto;
+  width: 100% !important;
+  min-width: 1080px !important;
+  margin-top: 15px;
+  background: #fff;
+}
+
+.reports-ingredients-table th,
+.reports-ingredients-table td {
+  height: 41px;
+  vertical-align: middle !important;
+  white-space: nowrap;
+}
+
+.reports-ingredients-table thead tr:first-child th {
+  font-weight: 700;
+  color: #000;
+}
+
+.reports-ingredients-table .column-search input {
+  height: 34px;
+}
+
+.reports-ingredients-table tfoot th {
+  font-weight: 700;
+  background: #f4f4f4;
+}
+
+.reports-ingredients-grid-bottom {
+  margin-right: 0;
+  margin-left: 0;
+}
+
+.reports-ingredients-grid-bottom .dataTables_info {
+  padding-top: 8px;
+}
+
+.reports-ingredients-grid-bottom .pagination {
+  float: right;
+  margin: 10px 0 0;
+}
+
+.reports-ingredients-page .sort-arrows {
+  float: right;
+  color: #c7c7c7;
+  font-size: 18px;
+}
+
+.ingredients-hidden-col {
+  display: none !important;
+}
+
+@media (max-width: 767px) {
+  .ingredients-filter-form .header_filter {
+    width: 100% !important;
+  }
+
+  .reports-ingredients-search {
+    justify-content: flex-start;
+    margin-top: 12px;
+  }
+
+  .reports-ingredients-search .form-control {
+    width: 100%;
+  }
+}

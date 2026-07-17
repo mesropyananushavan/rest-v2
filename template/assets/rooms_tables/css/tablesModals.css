@@ -1,0 +1,329 @@
+.numpad_main {
+  width: -webkit-max-content;
+  width: -moz-max-content;
+  width: max-content;
+  margin: 0 auto;
+}
+.numpad_main img {
+  top: 4px;
+}
+@media (max-width: 804px) {
+  .numpad {
+    top: 102px;
+  }
+}
+
+@media (max-width: 395px) {
+  .numpad_main, #exampleInputPassword5 {
+    width: 100% !important;
+  }
+}
+
+
+
+
+
+#myModal-4 .inputsPart {
+  display: flex;
+}
+#myModal-4 .totalCost {
+  width: 30%;
+  height: auto;
+  background: #f3f3f3;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+#myModal-4 .clientForm {
+  width: 70%;
+  padding-inline: 5px;
+}
+#myModal-4 .clientForm > *:first-child { margin: 0 0 5px 0; }
+#myModal-4 .clientForm > *:not(.bonusCardContainer) {
+  height: 35px;
+  margin: 5px 0;
+}
+#myModal-4 .clientForm > *:last-child {
+  height: 70px;
+  margin: 0 5px 0 0;
+}
+
+
+#myModal-4 .totalCost > span {
+  text-align: center;
+  font-weight: 400;
+  font-size: 14px;
+  color: #404040;
+}
+#myModal-4 .totalCost > span.totalPrice {
+  text-align: center;
+  font-weight: 700;
+  font-size: 32px !important;
+  color: #EF5038;
+}
+#myModal-4 .totalCost > span.totalPrice::after {
+  content: 'Դ';
+  font-size: 27px;
+  margin-left: 5px;
+}
+#myModal-4 .select2-selection--single {
+  height: 35px;
+}
+#tip {
+  padding-left: 10px !important;
+}
+
+#myModal-4 .cashBoxes {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-weight: 400;
+  font-size: 14px;
+  color: #2e2e2e;
+}
+
+
+#checkbox_id,
+.paymentsContainer {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-gap: 5px;
+}
+#checkbox_id > *,
+.paymentsContainer > * { width: 100% !important; }
+
+.payments {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+}
+.payment_type {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-gap: 5px;
+}
+.payment_type > * {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.payment_type input {
+  border-color: #4381C1 !important;
+  border-radius: 4px;
+}
+
+#myModal-4 > div {
+  min-width: 640px !important;
+  max-width: 95vw !important;
+}
+@media (max-width: 650px) {
+  #myModal-4 > div {
+    min-width: unset !important;
+    width: 95vw;
+  }
+}
+#myModal-4 span.totalPrice {
+  width: unset !important;
+}
+
+#checkbox_id,
+.paymentsContainer,
+.payment_type {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+#checkbox_id > *,
+.paymentsContainer > *,
+.payment_type > * {
+  width: 49%;
+  flex: 1 0 25% !important;
+}
+
+
+
+#myModal-4 h3{
+  text-align: center;
+  font-weight: 400;
+  font-size: 16px;
+}
+#myModal-4 .radio .radio {
+  height: 40px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: #f3f3f3;
+  display: flex;
+  align-items: center;
+  position: relative;
+  font-weight: 400;
+  font-size: 14px;
+}
+#myModal-4 .radio .radio > label { width: 35%; }
+#myModal-4 input[type='radio'] {
+  width: 0;
+  height: 0;
+  margin-left: 10px;
+  position: relative;
+  float: unset;
+}
+#myModal-4 input[type='radio']::after {
+  content: "";
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 1px solid #78CD51;
+  position: absolute;
+  transition-duration: 120ms;
+  transform: translate(-90%, -90%);
+  cursor: pointer;
+}
+#myModal-4 input[type='radio']:checked::after {
+  background: #78CD51;
+  border: 1px solid #2e2e2e;
+}
+
+#myModal-4 #customCardPayInput, #myModal-4 #remoteCustomCardPayInput {
+  width: 115px;
+  position: absolute;
+  right: 4px;
+  color: #2e2e2e;
+  border-radius: 4px;
+}
+#myModal-4 .radio .radio div.dividerLine {
+  width: 1px;
+  height: 100%;
+  margin-inline: 20px;
+  background: #c0c0c0;
+}
+@media (max-width: 425px) {
+  .inputsPart { flex-direction: column-reverse; }
+  #myModal-4 .totalCost,
+  #myModal-4 .clientForm {
+    width:100%;
+    margin-bottom: 10px;
+  }
+  #myModal-4 .clientForm { padding-inline: 0; }
+  #myModal-4 .clientForm > textarea:last-child { height: 35px; }
+  #myModal-4 .cashBoxes { margin-top: 0; }
+  #checkbox_id,
+  .paymentsContainer,
+  .payment_type {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+  }
+  #checkbox_id > *,
+  .paymentsContainer > *,
+  .payment_type > * {
+    width: 49%;
+    flex: 1 0 35% !important;
+  }
+  #myModal-4 label,
+  #myModal-4 span { font-size: 12px; }
+
+    #myModal-4 #customCardPayInput, #myModal-4 #remoteCustomCardPayInput {
+        width: 85px;
+    }
+  #myModal-4 > div.radio { padding-left: 0; }
+  .submitContainer {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+#myModal-4 #chargeButton {
+  position: absolute;
+  right: 4px;
+}
+
+#myModal-7 .modal-dialog {
+  width: 90%;
+}
+#myModal-7 .modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#myModal-7 .modal-footer:after,
+#myModal-7 .modal-footer:before {
+  display: none;
+}
+#myModal-7 form {
+  height: 125px;
+  font-size: 20px;
+  text-align: center;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+}
+#myModal-7 form > div {
+  width: 50%;
+  height: 100%;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+}
+#myModal-7 .saleInputTitle { width: 60%; }
+
+#myModal-7 .discountedAmount {
+  width: 60%;
+  height: 34px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.finalPriceContainer {
+  border-right: 1px solid #bec3c7;
+}
+@media screen and (max-width: 460px) {
+  #myModal-7 form {
+    height: 200px;
+    flex-direction: column;
+  }
+  #myModal-7 .form-inline > div {
+    width: 100%;
+    border-right: none;
+    justify-content: center;
+  }
+  #myModal-7 .saleInputTitle {
+    width: 100%;
+  }
+  .finalPriceContainer {
+    padding-bottom: 15px;
+    border-bottom: 1px solid #bec3c7;
+  }
+}
+
+@media screen and (min-width: 521px) {
+  #myModal-7 .modal-dialog {
+    width: 45%;
+  }
+}
+
+
+.saleCommentContainer {
+  width: 100%;
+  margin-top: 20px;
+  display: grid;
+  place-items: center;
+}
+#saleComment {
+  width: 80%;
+  aspect-ratio: 6;
+  resize: none;
+  padding: 5px 10px;
+  border-color: #B2B2B2
+}
+#saleComment::placeholder { color: #B2B2B2; }

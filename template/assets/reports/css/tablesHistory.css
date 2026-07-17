@@ -1,0 +1,219 @@
+.template-body[data-page="reports-tables-history.html"],
+.template-body[data-page="reports-tables-history.html"] #container,
+.template-body[data-page="reports-tables-history.html"] #main-content {
+  overflow-x: hidden;
+  background: #fff;
+}
+
+.template-body[data-page="reports-tables-history.html"] .wrapper {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 76px 15px 15px;
+  overflow: visible !important;
+  background: #fff;
+}
+
+.template-body[data-page="reports-tables-history.html"] #main-content,
+.template-body.sidebar-open[data-page="reports-tables-history.html"] #main-content {
+  width: calc(100vw - 274px);
+  max-width: none;
+}
+
+.reports-table-history-page {
+  width: 100%;
+  max-width: 100%;
+  overflow: visible;
+  background: #fff;
+}
+
+.reports-table-history-page .panel-body > div:not(.row) {
+  overflow: visible !important;
+}
+
+.filterButtonsContainer {
+  margin: 30px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-right: 25px;
+  flex-wrap: wrap;
+}
+
+.filterHistoryRow {
+  border: 0;
+  background: none;
+  color: #2e2e2e;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 16px;
+  display: flex;
+  align-items: center;
+  padding: 0;
+}
+
+.colorMarker {
+  width: 10px;
+  height: 10px;
+  margin-right: 10px;
+  border-radius: 2px;
+}
+
+.filterHistoryRow:nth-child(1) > .colorMarker {  }
+.filterHistoryRow:nth-child(2) > .colorMarker { background: #ffffff; border: 1px solid #2e2e2e; }
+.filterHistoryRow:nth-child(3) > .colorMarker { background: #E0CDA8; }
+.filterHistoryRow:nth-child(4) > .colorMarker { background: #F09A8D; }
+.filterHistoryRow:nth-child(5) > .colorMarker { background: #7DAF9C; }
+.filterHistoryRow:nth-child(6) > .colorMarker { background: #EDF08D; }
+.filterHistoryRow:nth-child(7) > .colorMarker { background: #A7A5C6; }
+.filterHistoryRow:nth-child(8) > .colorMarker { background: #5D707F; }
+
+#toolPager {
+  display: none;
+}
+
+.buttons-excel button {
+  transform: translateY(-15px);
+}
+
+.table-history-excel img {
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+  vertical-align: -4px;
+}
+
+#TableHistoryGridTable {
+  margin-right: 15px;
+  min-width: 2860px;
+  background: #fff;
+}
+
+form > .row {
+  padding-right: 15px;
+}
+
+.buttonsLine > button {
+  margin-inline: 5px !important;
+}
+
+.header_filter.header2,
+.food_date_print {
+  padding-right: 0;
+}
+
+.table-history-filter-form > .row {
+  display: block;
+  margin-right: -15px;
+  margin-left: -15px;
+}
+
+.table-history-filter-form > .row::before,
+.table-history-filter-form > .row::after {
+  display: table;
+  content: " ";
+}
+
+.table-history-filter-form > .row::after {
+  clear: both;
+}
+
+.table-history-filter-form .header_filter {
+  width: 50% !important;
+}
+
+.table-history-grid-wrap {
+  margin-top: 10px;
+  width: 100%;
+  max-width: 100%;
+}
+
+.table-history-grid-top,
+.table-history-grid-bottom {
+  margin-right: 0;
+  margin-left: 0;
+}
+
+.table-history-search label,
+.dataTables_length label {
+  font-weight: 400;
+}
+
+.table-history-search .form-control {
+  display: inline-block;
+  width: 180px;
+  margin-left: 5px;
+}
+
+.table-history-scroll {
+  overflow: auto;
+  width: 100%;
+  max-width: 100%;
+}
+
+#TableHistoryGridTable th,
+#TableHistoryGridTable td {
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+#TableHistoryGridTable .filters input,
+#TableHistoryGridTable .filters select {
+  min-width: 150px;
+  height: 30px;
+  padding: 4px 8px;
+}
+
+#TableHistoryGridTable .cogs {
+  font-size: 25px;
+  color: navy;
+  pointer-events: none;
+}
+
+.historyGridActions .flexBtns {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+#TableHistoryGridTable .closed-table {
+  background: #ffffff;
+}
+
+#TableHistoryGridTable .removed-order-table {
+  background: #E0CDA8;
+}
+
+#TableHistoryGridTable .zero-table {
+  background: #F09A8D;
+}
+
+#TableHistoryGridTable .discounted-table {
+  background: #7DAF9C;
+}
+
+#TableHistoryGridTable .discounted-product-table {
+  background: #EDF08D;
+}
+
+#TableHistoryGridTable .debt-table {
+  background: #A7A5C6;
+}
+
+#TableHistoryGridTable .empty-table {
+  background: #5D707F;
+  color: #fff;
+}
+
+@media (max-width: 767px) {
+  .table-history-filter-form .header_filter {
+    width: 100% !important;
+  }
+
+  .filterButtonsContainer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

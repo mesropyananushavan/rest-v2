@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="hy">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+  <title>Սպասման համակարգ - SMARTREST template</title>
+  <style>
+    :root {
+      --service-bg: #e8ece8;
+      --service-ink: #15191f;
+      --service-muted: #697386;
+      --service-dark: #111827;
+      --service-ready: #d71920;
+      --service-wait: #101820;
+      --service-green: #1f7a4d;
+      --service-card: rgba(255, 255, 255, 0.92);
+      --service-line: rgba(17, 24, 39, 0.12);
+      --page-pad: clamp(0.55rem, 0.9vw, 1.25rem);
+      --gap: clamp(0.45rem, 0.85vw, 1.25rem);
+      --card-height: clamp(4rem, 6.2vh, 5.6rem);
+      --number-size: clamp(1.6rem, 2.8vw, 2.8rem);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+    }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 8% 8%, rgba(31, 122, 77, 0.16), transparent 28%),
+        radial-gradient(circle at 94% 0%, rgba(215, 25, 32, 0.14), transparent 30%),
+        linear-gradient(135deg, #f4f6f4 0%, var(--service-bg) 100%);
+      color: var(--service-ink);
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+
+    .service-system-page {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      width: 100vw;
+      height: 100vh;
+      padding: var(--page-pad);
+      gap: var(--gap);
+    }
+
+    .service-system-topbar {
+      display: flex;
+      align-items: center;
+      gap: var(--gap);
+      min-height: clamp(3rem, 5.2vh, 4.6rem);
+    }
+
+    .service-system-back {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 clamp(2.35rem, 3vw, 3.5rem);
+      width: clamp(2.35rem, 3vw, 3.5rem);
+      height: clamp(2.35rem, 3vw, 3.5rem);
+      border-radius: clamp(0.65rem, 0.9vw, 1.1rem);
+      background: var(--service-dark);
+      color: #fff;
+      font-size: clamp(1.1rem, 1.5vw, 1.8rem);
+      line-height: 1;
+      text-decoration: none;
+      box-shadow: 0 0.8vh 2vh rgba(17, 24, 39, 0.16);
+      transition: transform 0.18s ease, background 0.18s ease;
+    }
+
+    .service-system-back:hover,
+    .service-system-back:focus {
+      background: #000;
+      color: #fff;
+      text-decoration: none;
+      transform: translateX(-0.18rem);
+    }
+
+    .service-system-brand {
+      flex: 1;
+      min-width: 0;
+      min-height: clamp(3rem, 5.2vh, 4.6rem);
+      border-radius: clamp(0.9rem, 1.2vw, 1.6rem);
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.72)),
+        var(--service-card);
+      box-shadow: 0 0.9vh 2.3vh rgba(17, 24, 39, 0.09);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--gap);
+      padding: clamp(0.45rem, 0.75vw, 0.95rem) clamp(0.75rem, 1vw, 1.25rem);
+    }
+
+    .service-system-logo {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(0.1rem, 0.25vh, 0.3rem);
+      min-width: 0;
+      line-height: 1;
+    }
+
+    .service-system-logo strong {
+      font-size: clamp(1.8rem, 3vw, 3rem);
+      font-weight: 900;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    .service-system-logo span {
+      color: var(--service-muted);
+      font-size: clamp(0.58rem, 0.7vw, 0.95rem);
+      font-weight: 900;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .service-system-live {
+      display: inline-flex;
+      align-items: center;
+      gap: clamp(0.35rem, 0.5vw, 0.65rem);
+      padding: clamp(0.38rem, 0.55vw, 0.7rem) clamp(0.65rem, 0.85vw, 1rem);
+      border: 1px solid rgba(31, 122, 77, 0.14);
+      border-radius: 999px;
+      background: #edfdf4;
+      color: var(--service-green);
+      font-size: clamp(0.68rem, 0.75vw, 1rem);
+      font-weight: 900;
+      white-space: nowrap;
+      transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+
+    .service-system-live:before {
+      content: "";
+      width: clamp(0.45rem, 0.55vw, 0.7rem);
+      height: clamp(0.45rem, 0.55vw, 0.7rem);
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+      animation: servicePulse 1.6s infinite;
+    }
+
+    .service-system-live.is-offline {
+      border-color: rgba(100, 116, 139, 0.26);
+      background: #eef2f7;
+      color: #64748b;
+    }
+
+    .service-system-live.is-offline:before {
+      background: #94a3b8;
+      box-shadow: none;
+      animation: none;
+    }
+
+    .service-system-live.is-error {
+      border-color: rgba(215, 25, 32, 0.22);
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .service-system-live.is-error:before {
+      background: var(--service-ready);
+      box-shadow: none;
+      animation: none;
+    }
+
+    @keyframes servicePulse {
+      70% {
+        box-shadow: 0 0 0 clamp(0.5rem, 0.75vw, 1rem) rgba(34, 197, 94, 0);
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+      }
+    }
+
+    .service-system-board {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: clamp(0.8rem, 1.8vw, 2.8rem);
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .service-system-board:before {
+      content: "";
+      position: absolute;
+      top: clamp(1rem, 2vh, 2rem);
+      bottom: clamp(1rem, 2vh, 2rem);
+      left: 50%;
+      width: clamp(0.26rem, 0.34vw, 0.48rem);
+      border-radius: 999px;
+      background: var(--service-dark);
+      transform: translateX(-50%);
+      opacity: 0.92;
+    }
+
+    .service-system-column {
+      position: relative;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      min-width: 0;
+      min-height: 0;
+      padding: clamp(0.25rem, 0.5vw, 0.7rem) clamp(0.35rem, 0.8vw, 1rem) clamp(0.3rem, 0.8vw, 1rem);
+    }
+
+    .service-system-heading {
+      margin: 0 0 clamp(0.35rem, 0.8vh, 0.8rem);
+      text-align: center;
+      font-size: clamp(2rem, 4vw, 3.5rem);
+      font-weight: 900;
+      line-height: 0.92;
+      letter-spacing: 0.02em;
+    }
+
+    .service-system-heading span {
+      display: block;
+      margin-top: clamp(0.18rem, 0.35vh, 0.45rem);
+      color: var(--service-muted);
+      font-size: clamp(0.62rem, 0.85vw, 1.05rem);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    .service-system-column.is-waiting .service-system-heading {
+      color: var(--service-wait);
+    }
+
+    .service-system-column.is-ready .service-system-heading {
+      color: var(--service-ready);
+    }
+
+    .service-system-orders {
+      --card-height: clamp(3.8rem, 5.9vh, 5.2rem);
+      --number-size: clamp(1.6rem, 2.8vw, 2.8rem);
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      grid-auto-rows: minmax(var(--card-height), auto);
+      align-content: start;
+      gap: clamp(0.65rem, 0.9vw, 1rem);
+      width: 100%;
+      max-width: 100%;
+      min-height: 0;
+      margin: 0 auto;
+      overflow: hidden;
+    }
+
+    .service-system-orders.is-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .service-system-orders.density-medium {
+      --card-height: clamp(3.45rem, 5.2vh, 4.7rem);
+      --number-size: clamp(1.45rem, 2.45vw, 2.45rem);
+    }
+
+    .service-system-orders.density-high {
+      --card-height: clamp(3.1rem, 4.5vh, 4rem);
+      --number-size: clamp(1.25rem, 2.05vw, 2.05rem);
+      gap: clamp(0.45rem, 0.65vw, 0.75rem);
+    }
+
+    .service-system-orders.density-max {
+      --card-height: clamp(2.8rem, 3.9vh, 3.5rem);
+      --number-size: clamp(1.05rem, 1.7vw, 1.7rem);
+      gap: clamp(0.35rem, 0.5vw, 0.6rem);
+    }
+
+    .service-order-card {
+      position: relative;
+      min-width: 0;
+      min-height: var(--card-height);
+      border: 1px solid var(--service-line);
+      border-radius: clamp(0.65rem, 0.95vw, 1.25rem);
+      background: var(--service-card);
+      box-shadow: 0 0.8vh 1.8vh rgba(17, 24, 39, 0.08);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(0.65rem, 0.8vh, 1rem) clamp(1.1rem, 1.35vw, 1.5rem);
+      text-align: center;
+      overflow: hidden;
+      animation: serviceCardIn 0.35s ease both;
+      transition: opacity 0.22s ease, transform 0.22s ease;
+    }
+
+    .service-order-card small {
+      color: var(--service-muted);
+      font-size: clamp(0.48rem, 0.58vw, 0.75rem);
+      font-weight: 900;
+      letter-spacing: 0.16em;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    .service-order-card strong {
+      color: var(--service-wait);
+      font-size: var(--number-size);
+      font-weight: 900;
+      line-height: 0.98;
+      max-width: 100%;
+      white-space: nowrap;
+    }
+
+    .service-system-column.is-ready .service-order-card {
+      border-color: rgba(215, 25, 32, 0.18);
+      background: rgba(255, 245, 245, 0.95);
+      box-shadow: 0 0.9vh 2vh rgba(215, 25, 32, 0.1);
+    }
+
+    .service-system-column.is-ready .service-order-card strong {
+      color: var(--service-ready);
+    }
+
+    .service-order-card.is-exiting {
+      opacity: 0;
+      transform: translateY(-1.2vh) scale(0.96);
+    }
+
+    .service-system-column.is-ready .service-order-card.is-new {
+      animation: serviceReadyIn 0.55s ease both, serviceReadyPulse 1.15s ease 0.55s 2;
+    }
+
+    .service-empty-state {
+      width: min(32rem, 82%);
+      padding: clamp(1rem, 2vw, 2rem);
+      border: 1px dashed rgba(100, 116, 139, 0.35);
+      border-radius: clamp(1rem, 1.5vw, 1.8rem);
+      background: rgba(255, 255, 255, 0.44);
+      color: rgba(100, 116, 139, 0.78);
+      font-size: clamp(1.1rem, 1.7vw, 2.3rem);
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .service-system-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--gap);
+      min-height: clamp(2.6rem, 5vh, 4.8rem);
+      padding: clamp(0.6rem, 1vw, 1.2rem) clamp(0.8rem, 1.2vw, 1.4rem);
+      border-radius: clamp(0.9rem, 1.4vw, 1.7rem);
+      background: rgba(17, 24, 39, 0.88);
+      color: rgba(255, 255, 255, 0.82);
+      font-size: clamp(0.78rem, 1vw, 1.25rem);
+      font-weight: 800;
+    }
+
+    .service-system-clock {
+      color: #fff;
+      font-size: clamp(1rem, 1.35vw, 1.8rem);
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+
+    @keyframes serviceCardIn {
+      from {
+        opacity: 0;
+        transform: translateY(1vh) scale(0.98);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes serviceReadyIn {
+      from {
+        opacity: 0;
+        transform: translateX(2.2vw) scale(0.94);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+      }
+    }
+
+    @keyframes serviceReadyPulse {
+      0%,
+      100% {
+        box-shadow: 0 1.7vh 3.8vh rgba(215, 25, 32, 0.13);
+      }
+
+      45% {
+        box-shadow: 0 0 0 clamp(0.45rem, 0.7vw, 0.9rem) rgba(215, 25, 32, 0.22), 0 2vh 4.5vh rgba(215, 25, 32, 0.26);
+      }
+    }
+
+    @media (max-width: 991px) {
+      body {
+        overflow-y: auto;
+      }
+
+      .service-system-page {
+        height: auto;
+        min-height: 100vh;
+      }
+
+      .service-system-topbar,
+      .service-system-brand {
+        align-items: stretch;
+      }
+
+      .service-system-brand {
+        flex-direction: column;
+      }
+
+      .service-system-logo strong,
+      .service-system-logo span {
+        white-space: normal;
+      }
+
+      .service-system-board {
+        grid-template-columns: 1fr;
+      }
+
+      .service-system-board:before {
+        display: none;
+      }
+
+      .service-system-orders {
+        max-width: 100%;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .service-system-topbar {
+        gap: 0.6rem;
+      }
+
+      .service-system-orders {
+        grid-template-columns: repeat(auto-fill, minmax(min(170px, 100%), 1fr));
+      }
+
+      .service-system-footer {
+        display: block;
+        text-align: center;
+      }
+
+      .service-system-clock {
+        display: block;
+        margin-top: 0.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="service-system-page">
+    <header class="service-system-topbar">
+      <a class="service-system-back" href="index.html" title="Վերադառնալ" aria-label="Վերադառնալ">
+        ‹
+      </a>
+      <section class="service-system-brand" aria-label="SMARTREST waiting display">
+        <div class="service-system-logo">
+          <strong>SMART PRODUCTION</strong>
+          <span>SMARTREST waiting display</span>
+        </div>
+        <div class="service-system-live" id="serviceSystemLive">Live refresh 2s</div>
+      </section>
+    </header>
+
+    <section class="service-system-board" aria-label="Սպասման համակարգ">
+      <div class="service-system-column is-waiting">
+        <h1 class="service-system-heading">Սպասում է<span>Wait</span></h1>
+        <div class="service-system-orders" id="waitingOrders" aria-live="polite"></div>
+      </div>
+
+      <div class="service-system-column is-ready">
+        <h1 class="service-system-heading">Պատրաստ է<span>Ready</span></h1>
+        <div class="service-system-orders" id="readyOrders" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <footer class="service-system-footer">
+      <span>Էկրանը նախատեսված է հաճախորդներին սպասող և պատրաստ պատվերները ցուցադրելու համար։</span>
+      <span class="service-system-clock" id="serviceSystemClock">--:--</span>
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      var REFRESH_MS = 2000;
+      var ENDPOINT = '/php/new_client_screen/logic/index.php';
+      var DEMO_DATA = {
+        expectedOrder: [
+          { client_check_id: 41 },
+          { client_check_id: 44 },
+          { client_check_id: 48 },
+          { client_check_id: 52 }
+        ],
+        readyOrder: [
+          { client_check_id: 39 },
+          { client_check_id: 43 },
+          { client_check_id: 47 }
+        ]
+      };
+
+      var waitingEl = document.getElementById('waitingOrders');
+      var readyEl = document.getElementById('readyOrders');
+      var clockEl = document.getElementById('serviceSystemClock');
+      var liveEl = document.getElementById('serviceSystemLive');
+      var state = {
+        waiting: [],
+        ready: [],
+        firstRender: true,
+        polling: false,
+        failCount: 0
+      };
+
+      function normalizeOrders(orders) {
+        if (!Array.isArray(orders)) return [];
+
+        return orders
+          .map(function (order) {
+            if (typeof order === 'number' || typeof order === 'string') return String(order).trim();
+            return String(order.client_check_id || order.orderNumber || order.id || '').trim();
+          })
+          .filter(Boolean)
+          .filter(function (value, index, list) {
+            return list.indexOf(value) === index;
+          })
+          .sort(function (a, b) {
+            return Number(a) - Number(b);
+          });
+      }
+
+      function sameList(a, b) {
+        if (a.length !== b.length) return false;
+        return a.every(function (item, index) {
+          return item === b[index];
+        });
+      }
+
+      function densityClass(count) {
+        if (count >= 24) return 'density-max';
+        if (count >= 14) return 'density-high';
+        if (count >= 8) return 'density-medium';
+        return '';
+      }
+
+      function setDensity(container, count) {
+        container.classList.remove('density-medium', 'density-high', 'density-max');
+        var nextClass = densityClass(count);
+        if (nextClass) container.classList.add(nextClass);
+      }
+
+      function createCard(orderNumber, type, isNew) {
+        var card = document.createElement('article');
+        card.className = 'service-order-card';
+        if (type === 'ready' && isNew) card.classList.add('is-new');
+        card.dataset.orderNumber = orderNumber;
+
+        var label = document.createElement('small');
+        label.textContent = 'Order';
+
+        var number = document.createElement('strong');
+        number.textContent = 'No.' + orderNumber;
+
+        card.appendChild(label);
+        card.appendChild(number);
+        return card;
+      }
+
+      function renderEmpty(container) {
+        var empty = document.createElement('div');
+        empty.className = 'service-empty-state';
+        empty.textContent = 'Պատվերներ չկան';
+        container.appendChild(empty);
+      }
+
+      function renderColumn(container, nextOrders, previousOrders, type, isInitialRender) {
+        var oldCards = Array.prototype.slice.call(container.querySelectorAll('.service-order-card'));
+        var nextSet = new Set(nextOrders);
+        var exitCards = oldCards.filter(function (card) {
+          return !nextSet.has(card.dataset.orderNumber);
+        });
+
+        if (exitCards.length) {
+          exitCards.forEach(function (card) {
+            card.classList.add('is-exiting');
+          });
+        }
+
+        setTimeout(function () {
+          container.innerHTML = '';
+          setDensity(container, nextOrders.length);
+          container.classList.toggle('is-empty', nextOrders.length === 0);
+
+          if (!nextOrders.length) {
+            renderEmpty(container);
+            return;
+          }
+
+          nextOrders.forEach(function (orderNumber) {
+            var isNew = !isInitialRender && previousOrders.indexOf(orderNumber) === -1;
+            container.appendChild(createCard(orderNumber, type, isNew));
+          });
+        }, exitCards.length ? 220 : 0);
+      }
+
+      function render(nextWaiting, nextReady) {
+        var waitingChanged = !sameList(state.waiting, nextWaiting);
+        var readyChanged = !sameList(state.ready, nextReady);
+
+        if (!state.firstRender && !waitingChanged && !readyChanged) return;
+
+        if (waitingChanged || state.firstRender) {
+          renderColumn(waitingEl, nextWaiting, state.waiting, 'waiting', state.firstRender);
+        }
+
+        if (readyChanged || state.firstRender) {
+          renderColumn(readyEl, nextReady, state.ready, 'ready', state.firstRender);
+        }
+
+        state.waiting = nextWaiting.slice();
+        state.ready = nextReady.slice();
+        state.firstRender = false;
+      }
+
+      function setLiveStatus(status) {
+        liveEl.classList.remove('is-offline', 'is-error');
+
+        if (status === 'online') {
+          liveEl.textContent = 'Live refresh 2s';
+          return;
+        }
+
+        if (status === 'error') {
+          liveEl.classList.add('is-error');
+          liveEl.textContent = 'Offline';
+          return;
+        }
+
+        liveEl.classList.add('is-offline');
+        liveEl.textContent = 'Offline';
+      }
+
+      function parseResponse(responseText) {
+        var payload = JSON.parse(responseText);
+        return {
+          waiting: normalizeOrders(payload.expectedOrder || payload.waiting || payload.waitingOrder || []),
+          ready: normalizeOrders(payload.readyOrder || payload.ready || [])
+        };
+      }
+
+      function fetchOrders() {
+        if (state.polling) return;
+        state.polling = true;
+
+        fetch(ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+          },
+          body: 'action=order_expected_or_ready',
+          cache: 'no-store'
+        })
+          .then(function (response) {
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            return response.text();
+          })
+          .then(function (text) {
+            var data = parseResponse(text);
+            state.failCount = 0;
+            setLiveStatus('online');
+            render(data.waiting, data.ready);
+          })
+          .catch(function (error) {
+            console.error('Service system fetch failed:', error);
+            state.failCount += 1;
+            if (state.failCount >= 2) {
+              setLiveStatus('error');
+            }
+          })
+          .finally(function () {
+            state.polling = false;
+            setTimeout(fetchOrders, REFRESH_MS);
+          });
+      }
+
+      function updateClock() {
+        var now = new Date();
+        var hours = String(now.getHours()).padStart(2, '0');
+        var minutes = String(now.getMinutes()).padStart(2, '0');
+        clockEl.textContent = hours + ':' + minutes;
+      }
+
+      render(normalizeOrders(DEMO_DATA.expectedOrder), normalizeOrders(DEMO_DATA.readyOrder));
+      updateClock();
+      setInterval(updateClock, 1000);
+      fetchOrders();
+    }());
+  </script>
+</body>
+</html>

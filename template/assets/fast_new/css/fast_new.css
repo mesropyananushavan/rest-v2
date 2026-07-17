@@ -1,0 +1,168 @@
+#bankModal {
+  backdrop-filter: blur(3px);
+  overflow-y: hidden;
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  background: #2e2e2e88;
+  z-index: 10000;
+}
+
+#bankModal.closed {
+  display: none;
+}
+
+#bankModal .modal-dialog {
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+#bankModal .modal-body,
+#bankModal .modal-content {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+#bankModal .modal-header {
+  color: #2e2e2e;
+  border-radius: 12px 12px 0 0;
+  background: #f3f3f3;
+}
+
+#bankModal .modal-footer::after,
+#bankModal .modal-footer::before {
+  display: none;
+}
+
+#bankModal .modal-body {
+  padding-bottom: 100px;
+}
+
+#bankModal .modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#bankModal .modal-footer > button {
+  min-width: 150px;
+  padding: 10px 20px;
+}
+
+#bankModal .modal-body > h4 {
+  text-align: center;
+}
+
+#bankModal .modal-body > img {
+  position: absolute;
+  left: 50%;
+  top: 60%;
+  transform: translate(-50%, -50%);
+}
+
+body {
+  overflow-x: hidden;
+}
+
+.client_card {
+  -webkit-text-security: disc;
+}
+
+.profiles_bonus_client_card {
+  -webkit-text-security: disc;
+}
+
+.sm-input {
+  -webkit-text-security: disc;
+}
+
+.fakepasswordremembered {
+  -webkit-text-security: disc;
+}
+
+.numpad_main img {
+  top: 4px;
+}
+
+.add_using_barcode {
+  padding-right: 35px;
+}
+
+#adminModal.modal.fade {
+  overflow: hidden;
+}
+
+@media (max-width: 804px) {
+  .numpad {
+    top: 102px;
+  }
+}
+
+@media (max-width: 395px) {
+  .numpad_main, #exampleInputPassword5 {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 991px) {
+  .add_scroll {
+    width: 100%;
+    max-height:
+  }
+
+  .tab-pane.active {
+    max-height: 386px;
+  }
+
+  #main-content .row > .mainContentContainer {
+    height: unset;
+  }
+}
+
+@media (max-width: 425px) {
+  #main-content .row > .mainContentContainer {
+    height: calc(100vh - 65px);
+  }
+}
+
+.defImage {
+  background-size: 40% !important;
+}
+.td-count > input[disabled] { border: none; background: none; outline: none; text-align: center; }
+
+
+.checkTelCell {
+  margin-bottom: 10px;
+  background-color: #f8643c;
+  border-color: #f8643c;
+}
+.checkTelCell:hover,
+.checkTelCell:active,
+.checkTelCell:focus {
+  background-color: #b4482b;
+  border-color: #b4482b;
+}
+
+.coffi .media {
+  width: 30%;
+  display: inline-block;
+  text-align: center;
+}
+
+.coffi button.addItemBtn, .coffi .media .text-muted, .coffi .media input {
+  display: none;
+}
+
+.coffi .addItemBtn {
+  float: none !important;
+  display: block;
+}
+
+.coffi .p-thumb img {
+  width: 100px;
+  height: 100px;
+}

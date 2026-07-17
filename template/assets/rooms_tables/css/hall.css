@@ -1,0 +1,299 @@
+body,
+html {
+  overflow-x: hidden;
+}
+
+.template-body .wrapper {
+  margin-top: 45px !important;
+}
+
+.template-body[data-page="rooms-hall.html"] {
+  background: #fff;
+  overflow-x: hidden !important;
+}
+
+.template-body[data-page="rooms-hall.html"] #main-content {
+  background: #fff;
+  min-height: auto;
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+}
+
+.template-body[data-page="rooms-hall.html"] #main-content > .wrapper > .row {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.template-body[data-page="rooms-hall.html"] .wrapper {
+  box-sizing: border-box;
+  display: block;
+  width: auto;
+  max-width: 100%;
+  min-height: 0;
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+}
+
+.template-body[data-page="rooms-hall.html"] .floresList {
+  max-width: 100%;
+  overflow-x: hidden !important;
+}
+
+.addNewFlore {
+  padding: 6px 12px !important;
+  border-radius: 4px;
+  transition-duration: 120ms;
+}
+
+.addNewFlore img,
+.profile-nav .user-heading .addHallButton img {
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+  vertical-align: -3px;
+}
+
+.tableTypes {
+  margin-left: 10px;
+  padding: 6px 12px !important;
+  background: #5FA8D3;
+  border-color: #5FA8D3;
+  border-radius: 4px;
+  transition-duration: 120ms;
+}
+
+.tableTypes:hover {
+  background: #4c88a9;
+  border-color: #4c88a9;
+}
+
+.floreContainer {
+  width: 100%;
+  margin: 0;
+}
+
+.floresList {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 15px;
+  background: #fff;
+}
+
+.profile-nav .user-heading {
+  background: #f3f3f3 !important;
+}
+
+.floreContainer .profile-nav {
+  margin-bottom: 0;
+}
+
+.floreContainer .panel {
+  margin-bottom: 0;
+  overflow: hidden;
+  background: #fff;
+  border-radius: 6px;
+}
+
+.floreName {
+  margin-top: 10px;
+  color: #2e2e2e;
+  font-size: 22px;
+}
+
+.buttonsInFloreContainer {
+  margin-top: 10px;
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: center;
+}
+
+.planningButton {
+  margin: 2px !important;
+  padding: 4px 10px;
+  font-size: 12px;
+  background: #97A7B3;
+  border-color: #97A7B3;
+  transition-duration: 120ms;
+}
+
+.changeButton,
+.deleteButton {
+  width: 28px;
+  height: 28px;
+  margin: 2px !important;
+  border-radius: 2px;
+  display: grid;
+  place-items: center;
+  transition-duration: 120ms;
+}
+
+.changeButton > img,
+.deleteButton > img {
+  height: 16px;
+}
+
+.planningButton:hover {
+  background: #79848f;
+  border-color: #79848f;
+}
+
+.addHallButton {
+  width: 65% !important;
+  min-width: 210px;
+  margin: 10px 0 15px 50% !important;
+  padding: 6px 12px !important;
+  border: 5px solid #78CD51 !important;
+  border-radius: 4px !important;
+  background: #78CD51;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  transition-duration: 120ms;
+  transform: translateX(-50%);
+  float: none !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+}
+
+.addHallButton:hover {
+  background: #67ab46;
+  border: 5px solid #67ab46 !important;
+}
+
+.hallContainer {
+  border-bottom: 1px solid #c0c0c0 !important;
+  display: flex !important;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: border-radius 300ms !important;
+}
+
+.hallContainer:hover {
+  background: #eeeeee;
+  border-radius: 8px !important;
+}
+
+.hallList {
+  background: #fff;
+  border-radius: 0 0 6px 6px;
+  min-height: 46px;
+}
+
+.hallName {
+  width: 85% !important;
+  padding: 0 0 0 3px !important;
+  color: #2e2e2e !important;
+  font-size: 14px !important;
+}
+
+.headerButtons {
+  margin-top: 15px !important;
+  margin-bottom: 15px !important;
+}
+
+.hallButtons {
+  width: 15% !important;
+  padding: 6px 3px 6px 0 !important;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.StoreContainerHeader {
+  background: #f3f3f3 !important;
+  border-radius: 6px !important;
+  padding: 10px !important;
+}
+
+@media (max-width: 1000px) {
+  .floresList {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  #main-content > .wrapper > .row {
+    margin: 0;
+  }
+
+  .floresList {
+    flex-direction: row;
+  }
+
+  .headerButtons > a,
+  .headerButtons > button {
+    margin: 0;
+  }
+
+  .pageTitle {
+    margin-left: 15px;
+    display: block;
+    color: #c0c0c0;
+    font-weight: 400;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 650px) {
+  .floresList {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 431px) {
+  .headerButtons {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .headerButtons > .btn:not(.btn-xs):not(.btn-sm) {
+    width: 49%;
+    padding-inline: 0;
+    margin-inline: 0;
+    margin-top: 5px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 360px) {
+  .headerButtons {
+    flex-direction: column;
+  }
+
+  .headerButtons > .btn:not(.btn-xs):not(.btn-sm) {
+    width: 100%;
+  }
+}
+
+#myModal-add .modal-body {
+  padding-bottom: 10px;
+}
+
+#add_srah {
+  margin-top: 25px !important;
+}
+
+#myModal-add .modal-dialog {
+  padding-inline: 10px;
+}
+
+header {
+  top: 0;
+}
+
+@media (max-width: 1160px) {
+  #main-content {
+    padding-top: 0 !important;
+  }
+}
+
+#addModal label,
+#addModal form > div > div,
+#editModal label,
+#editModal div.form-group > div {
+  width: 100% !important;
+}
+
+.change-type.btn-success img {
+  width: 15px;
+}

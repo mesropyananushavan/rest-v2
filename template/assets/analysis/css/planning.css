@@ -1,0 +1,132 @@
+.template-body[data-page="analysis-planning.html"],
+.template-body[data-page="analysis-planning.html"] #container,
+.template-body[data-page="analysis-planning.html"] #main-content {
+  overflow-x: hidden;
+  background: #fff;
+}
+
+.template-body[data-page="analysis-planning.html"] .wrapper {
+  overflow: visible !important;
+  padding: 76px 15px 0;
+  background: #fff;
+}
+
+.analysis-planning-page {
+  max-width: 100%;
+  overflow: visible;
+}
+
+.analysis-planning-page > .row {
+  margin-right: 0;
+  margin-left: 0;
+}
+
+.analysis-planning-action {
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.analysis-planning-page > .row > .col-md-12 {
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.analysis-planning-filter {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 15px;
+}
+
+.analysis-planning-select {
+  margin-right: 50px;
+  padding-left: 0;
+}
+
+.analysis-planning-select .select2,
+.analysis-planning-select .form-control {
+  width: 100%;
+}
+
+.analysis-planning-date {
+  padding-left: 0;
+}
+
+.analysis-planning-filter .input-large {
+  width: 100%;
+}
+
+.analysis-planning-filter .filter-planning {
+  min-width: 86px;
+  margin-left: auto;
+}
+
+.analysis-planning-table {
+  width: 100%;
+  margin-top: 15px;
+  background: #fff;
+}
+
+.analysis-planning-table,
+.analysis-planning-table tr,
+.analysis-planning-table th,
+.analysis-planning-table td {
+  text-align: center !important;
+}
+
+.analysis-planning-table th,
+.analysis-planning-table td {
+  height: 42px;
+  vertical-align: middle !important;
+}
+
+.analysis-planning-table .border-right {
+  border-right: 1px solid #ddd;
+}
+
+.analysis-planning-table .border-right-bolder {
+  border-right: 2px solid #ddd;
+}
+
+.analysis-planning-table thead th {
+  font-weight: 700;
+  background: #fff;
+}
+
+.analysis-planning-table tbody th {
+  width: 25%;
+  font-weight: 700;
+}
+
+.analysis-planning-modal .form-group {
+  margin-inline: 0;
+}
+
+.analysis-planning-modal .input-large {
+  width: 100%;
+}
+
+@media (max-width: 825px) {
+  .analysis-planning-filter {
+    flex-wrap: wrap;
+  }
+
+  .analysis-planning-filter > div {
+    margin-bottom: 10px;
+  }
+
+  .analysis-planning-select {
+    width: 100%;
+    margin-right: 0;
+    padding-right: 0;
+  }
+
+  .analysis-planning-date {
+    width: 100%;
+    padding-right: 0;
+  }
+
+  .analysis-planning-filter .filter-planning {
+    margin-left: 0;
+  }
+}

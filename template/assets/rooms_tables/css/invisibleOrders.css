@@ -1,0 +1,305 @@
+html {
+  height: 100%;
+}
+
+.template-body[data-page="rooms-invisible-orders.html"],
+.template-body[data-page="rooms-invisible-orders.html"] #main-content,
+.template-body[data-page="rooms-invisible-orders.html"] #container {
+  background: #f2f5f8;
+  overflow-x: hidden;
+}
+
+.template-body[data-page="rooms-invisible-orders.html"] #main-content .wrapper {
+  padding: 76px 18px 28px;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(239, 68, 68, 0.12), transparent 28%),
+    radial-gradient(circle at 92% 0%, rgba(14, 165, 233, 0.12), transparent 30%),
+    linear-gradient(135deg, #f2f5f8 0%, #f8fafc 100%);
+  overflow: visible !important;
+}
+
+.rooms-invisible-orders-page {
+  color: #1f2937;
+}
+
+.rooms-invisible-orders-page .invisible-orders-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+  padding: 26px;
+  border-radius: 24px;
+  background:
+    linear-gradient(135deg, rgba(127, 29, 29, 0.94), rgba(15, 23, 42, 0.9)),
+    #7f1d1d;
+  box-shadow: 0 18px 44px rgba(127, 29, 29, 0.18);
+  color: #fff;
+}
+
+.rooms-invisible-orders-page .invisible-orders-kicker,
+.rooms-invisible-orders-page .invisible-orders-card header span {
+  display: block;
+  margin-bottom: 6px;
+  color: #fecaca;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.rooms-invisible-orders-page .invisible-orders-hero h3 {
+  margin: 0 0 8px;
+  color: #fff;
+  font-size: 30px;
+  font-weight: 900;
+}
+
+.rooms-invisible-orders-page .invisible-orders-hero p {
+  max-width: 720px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.rooms-invisible-orders-page .invisible-orders-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.rooms-invisible-orders-page .invisible-orders-actions .btn {
+  min-width: 128px;
+  border: 0;
+  border-radius: 12px;
+  font-weight: 800;
+}
+
+.rooms-invisible-orders-page .invisible-orders-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.rooms-invisible-orders-page .invisible-orders-stat,
+.rooms-invisible-orders-page .invisible-orders-toolbar,
+.rooms-invisible-orders-page .invisible-orders-card {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+}
+
+.rooms-invisible-orders-page .invisible-orders-stat {
+  position: relative;
+  overflow: hidden;
+  padding: 16px;
+}
+
+.rooms-invisible-orders-page .invisible-orders-stat:before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 5px;
+  background: #94a3b8;
+}
+
+.rooms-invisible-orders-page .invisible-orders-stat.is-danger:before {
+  background: #ef4444;
+}
+
+.rooms-invisible-orders-page .invisible-orders-stat.is-warning:before {
+  background: #f59e0b;
+}
+
+.rooms-invisible-orders-page .invisible-orders-stat.is-info:before {
+  background: #06b6d4;
+}
+
+.rooms-invisible-orders-page .invisible-orders-stat span {
+  display: block;
+  margin-bottom: 6px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.rooms-invisible-orders-page .invisible-orders-stat strong {
+  display: block;
+  color: #0f172a;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.rooms-invisible-orders-page .invisible-orders-stat em {
+  display: block;
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 12px;
+  font-style: normal;
+}
+
+.rooms-invisible-orders-page .invisible-orders-toolbar {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) 210px 210px;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 14px;
+}
+
+.rooms-invisible-orders-page .invisible-orders-toolbar .form-control {
+  height: 40px;
+  border-color: #d8dee8;
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.rooms-invisible-orders-page .invisible-orders-search {
+  position: relative;
+}
+
+.rooms-invisible-orders-page .invisible-orders-search i {
+  position: absolute;
+  top: 12px;
+  left: 13px;
+  color: #94a3b8;
+}
+
+.rooms-invisible-orders-page .invisible-orders-search .form-control {
+  padding-left: 36px;
+}
+
+.rooms-invisible-orders-page .invisible-orders-card {
+  overflow: hidden;
+}
+
+.rooms-invisible-orders-page .invisible-orders-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.rooms-invisible-orders-page .invisible-orders-card h4 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.rooms-invisible-orders-page .invisible-orders-badge,
+.rooms-invisible-orders-page .invisible-orders-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 25px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.rooms-invisible-orders-page .invisible-orders-badge {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.rooms-invisible-orders-page .invisible-orders-pill.is-warning {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.rooms-invisible-orders-page .invisible-orders-pill.is-danger {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.rooms-invisible-orders-page .invisible-orders-pill.is-info {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.rooms-invisible-orders-page .invisible-orders-table-wrap {
+  padding: 18px 20px 20px;
+}
+
+.rooms-invisible-orders-page .invisible-orders-table {
+  min-width: 840px;
+  margin-bottom: 0;
+}
+
+.rooms-invisible-orders-page .invisible-orders-table > thead > tr > th {
+  border-bottom: 1px solid #e2e8f0;
+  color: #64748b;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.rooms-invisible-orders-page .invisible-orders-table > tbody > tr > td {
+  vertical-align: middle;
+  border-top: 1px solid #eef2f7;
+  color: #334155;
+}
+
+.rooms-invisible-orders-page .transform_order {
+  border: 0;
+  border-radius: 10px;
+  font-weight: 800;
+}
+
+@media (max-width: 1199px) {
+  .rooms-invisible-orders-page .invisible-orders-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .rooms-invisible-orders-page .invisible-orders-toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .rooms-invisible-orders-page .invisible-orders-search {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 767px) {
+  .template-body[data-page="rooms-invisible-orders.html"] #main-content .wrapper {
+    padding: 62px 8px 16px;
+  }
+
+  .rooms-invisible-orders-page .invisible-orders-hero {
+    display: block;
+    padding: 20px;
+    border-radius: 18px;
+  }
+
+  .rooms-invisible-orders-page .invisible-orders-hero h3 {
+    font-size: 24px;
+  }
+
+  .rooms-invisible-orders-page .invisible-orders-actions {
+    justify-content: stretch;
+    margin-top: 16px;
+  }
+
+  .rooms-invisible-orders-page .invisible-orders-actions .btn {
+    width: 100%;
+  }
+
+  .rooms-invisible-orders-page .invisible-orders-stats,
+  .rooms-invisible-orders-page .invisible-orders-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .rooms-invisible-orders-page .invisible-orders-search {
+    grid-column: auto;
+  }
+}

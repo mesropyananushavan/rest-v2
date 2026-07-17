@@ -1,0 +1,385 @@
+body,
+html {
+  overflow-x: hidden;
+}
+
+.template-body[data-page="rooms-hall-planning.html"] {
+  background: #ededed;
+}
+
+.template-body[data-page="rooms-hall-planning.html"] #main-content {
+  background: #ededed;
+  overflow: hidden;
+}
+
+.template-body[data-page="rooms-hall-planning.html"] .wrapper {
+  display: block;
+  width: auto;
+  min-height: calc(100vh - 76px);
+  padding: 76px 0 0;
+  background: #ededed;
+  overflow: hidden;
+}
+
+.hall-plan-page {
+  min-height: calc(100vh - 76px);
+}
+
+.hall-plan-top {
+  width: 100%;
+  padding: 17px 19px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.hall-plan-top h2 {
+  margin: 8px 0 0;
+  color: #2e2e2e;
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.hall-plan-top p {
+  margin: 3px 0 0;
+  color: #797979;
+}
+
+.hall-plan-back {
+  padding: 5px 12px;
+}
+
+.save_hall {
+  background-color: #78CD51 !important;
+  border-color: #78CD51 !important;
+}
+
+.hall-plan-workspace {
+  padding: 24px 30px 30px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.hall-plan-sidebar {
+  width: 280px;
+  flex: 0 0 280px;
+}
+
+.hall-plan-group {
+  margin-bottom: 12px;
+}
+
+.planning_main h3 {
+  width: 250px;
+  min-height: 40px;
+  margin: 0;
+  padding: 11px 40px 11px 34px !important;
+  position: relative;
+  border-radius: 12px 12px 0 0 !important;
+  border: 1px solid transparent;
+  color: #fff !important;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.planning_main h3:before {
+  content: "\f0d7";
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  font-family: FontAwesome, sans-serif;
+}
+
+.planning_main h3 .plus_icon {
+  position: absolute;
+  right: 6px;
+  top: 5px;
+  padding: 7px 9px 5px;
+  background: #78CD51;
+  border-radius: 12px;
+  color: #fff;
+}
+
+.ac_content {
+  width: 250px;
+  padding: 10px 15px !important;
+  border-radius: 0 0 12px 12px !important;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-top: 0;
+}
+
+.planning_main .tables_ {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  max-width: 220px;
+}
+
+.hall_table {
+  width: 44px;
+  margin: 0 8px 8px 0;
+  position: relative;
+  z-index: 9;
+}
+
+.hall_table span {
+  position: absolute;
+  z-index: 11;
+  top: 35%;
+  left: 0;
+  display: block;
+  width: 100%;
+  color: #2e2e2e;
+  font-size: 11px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hall_table .table_img_list {
+  width: 44px;
+}
+
+.hall_table .table_img_list2 {
+  width: 84px;
+}
+
+.halls_section {
+  width: min(1020px, calc(100vw - 640px));
+  min-width: 720px;
+  height: 650px;
+  margin: 0 auto 23px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #b8b8b8;
+  background: linear-gradient(135deg, rgba(255,255,255,.92), rgba(250,250,250,.92)), url("../../img/common/order_back.png") center/cover;
+}
+
+.floor-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,0,0,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.floor-room {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, .22);
+}
+
+.floor-room-main {
+  left: 6%;
+  top: 9%;
+  width: 45%;
+  height: 38%;
+  background: rgba(120, 205, 81, .78);
+  clip-path: polygon(0 0, 100% 0, 100% 70%, 74% 70%, 74% 100%, 0 100%);
+}
+
+.floor-room-vip {
+  right: 8%;
+  top: 10%;
+  width: 32%;
+  height: 34%;
+  background: rgba(95, 168, 211, .82);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 18% 100%, 0 75%);
+}
+
+.floor-room-terrace {
+  left: 27%;
+  bottom: 9%;
+  width: 58%;
+  height: 34%;
+  background: rgba(248, 181, 28, .8);
+  clip-path: polygon(8% 0, 100% 0, 92% 100%, 0 100%);
+}
+
+.placed-table {
+  width: 62px;
+  position: absolute;
+  z-index: 3;
+  text-align: center;
+}
+
+.placed-table img {
+  width: 54px;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .2));
+}
+
+.placed-table-rect {
+  width: 92px;
+}
+
+.placed-table-rect img {
+  width: 84px;
+}
+
+.placed-table span {
+  display: block;
+  margin-bottom: 2px;
+  padding: 2px 6px;
+  background: #fff;
+  border-radius: 20px;
+  color: #2e2e2e;
+  font-size: 11px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .12);
+}
+
+.box {
+  position: relative;
+  user-select: none;
+}
+
+.box-wrapper {
+  position: absolute;
+  transform-origin: center center;
+  user-select: none;
+}
+
+.demo-selection {
+  left: 12%;
+  top: 16%;
+  z-index: 4;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  position: absolute;
+  border: 1px solid #fff;
+  border-radius: 100px;
+  background-color: #1E88E5;
+  user-select: none;
+}
+
+.dot.left-top {
+  top: -5px;
+  left: -5px;
+}
+
+.dot.left-bottom {
+  bottom: -5px;
+  left: -5px;
+}
+
+.dot.right-top {
+  top: -5px;
+  right: -5px;
+}
+
+.dot.right-bottom {
+  right: -5px;
+  bottom: -5px;
+}
+
+.dot.top-mid {
+  top: -5px;
+  left: calc(50% - 5px);
+}
+
+.dot.bottom-mid {
+  bottom: -5px;
+  left: calc(50% - 5px);
+}
+
+.dot.left-mid {
+  left: -5px;
+  top: calc(50% - 5px);
+}
+
+.dot.right-mid {
+  right: -5px;
+  top: calc(50% - 5px);
+}
+
+.dot.rotate {
+  top: -30px;
+  left: calc(50% - 5px);
+}
+
+.rotate-link {
+  position: absolute;
+  width: 1px;
+  height: 15px;
+  top: -20px;
+  left: calc(50% + .5px);
+  z-index: -1;
+  background-color: #1E88E5;
+}
+
+.hall_buttons {
+  position: absolute;
+  top: -42px;
+  left: 0;
+  display: flex;
+}
+
+.hall_buttons .save_planning_room {
+  margin-right: 8px;
+  padding: 6px;
+  border: 1px solid #78CD51;
+  border-radius: 6px;
+  background: #fff;
+  color: #78CD51;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.hall_buttons .remove_planning_room {
+  height: 30px;
+  padding: 6px;
+  border: 1px solid #F05139;
+  border-radius: 6px;
+  background: #F05139;
+  color: #fff;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.hall_buttons .remove_planning_room img {
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
+}
+
+@media (max-width: 1160px) {
+  .hall-plan-workspace {
+    padding-inline: 15px;
+  }
+
+  .halls_section {
+    width: calc(100vw - 340px);
+    min-width: 620px;
+  }
+}
+
+@media (max-width: 900px) {
+  .template-body[data-page="rooms-hall-planning.html"] #main-content {
+    overflow: auto;
+  }
+
+  .hall-plan-workspace {
+    flex-direction: column;
+  }
+
+  .hall-plan-sidebar {
+    width: 100%;
+    flex-basis: auto;
+  }
+
+  .halls_section {
+    width: 100%;
+    min-width: 0;
+  }
+}
