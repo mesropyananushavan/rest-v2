@@ -47,11 +47,11 @@ Differs from legacy screens because v2 separates operational concepts that legac
 
 ## 2. Architecture Decision Records
 
-ADR-001 Backend stack. Context: v2 must be maintainable by Laravel/PHP teams and support queues, cache, tests, and relational transactions. Decision: PHP 8.3, Laravel latest supported major compatible with PHP 8.3, MariaDB/MySQL, Redis, Laravel Horizon, Pest. As of July 17, 2026, Laravel 13 requires PHP 8.3 and is active with security fixes until March 17, 2028 per official Laravel release notes. Consequences: use Laravel conventions where helpful, but domain rules remain module-owned, not controller/model-owned. Source: [official Laravel release notes](https://laravel.com/docs/13.x/releases).
+ADR-001 Backend stack. Context: v2 must be maintainable by Laravel/PHP teams and support queues, cache, tests, and relational transactions. Decision: PHP 8.3, Laravel latest supported major compatible with PHP 8.3, PostgreSQL, Redis, Laravel Horizon, Pest. As of July 17, 2026, Laravel 13 requires PHP 8.3 and is active with security fixes until March 17, 2028 per official Laravel release notes. Consequences: use Laravel conventions where helpful, but domain rules remain module-owned, not controller/model-owned. Source: [official Laravel release notes](https://laravel.com/docs/13.x/releases).
 
 ADR-002 Modular monolith. Context: the product has tightly related restaurant workflows but clear bounded contexts. Decision: one Laravel deployable with modules containing `Domain`, `Application`, `Infrastructure`, and `Http`. Modules communicate only through public contracts and domain events. Consequences: simpler deployment than microservices, but strict review rules are needed to prevent cross-module Eloquent/table access.
 
-ADR-003 Shared database tenancy. Context: SaaS must support many restaurant companies and branches from day one. Decision: shared DB, `tenant_id` on every tenant-owned row, branch-owned rows also carry `branch_id`; middleware resolves tenant and branch; Eloquent global scopes enforce tenant isolation. Consequences: all queries, indexes, jobs, events, and cache keys include tenant context.
+ADR-003 Shared database tenancy. Context: SaaS must support many restaurant companies and branches from day one. Decision: shared DB, `tenant_id` on every tenant-owned row, branch-owned rows also carry `branch_id`; middleware resolves tenant and branch; Eloquent global scopes enforce tenant isolation. PostgreSQL Row-Level Security will be evaluated in Stage 2 as a second enforcement layer for tenant isolation and implemented if straightforward. Consequences: all queries, indexes, jobs, events, and cache keys include tenant context.
 
 ADR-004 Server-rendered frontend. Context: legacy screens are operational, dense, and server-form oriented. Decision: Blade + Bootstrap 5 + extracted custom CSS tokens via Vite; Alpine for local UI; Livewire for POS, waiter calls, kitchen, displays. No SPA. Consequences: simpler auth/session/i18n, lower frontend complexity, Livewire components must be kept thin and call Application actions.
 
@@ -371,7 +371,7 @@ Differs from legacy screens because v2 removes hardcoded Armenian labels, inline
 
 ## 8. Infrastructure & Delivery
 
-Local dev: Docker Compose with app PHP-FPM/CLI, Nginx, MariaDB/MySQL, Redis, Horizon worker, mailhog-compatible mail catcher, optional local object storage. Seed demo tenant/branch/users/menu for walking skeleton.
+Local dev: Docker Compose with app PHP-FPM/CLI, Nginx, PostgreSQL, Redis, Horizon worker, mailhog-compatible mail catcher, optional local object storage. Seed demo tenant/branch/users/menu for walking skeleton.
 
 CI:
 

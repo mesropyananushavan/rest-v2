@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, intl, pdo_pgsql, redis, zip, pcntl
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Validate Composer
+        run: composer validate --strict
+
+      - name: Install PHP Dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Install Node Dependencies
+        run: npm ci
+
+      - name: Pint
+        run: vendor/bin/pint --test
+
+      - name: PHPStan
+        run: vendor/bin/phpstan analyse --memory-limit=1G
+
+      - name: Pest
+        run: vendor/bin/pest
+
+      - name: Vite Build
+        run: npm run build
