@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 /** @var string|null $title */
 /** @var int|string|null $count */
+/** @var string $bodyClass */
 ?>
 
 @props([
     'title' => null,
     'count' => null,
+    'bodyClass' => 'p-4',
 ])
 
 <section {{ $attributes->class(['sr-card card']) }}>
@@ -28,7 +30,7 @@ declare(strict_types=1);
         </div>
     @endif
 
-    <div class="card-body">
+    <div @class(['card-body', $bodyClass])>
         {{ $slot }}
     </div>
 </section>

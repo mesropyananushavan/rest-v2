@@ -15,55 +15,58 @@ $title = $isEdit ? __('menu.categories.edit_title') : __('menu.categories.create
 @section('title', $title)
 
 @section('content')
+    <x-page-header
+        :eyebrow="__('menu.categories.heading')"
+        :title="$title"
+    >
+        <x-slot:actions>
+            <x-button :href="route('admin.menu.index')" variant="outline-secondary" size="sm">
+                {{ __('menu.actions.back') }}
+            </x-button>
+        </x-slot:actions>
+    </x-page-header>
+
     <div class="row justify-content-center">
         <div class="col-12 col-lg-8">
-            <section class="sr-card card">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-start mb-4">
-                        <div>
-                            <p class="text-uppercase text-muted small mb-1">{{ __('menu.categories.heading') }}</p>
-                            <h1 class="h4 mb-0">{{ $title }}</h1>
+            <x-card>
+                <form method="post" action="{{ $isEdit ? route('admin.menu.categories.update', ['category' => (int) $category->id]) : route('admin.menu.categories.store') }}" novalidate>
+                    @csrf
+                    @if ($isEdit)
+                        @method('put')
+                    @endif
+
+                    @include('modules.menu.partials.localized-name-fields', ['model' => $category])
+
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <x-form.input
+                                name="sort_order"
+                                type="number"
+                                :label="__('menu.fields.sort_order')"
+                                :value="$category?->sort_order ?? 0"
+                                required
+                            />
                         </div>
-                        <a href="{{ route('admin.menu.index') }}" class="btn btn-outline-secondary btn-sm">
-                            {{ __('menu.actions.back') }}
-                        </a>
+                        <div class="col-12 col-md-6 d-flex align-items-end">
+                            <x-form.toggle
+                                class="mb-3"
+                                name="active"
+                                :label="__('menu.fields.active')"
+                                :checked="$category?->active ?? true"
+                            />
+                        </div>
                     </div>
 
-                    <form method="post" action="{{ $isEdit ? route('admin.menu.categories.update', ['category' => (int) $category->id]) : route('admin.menu.categories.store') }}" novalidate>
-                        @csrf
-                        @if ($isEdit)
-                            @method('put')
-                        @endif
-
-                        @include('modules.menu.partials.localized-name-fields', ['model' => $category])
-
-                        <div class="row g-3">
-                            <div class="col-12 col-md-6">
-                                <label for="sort_order" class="form-label">{{ __('menu.fields.sort_order') }}</label>
-                                <input id="sort_order" name="sort_order" type="number" min="0" class="form-control @error('sort_order') is-invalid @enderror" value="{{ old('sort_order', $category?->sort_order ?? 0) }}" required>
-                                @error('sort_order')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            <div class="col-12 col-md-6 d-flex align-items-end">
-                                <div class="form-check mb-2">
-                                    <input id="active" name="active" type="checkbox" value="1" class="form-check-input" @checked(old('active', $category?->active ?? true))>
-                                    <label for="active" class="form-check-label">{{ __('menu.fields.active') }}</label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mt-4 d-flex gap-2">
-                            <button type="submit" class="btn btn-primary">
-                                {{ $isEdit ? __('menu.actions.save') : __('menu.actions.create') }}
-                            </button>
-                            <a href="{{ route('admin.menu.index') }}" class="btn btn-outline-secondary">
-                                {{ __('menu.actions.cancel') }}
-                            </a>
-                        </div>
-                    </form>
-                </div>
-            </section>
+                    <div class="mt-4 d-flex gap-2">
+                        <x-button type="submit">
+                            {{ $isEdit ? __('menu.actions.save') : __('menu.actions.create') }}
+                        </x-button>
+                        <x-button :href="route('admin.menu.index')" variant="outline-secondary">
+                            {{ __('menu.actions.cancel') }}
+                        </x-button>
+                    </div>
+                </form>
+            </x-card>
         </div>
     </div>
 @endsection

@@ -79,6 +79,14 @@ it('runs menu category and item CRUD through authenticated Blade routes', functi
 
     $this->actingAs($manager['user'])
         ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->get(route('admin.menu.index'))
+        ->assertOk()
+        ->assertSee('data-bs-toggle="modal"', false)
+        ->assertSee('delete_category_', false)
+        ->assertSee('delete_item_', false);
+
+    $this->actingAs($manager['user'])
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
         ->delete(route('admin.menu.items.destroy', ['item' => (int) $item->id]))
         ->assertRedirect(route('admin.menu.index'));
 

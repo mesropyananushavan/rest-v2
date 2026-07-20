@@ -1,6 +1,6 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.4 complete; Stage 1.5 ready
+Status: Stage 1.5 complete; Stage 1.6 ready
 Branch: phase-2-stage-1-admin-ui
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
@@ -44,12 +44,16 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   confirm-modal delete flow, and flash messages; dashboard/layout now consume
   shared components and component smoke coverage renders the set. Gates green:
   Pint pass, PHPStan pass, Pest 41 passed / 2 skipped / 275 assertions.
-- [ ] Stage 1.5: Menu pages as the UI reference implementation. Rewrite the
+- [x] Stage 1.5: Menu pages as the UI reference implementation. Rewrite the
   existing Menu CRUD pages to use the new admin layout and x-components,
   replace raw delete buttons with confirm-modal, ensure every action returns
   success/error flash messages, preserve thin controllers and Application
   action placement, and keep tenant isolation tests green. Run `make pint &&
-  make stan && make test`, commit. Result: pending.
+  make stan && make test`, commit. Result: Menu index/forms now use shared
+  page header, card, table, button, form, status badge, and confirm-modal
+  components; delete actions render Bootstrap confirm modals while direct
+  action routes and existing flash messages remain unchanged. Gates green:
+  Pint pass, PHPStan pass, Pest 41 passed / 2 skipped / 279 assertions.
 - [ ] Stage 1.6: money presentation and major-unit forms. Add
   `App\Support\Money` formatting helpers that render minor-unit values as
   locale/currency-aware major units, update Menu prices to display and accept
@@ -85,6 +89,10 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   forms, status badges, confirm-delete modal, and flash messages; dashboard
   and layout consume the first shared components. Gates green: Pint pass,
   PHPStan pass, Pest 41 passed / 2 skipped / 275 assertions.
+- 2026-07-20: Stage 1.5 Menu component rewrite complete locally. Menu CRUD is
+  now the reference implementation for the shared admin components, including
+  confirm-modal delete UI and continued flash/tenant-isolation behavior. Gates
+  green: Pint pass, PHPStan pass, Pest 41 passed / 2 skipped / 279 assertions.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -96,6 +104,6 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   correct reference target for component migration.
 
 ## Next steps
-Implement Stage 1.5 by rewriting Menu CRUD pages to use the new admin
-components, replacing raw delete buttons with confirm-modal, and preserving
-flash messages plus tenant isolation coverage.
+Implement Stage 1.6 money presentation and major-unit forms: formatter in
+`App\Support\Money`, tests for AMD/decimal currencies, Menu display via
+formatter, and form conversion from major units to stored minor units.
