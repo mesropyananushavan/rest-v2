@@ -1,0 +1,46 @@
+COMPOSE := docker compose
+APP := $(COMPOSE) run --rm php-fpm
+APP_NO_DEPS := $(COMPOSE) run --rm --no-deps php-fpm
+NODE := docker run --rm -u $$(id -u):$$(id -g) -v "$$(pwd)":/app -w /app node:24-alpine
+
+.PHONY: up down restart shell test stan pint fresh build tools logs logs-queue
+
+up:
+	$(COMPOSE) up -d --build
+
+down:
+	$(COMPOSE) down
+
+restart:
+	$(COMPOSE) down
+	$(COMPOSE) up -d --build
+
+shell:
+	$(APP) bash
+
+test:
+	$(APP_NO_DEPS) vendor/bin/pest
+
+stan:
+	$(APP_NO_DEPS) vendor/bin/phpstan analyse --memory-limit=1G
+
+pint:
+	$(APP_NO_DEPS) vendor/bin/pint
+
+fresh:
+	$(APP) php artisan migrate:fresh --seed
+
+build:
+	$(APP_NO_DEPS) composer install
+	$(APP_NO_DEPS) php artisan key:generate --ansi
+	$(NODE) npm ci
+	$(NODE) npm run build
+
+tools:
+	$(COMPOSE) --profile dev up -d adminer
+
+logs:
+	$(COMPOSE) exec php-fpm sh -lc 'touch storage/logs/smartrest.json && tail -f storage/logs/smartrest.json'
+
+logs-queue:
+	$(COMPOSE) logs -f horizon

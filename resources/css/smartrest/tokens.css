@@ -1,0 +1,37 @@
+:root {
+    --sr-color-bg: #f1f2f7;
+    --sr-color-surface: #ffffff;
+    --sr-color-text: #2e2e2e;
+    --sr-color-muted: #6c757d;
+    --sr-color-border: #eeeeee;
+    --sr-color-success: #5cb85c;
+    --sr-color-danger: #d43f3a;
+    --sr-color-warning: #f5b400;
+    --sr-color-info: #5bc0de;
+    --sr-header-height: 60px;
+    --sr-sidebar-width: 274px;
+    --sr-logo-width: 219px;
+    --sr-card-radius: 9px;
+    --sr-card-shadow: 0 1px 3px rgb(0 0 0 / 12%);
+    --sr-control-radius: 4px;
+    --sr-table-row-hover: #f8f8f8;
+    --sr-table-status-open: #5cb85c;
+    --sr-table-status-warning: #f5b400;
+    --sr-table-status-danger: #d43f3a;
+}
+
+body {
+    background: var(--sr-color-bg);
+    color: var(--sr-color-text);
+}
+
+.sr-card {
+    background: var(--sr-color-surface);
+    border: 0;
+    border-radius: var(--sr-card-radius);
+    box-shadow: var(--sr-card-shadow);
+}
+
+.sr-dense-table > :not(caption) > * > * {
+    padding: .55rem .75rem;
+}

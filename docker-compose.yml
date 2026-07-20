@@ -1,0 +1,74 @@
+services:
+  php-fpm:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - postgres
+      - redis
+      - mailpit
+    environment:
+      APP_ENV: local
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      MAIL_HOST: mailpit
+
+  nginx:
+    image: nginx:1.29-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - php-fpm
+
+  postgres:
+    image: postgres:17-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: smartrest
+      POSTGRES_USER: smartrest
+      POSTGRES_PASSWORD: smartrest
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  adminer:
+    image: adminer:5
+    profiles:
+      - dev
+    ports:
+      - "8081:8080"
+    depends_on:
+      - postgres
+
+  redis:
+    image: redis:8-alpine
+    ports:
+      - "6379:6379"
+
+  horizon:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    working_dir: /var/www/html
+    # TODO: replace queue:work with `php artisan horizon` when a Laravel 13-compatible Horizon release is available.
+    command: php artisan queue:work redis --queue=default --sleep=1 --tries=3
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - postgres
+      - redis
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+volumes:
+  postgres-data:
