@@ -1,6 +1,6 @@
 # Worklog — Phase 1: Walking Skeleton
 
-Status: Stage 3.2 Menu CRUD in progress
+Status: Stage 3.2 Menu CRUD complete; awaiting owner PR
 Branch: phase-1-stage-3.2-menu
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
@@ -127,15 +127,16 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29727485150
   and verified `make fresh` runs migrations plus demo seeds successfully.
   Gates green: `make fresh` pass, Pint pass, PHPStan pass, Pest 35 passed /
   2 skipped / 236 assertions.
-- [ ] Stage 3.2.5: final verification, push, and CI handoff. Run `make fresh`,
+- [x] Stage 3.2.5: final verification, push, and CI handoff. Run `make fresh`,
   curl-smoke the primary menu pages, run full `make pint && make stan &&
   make test`, push `phase-1-stage-3.2-menu`, wait for both GitHub Actions jobs
   green, update this worklog with final local/CI results, and do not create or
-  merge a PR. Local result so far: final `make fresh` pass; curl smoke pass
-  after demo login (`POST /login` 302 to `/`, `GET /admin/menu` 200,
+  merge a PR. Result: final `make fresh` pass; curl smoke pass after demo
+  login (`POST /login` 302 to `/`, `GET /admin/menu` 200,
   `GET /admin/menu/categories/create` 200, `GET /admin/menu/items/create`
   200, seeded menu content present); Pint pass; PHPStan pass; Pest 35 passed /
-  2 skipped / 237 assertions. Push and CI confirmation pending.
+  2 skipped / 237 assertions. Branch pushed at code head `db4e587`; CI run
+  29735218745 passed both `quality` and `tenant-isolation-pgsql`.
 
 ## Done log
 - 2026-07-17: Stage 1 complete. All gates green (composer validate, Pint,
@@ -222,6 +223,15 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29727485150
 - 2026-07-20: PR #3 merged to `main` at merge commit `0a0529b` after owner
   explicitly requested Codex PR creation/merge for this mini-fix. Local
   `main` fast-forwarded to `origin/main`.
+- 2026-07-20: Stage 3.2 Menu CRUD complete locally and pushed. Implemented
+  tenant-owned Menu schema/RLS/models, Menu Application CRUD actions with
+  structured logs, Blade-only authenticated CRUD UI, menu permissions, demo
+  seed data for both tenants, and tenant/RLS/403/404/CRUD tests. Final local
+  verification green: `make fresh` pass, curl-smoke Menu pages pass, Pint pass,
+  PHPStan pass, Pest 35 passed / 2 skipped / 237 assertions. Branch
+  `phase-1-stage-3.2-menu` pushed at code head `db4e587`; GitHub Actions run
+  29735218745 passed both `quality` and `tenant-isolation-pgsql`. PR is not
+  created by Codex.
 
 ## Gotchas / known issues
 - Host PHP is 8.1 — never run PHP on host, docker/make only.
@@ -293,6 +303,6 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29727485150
   an app error.
 
 ## Next steps
-Continue with Stage 3.2.5: commit the final local verification/auth-session
-fixes, push `phase-1-stage-3.2-menu`, wait for both GitHub Actions jobs green,
-update this worklog with CI links/results, and do not create or merge a PR.
+Owner creates and merges the PR for `phase-1-stage-3.2-menu`. Codex must not
+create or merge the PR. After owner merge, resume from `main` for the next
+approved phase/stage prompt.
