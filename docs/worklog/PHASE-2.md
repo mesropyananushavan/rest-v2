@@ -98,12 +98,18 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   `AGENTS.md` now makes UI simplicity, superadmin-only deletes, and
   scale-from-day-one query/list/concurrency rules mandatory for all future
   stages.
-- [ ] Stage 1.9.3: superadmin-only delete enforcement. Add the user
+- [x] Stage 1.9.3: superadmin-only delete enforcement. Add the user
   `is_superadmin` flag, seed deterministic demo superadmins, enforce
   superadmin authorization on current destructive admin routes, hide Menu
   delete UI for non-superadmins, and cover allowed/denied behavior with
   feature tests. Run `make pint && make stan && make test`, commit with the
-  worklog result.
+  worklog result. Result: added `users.is_superadmin`, model/factory casts,
+  deterministic owner superadmins, `superadmin.delete` middleware on all
+  current `DELETE` routes, hidden Menu delete controls for non-superadmins,
+  and tests proving superadmin delete succeeds, normal manager delete is
+  `403`, foreign resource delete remains `404`, demo flags are seeded, and
+  every delete route carries the middleware. Gates green: Pint pass, PHPStan
+  pass, Pest 49 passed / 2 skipped / 313 assertions.
 - [ ] Stage 1.9.4: final verification and handoff. Run final
   `make pint && make stan && make test`, push the branch, check GitHub
   Actions status for both jobs if available, update this worklog, and do not
@@ -155,6 +161,11 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
 - 2026-07-20: Stage 1.9.2 Product Principles documentation complete.
   `AGENTS.md` now records mandatory simplicity, superadmin-only delete, and
   scale-from-day-one rules for current and future modules.
+- 2026-07-20: Stage 1.9.3 superadmin-only delete enforcement complete
+  locally. Added `users.is_superadmin`, deterministic demo owner superadmins,
+  route middleware enforcement for current admin destructive routes, hidden
+  Menu delete controls for non-superadmins, and regression tests. Gates green:
+  Pint pass, PHPStan pass, Pest 49 passed / 2 skipped / 313 assertions.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -174,6 +185,7 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
 
 ## Next steps
 Continue with Stage 1.9.3: add the `is_superadmin` flag, enforce
-superadmin-only delete on current admin destructive routes, hide Menu delete
-controls for non-superadmins, add tests, then run `make pint && make stan &&
-make test`. Codex must not create or merge a PR.
+Continue with Stage 1.9.4: run final `make pint && make stan && make test`,
+push `phase-2-stage-1.9-principles-superadmin`, check GitHub Actions status
+for both jobs if available, then update this worklog. Codex must not create or
+merge a PR.

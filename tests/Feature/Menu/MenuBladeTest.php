@@ -17,7 +17,9 @@ use App\Modules\Tenancy\Infrastructure\Models\Tenant;
 use App\Support\I18n\LocalizedText;
 use App\Support\Money\Money;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Route;
 
 uses(RefreshDatabase::class);
 
@@ -27,7 +29,7 @@ afterEach(function (): void {
 });
 
 it('runs menu category and item CRUD through authenticated Blade routes', function (): void {
-    $manager = menuBladeUser('tenant-a', 'manager-a', ['menu.categories.manage', 'menu.items.manage']);
+    $manager = menuBladeUser('tenant-a', 'manager-a', ['menu.categories.manage', 'menu.items.manage'], superadmin: true);
 
     $this->actingAs($manager['user'])
         ->withSession(['branch_id' => (int) $manager['branch']->id])
@@ -99,6 +101,35 @@ it('runs menu category and item CRUD through authenticated Blade routes', functi
         ->and(MenuCategory::query()->count())->toBe(0);
 });
 
+it('requires superadmin for menu deletes even when the user has menu permissions', function (): void {
+    $manager = menuBladeUser('tenant-a', 'manager-a', ['menu.categories.manage', 'menu.items.manage']);
+    $records = menuBladeRecords($manager, 'Breakfast');
+
+    $this->actingAs($manager['user'])
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->get(route('admin.menu.index'))
+        ->assertOk()
+        ->assertDontSee('delete_category_', false)
+        ->assertDontSee('delete_item_', false)
+        ->assertDontSee(__('menu.actions.delete'), false);
+
+    $this->actingAs($manager['user'])
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->delete(route('admin.menu.items.destroy', ['item' => (int) $records['item']->id]))
+        ->assertForbidden();
+
+    $this->actingAs($manager['user'])
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->delete(route('admin.menu.categories.destroy', ['category' => (int) $records['category']->id]))
+        ->assertForbidden();
+
+    app(TenantResolver::class)->set((int) $manager['tenant']->id);
+    app(BranchContext::class)->set((int) $manager['branch']->id);
+
+    expect(MenuItem::query()->count())->toBe(1)
+        ->and(MenuCategory::query()->count())->toBe(1);
+});
+
 it('returns 403 for authenticated users without menu permissions', function (): void {
     $user = menuBladeUser('tenant-a', 'waiter-a', []);
 
@@ -114,8 +145,8 @@ it('returns 403 for authenticated users without menu permissions', function (): 
 });
 
 it('returns 404 when a user requests another tenant menu resource by id', function (): void {
-    $tenantA = menuBladeUser('tenant-a', 'manager-a', ['menu.categories.manage', 'menu.items.manage']);
-    $tenantB = menuBladeUser('tenant-b', 'manager-b', ['menu.categories.manage', 'menu.items.manage']);
+    $tenantA = menuBladeUser('tenant-a', 'manager-a', ['menu.categories.manage', 'menu.items.manage'], superadmin: true);
+    $tenantB = menuBladeUser('tenant-b', 'manager-b', ['menu.categories.manage', 'menu.items.manage'], superadmin: true);
 
     $foreign = menuBladeRecords($tenantB, 'Foreign breakfast');
 
@@ -155,11 +186,28 @@ it('returns 404 when a user requests another tenant menu resource by id', functi
         ->assertNotFound();
 });
 
+it('protects every delete route with the superadmin delete middleware', function (): void {
+    $deleteRoutes = [];
+
+    foreach (Route::getRoutes() as $route) {
+        if (in_array('DELETE', $route->methods(), true)) {
+            $deleteRoutes[] = $route;
+        }
+    }
+
+    expect($deleteRoutes)->not->toBeEmpty();
+
+    /** @var RoutingRoute $route */
+    foreach ($deleteRoutes as $route) {
+        expect($route->gatherMiddleware())->toContain('superadmin.delete');
+    }
+});
+
 /**
  * @param  list<string>  $permissionCodes
  * @return array{tenant: Tenant, branch: Branch, user: User}
  */
-function menuBladeUser(string $tenantSlug, string $username, array $permissionCodes): array
+function menuBladeUser(string $tenantSlug, string $username, array $permissionCodes, bool $superadmin = false): array
 {
     $tenant = Tenant::query()->create([
         'name' => str($tenantSlug)->headline()->toString(),
@@ -202,6 +250,7 @@ function menuBladeUser(string $tenantSlug, string $username, array $permissionCo
         'username' => $username,
         'default_locale' => 'en',
         'active' => true,
+        'is_superadmin' => $superadmin,
         'password' => Hash::make('password'),
     ]);
 

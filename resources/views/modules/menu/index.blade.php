@@ -10,6 +10,7 @@ use App\Support\Money\MoneyFormatter;
 /** @var \Illuminate\Database\Eloquent\Collection<int, MenuItem> $items */
 
 $locale = app()->getLocale();
+$canDelete = (bool) data_get(auth()->user(), 'is_superadmin');
 ?>
 
 @extends('layouts.admin')
@@ -61,12 +62,14 @@ $locale = app()->getLocale();
                                     <x-button :href="route('admin.menu.categories.edit', ['category' => (int) $category->id])" variant="outline-secondary" size="sm">
                                         {{ __('menu.actions.edit') }}
                                     </x-button>
-                                    <x-confirm-modal
-                                        id="delete_category_{{ (int) $category->id }}"
-                                        :action="route('admin.menu.categories.destroy', ['category' => (int) $category->id])"
-                                        :trigger-label="__('menu.actions.delete')"
-                                        :confirm-label="__('menu.actions.delete')"
-                                    />
+                                    @if ($canDelete)
+                                        <x-confirm-modal
+                                            id="delete_category_{{ (int) $category->id }}"
+                                            :action="route('admin.menu.categories.destroy', ['category' => (int) $category->id])"
+                                            :trigger-label="__('menu.actions.delete')"
+                                            :confirm-label="__('menu.actions.delete')"
+                                        />
+                                    @endif
                                 </td>
                             </tr>
                         @empty
@@ -113,12 +116,14 @@ $locale = app()->getLocale();
                                     <x-button :href="route('admin.menu.items.edit', ['item' => (int) $item->id])" variant="outline-secondary" size="sm">
                                         {{ __('menu.actions.edit') }}
                                     </x-button>
-                                    <x-confirm-modal
-                                        id="delete_item_{{ (int) $item->id }}"
-                                        :action="route('admin.menu.items.destroy', ['item' => (int) $item->id])"
-                                        :trigger-label="__('menu.actions.delete')"
-                                        :confirm-label="__('menu.actions.delete')"
-                                    />
+                                    @if ($canDelete)
+                                        <x-confirm-modal
+                                            id="delete_item_{{ (int) $item->id }}"
+                                            :action="route('admin.menu.items.destroy', ['item' => (int) $item->id])"
+                                            :trigger-label="__('menu.actions.delete')"
+                                            :confirm-label="__('menu.actions.delete')"
+                                        />
+                                    @endif
                                 </td>
                             </tr>
                         @empty

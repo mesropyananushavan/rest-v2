@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Middleware\AttachLogContext;
+use App\Http\Middleware\EnsureSuperAdminForDeletes;
 use App\Modules\Tenancy\Http\Middleware\ResolveBranch;
 use App\Modules\Tenancy\Http\Middleware\ResolveTenant;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
@@ -21,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'tenant' => ResolveTenant::class,
             'branch' => ResolveBranch::class,
+            'superadmin.delete' => EnsureSuperAdminForDeletes::class,
         ]);
 
         $middleware->appendToGroup('web', [

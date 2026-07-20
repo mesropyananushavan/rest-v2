@@ -40,6 +40,7 @@ final class IdentityDemoSeeder extends Seeder
                         'email' => $userRow['email'],
                         'default_locale' => $userRow['locale'],
                         'active' => true,
+                        'is_superadmin' => $userRow['superadmin'],
                         'password' => Hash::make($userRow['password']),
                     ],
                 );
@@ -141,25 +142,25 @@ final class IdentityDemoSeeder extends Seeder
     }
 
     /**
-     * @return array<string, array{users: list<array{name: string, username: string, email: string, role: string, locale: string, password: string, branches: list<string>}>}>
+     * @return array<string, array{users: list<array{name: string, username: string, email: string, role: string, locale: string, password: string, superadmin: bool, branches: list<string>}>}>
      */
     private function tenantUsers(): array
     {
         return [
             'arat-riverside' => [
                 'users' => [
-                    ['name' => 'Ani Petrosyan', 'username' => 'arat-owner', 'email' => 'owner@arat.test', 'role' => 'owner', 'locale' => 'hy', 'password' => 'password', 'branches' => ['arat-kentron', 'arat-dilijan']],
-                    ['name' => 'Gor Hakobyan', 'username' => 'arat-manager', 'email' => 'manager@arat.test', 'role' => 'manager', 'locale' => 'hy', 'password' => 'password', 'branches' => ['arat-kentron', 'arat-dilijan']],
-                    ['name' => 'Mariam Sargsyan', 'username' => 'arat-cashier', 'email' => 'cashier@arat.test', 'role' => 'cashier', 'locale' => 'hy', 'password' => 'password', 'branches' => ['arat-kentron']],
-                    ['name' => 'Tigran Manukyan', 'username' => 'arat-waiter', 'email' => 'waiter@arat.test', 'role' => 'waiter', 'locale' => 'hy', 'password' => 'password', 'branches' => ['arat-dilijan']],
+                    ['name' => 'Ani Petrosyan', 'username' => 'arat-owner', 'email' => 'owner@arat.test', 'role' => 'owner', 'locale' => 'hy', 'password' => 'password', 'superadmin' => true, 'branches' => ['arat-kentron', 'arat-dilijan']],
+                    ['name' => 'Gor Hakobyan', 'username' => 'arat-manager', 'email' => 'manager@arat.test', 'role' => 'manager', 'locale' => 'hy', 'password' => 'password', 'superadmin' => false, 'branches' => ['arat-kentron', 'arat-dilijan']],
+                    ['name' => 'Mariam Sargsyan', 'username' => 'arat-cashier', 'email' => 'cashier@arat.test', 'role' => 'cashier', 'locale' => 'hy', 'password' => 'password', 'superadmin' => false, 'branches' => ['arat-kentron']],
+                    ['name' => 'Tigran Manukyan', 'username' => 'arat-waiter', 'email' => 'waiter@arat.test', 'role' => 'waiter', 'locale' => 'hy', 'password' => 'password', 'superadmin' => false, 'branches' => ['arat-dilijan']],
                 ],
             ],
             'northstar-bistro' => [
                 'users' => [
-                    ['name' => 'Olivia Carter', 'username' => 'northstar-owner', 'email' => 'owner@northstar.test', 'role' => 'owner', 'locale' => 'en', 'password' => 'password', 'branches' => ['northstar-downtown']],
-                    ['name' => 'Noah Bennett', 'username' => 'northstar-manager', 'email' => 'manager@northstar.test', 'role' => 'manager', 'locale' => 'en', 'password' => 'password', 'branches' => ['northstar-downtown']],
-                    ['name' => 'Emma Brooks', 'username' => 'northstar-cashier', 'email' => 'cashier@northstar.test', 'role' => 'cashier', 'locale' => 'en', 'password' => 'password', 'branches' => ['northstar-downtown']],
-                    ['name' => 'Liam Reed', 'username' => 'northstar-waiter', 'email' => 'waiter@northstar.test', 'role' => 'waiter', 'locale' => 'en', 'password' => 'password', 'branches' => ['northstar-downtown']],
+                    ['name' => 'Olivia Carter', 'username' => 'northstar-owner', 'email' => 'owner@northstar.test', 'role' => 'owner', 'locale' => 'en', 'password' => 'password', 'superadmin' => true, 'branches' => ['northstar-downtown']],
+                    ['name' => 'Noah Bennett', 'username' => 'northstar-manager', 'email' => 'manager@northstar.test', 'role' => 'manager', 'locale' => 'en', 'password' => 'password', 'superadmin' => false, 'branches' => ['northstar-downtown']],
+                    ['name' => 'Emma Brooks', 'username' => 'northstar-cashier', 'email' => 'cashier@northstar.test', 'role' => 'cashier', 'locale' => 'en', 'password' => 'password', 'superadmin' => false, 'branches' => ['northstar-downtown']],
+                    ['name' => 'Liam Reed', 'username' => 'northstar-waiter', 'email' => 'waiter@northstar.test', 'role' => 'waiter', 'locale' => 'en', 'password' => 'password', 'superadmin' => false, 'branches' => ['northstar-downtown']],
                 ],
             ],
         ];
