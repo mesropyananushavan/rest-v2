@@ -20,6 +20,11 @@ final class MenuDomainException extends RuntimeException
         return new self('menu.branch_context_required', 'Menu item operations require a resolved branch context.');
     }
 
+    public static function categoryArchived(): self
+    {
+        return new self('menu.category_archived', 'Menu items cannot be restored while their category is archived.');
+    }
+
     public function errorCode(): string
     {
         return $this->errorCode;

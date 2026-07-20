@@ -219,13 +219,20 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   physical deletion through UI, and confirm-modal archive controls;
   `docs/DECISIONS.md` records the explicit Menu category cascade marker
   policy so category restore only restores items archived by that cascade.
-- [ ] Stage 1.11.3 (Part A): schema, models, and actions for archive/restore.
+- [x] Stage 1.11.3 (Part A): schema, models, and actions for archive/restore.
   Add `deleted_at` to `menu_categories` and `menu_items`, convert models to
   Laravel `SoftDeletes`, replace `DeleteMenu*` behavior with archive actions,
-  add restore actions, make category archive cascade to active child items and
-  restore only the items archived by that category cascade, and update
+  add restore actions, make category archive cascade to non-archived child
+  items and restore only the items archived by that category cascade, and update
   composite indexes for `tenant_id`/`branch_id`/`category_id`/`deleted_at`
-  filtering paths. Run focused action/schema tests and commit.
+  filtering paths. Run focused action/schema tests and commit. Result: added
+  soft-delete migration, `SoftDeletes` models, explicit
+  `archived_with_category_id` marker, Archive/Restore Application actions,
+  compatibility wrappers for legacy Delete actions, deleted-at-aware indexes,
+  and tests proving default lists hide archived records, category restore only
+  restores cascade-marked items, manual archives stay archived, and item
+  restore is blocked while its category is archived. Gates green: Pint pass,
+  PHPStan pass, Pest 51 passed / 2 skipped / 339 assertions.
 - [ ] Stage 1.11.4 (Part A): routes, controllers, UI, translations, and
   permission tests. Remove `superadmin.delete` from archive routes while
   retaining normal manage permissions, add superadmin-only restore routes,
@@ -370,6 +377,11 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   now means archive in `AGENTS.md`, restore is superadmin-only, and
   `docs/DECISIONS.md` records explicit Menu category cascade restore
   semantics.
+- 2026-07-20: Stage 1.11.3 Part A schema/action layer complete. Menu
+  categories/items now use `deleted_at`, item cascade membership is tracked
+  by `archived_with_category_id`, archive/restore Application actions cover
+  item/category behavior, and focused schema/action tests plus full Pest,
+  Pint, and PHPStan are green.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -403,6 +415,7 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   with a push/CI handoff after each part and owner-created PRs only.
 
 ## Next steps
-Continue Stage 1.11 Part A with Stage 1.11.3: add soft-delete schema/model
-support, archive/restore Application actions, explicit category cascade
-marker behavior, deleted-at-aware indexes, and focused action/schema tests.
+Continue Stage 1.11 Part A with Stage 1.11.4: switch routes/controllers/UI
+from delete to archive, add superadmin-only restore routes, archived filters,
+badges/restores, inactive category exclusion in item forms, translations, and
+permission/tenant-isolation feature tests.

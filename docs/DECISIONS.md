@@ -72,8 +72,9 @@ principles require; Bootstrap JS — tied to the outgoing Bootstrap UI stack.
 Decision: menu category and item deletion in the product is archive
 (`deleted_at`) rather than physical deletion. Users with the relevant Menu
 manage permission may archive categories/items; restoring archived records is
-superadmin-only. Archiving a category also archives its currently active child
-items and marks those items as archived by that category cascade. Restoring
+superadmin-only. Archiving a category also archives its currently
+non-archived child items and marks those items as archived by that category
+cascade. Restoring
 the category restores only items carrying that cascade marker; items archived
 independently before the category archive remain archived. An item cannot be
 restored while its category is still archived.
