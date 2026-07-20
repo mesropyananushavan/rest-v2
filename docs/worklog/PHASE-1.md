@@ -23,7 +23,7 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29590252242
   permissions, seeders, isolation tests) — STOP checkpoint after
 - [x] Pre-Stage-3: extend tenant isolation tests for write/create/HTTP 404
   invariants and add standing AGENTS rule for every new resourceful route
-- [ ] Stage 2.5.1: tenant header policy hardening. Implement tenant resolve
+- [x] Stage 2.5.1: tenant header policy hardening. Implement tenant resolve
   order `authenticated user -> session -> X-Tenant-ID`, accept header only
   outside production, ensure header never overrides authenticated user tenant,
   add tests, record DECISIONS.md entry, run `make pint && make stan &&
@@ -69,6 +69,11 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29590252242
   Stage 2 checkpoint approved, tenant isolation tests extended
   (TenantIsolationTest 6 tests / 27 assertions), logging foundation done.
   GitHub Actions CI is green at run 29590252242.
+- 2026-07-20: Stage 2.5.1 tenant header policy hardening complete. Tenant
+  resolution is authenticated user, session, then dev/test-only
+  `X-Tenant-ID`; header cannot override authenticated user tenant. Decision
+  recorded in DECISIONS.md. Gates green: Pint pass, PHPStan pass, Pest
+  17 passed / 91 assertions.
 
 ## Gotchas / known issues
 - Host PHP is 8.1 — never run PHP on host, docker/make only.
@@ -100,7 +105,7 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29590252242
   a local `.env`.
 
 ## Next steps
-Continue Stage 2.5.1: implement tenant header policy hardening in
-`ResolveTenant`, add production/header and authenticated-user precedence tests,
-record the owner decision in `docs/DECISIONS.md`, run `make pint &&
-make stan && make test`, then commit the completed step. Do NOT start Stage 3.
+Continue Stage 2.5.2: harden queue context propagation so queued jobs restore
+TenantResolver and BranchContext from payload, add a tenant-scoped query test
+inside a job, run `make pint && make stan && make test`, then commit the
+completed step. Do NOT start Stage 3.

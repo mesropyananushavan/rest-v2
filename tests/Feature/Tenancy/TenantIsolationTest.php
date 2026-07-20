@@ -123,6 +123,40 @@ it('resolves tenant and branch context from request headers', function (): void 
         ]);
 });
 
+it('ignores tenant header in production', function (): void {
+    $tenant = tenantWithUser('tenant-a', 'manager-a', ['menu.items.manage']);
+
+    app()->detectEnvironment(fn (): string => 'production');
+
+    Route::middleware('web')->get('/_test/production-context', fn () => response()->json([
+        'tenant_id' => app(TenantResolver::class)->id(),
+    ]));
+
+    $this->withHeader('X-Tenant-ID', (string) $tenant['tenant']->id)
+        ->get('/_test/production-context')
+        ->assertOk()
+        ->assertJson([
+            'tenant_id' => null,
+        ]);
+});
+
+it('does not allow tenant header to override an authenticated user tenant', function (): void {
+    $tenantA = tenantWithUser('tenant-a', 'manager-a', ['menu.items.manage']);
+    $tenantB = tenantWithUser('tenant-b', 'manager-b', ['menu.items.manage']);
+
+    Route::middleware(['web', 'auth'])->get('/_test/authenticated-context', fn () => response()->json([
+        'tenant_id' => app(TenantResolver::class)->id(),
+    ]));
+
+    $this->actingAs($tenantA['user'])
+        ->withHeader('X-Tenant-ID', (string) $tenantB['tenant']->id)
+        ->get('/_test/authenticated-context')
+        ->assertOk()
+        ->assertJson([
+            'tenant_id' => (int) $tenantA['tenant']->id,
+        ]);
+});
+
 it('checks action permissions through the identity authorizer contract', function (): void {
     $tenant = tenantWithUser('tenant-a', 'manager-a', ['menu.items.manage']);
 
