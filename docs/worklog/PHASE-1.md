@@ -1,6 +1,6 @@
 # Worklog — Phase 1: Walking Skeleton
 
-Status: Stage 3.1 login auth UI complete; branch pushed; awaiting owner PR
+Status: Stage 3.1 Docker storage permission fix implemented locally
 Branch: phase-1-stage-3-login
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
@@ -72,6 +72,15 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29725976561
   worklog with CI links/results, no PR creation. Result: local `make fresh`,
   Pint, PHPStan, and Pest green; branch pushed at code head `bf13432`; CI run
   29725976561 passed both `quality` and `tenant-isolation-pgsql`.
+- [x] Stage 3.1.6: Docker storage/bootstrap cache permissions. Add a
+  container startup permission repair for `storage` and `bootstrap/cache` so
+  www-data can write compiled views and logs after rebuild/fresh checkout.
+  Verify with `make down && make build && make up && make fresh`, then curl
+  `/` and `/login` for HTTP 200, run `make pint && make stan && make test`,
+  commit, push, and wait for CI. Result: entrypoint repair added; compose web
+  runtime now forces PostgreSQL/Redis service env; `make test` forces isolated
+  testing/sqlite env. Local rebuild/fresh/curl/gates green; commit/push/CI
+  pending.
 - [ ] Stage 3.2: menu vertical slice (actions, Blade UI, API, i18n, audit,
   tests, demo seeders)
 
@@ -146,6 +155,14 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29725976561
   `phase-1-stage-3-login` pushed at code head `bf13432`; GitHub Actions run
   29725976561 passed both `quality` and `tenant-isolation-pgsql`. PR is not
   created by Codex.
+- 2026-07-20: Stage 3.1.6 Docker permission/runtime fix implemented locally.
+  Added php entrypoint startup repair for `storage` and `bootstrap/cache`,
+  forced compose web/worker runtime to PostgreSQL/Redis service env, and made
+  `make test` explicitly run with testing/sqlite overrides so compose local
+  runtime env does not leak into Pest. Verification green: `make down`,
+  `make build`, `make up`, `make fresh`, curl `/` 200, curl `/login` 200,
+  curl demo login `manager@arat.test` / `password` redirects to `/`, Pint pass,
+  PHPStan pass, Pest 25 passed / 1 skipped / 160 assertions.
 
 ## Gotchas / known issues
 - Host PHP is 8.1 — never run PHP on host, docker/make only.
@@ -192,8 +209,19 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29725976561
 - Demo identity seeders must set `tenant_id` explicitly in `updateOrCreate`
   lookup attributes for tenant-owned rows. Relying only on the creating hook
   failed during `make fresh` for permissions.
+- Bind-mounted Laravel writable paths need runtime repair, not only image
+  build-time `chown`, because fresh checkouts and host-owned files are mounted
+  over image paths.
+- Compose web/worker runtime must set `DB_CONNECTION=pgsql` and service
+  credentials explicitly. Otherwise a local `.env` with sqlite makes browser
+  sessions write to `database/database.sqlite`, which can be readonly for
+  `www-data`.
+- `make test` must explicitly override compose runtime env back to
+  testing/sqlite; otherwise local PostgreSQL service env leaks into no-deps
+  Pest runs and breaks sqlite/RLS expectations.
 
 ## Next steps
-Await owner PR creation/review/merge for `phase-1-stage-3-login`. Codex must
-not create the PR. After the owner confirms merge to `main`, continue with
-Stage 3.2 Menu CRUD (Blade) planning before code.
+Continue Stage 3.1.6: commit the Docker permission/runtime fix, push
+`phase-1-stage-3-login`, wait for CI, record results, then resolve owner
+request about PR creation/merge against the standing "Codex must not create
+PR" project rule.

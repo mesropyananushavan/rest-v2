@@ -12,7 +12,11 @@ services:
       - mailpit
     environment:
       APP_ENV: local
+      DB_CONNECTION: pgsql
       DB_HOST: postgres
+      DB_DATABASE: smartrest
+      DB_USERNAME: smartrest
+      DB_PASSWORD: smartrest
       REDIS_HOST: redis
       MAIL_HOST: mailpit
 
@@ -63,6 +67,14 @@ services:
     depends_on:
       - postgres
       - redis
+    environment:
+      APP_ENV: local
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_DATABASE: smartrest
+      DB_USERNAME: smartrest
+      DB_PASSWORD: smartrest
+      REDIS_HOST: redis
 
   mailpit:
     image: axllent/mailpit:v1.27
