@@ -1,6 +1,6 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.11 Part A owner review changes in progress
+Status: Stage 1.11 Part A owner review complete; awaiting owner PR/merge
 Branch: phase-2-stage-1.11-menu-ux
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
@@ -302,11 +302,17 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   in `hy`/`ru`/`en`, and tests prove manager archive disappearance plus
   superadmin archive controls. Gates green: Pint pass, PHPStan pass, Pest
   54 passed / 2 skipped / 411 assertions.
-- [ ] Stage 1.11.5.5 (Part A review): final verification and handoff. Run
+- [x] Stage 1.11.5.5 (Part A review): final verification and handoff. Run
   `make fresh`, curl-smoke manager archive then hidden/no archive access,
   owner archive visibility/restore/force-delete, final `make pint && make stan
   && make test`, push `phase-2-stage-1.11-menu-ux`, wait for both CI jobs
-  green, update this worklog, and do not create or merge a PR.
+  green, update this worklog, and do not create or merge a PR. Result:
+  `make fresh` passed; curl smoke passed for manager archive disappearance,
+  ignored manager `show_archived`, owner archive visibility, owner restore,
+  and owner force-delete category cascade; final gates green: Pint pass,
+  PHPStan pass, Pest 54 passed / 2 skipped / 411 assertions. Branch pushed at
+  code head `0d11d6d`; CI run 29749417502 passed both `quality` and
+  `tenant-isolation-pgsql`.
 - [ ] Stage 1.11.6 (Part B): menu item image architecture and dependency
   decision. After Part A is merged by owner, continue on the same Stage 1.11
   branch from fresh `main`; choose the image processing dependency/storage
@@ -467,6 +473,11 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
 - 2026-07-20: Stage 1.11.5.4 Part A review UI complete. Archive visibility is
   now superadmin-only in the Menu index; managers can archive but cannot see
   archive filters, archived rows, badges, restore, or force-delete controls.
+- 2026-07-20: Stage 1.11.5.5 Part A review final verification complete.
+  Local `make fresh`, curl smoke, Pint, PHPStan, and Pest are green. Branch
+  `phase-2-stage-1.11-menu-ux` pushed at code head `0d11d6d`; GitHub Actions
+  run 29749417502 passed both `quality` and `tenant-isolation-pgsql`. PR is
+  not created by Codex.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -500,8 +511,7 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   with a push/CI handoff after each part and owner-created PRs only.
 
 ## Next steps
-Continue Stage 1.11 Part A owner review with Stage 1.11.5.5: run `make
-fresh`, curl-smoke manager archive then hidden/no archive access, owner
-archive visibility/restore/force-delete, final `make pint && make stan &&
-make test`, push `phase-2-stage-1.11-menu-ux`, wait for both CI jobs green,
-update worklog, and do not create or merge a PR.
+Owner creates and merges the Stage 1.11 Part A PR from
+`phase-2-stage-1.11-menu-ux`. After that merge, continue with Stage 1.11.6
+Part B from fresh `main`: menu item image architecture and dependency/storage
+decision.
