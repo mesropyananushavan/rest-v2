@@ -1,7 +1,7 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.9 Product Principles + superadmin-only delete complete; awaiting owner PR
-Branch: phase-2-stage-1.9-principles-superadmin
+Status: Stage 1.10 UI stack migration planned; Tailwind/Livewire/Alpine implementation next
+Branch: phase-2-stage-1.10-ui-stack
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
 
@@ -120,6 +120,48 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   200 with delete controls; manager direct `DELETE /admin/menu/items/1`
   returned 403). Branch pushed at code head `b65af49`; CI run 29740192312
   passed both `quality` and `tenant-isolation-pgsql`.
+- [x] Stage 1.10.1: branch baseline and UI stack plan. Update fresh `main`,
+  verify Stage 1.9 merge is present, create
+  `phase-2-stage-1.10-ui-stack`, and write this plan before code. Commit only
+  documentation for the Stage 1.10 baseline. Result: `main` fast-forwarded to
+  merge commit `fe26e7e`, Stage 1.9 head `b65af49` verified through the merge
+  history, branch `phase-2-stage-1.10-ui-stack` created from fresh `main`, and
+  this Stage 1.10 plan written before implementation.
+- [ ] Stage 1.10.2: Tailwind foundation and ADR. Install the latest stable
+  Tailwind CSS through Vite, remove Bootstrap from the CSS/JS entry points,
+  move `resources/css/smartrest/tokens.css` values into a SmartRest Tailwind
+  theme, and record the Tailwind decision in `docs/DECISIONS.md`. Run focused
+  asset/build checks and commit.
+- [ ] Stage 1.10.3: Livewire + Alpine foundation and proof component. Install
+  the latest stable Livewire version compatible with Laravel 13 plus Alpine.js,
+  wire Blade/Vite/Livewire assets, convert dashboard counters into a simple
+  Livewire component served over normal HTTP, add/adjust tests for the proof,
+  and record the Livewire/Alpine decision in `docs/DECISIONS.md`. Run focused
+  checks and commit.
+- [ ] Stage 1.10.4: Tailwind admin shell and shared components. Rewrite
+  `resources/views/layouts/admin.blade.php`, login, error pages, dashboard,
+  and all existing `x-` Blade components to Tailwind while preserving current
+  behavior, translations, tablet responsiveness, flash messages, branch/locale
+  switching, and superadmin-only destructive controls. Replace Bootstrap
+  modals/collapse behavior with Alpine. Run focused feature/component tests
+  and commit.
+- [ ] Stage 1.10.5: Tailwind Menu views and Bootstrap removal audit. Rewrite
+  existing Menu CRUD views to the Tailwind component system without starting
+  the future Menu UX redesign, remove Bootstrap dependencies from
+  `package.json` / lockfile, audit views/assets/tests for leftover
+  Bootstrap-only classes or JS hooks, and update only markup-coupled tests.
+  Run focused Menu/admin tests and commit.
+- [ ] Stage 1.10.6: AGENTS UI stack update. Update `AGENTS.md` UI Definition
+  of Done to declare Blade + Livewire + Alpine + Tailwind as the admin UI
+  base, forbid SPA frameworks, and document allowed criteria for focused
+  npm/Vite UI widget libraries with mandatory `DECISIONS.md` entries. Run
+  documentation/grep checks and commit.
+- [ ] Stage 1.10.7: final verification, push, and CI handoff. Run
+  `make fresh`, curl-smoke login -> `/admin` -> `/admin/menu` -> create/edit
+  category and item -> locale switch -> branch switch -> 403/404 pages, audit
+  markup/assets for no Bootstrap remnants, run `make pint && make stan &&
+  make test`, push `phase-2-stage-1.10-ui-stack`, wait for both GitHub
+  Actions jobs green, update this worklog, and do not create or merge a PR.
 
 ## Done log
 - 2026-07-20: Phase 2 Stage 1 opened from fresh `origin/main` on branch
@@ -181,6 +223,10 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   `phase-2-stage-1.9-principles-superadmin` pushed at code head `b65af49`;
   GitHub Actions run 29740192312 passed both `quality` and
   `tenant-isolation-pgsql`. PR is not created by Codex.
+- 2026-07-20: Stage 1.10 started from fresh `main` after owner merged Stage
+  1.9. Stage 1.9 merge commit `fe26e7e` includes Stage 1.9 head `b65af49`;
+  branch `phase-2-stage-1.10-ui-stack` created and implementation plan
+  written before code.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -199,7 +245,10 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   create/read/update permission checks.
 - GitHub Actions emitted non-blocking Node.js 20 deprecation annotations for
   `actions/checkout@v4` / `actions/setup-node@v4` while the jobs still passed.
+- `docs/BLUEPRINT.md` ADR-004 still names Bootstrap 5 in the original v1.0
+  frontend decision. Stage 1.10 is intentionally superseding that via
+  `docs/DECISIONS.md`; do not edit `docs/BLUEPRINT.md` without explicit owner
+  approval and a separate commit.
 
 ## Next steps
-Owner creates the PR for `phase-2-stage-1.9-principles-superadmin`. Codex must
-not create or merge the PR.
+Continue with Stage 1.10.2 Tailwind foundation and ADR.
