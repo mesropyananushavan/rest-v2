@@ -1,6 +1,6 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.10 UI stack migration complete; CI lockfile retry in progress
+Status: Stage 1.10 UI stack migration complete; awaiting owner PR
 Branch: phase-2-stage-1.10-ui-stack
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
@@ -199,7 +199,9 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   `quality` at `npm ci` because npm 11.16.0 required root lockfile package
   entries for optional `@emnapi/core` / `@emnapi/runtime` dependencies used by
   Rolldown's wasm binding. Added the missing lockfile entries and verified
-  local `npm ci` plus `npm run build`; retry CI pending after push.
+  local `npm ci` plus `npm run build`; retry pushed at code head `7ad9506`,
+  and CI run 29744773070 passed both `quality` and
+  `tenant-isolation-pgsql`.
 
 ## Done log
 - 2026-07-20: Phase 2 Stage 1 opened from fresh `origin/main` on branch
@@ -296,7 +298,8 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   passed `tenant-isolation-pgsql` but failed `quality` at `npm ci`. Added the
   missing optional `@emnapi/core` / `@emnapi/runtime` lockfile entries required
   by npm 11.16.0 and verified local `npm ci` plus `npm run build`; retry CI
-  pending.
+  run 29744773070 passed both `quality` and `tenant-isolation-pgsql` at code
+  head `7ad9506`. PR is not created by Codex.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -328,5 +331,5 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   binding were present at the lockfile root.
 
 ## Next steps
-Commit and push the npm lockfile CI fix, wait for both GitHub Actions jobs
-green, record CI result here, and do not create or merge a PR.
+Owner creates the PR for `phase-2-stage-1.10-ui-stack`; Codex must not create
+or merge a PR.
