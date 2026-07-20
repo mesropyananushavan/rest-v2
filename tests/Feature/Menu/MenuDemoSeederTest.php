@@ -24,6 +24,7 @@ it('seeds deterministic menu data visible to demo managers by tenant', function 
     $this->get(route('admin.menu.index'))
         ->assertOk()
         ->assertSee('Լոռի ձվածեղ', false)
+        ->assertSee('2200 ֏', false)
         ->assertSee('Երեւանյան աղցան', false)
         ->assertDontSee('Northstar burger', false);
 
@@ -38,6 +39,7 @@ it('seeds deterministic menu data visible to demo managers by tenant', function 
     $this->get(route('admin.menu.index'))
         ->assertOk()
         ->assertSee('Northstar burger', false)
+        ->assertSee('$14.99', false)
         ->assertSee('Corn chowder', false)
         ->assertDontSee('Լոռի ձվածեղ', false);
 });

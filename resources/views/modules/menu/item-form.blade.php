@@ -3,12 +3,15 @@
 declare(strict_types=1);
 
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
+use App\Support\Money\MoneyFormatter;
 
 /** @var \Illuminate\Database\Eloquent\Collection<int, \App\Modules\Menu\Infrastructure\Models\MenuCategory> $categories */
+/** @var string $defaultCurrency */
 /** @var MenuItem|null $item */
 
 $isEdit = $item instanceof MenuItem;
 $title = $isEdit ? __('menu.items.edit_title') : __('menu.items.create_title');
+$priceMajor = $isEdit ? MoneyFormatter::toMajor($item->price()) : '0';
 $categoryOptions = $categories
     ->mapWithKeys(fn ($category): array => [
         (int) $category->id => $category->translatedName()->forLocale(app()->getLocale()),
@@ -67,10 +70,9 @@ $categoryOptions = $categories
                     <div class="row g-3">
                         <div class="col-12 col-md-4">
                             <x-form.input
-                                name="price_minor"
-                                type="number"
-                                :label="__('menu.fields.price_minor')"
-                                :value="$item?->price_minor ?? 0"
+                                name="price_major"
+                                :label="__('menu.fields.price_major')"
+                                :value="$priceMajor"
                                 required
                             />
                         </div>
@@ -78,7 +80,7 @@ $categoryOptions = $categories
                             <x-form.input
                                 name="currency"
                                 :label="__('menu.fields.currency')"
-                                :value="$item?->currency ?? 'AMD'"
+                                :value="$item?->currency ?? $defaultCurrency"
                                 required
                             />
                         </div>

@@ -11,15 +11,18 @@ use App\Modules\Menu\Application\UpdateMenuItem;
 use App\Modules\Menu\Http\Requests\MenuItemRequest;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use App\Modules\Tenancy\Contracts\BranchContext;
+use App\Modules\Tenancy\Contracts\TenantResolver;
+use App\Modules\Tenancy\Contracts\TenantSettingsReader;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 final class MenuItemController
 {
-    public function create(ListMenuCategories $categories): View
+    public function create(ListMenuCategories $categories, TenantResolver $tenants, TenantSettingsReader $settings): View
     {
         return view('modules.menu.item-form', [
             'categories' => $categories(),
+            'defaultCurrency' => $this->defaultCurrency($tenants, $settings),
             'item' => null,
         ]);
     }
@@ -40,10 +43,11 @@ final class MenuItemController
             ->with('status', __('menu.flash.item_created'));
     }
 
-    public function edit(int $item, ListMenuCategories $categories, BranchContext $branches): View
+    public function edit(int $item, ListMenuCategories $categories, BranchContext $branches, TenantResolver $tenants, TenantSettingsReader $settings): View
     {
         return view('modules.menu.item-form', [
             'categories' => $categories(),
+            'defaultCurrency' => $this->defaultCurrency($tenants, $settings),
             'item' => $this->findItem($item, $branches),
         ]);
     }
@@ -83,5 +87,16 @@ final class MenuItemController
         return MenuItem::query()
             ->where('branch_id', $branchId)
             ->findOrFail($item);
+    }
+
+    private function defaultCurrency(TenantResolver $tenants, TenantSettingsReader $settings): string
+    {
+        $tenantId = $tenants->id();
+
+        if ($tenantId === null) {
+            return 'AMD';
+        }
+
+        return $settings->settingsFor($tenantId)['currency'] ?? 'AMD';
     }
 }

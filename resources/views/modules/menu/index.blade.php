@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
+use App\Support\Money\MoneyFormatter;
 
 /** @var \Illuminate\Database\Eloquent\Collection<int, MenuCategory> $categories */
 /** @var \Illuminate\Database\Eloquent\Collection<int, MenuItem> $items */
@@ -85,7 +86,7 @@ $locale = app()->getLocale();
                         <tr>
                             <th>{{ __('menu.fields.name') }}</th>
                             <th>{{ __('menu.fields.category') }}</th>
-                            <th>{{ __('menu.fields.price_minor') }}</th>
+                            <th>{{ __('menu.fields.price') }}</th>
                             <th>{{ __('menu.fields.active') }}</th>
                             <th class="text-end">{{ __('menu.fields.actions') }}</th>
                         </tr>
@@ -100,7 +101,7 @@ $locale = app()->getLocale();
                                     @endif
                                 </td>
                                 <td>{{ $item->category?->translatedName()->forLocale($locale) }}</td>
-                                <td>{{ $item->price()->minor }} {{ $item->price()->currency }}</td>
+                                <td>{{ MoneyFormatter::format($item->price(), $locale) }}</td>
                                 <td>
                                     <x-badge-status
                                         :active="$item->active"
