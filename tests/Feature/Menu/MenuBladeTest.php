@@ -29,7 +29,7 @@ afterEach(function (): void {
 });
 
 it('runs menu category and item CRUD through authenticated Blade routes', function (): void {
-    $manager = menuBladeUser('tenant-a', 'manager-a', ['menu.categories.manage', 'menu.items.manage'], superadmin: true);
+    $manager = menuBladeUser('tenant-a', 'manager-a', ['menu.categories.manage', 'menu.items.manage']);
 
     $this->actingAs($manager['user'])
         ->withSession(['branch_id' => (int) $manager['branch']->id])
@@ -83,8 +83,9 @@ it('runs menu category and item CRUD through authenticated Blade routes', functi
         ->withSession(['branch_id' => (int) $manager['branch']->id])
         ->get(route('admin.menu.index'))
         ->assertOk()
-        ->assertSee('delete_category_', false)
-        ->assertSee('delete_item_', false);
+        ->assertSee('archive_category_', false)
+        ->assertSee('archive_item_', false)
+        ->assertSee(__('menu.actions.archive'), false);
 
     $this->actingAs($manager['user'])
         ->withSession(['branch_id' => (int) $manager['branch']->id])
@@ -100,7 +101,7 @@ it('runs menu category and item CRUD through authenticated Blade routes', functi
         ->and(MenuCategory::query()->count())->toBe(0);
 });
 
-it('requires superadmin for menu deletes even when the user has menu permissions', function (): void {
+it('allows managers to archive and requires superadmin to restore menu records', function (): void {
     $manager = menuBladeUser('tenant-a', 'manager-a', ['menu.categories.manage', 'menu.items.manage']);
     $records = menuBladeRecords($manager, 'Breakfast');
 
@@ -108,25 +109,120 @@ it('requires superadmin for menu deletes even when the user has menu permissions
         ->withSession(['branch_id' => (int) $manager['branch']->id])
         ->get(route('admin.menu.index'))
         ->assertOk()
-        ->assertDontSee('delete_category_', false)
-        ->assertDontSee('delete_item_', false)
-        ->assertDontSee(__('menu.actions.delete'), false);
+        ->assertSee('Breakfast', false)
+        ->assertSee('archive_category_', false)
+        ->assertSee('archive_item_', false)
+        ->assertDontSee(__('menu.actions.restore'), false);
 
     $this->actingAs($manager['user'])
         ->withSession(['branch_id' => (int) $manager['branch']->id])
         ->delete(route('admin.menu.items.destroy', ['item' => (int) $records['item']->id]))
-        ->assertForbidden();
-
-    $this->actingAs($manager['user'])
-        ->withSession(['branch_id' => (int) $manager['branch']->id])
-        ->delete(route('admin.menu.categories.destroy', ['category' => (int) $records['category']->id]))
-        ->assertForbidden();
+        ->assertRedirect(route('admin.menu.index'));
 
     app(TenantResolver::class)->set((int) $manager['tenant']->id);
     app(BranchContext::class)->set((int) $manager['branch']->id);
 
-    expect(MenuItem::query()->count())->toBe(1)
-        ->and(MenuCategory::query()->count())->toBe(1);
+    expect(MenuItem::query()->count())->toBe(0)
+        ->and(MenuItem::withTrashed()->findOrFail((int) $records['item']->id)->trashed())->toBeTrue();
+
+    $this->actingAs($manager['user'])
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->get(route('admin.menu.index'))
+        ->assertOk()
+        ->assertDontSee('Breakfast Item', false);
+
+    $this->actingAs($manager['user'])
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->get(route('admin.menu.index', ['show_archived' => '1']))
+        ->assertOk()
+        ->assertSee('Breakfast Item', false)
+        ->assertSee(__('menu.status.archived'), false)
+        ->assertDontSee(__('menu.actions.restore'), false);
+
+    $this->actingAs($manager['user'])
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->post(route('admin.menu.items.restore', ['item' => (int) $records['item']->id]))
+        ->assertForbidden();
+
+    $manager['user']->forceFill(['is_superadmin' => true])->save();
+
+    $this->actingAs($manager['user']->refresh())
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->get(route('admin.menu.index', ['show_archived' => '1']))
+        ->assertOk()
+        ->assertSee(__('menu.actions.restore'), false);
+
+    $this->actingAs($manager['user'])
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->post(route('admin.menu.items.restore', ['item' => (int) $records['item']->id]))
+        ->assertRedirect(route('admin.menu.index', ['show_archived' => '1']));
+
+    expect(MenuItem::query()->count())->toBe(1);
+
+    $manager['user']->forceFill(['is_superadmin' => false])->save();
+
+    $this->actingAs($manager['user'])
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->delete(route('admin.menu.categories.destroy', ['category' => (int) $records['category']->id]))
+        ->assertRedirect(route('admin.menu.index'));
+
+    app(TenantResolver::class)->set((int) $manager['tenant']->id);
+    app(BranchContext::class)->set((int) $manager['branch']->id);
+
+    expect(MenuItem::query()->count())->toBe(0)
+        ->and(MenuCategory::query()->count())->toBe(0)
+        ->and(MenuCategory::withTrashed()->findOrFail((int) $records['category']->id)->trashed())->toBeTrue()
+        ->and(MenuItem::withTrashed()->findOrFail((int) $records['item']->id)->archived_with_category_id)->toBe((int) $records['category']->id);
+
+    $this->actingAs($manager['user']->refresh())
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->post(route('admin.menu.categories.restore', ['category' => (int) $records['category']->id]))
+        ->assertForbidden();
+
+    $manager['user']->forceFill(['is_superadmin' => true])->save();
+
+    $this->actingAs($manager['user']->refresh())
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->post(route('admin.menu.categories.restore', ['category' => (int) $records['category']->id]))
+        ->assertRedirect(route('admin.menu.index', ['show_archived' => '1']));
+
+    expect(MenuCategory::query()->count())->toBe(1)
+        ->and(MenuItem::query()->count())->toBe(1);
+});
+
+it('does not show archived categories in item forms or accept them in item creation', function (): void {
+    $manager = menuBladeUser('tenant-a', 'manager-a', ['menu.categories.manage', 'menu.items.manage']);
+    $records = menuBladeRecords($manager, 'Breakfast');
+
+    $this->actingAs($manager['user'])
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->delete(route('admin.menu.categories.destroy', ['category' => (int) $records['category']->id]))
+        ->assertRedirect(route('admin.menu.index'));
+
+    $this->actingAs($manager['user'])
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->get(route('admin.menu.items.create'))
+        ->assertOk()
+        ->assertDontSee('Breakfast', false);
+
+    $this->actingAs($manager['user'])
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->post(route('admin.menu.items.store'), menuBladeItemPayload((int) $records['category']->id, 'Compromised'))
+        ->assertNotFound();
+});
+
+it('does not render category actions for item-only managers', function (): void {
+    $manager = menuBladeUser('tenant-a', 'manager-a', ['menu.items.manage']);
+    menuBladeRecords($manager, 'Breakfast');
+
+    $this->actingAs($manager['user'])
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->get(route('admin.menu.index'))
+        ->assertOk()
+        ->assertSee('Breakfast', false)
+        ->assertSee('archive_item_', false)
+        ->assertDontSee(__('menu.actions.create_category'), false)
+        ->assertDontSee('archive_category_', false);
 });
 
 it('returns 403 for authenticated users without menu permissions', function (): void {
@@ -166,6 +262,11 @@ it('returns 404 when a user requests another tenant menu resource by id', functi
 
     $this->actingAs($tenantA['user'])
         ->withSession(['branch_id' => (int) $tenantA['branch']->id])
+        ->post(route('admin.menu.categories.restore', ['category' => (int) $foreign['category']->id]))
+        ->assertNotFound();
+
+    $this->actingAs($tenantA['user'])
+        ->withSession(['branch_id' => (int) $tenantA['branch']->id])
         ->post(route('admin.menu.items.store'), menuBladeItemPayload((int) $foreign['category']->id, 'Compromised'))
         ->assertNotFound();
 
@@ -183,22 +284,38 @@ it('returns 404 when a user requests another tenant menu resource by id', functi
         ->withSession(['branch_id' => (int) $tenantA['branch']->id])
         ->delete(route('admin.menu.items.destroy', ['item' => (int) $foreign['item']->id]))
         ->assertNotFound();
+
+    $this->actingAs($tenantA['user'])
+        ->withSession(['branch_id' => (int) $tenantA['branch']->id])
+        ->post(route('admin.menu.items.restore', ['item' => (int) $foreign['item']->id]))
+        ->assertNotFound();
 });
 
-it('protects every delete route with the superadmin delete middleware', function (): void {
+it('allows archive routes by permission and protects restore routes with superadmin middleware', function (): void {
     $deleteRoutes = [];
+    $restoreRoutes = [];
 
     foreach (Route::getRoutes() as $route) {
         if (in_array('DELETE', $route->methods(), true)) {
             $deleteRoutes[] = $route;
         }
+
+        if (str_ends_with((string) $route->getName(), '.restore')) {
+            $restoreRoutes[] = $route;
+        }
     }
 
     expect($deleteRoutes)->not->toBeEmpty();
+    expect($restoreRoutes)->not->toBeEmpty();
 
     /** @var RoutingRoute $route */
     foreach ($deleteRoutes as $route) {
-        expect($route->gatherMiddleware())->toContain('superadmin.delete');
+        expect($route->gatherMiddleware())->not->toContain('superadmin.delete');
+    }
+
+    /** @var RoutingRoute $route */
+    foreach ($restoreRoutes as $route) {
+        expect($route->gatherMiddleware())->toContain('superadmin');
     }
 });
 

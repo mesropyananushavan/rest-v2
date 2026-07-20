@@ -233,14 +233,23 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   restores cascade-marked items, manual archives stay archived, and item
   restore is blocked while its category is archived. Gates green: Pint pass,
   PHPStan pass, Pest 51 passed / 2 skipped / 339 assertions.
-- [ ] Stage 1.11.4 (Part A): routes, controllers, UI, translations, and
+- [x] Stage 1.11.4 (Part A): routes, controllers, UI, translations, and
   permission tests. Remove `superadmin.delete` from archive routes while
   retaining normal manage permissions, add superadmin-only restore routes,
   rename UI copy from delete to archive, add archive filters and archived
   badges/restores, ensure archived categories are not selectable in item
   forms, update `hy`/`ru`/`en` translations, and cover archive permission,
   restore `403` for normal users, hidden archived records, and tenant
-  isolation. Run `make pint && make stan && make test`, commit.
+  isolation. Run `make pint && make stan && make test`, commit. Result:
+  archive routes now require only normal manage permissions, restore routes
+  use a new `superadmin` middleware alias, Menu controllers call Archive and
+  Restore actions, index has a show/hide archived filter, archived badges,
+  restore controls for superadmins only, category/item action visibility
+  follows permissions, archived categories are excluded from item forms and
+  rejected by create, all archive/restore strings are translated in `hy`,
+  `ru`, and `en`, and feature tests cover permission, restore 403, tenant
+  404s, hidden archived rows, and inaccessible category controls. Gates green:
+  Pint pass, PHPStan pass, Pest 53 passed / 2 skipped / 379 assertions.
 - [ ] Stage 1.11.5 (Part A): final verification and handoff for soft delete.
   Run `make fresh`, curl-smoke manager archive/category cascade/hidden
   archive filter plus owner restore, final `make pint && make stan &&
@@ -382,6 +391,11 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   by `archived_with_category_id`, archive/restore Application actions cover
   item/category behavior, and focused schema/action tests plus full Pest,
   Pint, and PHPStan are green.
+- 2026-07-20: Stage 1.11.4 Part A HTTP/UI layer complete. Delete routes now
+  archive by normal manage permission, restore routes are superadmin-only,
+  Menu index shows archived rows only via filter with translated badges and
+  restore controls, archived categories are unavailable in item forms, and
+  permission/tenant-isolation feature coverage is updated.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -415,7 +429,8 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   with a push/CI handoff after each part and owner-created PRs only.
 
 ## Next steps
-Continue Stage 1.11 Part A with Stage 1.11.4: switch routes/controllers/UI
-from delete to archive, add superadmin-only restore routes, archived filters,
-badges/restores, inactive category exclusion in item forms, translations, and
-permission/tenant-isolation feature tests.
+Continue Stage 1.11 Part A with Stage 1.11.5: run `make fresh`, curl-smoke
+manager archive/category cascade/default hidden archived rows/show archived
+filter plus owner restore, final `make pint && make stan && make test`, push
+`phase-2-stage-1.11-menu-ux`, wait for both CI jobs green, update worklog, and
+do not create or merge a PR.

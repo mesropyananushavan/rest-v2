@@ -35,7 +35,7 @@ final class MenuItem extends Model
      */
     public function category(): BelongsTo
     {
-        return $this->belongsTo(MenuCategory::class, 'category_id');
+        return $this->belongsTo(MenuCategory::class, 'category_id')->withTrashed();
     }
 
     public function price(): Money

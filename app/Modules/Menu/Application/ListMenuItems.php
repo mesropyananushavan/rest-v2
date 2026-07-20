@@ -20,7 +20,7 @@ final class ListMenuItems
     /**
      * @return EloquentCollection<int, MenuItem>
      */
-    public function __invoke(?int $categoryId = null): EloquentCollection
+    public function __invoke(?int $categoryId = null, bool $includeArchived = false): EloquentCollection
     {
         $startedAt = microtime(true);
         $branchId = $this->branches->id();
@@ -33,6 +33,7 @@ final class ListMenuItems
         }
 
         $items = MenuItem::query()
+            ->when($includeArchived, fn ($query) => $query->withTrashed())
             ->with('category')
             ->where('branch_id', $branchId)
             ->when($categoryId !== null, fn ($query) => $query->where('category_id', $categoryId))
@@ -44,6 +45,7 @@ final class ListMenuItems
             'branch_id' => $branchId,
             'category_id' => $categoryId,
             'item_count' => $items->count(),
+            'include_archived' => $includeArchived,
         ]);
 
         return $items;

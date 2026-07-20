@@ -62,8 +62,11 @@ Route::middleware(['tenant', 'branch', 'auth'])->prefix('/admin/menu')->name('ad
         ->middleware('can:menu.categories.manage')
         ->name('categories.update');
     Route::delete('/categories/{category}', [MenuCategoryController::class, 'destroy'])
-        ->middleware(['can:menu.categories.manage', 'superadmin.delete'])
+        ->middleware('can:menu.categories.manage')
         ->name('categories.destroy');
+    Route::post('/categories/{category}/restore', [MenuCategoryController::class, 'restore'])
+        ->middleware(['can:menu.categories.manage', 'superadmin'])
+        ->name('categories.restore');
 
     Route::get('/items/create', [MenuItemController::class, 'create'])
         ->middleware('can:menu.items.manage')
@@ -78,6 +81,9 @@ Route::middleware(['tenant', 'branch', 'auth'])->prefix('/admin/menu')->name('ad
         ->middleware('can:menu.items.manage')
         ->name('items.update');
     Route::delete('/items/{item}', [MenuItemController::class, 'destroy'])
-        ->middleware(['can:menu.items.manage', 'superadmin.delete'])
+        ->middleware('can:menu.items.manage')
         ->name('items.destroy');
+    Route::post('/items/{item}/restore', [MenuItemController::class, 'restore'])
+        ->middleware(['can:menu.items.manage', 'superadmin'])
+        ->name('items.restore');
 });
