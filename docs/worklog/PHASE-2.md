@@ -1,6 +1,6 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.10 UI stack migration complete; awaiting owner PR
+Status: Stage 1.10 UI stack migration complete; CI lockfile retry in progress
 Branch: phase-2-stage-1.10-ui-stack
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
@@ -195,7 +195,11 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   Dilijan Terrace 302, 404 page 404, manager delete 403 page 403); final audit
   found no Bootstrap/Popper imports or `data-bs-*` usage; final gates green:
   Pint pass, PHPStan pass, Pest 50 passed / 2 skipped / 318 assertions.
-  Branch push and CI status are recorded below after push.
+  First CI run 29744439073 passed `tenant-isolation-pgsql` but failed
+  `quality` at `npm ci` because npm 11.16.0 required root lockfile package
+  entries for optional `@emnapi/core` / `@emnapi/runtime` dependencies used by
+  Rolldown's wasm binding. Added the missing lockfile entries and verified
+  local `npm ci` plus `npm run build`; retry CI pending after push.
 
 ## Done log
 - 2026-07-20: Phase 2 Stage 1 opened from fresh `origin/main` on branch
@@ -288,7 +292,11 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   passed; curl-smoke passed for login, `/admin`, `/admin/menu`, category/item
   create/edit/update, locale switch, branch switch, 404 page, and manager 403
   page; final gates green: Pint pass, PHPStan pass, Pest 50 passed / 2 skipped
-  / 318 assertions. Push/CI handoff pending.
+  / 318 assertions. Branch pushed at `80dd575`; first CI run 29744439073
+  passed `tenant-isolation-pgsql` but failed `quality` at `npm ci`. Added the
+  missing optional `@emnapi/core` / `@emnapi/runtime` lockfile entries required
+  by npm 11.16.0 and verified local `npm ci` plus `npm run build`; retry CI
+  pending.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -314,7 +322,11 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
 - After `make up` rebuilt/recreated `php-fpm`, nginx temporarily returned 502
   because it held the old Docker upstream IP. `make restart` recreated nginx
   and resolved the smoke-test issue.
+- CI npm 11.16.0 is stricter than the local npm 11.6.2 used during initial
+  verification: it rejected `package-lock.json` until optional
+  `@emnapi/core` / `@emnapi/runtime` package entries for Rolldown's wasm
+  binding were present at the lockfile root.
 
 ## Next steps
-Push `phase-2-stage-1.10-ui-stack`, wait for both GitHub Actions jobs green,
-record CI result here, and do not create or merge a PR.
+Commit and push the npm lockfile CI fix, wait for both GitHub Actions jobs
+green, record CI result here, and do not create or merge a PR.
