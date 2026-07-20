@@ -159,6 +159,10 @@ body {
     background: #fff;
 }
 
+.sr-context-pill-compact {
+    min-width: 7.5rem;
+}
+
 .sr-context-pill span {
     display: block;
     color: var(--sr-color-muted);
@@ -172,6 +176,18 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.sr-shell-select {
+    min-width: 100%;
+    padding-left: 0;
+    border: 0;
+    box-shadow: none;
+    font-weight: 700;
+}
+
+.sr-shell-select:focus {
+    box-shadow: none;
 }
 
 .sr-content {

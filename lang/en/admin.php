@@ -15,9 +15,21 @@ return [
         'toggle_navigation' => 'Toggle navigation',
         'tenant' => 'Tenant',
         'branch' => 'Branch',
+        'locale' => 'Locale',
         'no_tenant' => 'No tenant',
         'no_branch' => 'No branch',
         'signed_in_as' => 'Signed in as',
+        'switch_branch' => 'Switch branch',
+        'switch_locale' => 'Switch locale',
+    ],
+    'locales' => [
+        'hy' => 'Հայ',
+        'ru' => 'Рус',
+        'en' => 'Eng',
+    ],
+    'flash' => [
+        'branch_updated' => 'Branch changed.',
+        'locale_updated' => 'Locale changed.',
     ],
     'dashboard' => [
         'title' => 'Dashboard',

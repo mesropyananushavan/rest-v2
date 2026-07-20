@@ -15,9 +15,21 @@ return [
         'toggle_navigation' => 'Բացել կամ փակել նավիգացիան',
         'tenant' => 'Ընկերություն',
         'branch' => 'Մասնաճյուղ',
+        'locale' => 'Լեզու',
         'no_tenant' => 'Ընկերություն չկա',
         'no_branch' => 'Մասնաճյուղ չկա',
         'signed_in_as' => 'Մուտք գործած օգտատեր',
+        'switch_branch' => 'Փոխել մասնաճյուղը',
+        'switch_locale' => 'Փոխել լեզուն',
+    ],
+    'locales' => [
+        'hy' => 'Հայ',
+        'ru' => 'Рус',
+        'en' => 'Eng',
+    ],
+    'flash' => [
+        'branch_updated' => 'Մասնաճյուղը փոխվեց։',
+        'locale_updated' => 'Լեզուն փոխվեց։',
     ],
     'dashboard' => [
         'title' => 'Վահանակ',

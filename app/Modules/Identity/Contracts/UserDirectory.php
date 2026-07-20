@@ -9,4 +9,9 @@ interface UserDirectory
     public function findName(int $userId): ?string;
 
     public function firstAssignedBranchId(int $userId): ?int;
+
+    /**
+     * @return list<int>
+     */
+    public function assignedBranchIds(int $userId): array;
 }

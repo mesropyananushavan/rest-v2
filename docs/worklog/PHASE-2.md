@@ -1,6 +1,6 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.2 complete; Stage 1.3 ready
+Status: Stage 1.3 complete; Stage 1.4 ready
 Branch: phase-2-stage-1-admin-ui
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
@@ -22,13 +22,18 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   login redirect to `/admin`, admin translations for all three locales, and
   dashboard/login regression tests. Gates green: Pint pass, PHPStan pass,
   Pest 37 passed / 2 skipped / 250 assertions.
-- [ ] Stage 1.3: branch and locale switching. Add topbar branch switch using
+- [x] Stage 1.3: branch and locale switching. Add topbar branch switch using
   the Identity `UserDirectory` assignments contract without changing tenant,
   persist selected branch in session, reject foreign/unassigned branches with
   404/403, add locale switch stored in session, apply locale through
   middleware with tenant default fallback via `TenantSettingsReader`, and add
   tests for both switches. Run `make pint && make stan && make test`, commit.
-  Result: pending.
+  Result: extended Identity/Tenancy contracts for assigned branch IDs and
+  tenant-owned branch summaries, added topbar branch/locale forms, persisted
+  branch and locale in session, applied locale from session with tenant
+  default fallback, and covered assigned/unassigned branch switching plus
+  locale switching. Gates green: Pint pass, PHPStan pass, Pest 40 passed /
+  2 skipped / 267 assertions.
 - [ ] Stage 1.4: Blade UI component foundation. Add reusable Blade components
   for page header, card, table, buttons, form input/select/toggle, status
   badge, confirm-modal delete flow, and flash messages. Keep Bootstrap 5 +
@@ -65,6 +70,12 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   branded responsive layout, `/admin` dashboard counters, login redirect to
   `/admin`, and translated admin shell strings implemented. Gates green:
   Pint pass, PHPStan pass, Pest 37 passed / 2 skipped / 250 assertions.
+- 2026-07-20: Stage 1.3 branch/locale switching complete locally. Branch
+  switch uses `UserDirectory` assignment IDs and `TenantDirectory` branch
+  summaries, rejects unassigned branches with 404, keeps tenant session
+  unchanged, and locale switching uses session override with tenant settings
+  default fallback. Gates green: Pint pass, PHPStan pass, Pest 40 passed /
+  2 skipped / 267 assertions.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -76,5 +87,6 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   correct reference target for component migration.
 
 ## Next steps
-Implement Stage 1.3 branch and locale switching: topbar forms, session-backed
-branch/locale updates, tenant default locale fallback, and switch tests.
+Implement Stage 1.4 Blade UI component foundation: page header, card, table,
+buttons, form controls, status badge, confirm-modal, flash messages, and
+component smoke coverage where practical.

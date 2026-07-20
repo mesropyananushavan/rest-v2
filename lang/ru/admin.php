@@ -15,9 +15,21 @@ return [
         'toggle_navigation' => 'Открыть или закрыть навигацию',
         'tenant' => 'Компания',
         'branch' => 'Филиал',
+        'locale' => 'Язык',
         'no_tenant' => 'Нет компании',
         'no_branch' => 'Нет филиала',
         'signed_in_as' => 'Пользователь',
+        'switch_branch' => 'Сменить филиал',
+        'switch_locale' => 'Сменить язык',
+    ],
+    'locales' => [
+        'hy' => 'Հայ',
+        'ru' => 'Рус',
+        'en' => 'Eng',
+    ],
+    'flash' => [
+        'branch_updated' => 'Филиал изменён.',
+        'locale_updated' => 'Язык изменён.',
     ],
     'dashboard' => [
         'title' => 'Панель',

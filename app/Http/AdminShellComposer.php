@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http;
 
+use App\Modules\Identity\Contracts\UserDirectory;
 use App\Modules\Tenancy\Contracts\BranchContext;
+use App\Modules\Tenancy\Contracts\TenantDirectory;
 use App\Modules\Tenancy\Contracts\TenantResolver;
-use App\Modules\Tenancy\Infrastructure\Models\Branch;
-use App\Modules\Tenancy\Infrastructure\Models\Tenant;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 final class AdminShellComposer
@@ -15,6 +16,8 @@ final class AdminShellComposer
     public function __construct(
         private readonly TenantResolver $tenants,
         private readonly BranchContext $branches,
+        private readonly UserDirectory $users,
+        private readonly TenantDirectory $tenantDirectory,
     ) {}
 
     public function compose(View $view): void
@@ -22,12 +25,32 @@ final class AdminShellComposer
         $tenantId = $this->tenants->id();
         $branchId = $this->branches->id();
 
-        $tenant = $tenantId === null ? null : Tenant::query()->find($tenantId);
-        $branch = $branchId === null ? null : Branch::query()->find($branchId);
+        $branchOptions = $this->branchOptions();
+        $currentBranch = collect($branchOptions)
+            ->first(fn (array $branch): bool => $branch['id'] === $branchId);
 
         $view->with('adminShell', [
-            'tenant_name' => is_string($tenant?->name) ? $tenant->name : null,
-            'branch_name' => is_string($branch?->name) ? $branch->name : null,
+            'tenant_name' => $tenantId === null ? null : $this->tenantDirectory->tenantName($tenantId),
+            'branch_name' => $currentBranch['name'] ?? null,
+            'branch_id' => $branchId,
+            'branch_options' => $branchOptions,
+            'locale' => app()->getLocale(),
         ]);
+    }
+
+    /**
+     * @return list<array{id: int, name: string}>
+     */
+    private function branchOptions(): array
+    {
+        $userId = Auth::id();
+
+        if (! is_numeric($userId)) {
+            return [];
+        }
+
+        return $this->tenantDirectory->branchSummariesForIds(
+            $this->users->assignedBranchIds((int) $userId),
+        );
     }
 }

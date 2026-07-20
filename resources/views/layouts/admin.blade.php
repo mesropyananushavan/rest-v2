@@ -2,10 +2,13 @@
 
 declare(strict_types=1);
 
-/** @var array{tenant_name: string|null, branch_name: string|null} $adminShell */
+/** @var array{tenant_name: string|null, branch_name: string|null, branch_id: int|null, branch_options: list<array{id: int, name: string}>, locale: string} $adminShell */
 
 $tenantName = $adminShell['tenant_name'] ?? __('admin.shell.no_tenant');
 $branchName = $adminShell['branch_name'] ?? __('admin.shell.no_branch');
+$branchId = $adminShell['branch_id'] ?? null;
+$branchOptions = $adminShell['branch_options'] ?? [];
+$locale = $adminShell['locale'] ?? app()->getLocale();
 ?>
 <!doctype html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -63,7 +66,45 @@ $branchName = $adminShell['branch_name'] ?? __('admin.shell.no_branch');
                         </div>
                         <div class="sr-context-pill">
                             <span>{{ __('admin.shell.branch') }}</span>
-                            <strong>{{ $branchName }}</strong>
+                            @if ($branchOptions === [])
+                                <strong>{{ $branchName }}</strong>
+                            @else
+                                <form method="post" action="{{ route('admin.branch.switch') }}">
+                                    @csrf
+                                    <label class="visually-hidden" for="admin_branch_id">{{ __('admin.shell.switch_branch') }}</label>
+                                    <select
+                                        id="admin_branch_id"
+                                        name="branch_id"
+                                        class="form-select form-select-sm sr-shell-select"
+                                        onchange="this.form.submit()"
+                                    >
+                                        @foreach ($branchOptions as $branch)
+                                            <option value="{{ $branch['id'] }}" @selected($branchId === $branch['id'])>
+                                                {{ $branch['name'] }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </form>
+                            @endif
+                        </div>
+                        <div class="sr-context-pill sr-context-pill-compact">
+                            <span>{{ __('admin.shell.locale') }}</span>
+                            <form method="post" action="{{ route('admin.locale.switch') }}">
+                                @csrf
+                                <label class="visually-hidden" for="admin_locale">{{ __('admin.shell.switch_locale') }}</label>
+                                <select
+                                    id="admin_locale"
+                                    name="locale"
+                                    class="form-select form-select-sm sr-shell-select"
+                                    onchange="this.form.submit()"
+                                >
+                                    @foreach (['hy', 'ru', 'en'] as $availableLocale)
+                                        <option value="{{ $availableLocale }}" @selected($locale === $availableLocale)>
+                                            {{ __('admin.locales.'.$availableLocale) }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </form>
                         </div>
                     </div>
 
