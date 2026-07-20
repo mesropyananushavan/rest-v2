@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Tenancy\Http\Middleware;
 
+use App\Modules\Identity\Contracts\UserDirectory;
 use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Modules\Tenancy\Contracts\TenantResolver;
 use App\Modules\Tenancy\Infrastructure\Models\Branch;
@@ -17,6 +18,7 @@ final class ResolveBranch
     public function __construct(
         private readonly TenantResolver $tenants,
         private readonly BranchContext $branches,
+        private readonly UserDirectory $users,
     ) {}
 
     public function handle(Request $request, Closure $next): Response
@@ -54,6 +56,12 @@ final class ResolveBranch
             $sessionBranchId = $request->session()->get('branch_id');
 
             return is_numeric($sessionBranchId) ? (int) $sessionBranchId : null;
+        }
+
+        $userId = $request->user()?->getAuthIdentifier();
+
+        if (is_numeric($userId)) {
+            return $this->users->firstAssignedBranchId((int) $userId);
         }
 
         return null;

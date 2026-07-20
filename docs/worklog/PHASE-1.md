@@ -1,7 +1,7 @@
 # Worklog — Phase 1: Walking Skeleton
 
-Status: Stage 2.5 hardening complete; branch pushed; awaiting owner PR
-Branch: phase-1-stage-2.5-hardening
+Status: Stage 3.1 login auth UI in progress
+Branch: phase-1-stage-3-login
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
 
@@ -42,7 +42,35 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29724811580
   `UserFactory` hardcoded `tenant_id => 1` via factory/state, replace welcome
   page with minimal translated placeholder, run `make pint && make stan &&
   make test`, commit.
-- [ ] Stage 3: menu vertical slice (actions, Blade UI, API, i18n, audit,
+- [x] Stage 3.1.1: minimal Identity login/logout routes and controller.
+  Add hand-written Laravel session auth endpoints in Identity Http, no
+  Breeze/Jetstream/Fortify, no registration/password reset/2FA/remember me.
+  Add translated validation/flash text and focused feature tests, run
+  `make pint && make stan && make test`, commit. Result: implemented as part
+  of login slice; gates green with Stage 3.1.1-3.1.4 combined.
+- [x] Stage 3.1.2: minimal login Blade UI. Build the `/login` page with
+  email and password only, using existing Bootstrap and `tokens.css`, with
+  all user-facing text in `lang/en`, `lang/hy`, and `lang/ru`. Add smoke
+  coverage for seeded demo users where practical, run `make pint &&
+  make stan && make test`, commit. Result: translated Blade form added with
+  demo seeder login smoke test; gates green with Stage 3.1.1-3.1.4 combined.
+- [x] Stage 3.1.3: auth middleware and tenant isolation through real login.
+  Prove guest redirects to `/login`, authenticated users are redirected away
+  from `/login`, and a user from tenant A receives 404 for tenant B branch via
+  `POST /login -> session -> GET /admin/branches/{id}` rather than
+  `actingAs`. Run `make pint && make stan && make test`, commit. Result:
+  tenant and branch context resolve from authenticated user middleware and
+  foreign tenant branch returns 404 through real session login; gates green
+  with Stage 3.1.1-3.1.4 combined.
+- [x] Stage 3.1.4: login rate limiting. Apply standard Laravel throttle to
+  the login endpoint and add a regression test. Run `make pint && make stan
+  && make test`, commit. Result: `/login` POST uses `throttle:5,1`; regression
+  test covers 429 after five failed attempts; gates green with Stage 3.1.1-
+  3.1.4 combined.
+- [ ] Stage 3.1.5: final verification and handoff. Run full local gates,
+  push `phase-1-stage-3-login`, wait for both CI jobs green, update this
+  worklog with CI links/results, no PR creation.
+- [ ] Stage 3.2: menu vertical slice (actions, Blade UI, API, i18n, audit,
   tests, demo seeders)
 
 ## Done log
@@ -104,6 +132,14 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29724811580
   issues: welcome placeholder depended on Vite manifest before build, and the
   pgsql service user bypassed RLS. Fix: remove direct `@vite` from the
   placeholder and test pgsql RLS through non-superuser `smartrest_app`.
+- 2026-07-20: Stage 3.1 login slice implemented locally. Added minimal
+  Identity session login/logout, translated `/login` Blade form, logout/context
+  cleanup, tenant directory contract for scoped authentication, branch context
+  fallback from authenticated user's first assignment via Identity contract,
+  login throttle, real-session tenant isolation regression, guest/auth
+  redirects, demo user login smoke test, and explicit tenant keys in Identity
+  demo seeder rows. Demo verification green: `make fresh` pass. Gates green:
+  Pint pass, PHPStan pass, Pest 25 passed / 1 skipped / 160 assertions.
 
 ## Gotchas / known issues
 - Host PHP is 8.1 — never run PHP on host, docker/make only.
@@ -139,8 +175,19 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29724811580
 - The minimal welcome placeholder must not call `@vite` directly before the
   CI build step creates `public/build/manifest.json`; otherwise the Pest step
   fails before Vite Build runs.
+- `/login` conditionally loads Vite assets only when `public/build/manifest.json`
+  exists, matching the welcome placeholder CI gotcha while still using
+  Bootstrap/tokens after frontend build.
+- Because users are tenant-scoped, login cannot query `users` before selecting
+  a tenant. Stage 3.1 uses the Tenancy `TenantDirectory` contract to attempt
+  credentials inside active tenant scopes. Duplicate emails across tenants are
+  not disambiguated yet; tenant-domain routing or a tenant selector belongs to
+  later login polish.
+- Demo identity seeders must set `tenant_id` explicitly in `updateOrCreate`
+  lookup attributes for tenant-owned rows. Relying only on the creating hook
+  failed during `make fresh` for permissions.
 
 ## Next steps
-Await owner PR creation/review/merge for `phase-1-stage-2.5-hardening`.
-Codex must not create the PR and must not start Stage 3 until the owner
-confirms this branch is merged to `main`.
+Continue Stage 3.1.5: commit the login slice, push
+`phase-1-stage-3-login`, then wait for both CI jobs green and record the run
+link/results here. Codex must not create a PR.
