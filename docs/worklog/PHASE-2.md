@@ -91,10 +91,13 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   Result: `main` fast-forwarded to merge commit `9425cdf`, Stage 1 head
   `e392736` verified as an ancestor of `origin/main`, branch created from
   fresh `main`, and this Stage 1.9 plan written before implementation.
-- [ ] Stage 1.9.2: Product Principles documentation. Add the mandatory
+- [x] Stage 1.9.2: Product Principles documentation. Add the mandatory
   `Product Principles` section to `AGENTS.md` covering restaurant-worker
   simplicity, superadmin-only destructive actions, and scale-from-day-one
-  constraints. Commit documentation with the worklog result.
+  constraints. Commit documentation with the worklog result. Result:
+  `AGENTS.md` now makes UI simplicity, superadmin-only deletes, and
+  scale-from-day-one query/list/concurrency rules mandatory for all future
+  stages.
 - [ ] Stage 1.9.3: superadmin-only delete enforcement. Add the user
   `is_superadmin` flag, seed deterministic demo superadmins, enforce
   superadmin authorization on current destructive admin routes, hide Menu
@@ -149,6 +152,9 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   Stage 1 merge commit `9425cdf` includes Stage 1 head `e392736`; branch
   `phase-2-stage-1.9-principles-superadmin` created and implementation plan
   written before code.
+- 2026-07-20: Stage 1.9.2 Product Principles documentation complete.
+  `AGENTS.md` now records mandatory simplicity, superadmin-only delete, and
+  scale-from-day-one rules for current and future modules.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -167,6 +173,7 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   create/read/update permission checks.
 
 ## Next steps
-Continue with Stage 1.9.2: add the mandatory `Product Principles` section to
-`AGENTS.md`, then commit it with the worklog result. Codex must not create or
-merge a PR.
+Continue with Stage 1.9.3: add the `is_superadmin` flag, enforce
+superadmin-only delete on current admin destructive routes, hide Menu delete
+controls for non-superadmins, add tests, then run `make pint && make stan &&
+make test`. Codex must not create or merge a PR.
