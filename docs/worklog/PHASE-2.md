@@ -1,6 +1,6 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.11 Menu UX started; Part A soft delete in progress
+Status: Stage 1.11 Part A soft delete complete; awaiting owner PR/merge
 Branch: phase-2-stage-1.11-menu-ux
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
@@ -250,11 +250,20 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   `ru`, and `en`, and feature tests cover permission, restore 403, tenant
   404s, hidden archived rows, and inaccessible category controls. Gates green:
   Pint pass, PHPStan pass, Pest 53 passed / 2 skipped / 379 assertions.
-- [ ] Stage 1.11.5 (Part A): final verification and handoff for soft delete.
+- [x] Stage 1.11.5 (Part A): final verification and handoff for soft delete.
   Run `make fresh`, curl-smoke manager archive/category cascade/hidden
   archive filter plus owner restore, final `make pint && make stan &&
   make test`, push `phase-2-stage-1.11-menu-ux`, wait for both CI jobs green,
-  update this worklog, and do not create or merge a PR.
+  update this worklog, and do not create or merge a PR. Result: `make fresh`
+  passed on PostgreSQL with the new soft-delete migration; curl smoke passed
+  by creating a temporary category/item as `manager@arat.test`, archiving the
+  category, confirming default `/admin/menu` hid it, `show_archived=1` showed
+  the localized archived badge, manager restore returned 403, `owner@arat.test`
+  restore returned 302, and the cascade item was restored with
+  `archived_with_category_id` cleared; final gates green: Pint pass, PHPStan
+  pass, Pest 53 passed / 2 skipped / 379 assertions. Branch pushed at code
+  head `9374d4b`; CI run 29747861501 passed both `quality` and
+  `tenant-isolation-pgsql`.
 - [ ] Stage 1.11.6 (Part B): menu item image architecture and dependency
   decision. After Part A is merged by owner, continue on the same Stage 1.11
   branch from fresh `main`; choose the image processing dependency/storage
@@ -396,6 +405,11 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   Menu index shows archived rows only via filter with translated badges and
   restore controls, archived categories are unavailable in item forms, and
   permission/tenant-isolation feature coverage is updated.
+- 2026-07-20: Stage 1.11.5 Part A final verification complete. Local
+  `make fresh`, curl smoke, Pint, PHPStan, and Pest are green. Branch
+  `phase-2-stage-1.11-menu-ux` pushed at code head `9374d4b`; GitHub Actions
+  run 29747861501 passed both `quality` and `tenant-isolation-pgsql`. PR is
+  not created by Codex.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -429,8 +443,7 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   with a push/CI handoff after each part and owner-created PRs only.
 
 ## Next steps
-Continue Stage 1.11 Part A with Stage 1.11.5: run `make fresh`, curl-smoke
-manager archive/category cascade/default hidden archived rows/show archived
-filter plus owner restore, final `make pint && make stan && make test`, push
-`phase-2-stage-1.11-menu-ux`, wait for both CI jobs green, update worklog, and
-do not create or merge a PR.
+Owner creates and merges the Part A PR for `phase-2-stage-1.11-menu-ux`;
+Codex must not create or merge a PR. After owner merge, continue Stage 1.11
+Part B with Stage 1.11.6 from fresh `main`: image architecture/dependency
+decision, storage schema, and focused checks.
