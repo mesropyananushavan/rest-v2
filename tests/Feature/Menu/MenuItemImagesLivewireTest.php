@@ -13,6 +13,7 @@ use App\Modules\Menu\Application\ReplaceMenuItemImage;
 use App\Modules\Menu\Domain\MenuItemImageSlot;
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
+use App\Modules\Menu\Infrastructure\Storage\MenuItemImageUrlResolver;
 use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Modules\Tenancy\Contracts\TenantResolver;
 use App\Modules\Tenancy\Infrastructure\Models\Branch;
@@ -165,6 +166,20 @@ it('renders the menu item form image zones and list placeholder thumbnail', func
         ->assertOk()
         ->assertSee(__('menu.fields.image'), false)
         ->assertSee('menu-item-placeholder.svg', false);
+});
+
+it('renders local public storage image URLs relative to the current host', function (): void {
+    config(['filesystems.disks.public.url' => '/storage']);
+
+    $item = new MenuItem([
+        'internal_image' => [
+            'path' => 'tenants/1/menu/items/9/internal/original.png',
+            'thumbnail_path' => 'tenants/1/menu/items/9/internal/thumb.png',
+        ],
+    ]);
+
+    expect(app(MenuItemImageUrlResolver::class)->thumbnailUrl($item, MenuItemImageSlot::Internal))
+        ->toBe('/storage/tenants/1/menu/items/9/internal/thumb.png');
 });
 
 /**

@@ -106,7 +106,10 @@ stores nullable JSON metadata on `menu_items` (`path`, `thumbnail_path`,
 dimensions, MIME type, and byte size), while files are stored through Laravel
 Storage using the configured `MENU_IMAGES_DISK` and tenant-scoped
 `MENU_IMAGES_PATH_TEMPLATE` (`tenants/{tenant_id}/menu/items/{item_id}/{slot}`
-locally on the `public` disk). UI code resolves URLs through Storage only and
+locally on the `public` disk). The local public disk uses a relative
+`FILESYSTEM_PUBLIC_URL=/storage` by default so Docker ports do not leak into
+stored/rendered URLs; deployments may set an absolute CDN/object-storage URL
+without changing application code. UI code resolves URLs through Storage only and
 uses one shared placeholder asset when a slot is empty. Replacing or removing
 an image deletes the old original and thumbnail files; archiving/restoring a
 menu item keeps files; superadmin force delete removes the files with the

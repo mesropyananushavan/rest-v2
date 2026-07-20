@@ -13,8 +13,8 @@ Use Docker through the Makefile; host PHP is not required.
 - `make test` runs Pest.
 - `make stan` runs PHPStan/Larastan.
 - `make pint` formats with Pint.
-- `make fresh` runs `migrate:fresh --seed`.
-- `make build` installs dependencies and builds Vite assets.
+- `make fresh` creates the public storage link and runs `migrate:fresh --seed`.
+- `make build` installs dependencies, creates the app key and public storage link, and builds Vite assets.
 - `make tools` starts dev-profile tools, currently Adminer at `http://localhost:8081`.
 
 ## Horizon
@@ -23,7 +23,7 @@ TODO: the `horizon` Compose service currently runs `php artisan queue:work` as a
 
 ## Demo Data
 
-`make fresh` runs guarded deterministic demo seeders in non-production environments only.
+`make fresh` creates the public storage link and runs guarded deterministic demo seeders in non-production environments only.
 
 Dev-only password for all demo users: `password`.
 

@@ -37,11 +37,13 @@ pint:
 	$(APP_NO_DEPS) vendor/bin/pint
 
 fresh:
+	$(APP) php artisan storage:link --force
 	$(APP) php artisan migrate:fresh --seed
 
 build:
 	$(APP_NO_DEPS) composer install
 	$(APP_NO_DEPS) php artisan key:generate --ansi
+	$(APP_NO_DEPS) php artisan storage:link --force
 	$(NODE) npm ci
 	$(NODE) npm run build
 
