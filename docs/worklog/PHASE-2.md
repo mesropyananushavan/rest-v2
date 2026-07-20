@@ -137,12 +137,18 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   removed the Bootstrap JS import, recorded the Tailwind decision, and verified
   `npm run build` passes. Bootstrap packages remain until Stage 1.10.5 after
   Blade views no longer depend on Bootstrap classes.
-- [ ] Stage 1.10.3: Livewire + Alpine foundation and proof component. Install
+- [x] Stage 1.10.3: Livewire + Alpine foundation and proof component. Install
   the latest stable Livewire version compatible with Laravel 13 plus Alpine.js,
   wire Blade/Vite/Livewire assets, convert dashboard counters into a simple
   Livewire component served over normal HTTP, add/adjust tests for the proof,
   and record the Livewire/Alpine decision in `docs/DECISIONS.md`. Run focused
-  checks and commit.
+  checks and commit. Result: installed `livewire/livewire` 4.3.3, started
+  Livewire through the Vite ESM bundle with its Alpine runtime, added
+  `App\Livewire\Admin\DashboardCounters` and a Menu Application metric action,
+  rendered dashboard counters as a Livewire component over the admin HTTP
+  route, recorded the Livewire/Alpine decision, and verified `npm run build`,
+  `make test` (Pest 50 passed / 2 skipped / 318 assertions), `make pint`, and
+  `make stan`.
 - [ ] Stage 1.10.4: Tailwind admin shell and shared components. Rewrite
   `resources/views/layouts/admin.blade.php`, login, error pages, dashboard,
   and all existing `x-` Blade components to Tailwind while preserving current
@@ -256,4 +262,4 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   approval and a separate commit.
 
 ## Next steps
-Continue with Stage 1.10.3 Livewire + Alpine foundation and proof component.
+Continue with Stage 1.10.4 Tailwind admin shell and shared components.
