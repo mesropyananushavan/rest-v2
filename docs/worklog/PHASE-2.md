@@ -174,11 +174,14 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   Bootstrap/Popper imports or `data-bs-*` usage. Verified `npm run build`,
   `make test` (Pest 50 passed / 2 skipped / 318 assertions), `make pint`, and
   `make stan`.
-- [ ] Stage 1.10.6: AGENTS UI stack update. Update `AGENTS.md` UI Definition
+- [x] Stage 1.10.6: AGENTS UI stack update. Update `AGENTS.md` UI Definition
   of Done to declare Blade + Livewire + Alpine + Tailwind as the admin UI
   base, forbid SPA frameworks, and document allowed criteria for focused
   npm/Vite UI widget libraries with mandatory `DECISIONS.md` entries. Run
-  documentation/grep checks and commit.
+  documentation/grep checks and commit. Result: `AGENTS.md` now names Blade +
+  Livewire + Alpine + Tailwind as the UI base, forbids SPA frameworks for
+  admin screens, and documents criteria for focused npm/Vite UI widget
+  libraries plus mandatory `DECISIONS.md` entries.
 - [ ] Stage 1.10.7: final verification, push, and CI handoff. Run
   `make fresh`, curl-smoke login -> `/admin` -> `/admin/menu` -> create/edit
   category and item -> locale switch -> branch switch -> 403/404 pages, audit
@@ -274,4 +277,4 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   approval and a separate commit.
 
 ## Next steps
-Continue with Stage 1.10.6 AGENTS UI stack update.
+Continue with Stage 1.10.7 final verification, push, and CI handoff.
