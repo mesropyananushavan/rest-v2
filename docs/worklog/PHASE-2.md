@@ -1,6 +1,6 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.7 complete; Stage 1.8 ready
+Status: Stage 1 Admin UI Foundation complete; awaiting owner PR
 Branch: phase-2-stage-1-admin-ui
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
@@ -72,12 +72,19 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   admin shell guest-safe for error rendering, covered all error pages, and
   added the requested UI Definition of Done to `AGENTS.md`. Gates green: Pint
   pass, PHPStan pass, Pest 47 passed / 2 skipped / 298 assertions.
-- [ ] Stage 1.8: final verification, push, and CI handoff. Run `make fresh`,
+- [x] Stage 1.8: final verification, push, and CI handoff. Run `make fresh`,
   curl-smoke login -> `/admin` -> `/admin/menu` -> locale switch -> branch
   switch, then run full `make pint && make stan && make test`, push
   `phase-2-stage-1-admin-ui`, wait for both GitHub Actions jobs green, update
   this worklog with local/CI results, and do not create or merge a PR. Result:
-  pending.
+  final `make fresh` pass after temporarily stopping unrelated `app-redis`
+  that occupied host port 6379; curl smoke pass (`POST /login` 302 to
+  `/admin`, `GET /admin` 200, `GET /admin/menu` 200 with `Լոռի ձվածեղ` and
+  `2200 ֏`, `POST /admin/locale` 302, `POST /admin/branch` 302, Dilijan branch
+  menu showed `Դիլիջանյան նախաճաշ` and hid Kentron item); final Pint pass,
+  PHPStan pass, Pest 47 passed / 2 skipped / 298 assertions. Branch pushed at
+  code head `e392736`; CI run 29738507952 passed both `quality` and
+  `tenant-isolation-pgsql`.
 
 ## Done log
 - 2026-07-20: Phase 2 Stage 1 opened from fresh `origin/main` on branch
@@ -111,6 +118,13 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   guest-safe admin layout behavior for error rendering, and the requested
   `AGENTS.md` UI rules. Gates green: Pint pass, PHPStan pass, Pest 47 passed /
   2 skipped / 298 assertions.
+- 2026-07-20: Stage 1.8 final verification and CI handoff complete. Local
+  `make fresh` passed; curl smoke passed for login, `/admin`, `/admin/menu`,
+  locale switch, and explicit branch switch to Dilijan with branch-scoped menu
+  content. Final gates green: Pint pass, PHPStan pass, Pest 47 passed /
+  2 skipped / 298 assertions. Branch `phase-2-stage-1-admin-ui` pushed at
+  code head `e392736`; GitHub Actions run 29738507952 passed both `quality`
+  and `tenant-isolation-pgsql`. PR is not created by Codex.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -120,8 +134,11 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   and a separate commit.
 - `main` now includes the Phase 1 Menu CRUD merge, so Menu pages are the
   correct reference target for component migration.
+- Final local `make fresh` initially failed because unrelated Docker container
+  `app-redis` occupied host port 6379. Owner-approved remediation was to
+  temporarily stop `app-redis`, run verification, then stop this project's
+  containers and restart `app-redis` after curl smoke.
 
 ## Next steps
-Run Stage 1.8 final verification: `make fresh`, curl-smoke login -> `/admin`
--> `/admin/menu` -> locale switch -> branch switch, full gates, push branch,
-wait for both CI jobs green, then update this worklog with final results.
+Owner creates the PR for `phase-2-stage-1-admin-ui`. Codex must not create or
+merge the PR.
