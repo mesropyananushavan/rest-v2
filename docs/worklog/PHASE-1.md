@@ -1,12 +1,14 @@
 # Worklog — Phase 1: Walking Skeleton
 
-Status: Stage 3.1 Docker storage permission fix complete; CI green
-Branch: phase-1-stage-3-login
+Status: Stage 3.1 login auth UI merged to main
+Branch: main
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
 
 CI status: green on pushed Stage 3.1 branch. Run:
 https://github.com/mesropyananushavan/rest-v2/actions/runs/29725976561
+Docker permission fix CI: green. Run:
+https://github.com/mesropyananushavan/rest-v2/actions/runs/29727485150
 
 ## Plan
 - [x] Stage 1: Laravel 13 scaffold, module skeletons (Tenancy/Identity/Menu),
@@ -167,6 +169,9 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29725976561
 - 2026-07-20: Stage 3.1.6 CI confirmed green. Branch
   `phase-1-stage-3-login` pushed at head `8b607d9`; GitHub Actions run
   29727485150 passed both `quality` and `tenant-isolation-pgsql`.
+- 2026-07-20: PR #3 merged to `main` at merge commit `0a0529b` after owner
+  explicitly requested Codex PR creation/merge for this mini-fix. Local
+  `main` fast-forwarded to `origin/main`.
 
 ## Gotchas / known issues
 - Host PHP is 8.1 — never run PHP on host, docker/make only.
@@ -225,7 +230,6 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29725976561
   Pest runs and breaks sqlite/RLS expectations.
 
 ## Next steps
-Owner explicitly requested Codex to create and merge the Stage 3.1 PR after
-this mini-fix. Create PR for `phase-1-stage-3-login`, merge it if GitHub
-allows, then update local `main`. After merge, wait for the owner's Stage 3.2
-Menu CRUD prompt.
+Await the owner's Stage 3.2 Menu CRUD prompt. Do not start Menu work until the
+prompt is provided; when it arrives, plan Stage 3.2 in this worklog before
+writing code.
