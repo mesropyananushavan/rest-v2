@@ -70,20 +70,31 @@ principles require; Bootstrap JS — tied to the outgoing Bootstrap UI stack.
 
 ## 2026-07-20 — Menu archive and restore cascade policy
 Decision: menu category and item deletion in the product is archive
-(`deleted_at`) rather than physical deletion. Users with the relevant Menu
-manage permission may archive categories/items; restoring archived records is
-superadmin-only. Archiving a category also archives its currently
-non-archived child items and marks those items as archived by that category
-cascade. Restoring
-the category restores only items carrying that cascade marker; items archived
-independently before the category archive remain archived. An item cannot be
-restored while its category is still archived.
+(`deleted_at`) rather than physical deletion for normal workflows. Users with
+the relevant Menu manage permission may archive categories/items. Viewing
+archived records, using the `show_archived` list state, restoring archived
+records, and permanently deleting archived records are superadmin-only. If a
+non-superadmin requests `show_archived=1`, the parameter is ignored and the
+normal non-archived list is rendered. Archiving a category also archives its
+currently non-archived child items and marks those items as archived by that
+category cascade. Restoring the category restores only items carrying that
+cascade marker; items archived independently before the category archive
+remain archived. An item cannot be restored while its category is still
+archived. Force deleting an archived category permanently deletes that
+category and its archived child items.
 Reason: Menu catalog records can be referenced by historical orders later, so
 retaining rows preserves history and tenant isolation while still removing
-records from normal workflows. The explicit cascade marker avoids relying on
-timestamp equality and prevents accidental restoration of items that a manager
-had intentionally archived before the category was archived.
+records from normal workflows. Archive visibility is limited to superadmins to
+avoid operational users working around the archive state or seeing maintenance
+data. Ignoring `show_archived` for non-superadmins keeps the normal Menu index
+accessible by manage permission while preventing archive disclosure. The
+explicit cascade marker avoids relying on timestamp equality and prevents
+accidental restoration of items that a manager had intentionally archived
+before the category was archived.
 Rejected: physical deletion from admin UI — unsafe for catalog history;
 restoring every item in a category — would revive independently archived
 items; inferring cascade membership from matching `deleted_at` timestamps —
-fragile and hard to reason about under retries or concurrent requests.
+fragile and hard to reason about under retries or concurrent requests;
+returning 403 for `show_archived=1` from non-superadmins — more disruptive
+than needed because the same index page is otherwise valid for their normal
+workflow.

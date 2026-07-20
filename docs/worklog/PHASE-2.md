@@ -270,11 +270,14 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   owner-review plan before code. Result: branch was already clean and tracking
   `origin/phase-2-stage-1.11-menu-ux` at Part A handoff head; owner requested
   superadmin-only archive visibility plus superadmin force delete.
-- [ ] Stage 1.11.5.2 (Part A review): archive visibility and policy docs.
+- [x] Stage 1.11.5.2 (Part A review): archive visibility and policy docs.
   Update `AGENTS.md` and `docs/DECISIONS.md` so archive viewing,
   `show_archived`, badges, restore, and force delete are superadmin-only;
   record that `show_archived=1` from non-superadmins is ignored rather than
-  forbidden. Commit with the worklog result.
+  forbidden. Commit with the worklog result. Result: product policy now states
+  archive is by manage permission while archive viewing, restore, and
+  permanent delete are superadmin-only; `docs/DECISIONS.md` records ignored
+  `show_archived` for non-superadmins and superadmin-only force delete.
 - [ ] Stage 1.11.5.3 (Part A review): force-delete application and routes.
   Add superadmin-only force-delete actions/routes for categories/items,
   permanently delete archived categories with their archived items, keep tenant
@@ -441,6 +444,10 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
 - 2026-07-20: Stage 1.11 Part A owner review opened on the existing
   `phase-2-stage-1.11-menu-ux` branch. Scope is limited to superadmin-only
   archive visibility and superadmin force delete; `main` is not touched.
+- 2026-07-20: Stage 1.11.5.2 Part A review documentation complete.
+  `AGENTS.md` and `docs/DECISIONS.md` now make archive visibility, restore,
+  and permanent delete superadmin-only, while normal managers may still
+  archive by permission.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -474,7 +481,7 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   with a push/CI handoff after each part and owner-created PRs only.
 
 ## Next steps
-Continue Stage 1.11 Part A owner review with Stage 1.11.5.2: update
-`AGENTS.md` and `docs/DECISIONS.md` for superadmin-only archive visibility,
-superadmin-only restore/force-delete, and ignored `show_archived` for
-non-superadmins; commit the documentation step.
+Continue Stage 1.11 Part A owner review with Stage 1.11.5.3: add
+force-delete Application actions/routes, superadmin middleware enforcement,
+database-removal tests, non-superadmin 403 tests, and tenant-isolation 404
+tests for force-delete routes.
