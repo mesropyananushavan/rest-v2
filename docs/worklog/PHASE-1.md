@@ -126,6 +126,12 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29590252242
 - CI Pest requires an application key. `phpunit.xml` now sets a static
   testing-only `APP_KEY` so GitHub Actions can run Feature tests without
   a local `.env`.
+- PostgreSQL service users created by the GitHub Actions postgres image can
+  bypass RLS. The dedicated pgsql tenant isolation job creates and uses a
+  separate non-superuser `smartrest_app` role so FORCE RLS is actually tested.
+- The minimal welcome placeholder must not call `@vite` directly before the
+  CI build step creates `public/build/manifest.json`; otherwise the Pest step
+  fails before Vite Build runs.
 
 ## Next steps
 Push `phase-1-stage-2.5-hardening`, wait for GitHub Actions, record CI result

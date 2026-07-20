@@ -74,10 +74,10 @@ jobs:
       DB_CONNECTION: pgsql
       DB_DATABASE: smartrest_test
       DB_HOST: 127.0.0.1
-      DB_PASSWORD: smartrest
+      DB_PASSWORD: smartrest_app
       DB_PORT: 5432
       DB_URL: ""
-      DB_USERNAME: smartrest
+      DB_USERNAME: smartrest_app
       MAIL_MAILER: array
       NIGHTWATCH_ENABLED: false
       PULSE_ENABLED: false
@@ -95,6 +95,17 @@ jobs:
           php-version: "8.3"
           extensions: mbstring, intl, pdo_pgsql, redis, zip, pcntl
           coverage: none
+
+      - name: Prepare PostgreSQL App Role
+        env:
+          PGPASSWORD: smartrest
+        run: |
+          psql -h 127.0.0.1 -U smartrest -d smartrest_test <<'SQL'
+          CREATE ROLE smartrest_app LOGIN PASSWORD 'smartrest_app';
+          GRANT CONNECT ON DATABASE smartrest_test TO smartrest_app;
+          GRANT USAGE, CREATE ON SCHEMA public TO smartrest_app;
+          ALTER SCHEMA public OWNER TO smartrest_app;
+          SQL
 
       - name: Install PHP Dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
