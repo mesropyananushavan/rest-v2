@@ -1,6 +1,6 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.3 complete; Stage 1.4 ready
+Status: Stage 1.4 complete; Stage 1.5 ready
 Branch: phase-2-stage-1-admin-ui
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
@@ -34,12 +34,16 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   default fallback, and covered assigned/unassigned branch switching plus
   locale switching. Gates green: Pint pass, PHPStan pass, Pest 40 passed /
   2 skipped / 267 assertions.
-- [ ] Stage 1.4: Blade UI component foundation. Add reusable Blade components
+- [x] Stage 1.4: Blade UI component foundation. Add reusable Blade components
   for page header, card, table, buttons, form input/select/toggle, status
   badge, confirm-modal delete flow, and flash messages. Keep Bootstrap 5 +
   existing `tokens.css`; no new JS framework or packages. Add component smoke
   coverage where practical. Run `make pint && make stan && make test`, commit.
-  Result: pending.
+  Result: added anonymous Blade components for page headers, cards, dense
+  tables, buttons, form input/select/toggle controls, status badges,
+  confirm-modal delete flow, and flash messages; dashboard/layout now consume
+  shared components and component smoke coverage renders the set. Gates green:
+  Pint pass, PHPStan pass, Pest 41 passed / 2 skipped / 275 assertions.
 - [ ] Stage 1.5: Menu pages as the UI reference implementation. Rewrite the
   existing Menu CRUD pages to use the new admin layout and x-components,
   replace raw delete buttons with confirm-modal, ensure every action returns
@@ -76,6 +80,11 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   unchanged, and locale switching uses session override with tenant settings
   default fallback. Gates green: Pint pass, PHPStan pass, Pest 40 passed /
   2 skipped / 267 assertions.
+- 2026-07-20: Stage 1.4 Blade component foundation complete locally. Added
+  reusable anonymous components for admin page structure, tables, buttons,
+  forms, status badges, confirm-delete modal, and flash messages; dashboard
+  and layout consume the first shared components. Gates green: Pint pass,
+  PHPStan pass, Pest 41 passed / 2 skipped / 275 assertions.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -87,6 +96,6 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   correct reference target for component migration.
 
 ## Next steps
-Implement Stage 1.4 Blade UI component foundation: page header, card, table,
-buttons, form controls, status badge, confirm-modal, flash messages, and
-component smoke coverage where practical.
+Implement Stage 1.5 by rewriting Menu CRUD pages to use the new admin
+components, replacing raw delete buttons with confirm-modal, and preserving
+flash messages plus tenant isolation coverage.

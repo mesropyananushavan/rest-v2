@@ -11,6 +11,10 @@ return [
         'dashboard' => 'Dashboard',
         'menu' => 'Menu',
     ],
+    'actions' => [
+        'cancel' => 'Cancel',
+        'delete' => 'Delete',
+    ],
     'shell' => [
         'toggle_navigation' => 'Toggle navigation',
         'tenant' => 'Tenant',
@@ -30,6 +34,12 @@ return [
     'flash' => [
         'branch_updated' => 'Branch changed.',
         'locale_updated' => 'Locale changed.',
+    ],
+    'components' => [
+        'confirm_delete' => [
+            'title' => 'Confirm deletion',
+            'message' => 'This action cannot be undone.',
+        ],
     ],
     'dashboard' => [
         'title' => 'Dashboard',

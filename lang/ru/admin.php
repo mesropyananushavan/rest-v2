@@ -11,6 +11,10 @@ return [
         'dashboard' => 'Панель',
         'menu' => 'Меню',
     ],
+    'actions' => [
+        'cancel' => 'Отмена',
+        'delete' => 'Удалить',
+    ],
     'shell' => [
         'toggle_navigation' => 'Открыть или закрыть навигацию',
         'tenant' => 'Компания',
@@ -30,6 +34,12 @@ return [
     'flash' => [
         'branch_updated' => 'Филиал изменён.',
         'locale_updated' => 'Язык изменён.',
+    ],
+    'components' => [
+        'confirm_delete' => [
+            'title' => 'Подтвердите удаление',
+            'message' => 'Это действие нельзя отменить.',
+        ],
     ],
     'dashboard' => [
         'title' => 'Панель',

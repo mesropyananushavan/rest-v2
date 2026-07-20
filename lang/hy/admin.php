@@ -11,6 +11,10 @@ return [
         'dashboard' => 'Վահանակ',
         'menu' => 'Մենյու',
     ],
+    'actions' => [
+        'cancel' => 'Չեղարկել',
+        'delete' => 'Ջնջել',
+    ],
     'shell' => [
         'toggle_navigation' => 'Բացել կամ փակել նավիգացիան',
         'tenant' => 'Ընկերություն',
@@ -30,6 +34,12 @@ return [
     'flash' => [
         'branch_updated' => 'Մասնաճյուղը փոխվեց։',
         'locale_updated' => 'Լեզուն փոխվեց։',
+    ],
+    'components' => [
+        'confirm_delete' => [
+            'title' => 'Հաստատել ջնջումը',
+            'message' => 'Այս գործողությունը հնարավոր չէ հետարկել։',
+        ],
     ],
     'dashboard' => [
         'title' => 'Վահանակ',
