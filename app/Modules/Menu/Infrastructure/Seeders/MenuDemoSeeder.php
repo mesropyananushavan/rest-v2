@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace App\Modules\Menu\Infrastructure\Seeders;
 
+use App\Modules\Menu\Application\RemoveMenuItemImage;
+use App\Modules\Menu\Application\ReplaceMenuItemImage;
+use App\Modules\Menu\Domain\MenuItemImageSlot;
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Modules\Tenancy\Contracts\TenantResolver;
 use Illuminate\Database\Seeder;
+use Illuminate\Http\UploadedFile;
 use RuntimeException;
 
 final class MenuDemoSeeder extends Seeder
@@ -53,7 +57,7 @@ final class MenuDemoSeeder extends Seeder
                 foreach ($items as $itemRow) {
                     $category = $categories[$itemRow['category']];
 
-                    MenuItem::query()->updateOrCreate(
+                    $item = MenuItem::query()->updateOrCreate(
                         [
                             'tenant_id' => $tenantId,
                             'branch_id' => $branchId,
@@ -68,6 +72,8 @@ final class MenuDemoSeeder extends Seeder
                             'active' => true,
                         ],
                     );
+
+                    $this->syncItemImages($item, $itemRow);
                 }
             }
         }
@@ -85,7 +91,9 @@ final class MenuDemoSeeder extends Seeder
      *         sort_order: int,
      *         name: array{hy: string, ru: string, en: string},
      *         description: array{hy: string, ru: string, en: string},
-     *         price_minor: int
+     *         price_minor: int,
+     *         internal_image_fixture?: string,
+     *         public_image_fixture?: string
      *     }>>
      * }>
      */
@@ -101,8 +109,8 @@ final class MenuDemoSeeder extends Seeder
                 ],
                 'branches' => [
                     'arat-kentron' => [
-                        ['category' => 'breakfast', 'sort_order' => 10, 'name' => $this->localized('Լոռի ձվածեղ', 'Омлет Лори', 'Lori omelette'), 'description' => $this->localized('Ձու, լոռի պանիր, կանաչի', 'Яйца, сыр лори, зелень', 'Eggs, Lori cheese, greens'), 'price_minor' => 220000],
-                        ['category' => 'salads', 'sort_order' => 20, 'name' => $this->localized('Երեւանյան աղցան', 'Ереванский салат', 'Yerevan salad'), 'description' => $this->localized('Թարմ բանջարեղեն եւ ռեհան', 'Свежие овощи и базилик', 'Fresh vegetables and basil'), 'price_minor' => 260000],
+                        ['category' => 'breakfast', 'sort_order' => 10, 'name' => $this->localized('Լոռի ձվածեղ', 'Омлет Лори', 'Lori omelette'), 'description' => $this->localized('Ձու, լոռի պանիր, կանաչի', 'Яйца, сыр лори, зелень', 'Eggs, Lori cheese, greens'), 'price_minor' => 220000, 'internal_image_fixture' => 'staff-omelette.png'],
+                        ['category' => 'salads', 'sort_order' => 20, 'name' => $this->localized('Երեւանյան աղցան', 'Ереванский салат', 'Yerevan salad'), 'description' => $this->localized('Թարմ բանջարեղեն եւ ռեհան', 'Свежие овощи и базилик', 'Fresh vegetables and basil'), 'price_minor' => 260000, 'public_image_fixture' => 'guest-salad.png'],
                         ['category' => 'mains', 'sort_order' => 30, 'name' => $this->localized('Խորոված հավ', 'Куриный хоровац', 'Chicken khorovats'), 'description' => $this->localized('Ածուխի վրա պատրաստված հավ', 'Курица на углях', 'Charcoal-grilled chicken'), 'price_minor' => 380000],
                     ],
                     'arat-dilijan' => [
@@ -137,5 +145,35 @@ final class MenuDemoSeeder extends Seeder
             'ru' => $ru,
             'en' => $en,
         ];
+    }
+
+    /**
+     * @param  array{internal_image_fixture?: string, public_image_fixture?: string}  $itemRow
+     */
+    private function syncItemImages(MenuItem $item, array $itemRow): void
+    {
+        $this->syncSlot($item, MenuItemImageSlot::Internal, $itemRow['internal_image_fixture'] ?? null);
+        $this->syncSlot($item, MenuItemImageSlot::Public, $itemRow['public_image_fixture'] ?? null);
+    }
+
+    private function syncSlot(MenuItem $item, MenuItemImageSlot $slot, ?string $fixture): void
+    {
+        if ($fixture === null) {
+            app(RemoveMenuItemImage::class)((int) $item->id, $slot);
+
+            return;
+        }
+
+        $path = database_path('fixtures/menu-images/'.$fixture);
+
+        if (! is_file($path)) {
+            throw new RuntimeException("Missing demo menu image fixture [{$fixture}].");
+        }
+
+        app(ReplaceMenuItemImage::class)(
+            (int) $item->id,
+            $slot,
+            new UploadedFile($path, $fixture, 'image/png', null, true),
+        );
     }
 }

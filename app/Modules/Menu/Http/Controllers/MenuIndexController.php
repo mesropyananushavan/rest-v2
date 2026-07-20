@@ -6,6 +6,7 @@ namespace App\Modules\Menu\Http\Controllers;
 
 use App\Modules\Menu\Application\ListMenuCategories;
 use App\Modules\Menu\Application\ListMenuItems;
+use App\Modules\Menu\Infrastructure\Storage\MenuItemImageUrlResolver;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -21,6 +22,7 @@ final class MenuIndexController
             'items' => $items(includeArchived: $showArchived),
             'canViewArchive' => $canViewArchive,
             'showArchived' => $showArchived,
+            'imageUrls' => app(MenuItemImageUrlResolver::class),
         ]);
     }
 }

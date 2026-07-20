@@ -343,13 +343,20 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   isolation on id tampering, archive preserving files, and force delete removing
   files. Gates green: Pint pass, PHPStan pass, Pest 59 passed / 2 skipped /
   464 assertions.
-- [ ] Stage 1.11.8 (Part B): Livewire upload UI, placeholders, translations,
+- [x] Stage 1.11.8 (Part B): Livewire upload UI, placeholders, translations,
   and demo fixtures. Convert the menu item form to a thin Livewire adapter for
   two optional image upload zones with current preview, replace, and remove
   controls; render thumbnails with the shared default placeholder in the item
   list; add `hy`/`ru`/`en` translations; add deterministic demo image fixtures
   for a few seeded items while leaving other items empty. Run focused UI tests,
-  `npm run build`, full gates, and commit.
+  `npm run build`, full gates, and commit. Result: item create/edit now renders
+  a Livewire form with staff/internal and guest/public upload zones, previews,
+  replace/remove controls, Livewire validation for jpeg/png/webp and max size,
+  and translated labels/help in `hy`/`ru`/`en`; the item list renders an
+  internal staff thumbnail with the shared SVG placeholder fallback; demo
+  seeding uses two small PNG fixtures through the same image processing action
+  while other items remain image-empty. Verified `make pint`, `make stan`,
+  `make test` (Pest 63 passed / 2 skipped / 502 assertions), and `make build`.
 - [ ] Stage 1.11.9 (Part B): final verification, push, and CI handoff. Run
   `make fresh`, curl/HTTP smoke for Livewire upload, thumbnail rendering, and
   placeholder fallback, then final `make pint && make stan && make test`.
