@@ -7,4 +7,6 @@ namespace App\Modules\Identity\Contracts;
 interface UserDirectory
 {
     public function findName(int $userId): ?string;
+
+    public function firstAssignedBranchId(int $userId): ?int;
 }

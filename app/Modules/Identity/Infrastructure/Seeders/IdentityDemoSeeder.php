@@ -25,7 +25,7 @@ final class IdentityDemoSeeder extends Seeder
 
             app(TenantResolver::class)->set($tenantId);
 
-            $permissions = $this->seedPermissions();
+            $permissions = $this->seedPermissions($tenantId);
             $roles = $this->seedRoles($tenantId, $permissions);
 
             foreach ($tenantConfig['users'] as $userRow) {
@@ -61,14 +61,19 @@ final class IdentityDemoSeeder extends Seeder
     /**
      * @return array<string, Permission>
      */
-    private function seedPermissions(): array
+    private function seedPermissions(int $tenantId): array
     {
         $permissions = [];
 
         foreach ($this->permissionRows() as $code => $name) {
             $permissions[$code] = Permission::query()->updateOrCreate(
-                ['code' => $code],
-                ['name' => $name],
+                [
+                    'tenant_id' => $tenantId,
+                    'code' => $code,
+                ],
+                [
+                    'name' => $name,
+                ],
             );
         }
 
@@ -85,8 +90,13 @@ final class IdentityDemoSeeder extends Seeder
 
         foreach ($this->rolePermissions() as $roleCode => $permissionCodes) {
             $role = Role::query()->updateOrCreate(
-                ['code' => $roleCode],
-                ['name' => ucfirst($roleCode)],
+                [
+                    'tenant_id' => $tenantId,
+                    'code' => $roleCode,
+                ],
+                [
+                    'name' => ucfirst($roleCode),
+                ],
             );
 
             $roles[$roleCode] = $role;

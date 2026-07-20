@@ -11,10 +11,12 @@ use App\Modules\Identity\Infrastructure\Authorization\EloquentAuthorizer;
 use App\Modules\Identity\Infrastructure\Authorization\EloquentPermissionCatalog;
 use App\Modules\Identity\Infrastructure\Directory\EloquentUserDirectory;
 use App\Modules\Tenancy\Contracts\BranchContext;
+use App\Modules\Tenancy\Contracts\TenantDirectory;
 use App\Modules\Tenancy\Contracts\TenantResolver;
 use App\Modules\Tenancy\Contracts\TenantSettingsReader;
 use App\Modules\Tenancy\Infrastructure\Context\InMemoryBranchContext;
 use App\Modules\Tenancy\Infrastructure\Context\InMemoryTenantResolver;
+use App\Modules\Tenancy\Infrastructure\Directory\EloquentTenantDirectory;
 use App\Modules\Tenancy\Infrastructure\Settings\EloquentTenantSettingsReader;
 use App\Support\Logging\LogContext;
 use App\Support\Logging\Redactor;
@@ -36,6 +38,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(TenantResolver::class, InMemoryTenantResolver::class);
         $this->app->singleton(BranchContext::class, InMemoryBranchContext::class);
+        $this->app->bind(TenantDirectory::class, EloquentTenantDirectory::class);
         $this->app->bind(TenantSettingsReader::class, EloquentTenantSettingsReader::class);
         $this->app->bind(Authorizer::class, EloquentAuthorizer::class);
         $this->app->bind(UserDirectory::class, EloquentUserDirectory::class);

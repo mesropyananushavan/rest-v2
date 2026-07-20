@@ -1,12 +1,12 @@
 # Worklog — Phase 1: Walking Skeleton
 
-Status: Stage 2.5 hardening complete; branch pushed; awaiting owner PR
-Branch: phase-1-stage-2.5-hardening
+Status: Stage 3.1 Docker storage permission fix complete; CI green
+Branch: phase-1-stage-3-login
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
 
-CI status: green on pushed Stage 2.5 branch. Run:
-https://github.com/mesropyananushavan/rest-v2/actions/runs/29724811580
+CI status: green on pushed Stage 3.1 branch. Run:
+https://github.com/mesropyananushavan/rest-v2/actions/runs/29725976561
 
 ## Plan
 - [x] Stage 1: Laravel 13 scaffold, module skeletons (Tenancy/Identity/Menu),
@@ -42,7 +42,47 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29724811580
   `UserFactory` hardcoded `tenant_id => 1` via factory/state, replace welcome
   page with minimal translated placeholder, run `make pint && make stan &&
   make test`, commit.
-- [ ] Stage 3: menu vertical slice (actions, Blade UI, API, i18n, audit,
+- [x] Stage 3.1.1: minimal Identity login/logout routes and controller.
+  Add hand-written Laravel session auth endpoints in Identity Http, no
+  Breeze/Jetstream/Fortify, no registration/password reset/2FA/remember me.
+  Add translated validation/flash text and focused feature tests, run
+  `make pint && make stan && make test`, commit. Result: implemented as part
+  of login slice; gates green with Stage 3.1.1-3.1.4 combined.
+- [x] Stage 3.1.2: minimal login Blade UI. Build the `/login` page with
+  email and password only, using existing Bootstrap and `tokens.css`, with
+  all user-facing text in `lang/en`, `lang/hy`, and `lang/ru`. Add smoke
+  coverage for seeded demo users where practical, run `make pint &&
+  make stan && make test`, commit. Result: translated Blade form added with
+  demo seeder login smoke test; gates green with Stage 3.1.1-3.1.4 combined.
+- [x] Stage 3.1.3: auth middleware and tenant isolation through real login.
+  Prove guest redirects to `/login`, authenticated users are redirected away
+  from `/login`, and a user from tenant A receives 404 for tenant B branch via
+  `POST /login -> session -> GET /admin/branches/{id}` rather than
+  `actingAs`. Run `make pint && make stan && make test`, commit. Result:
+  tenant and branch context resolve from authenticated user middleware and
+  foreign tenant branch returns 404 through real session login; gates green
+  with Stage 3.1.1-3.1.4 combined.
+- [x] Stage 3.1.4: login rate limiting. Apply standard Laravel throttle to
+  the login endpoint and add a regression test. Run `make pint && make stan
+  && make test`, commit. Result: `/login` POST uses `throttle:5,1`; regression
+  test covers 429 after five failed attempts; gates green with Stage 3.1.1-
+  3.1.4 combined.
+- [x] Stage 3.1.5: final verification and handoff. Run full local gates,
+  push `phase-1-stage-3-login`, wait for both CI jobs green, update this
+  worklog with CI links/results, no PR creation. Result: local `make fresh`,
+  Pint, PHPStan, and Pest green; branch pushed at code head `bf13432`; CI run
+  29725976561 passed both `quality` and `tenant-isolation-pgsql`.
+- [x] Stage 3.1.6: Docker storage/bootstrap cache permissions. Add a
+  container startup permission repair for `storage` and `bootstrap/cache` so
+  www-data can write compiled views and logs after rebuild/fresh checkout.
+  Verify with `make down && make build && make up && make fresh`, then curl
+  `/` and `/login` for HTTP 200, run `make pint && make stan && make test`,
+  commit, push, and wait for CI. Result: entrypoint repair added; compose web
+  runtime now forces PostgreSQL/Redis service env; `make test` forces isolated
+  testing/sqlite env. Local rebuild/fresh/curl/gates green; pushed at
+  `8b607d9`; CI run 29727485150 passed both `quality` and
+  `tenant-isolation-pgsql`.
+- [ ] Stage 3.2: menu vertical slice (actions, Blade UI, API, i18n, audit,
   tests, demo seeders)
 
 ## Done log
@@ -104,6 +144,29 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29724811580
   issues: welcome placeholder depended on Vite manifest before build, and the
   pgsql service user bypassed RLS. Fix: remove direct `@vite` from the
   placeholder and test pgsql RLS through non-superuser `smartrest_app`.
+- 2026-07-20: Stage 3.1 login slice implemented locally. Added minimal
+  Identity session login/logout, translated `/login` Blade form, logout/context
+  cleanup, tenant directory contract for scoped authentication, branch context
+  fallback from authenticated user's first assignment via Identity contract,
+  login throttle, real-session tenant isolation regression, guest/auth
+  redirects, demo user login smoke test, and explicit tenant keys in Identity
+  demo seeder rows. Demo verification green: `make fresh` pass. Gates green:
+  Pint pass, PHPStan pass, Pest 25 passed / 1 skipped / 160 assertions.
+- 2026-07-20: Stage 3.1 CI confirmed green. Branch
+  `phase-1-stage-3-login` pushed at code head `bf13432`; GitHub Actions run
+  29725976561 passed both `quality` and `tenant-isolation-pgsql`. PR is not
+  created by Codex.
+- 2026-07-20: Stage 3.1.6 Docker permission/runtime fix implemented locally.
+  Added php entrypoint startup repair for `storage` and `bootstrap/cache`,
+  forced compose web/worker runtime to PostgreSQL/Redis service env, and made
+  `make test` explicitly run with testing/sqlite overrides so compose local
+  runtime env does not leak into Pest. Verification green: `make down`,
+  `make build`, `make up`, `make fresh`, curl `/` 200, curl `/login` 200,
+  curl demo login `manager@arat.test` / `password` redirects to `/`, Pint pass,
+  PHPStan pass, Pest 25 passed / 1 skipped / 160 assertions.
+- 2026-07-20: Stage 3.1.6 CI confirmed green. Branch
+  `phase-1-stage-3-login` pushed at head `8b607d9`; GitHub Actions run
+  29727485150 passed both `quality` and `tenant-isolation-pgsql`.
 
 ## Gotchas / known issues
 - Host PHP is 8.1 — never run PHP on host, docker/make only.
@@ -139,8 +202,30 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29724811580
 - The minimal welcome placeholder must not call `@vite` directly before the
   CI build step creates `public/build/manifest.json`; otherwise the Pest step
   fails before Vite Build runs.
+- `/login` conditionally loads Vite assets only when `public/build/manifest.json`
+  exists, matching the welcome placeholder CI gotcha while still using
+  Bootstrap/tokens after frontend build.
+- Because users are tenant-scoped, login cannot query `users` before selecting
+  a tenant. Stage 3.1 uses the Tenancy `TenantDirectory` contract to attempt
+  credentials inside active tenant scopes. Duplicate emails across tenants are
+  not disambiguated yet; tenant-domain routing or a tenant selector belongs to
+  later login polish.
+- Demo identity seeders must set `tenant_id` explicitly in `updateOrCreate`
+  lookup attributes for tenant-owned rows. Relying only on the creating hook
+  failed during `make fresh` for permissions.
+- Bind-mounted Laravel writable paths need runtime repair, not only image
+  build-time `chown`, because fresh checkouts and host-owned files are mounted
+  over image paths.
+- Compose web/worker runtime must set `DB_CONNECTION=pgsql` and service
+  credentials explicitly. Otherwise a local `.env` with sqlite makes browser
+  sessions write to `database/database.sqlite`, which can be readonly for
+  `www-data`.
+- `make test` must explicitly override compose runtime env back to
+  testing/sqlite; otherwise local PostgreSQL service env leaks into no-deps
+  Pest runs and breaks sqlite/RLS expectations.
 
 ## Next steps
-Await owner PR creation/review/merge for `phase-1-stage-2.5-hardening`.
-Codex must not create the PR and must not start Stage 3 until the owner
-confirms this branch is merged to `main`.
+Owner explicitly requested Codex to create and merge the Stage 3.1 PR after
+this mini-fix. Create PR for `phase-1-stage-3-login`, merge it if GitHub
+allows, then update local `main`. After merge, wait for the owner's Stage 3.2
+Menu CRUD prompt.

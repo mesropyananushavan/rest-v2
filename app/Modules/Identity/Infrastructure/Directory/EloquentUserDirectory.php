@@ -6,11 +6,22 @@ namespace App\Modules\Identity\Infrastructure\Directory;
 
 use App\Modules\Identity\Contracts\UserDirectory;
 use App\Modules\Identity\Infrastructure\Models\User;
+use App\Modules\Identity\Infrastructure\Models\UserBranchAssignment;
 
 final class EloquentUserDirectory implements UserDirectory
 {
     public function findName(int $userId): ?string
     {
         return User::query()->find($userId)?->name;
+    }
+
+    public function firstAssignedBranchId(int $userId): ?int
+    {
+        $branchId = UserBranchAssignment::query()
+            ->where('user_id', $userId)
+            ->orderBy('id')
+            ->value('branch_id');
+
+        return is_numeric($branchId) ? (int) $branchId : null;
     }
 }

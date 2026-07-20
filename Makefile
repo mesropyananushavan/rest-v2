@@ -1,6 +1,15 @@
 COMPOSE := docker compose
 APP := $(COMPOSE) run --rm php-fpm
 APP_NO_DEPS := $(COMPOSE) run --rm --no-deps php-fpm
+APP_TEST := $(COMPOSE) run --rm --no-deps \
+	-e APP_ENV=testing \
+	-e CACHE_STORE=array \
+	-e DB_CONNECTION=sqlite \
+	-e DB_DATABASE=:memory: \
+	-e DB_URL= \
+	-e QUEUE_CONNECTION=sync \
+	-e SESSION_DRIVER=array \
+	php-fpm
 NODE := docker run --rm -u $$(id -u):$$(id -g) -v "$$(pwd)":/app -w /app node:24-alpine
 
 .PHONY: up down restart shell test stan pint fresh build tools logs logs-queue
@@ -19,7 +28,7 @@ shell:
 	$(APP) bash
 
 test:
-	$(APP_NO_DEPS) vendor/bin/pest
+	$(APP_TEST) vendor/bin/pest
 
 stan:
 	$(APP_NO_DEPS) vendor/bin/phpstan analyse --memory-limit=1G
