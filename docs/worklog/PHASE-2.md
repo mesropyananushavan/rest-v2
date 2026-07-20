@@ -1,6 +1,6 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.11 Part A soft delete complete; awaiting owner PR/merge
+Status: Stage 1.11 Part A owner review changes in progress
 Branch: phase-2-stage-1.11-menu-ux
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
@@ -264,6 +264,34 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   pass, Pest 53 passed / 2 skipped / 379 assertions. Branch pushed at code
   head `9374d4b`; CI run 29747861501 passed both `quality` and
   `tenant-isolation-pgsql`.
+- [x] Stage 1.11.5.1 (Part A review): review-change plan. Continue on the
+  existing `phase-2-stage-1.11-menu-ux` branch without touching `main`, read
+  the required session documents, verify the working tree, and write this
+  owner-review plan before code. Result: branch was already clean and tracking
+  `origin/phase-2-stage-1.11-menu-ux` at Part A handoff head; owner requested
+  superadmin-only archive visibility plus superadmin force delete.
+- [ ] Stage 1.11.5.2 (Part A review): archive visibility and policy docs.
+  Update `AGENTS.md` and `docs/DECISIONS.md` so archive viewing,
+  `show_archived`, badges, restore, and force delete are superadmin-only;
+  record that `show_archived=1` from non-superadmins is ignored rather than
+  forbidden. Commit with the worklog result.
+- [ ] Stage 1.11.5.3 (Part A review): force-delete application and routes.
+  Add superadmin-only force-delete actions/routes for categories/items,
+  permanently delete archived categories with their archived items, keep tenant
+  and branch isolation at 404 for foreign ids, and update tests for
+  non-superadmin restore/force-delete 403 and force delete database removal.
+  Run focused tests and commit.
+- [ ] Stage 1.11.5.4 (Part A review): superadmin-only archive UI. Hide the
+  `show_archived` filter, archived rows, archived badges, restore, and force
+  delete controls from non-superadmins; add hard confirm-modal copy for force
+  delete in `hy`/`ru`/`en`; keep normal manager archive behavior unchanged so
+  archived records disappear for that user. Run `make pint && make stan &&
+  make test` and commit.
+- [ ] Stage 1.11.5.5 (Part A review): final verification and handoff. Run
+  `make fresh`, curl-smoke manager archive then hidden/no archive access,
+  owner archive visibility/restore/force-delete, final `make pint && make stan
+  && make test`, push `phase-2-stage-1.11-menu-ux`, wait for both CI jobs
+  green, update this worklog, and do not create or merge a PR.
 - [ ] Stage 1.11.6 (Part B): menu item image architecture and dependency
   decision. After Part A is merged by owner, continue on the same Stage 1.11
   branch from fresh `main`; choose the image processing dependency/storage
@@ -410,6 +438,9 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   `phase-2-stage-1.11-menu-ux` pushed at code head `9374d4b`; GitHub Actions
   run 29747861501 passed both `quality` and `tenant-isolation-pgsql`. PR is
   not created by Codex.
+- 2026-07-20: Stage 1.11 Part A owner review opened on the existing
+  `phase-2-stage-1.11-menu-ux` branch. Scope is limited to superadmin-only
+  archive visibility and superadmin force delete; `main` is not touched.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -443,7 +474,7 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   with a push/CI handoff after each part and owner-created PRs only.
 
 ## Next steps
-Owner creates and merges the Part A PR for `phase-2-stage-1.11-menu-ux`;
-Codex must not create or merge a PR. After owner merge, continue Stage 1.11
-Part B with Stage 1.11.6 from fresh `main`: image architecture/dependency
-decision, storage schema, and focused checks.
+Continue Stage 1.11 Part A owner review with Stage 1.11.5.2: update
+`AGENTS.md` and `docs/DECISIONS.md` for superadmin-only archive visibility,
+superadmin-only restore/force-delete, and ignored `show_archived` for
+non-superadmins; commit the documentation step.
