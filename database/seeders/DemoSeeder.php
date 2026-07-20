@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Modules\Identity\Infrastructure\Seeders\IdentityDemoSeeder;
+use App\Modules\Menu\Infrastructure\Seeders\MenuDemoSeeder;
 use App\Modules\Tenancy\Infrastructure\Seeders\TenancyDemoSeeder;
 use Illuminate\Database\Seeder;
 
@@ -15,5 +16,6 @@ final class DemoSeeder extends Seeder
         $demo = app(TenancyDemoSeeder::class)->seed();
 
         app(IdentityDemoSeeder::class)->seed($demo);
+        app(MenuDemoSeeder::class)->seed($demo);
     }
 }

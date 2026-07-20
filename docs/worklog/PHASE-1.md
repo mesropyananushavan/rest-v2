@@ -118,10 +118,15 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29727485150
   locales, HTTP CRUD feature tests, 403 coverage, and foreign-tenant 404
   coverage for category/item ids. Gates green: Pint pass, PHPStan pass, Pest
   34 passed / 2 skipped / 222 assertions.
-- [ ] Stage 3.2.4: deterministic menu demo seed data. Add `MenuDemoSeeder`
+- [x] Stage 3.2.4: deterministic menu demo seed data. Add `MenuDemoSeeder`
   for both tenants, connect it to `DemoSeeder`, ensure data is visible after
   `make fresh`, and update tests if seeder assumptions change. Run `make pint
-  && make stan && make test`, commit.
+  && make stan && make test`, commit. Result: added deterministic
+  `MenuDemoSeeder` for both tenants and all demo branches, wired it into
+  `DemoSeeder`, added real-login demo visibility coverage for both managers,
+  and verified `make fresh` runs migrations plus demo seeds successfully.
+  Gates green: `make fresh` pass, Pint pass, PHPStan pass, Pest 35 passed /
+  2 skipped / 236 assertions.
 - [ ] Stage 3.2.5: final verification, push, and CI handoff. Run `make fresh`,
   curl-smoke the primary menu pages, run full `make pint && make stan &&
   make test`, push `phase-1-stage-3.2-menu`, wait for both GitHub Actions jobs
@@ -271,6 +276,8 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29727485150
   Pest runs and breaks sqlite/RLS expectations.
 
 ## Next steps
-Continue with Stage 3.2.4: add deterministic `MenuDemoSeeder` data for both
-tenants, wire it into `DemoSeeder`, verify it is visible after `make fresh`,
-and update tests if seeder assumptions change.
+Continue with Stage 3.2.5: run final `make fresh`, curl-smoke primary Menu
+pages through a demo login session, run full `make pint`, `make stan`, and
+`make test`, push `phase-1-stage-3.2-menu`, wait for both GitHub Actions jobs
+green, update this worklog with final local/CI results, and do not create or
+merge a PR.
