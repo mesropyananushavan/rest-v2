@@ -1,6 +1,6 @@
 # Worklog — Phase 1: Walking Skeleton
 
-Status: Stage 3.1 Docker storage permission fix implemented locally
+Status: Stage 3.1 Docker storage permission fix complete; CI green
 Branch: phase-1-stage-3-login
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
@@ -79,8 +79,9 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29725976561
   `/` and `/login` for HTTP 200, run `make pint && make stan && make test`,
   commit, push, and wait for CI. Result: entrypoint repair added; compose web
   runtime now forces PostgreSQL/Redis service env; `make test` forces isolated
-  testing/sqlite env. Local rebuild/fresh/curl/gates green; commit/push/CI
-  pending.
+  testing/sqlite env. Local rebuild/fresh/curl/gates green; pushed at
+  `8b607d9`; CI run 29727485150 passed both `quality` and
+  `tenant-isolation-pgsql`.
 - [ ] Stage 3.2: menu vertical slice (actions, Blade UI, API, i18n, audit,
   tests, demo seeders)
 
@@ -163,6 +164,9 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29725976561
   `make build`, `make up`, `make fresh`, curl `/` 200, curl `/login` 200,
   curl demo login `manager@arat.test` / `password` redirects to `/`, Pint pass,
   PHPStan pass, Pest 25 passed / 1 skipped / 160 assertions.
+- 2026-07-20: Stage 3.1.6 CI confirmed green. Branch
+  `phase-1-stage-3-login` pushed at head `8b607d9`; GitHub Actions run
+  29727485150 passed both `quality` and `tenant-isolation-pgsql`.
 
 ## Gotchas / known issues
 - Host PHP is 8.1 — never run PHP on host, docker/make only.
@@ -221,7 +225,7 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29725976561
   Pest runs and breaks sqlite/RLS expectations.
 
 ## Next steps
-Continue Stage 3.1.6: commit the Docker permission/runtime fix, push
-`phase-1-stage-3-login`, wait for CI, record results, then resolve owner
-request about PR creation/merge against the standing "Codex must not create
-PR" project rule.
+Owner explicitly requested Codex to create and merge the Stage 3.1 PR after
+this mini-fix. Create PR for `phase-1-stage-3-login`, merge it if GitHub
+allows, then update local `main`. After merge, wait for the owner's Stage 3.2
+Menu CRUD prompt.
