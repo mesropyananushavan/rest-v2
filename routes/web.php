@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\AdminBranchSwitchController;
+use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\AdminLocaleSwitchController;
 use App\Modules\Identity\Http\Controllers\LoginController;
 use App\Modules\Identity\Http\Controllers\LogoutController;
 use App\Modules\Menu\Http\Controllers\MenuCategoryController;
@@ -28,6 +31,18 @@ Route::post('/logout', LogoutController::class)
 Route::get('/admin/branches/{branch}', BranchShowController::class)
     ->middleware(['tenant', 'branch', 'auth'])
     ->name('admin.branches.show');
+
+Route::get('/admin', AdminDashboardController::class)
+    ->middleware(['tenant', 'branch', 'auth'])
+    ->name('admin.dashboard');
+
+Route::post('/admin/branch', AdminBranchSwitchController::class)
+    ->middleware(['tenant', 'branch', 'auth'])
+    ->name('admin.branch.switch');
+
+Route::post('/admin/locale', AdminLocaleSwitchController::class)
+    ->middleware(['tenant', 'branch', 'auth'])
+    ->name('admin.locale.switch');
 
 Route::middleware(['tenant', 'branch', 'auth'])->prefix('/admin/menu')->name('admin.menu.')->group(function (): void {
     Route::get('/', MenuIndexController::class)

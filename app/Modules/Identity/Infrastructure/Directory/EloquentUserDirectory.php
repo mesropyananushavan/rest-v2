@@ -24,4 +24,16 @@ final class EloquentUserDirectory implements UserDirectory
 
         return is_numeric($branchId) ? (int) $branchId : null;
     }
+
+    public function assignedBranchIds(int $userId): array
+    {
+        /** @var list<int|string> $branchIds */
+        $branchIds = array_values(UserBranchAssignment::query()
+            ->where('user_id', $userId)
+            ->orderBy('id')
+            ->pluck('branch_id')
+            ->all());
+
+        return array_map(fn (int|string $branchId): int => (int) $branchId, $branchIds);
+    }
 }

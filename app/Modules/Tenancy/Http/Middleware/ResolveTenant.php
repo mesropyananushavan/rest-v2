@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Tenancy\Http\Middleware;
 
 use App\Modules\Tenancy\Contracts\TenantResolver;
+use App\Modules\Tenancy\Contracts\TenantSettingsReader;
 use App\Modules\Tenancy\Infrastructure\Models\Tenant;
 use App\Support\Logging\LogContext;
 use Closure;
@@ -14,7 +15,15 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class ResolveTenant
 {
-    public function __construct(private readonly TenantResolver $tenants) {}
+    /**
+     * @var list<string>
+     */
+    private const array SUPPORTED_LOCALES = ['hy', 'ru', 'en'];
+
+    public function __construct(
+        private readonly TenantResolver $tenants,
+        private readonly TenantSettingsReader $settings,
+    ) {}
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -31,7 +40,7 @@ final class ResolveTenant
 
             $this->tenants->set((int) $tenant->id);
             $request->session()->put('tenant_id', (int) $tenant->id);
-            App::setLocale((string) $tenant->default_locale);
+            App::setLocale($this->localeFor($request, (int) $tenant->id));
             LogContext::refreshRuntimeContext();
         }
 
@@ -72,5 +81,23 @@ final class ResolveTenant
         $sessionTenantId = $request->session()->get('tenant_id');
 
         return is_numeric($sessionTenantId) ? (int) $sessionTenantId : null;
+    }
+
+    private function localeFor(Request $request, int $tenantId): string
+    {
+        $sessionLocale = $request->session()->get('locale');
+
+        if (is_string($sessionLocale) && in_array($sessionLocale, self::SUPPORTED_LOCALES, true)) {
+            return $sessionLocale;
+        }
+
+        $settings = $this->settings->settingsFor($tenantId);
+        $tenantLocale = $settings['default_locale'] ?? null;
+
+        if (is_string($tenantLocale) && in_array($tenantLocale, self::SUPPORTED_LOCALES, true)) {
+            return $tenantLocale;
+        }
+
+        return 'en';
     }
 }

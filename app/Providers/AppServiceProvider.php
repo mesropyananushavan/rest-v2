@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Http\AdminShellComposer;
 use App\Modules\Identity\Contracts\Authorizer;
 use App\Modules\Identity\Contracts\PermissionCatalog;
 use App\Modules\Identity\Contracts\UserDirectory;
@@ -27,6 +28,7 @@ use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -50,6 +52,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        View::composer('layouts.admin', AdminShellComposer::class);
+
         Queue::createPayloadUsing(fn (): array => [
             'smartrest_context' => LogContext::current(),
         ]);

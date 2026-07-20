@@ -147,6 +147,21 @@ each other and you cannot resolve it safely.
 7. Worklog reflects reality: all completed steps checked with results,
    "Next steps" names the exact next action, new gotchas recorded.
 
+## UI Definition of Done
+- Every new admin screen uses `resources/views/layouts/admin.blade.php` and
+  existing `x-` Blade components for page structure, cards, tables, actions,
+  forms, badges, flash messages, and destructive confirmations.
+- Every user-facing string is a translation key with `hy`, `ru`, and `en`
+  entries. User-editable names remain localized value objects.
+- Money is displayed only through the `App\Support\Money` formatter and forms
+  accept major units while storage remains integer minor units.
+- Delete/destructive actions use the shared confirm-modal component, never a
+  bare delete button.
+- Mutating actions return translated success/error flash messages.
+- Screens are responsive for desktop, tablets, and mobile using Bootstrap 5
+  plus existing SmartRest tokens; no new JS framework or package is added
+  without explicit approval.
+
 
 ## Logging (mandatory from Phase 1)
 - All logs are structured JSON (single line per record) via a dedicated

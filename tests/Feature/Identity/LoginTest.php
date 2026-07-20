@@ -42,7 +42,7 @@ it('authenticates and logs out an active user with session auth', function (): v
             'email' => 'manager-a@smartrest.test',
             'password' => 'password',
         ]))
-        ->assertRedirect('/')
+        ->assertRedirect(route('admin.dashboard'))
         ->assertSessionHas('tenant_id', (int) $record['tenant']->id);
 
     $this->assertAuthenticatedAs($record['user']);
@@ -81,7 +81,7 @@ it('redirects guests from protected routes to login and authenticated users away
         ->assertRedirect(route('admin.branches.show', ['branch' => (int) $record['branch']->id]));
 
     $this->get(route('login'))
-        ->assertRedirect('/');
+        ->assertRedirect(route('admin.dashboard'));
 });
 
 it('resolves tenant and branch context from the logged-in user through middleware', function (): void {
@@ -97,7 +97,7 @@ it('resolves tenant and branch context from the logged-in user through middlewar
             'email' => 'manager-a@smartrest.test',
             'password' => 'password',
         ]))
-        ->assertRedirect('/');
+        ->assertRedirect(route('admin.dashboard'));
 
     Auth::forgetGuards();
 
@@ -118,7 +118,7 @@ it('returns 404 for another tenant branch after logging in through the real form
             'email' => 'manager-a@smartrest.test',
             'password' => 'password',
         ]))
-        ->assertRedirect('/');
+        ->assertRedirect(route('admin.dashboard'));
 
     $this->get(route('admin.branches.show', ['branch' => (int) $tenantA['branch']->id]))
         ->assertOk()
@@ -157,7 +157,7 @@ it('logs in with demo users from the deterministic seeders', function (): void {
                 'email' => $email,
                 'password' => 'password',
             ]))
-            ->assertRedirect('/');
+            ->assertRedirect(route('admin.dashboard'));
 
         $this->assertAuthenticated();
 
