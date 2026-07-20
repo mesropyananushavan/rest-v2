@@ -8,12 +8,12 @@ use App\Support\Money\MoneyFormatter;
 
 /** @var \Illuminate\Database\Eloquent\Collection<int, MenuCategory> $categories */
 /** @var \Illuminate\Database\Eloquent\Collection<int, MenuItem> $items */
+/** @var bool $canViewArchive */
 /** @var bool $showArchived */
 
 $locale = app()->getLocale();
 $canManageCategories = auth()->user()?->can('menu.categories.manage') ?? false;
 $canManageItems = auth()->user()?->can('menu.items.manage') ?? false;
-$canRestore = (bool) data_get(auth()->user(), 'is_superadmin');
 ?>
 
 @extends('layouts.admin')
@@ -27,9 +27,11 @@ $canRestore = (bool) data_get(auth()->user(), 'is_superadmin');
         :subtitle="__('menu.index.subtitle')"
     >
         <x-slot:actions>
-            <x-button :href="route('admin.menu.index', ['show_archived' => $showArchived ? '0' : '1'])" variant="outline-secondary">
-                {{ $showArchived ? __('menu.actions.hide_archived') : __('menu.actions.show_archived') }}
-            </x-button>
+            @if ($canViewArchive)
+                <x-button :href="route('admin.menu.index', ['show_archived' => $showArchived ? '0' : '1'])" variant="outline-secondary">
+                    {{ $showArchived ? __('menu.actions.hide_archived') : __('menu.actions.show_archived') }}
+                </x-button>
+            @endif
             @if ($canManageCategories)
                 <x-button :href="route('admin.menu.categories.create')" variant="outline-primary">
                     {{ __('menu.actions.create_category') }}
@@ -90,13 +92,21 @@ $canRestore = (bool) data_get(auth()->user(), 'is_superadmin');
                                                 :confirm-label="__('menu.actions.archive')"
                                             />
                                         @endif
-                                        @if ($category->trashed() && $canManageCategories && $canRestore)
+                                        @if ($category->trashed() && $canManageCategories && $canViewArchive)
                                             <form method="post" action="{{ route('admin.menu.categories.restore', ['category' => (int) $category->id]) }}">
                                                 @csrf
                                                 <x-button type="submit" variant="outline-primary" size="sm">
                                                     {{ __('menu.actions.restore') }}
                                                 </x-button>
                                             </form>
+                                            <x-confirm-modal
+                                                id="force_delete_category_{{ (int) $category->id }}"
+                                                :action="route('admin.menu.categories.force-delete', ['category' => (int) $category->id])"
+                                                :title="__('menu.confirm.force_delete_category_title')"
+                                                :message="__('menu.confirm.force_delete_category_message')"
+                                                :trigger-label="__('menu.actions.force_delete')"
+                                                :confirm-label="__('menu.actions.force_delete')"
+                                            />
                                         @endif
                                     </div>
                                 </td>
@@ -163,13 +173,23 @@ $canRestore = (bool) data_get(auth()->user(), 'is_superadmin');
                                                 :confirm-label="__('menu.actions.archive')"
                                             />
                                         @endif
-                                        @if ($item->trashed() && $canManageItems && $canRestore && ! $item->category?->trashed())
+                                        @if ($item->trashed() && $canManageItems && $canViewArchive && ! $item->category?->trashed())
                                             <form method="post" action="{{ route('admin.menu.items.restore', ['item' => (int) $item->id]) }}">
                                                 @csrf
                                                 <x-button type="submit" variant="outline-primary" size="sm">
                                                     {{ __('menu.actions.restore') }}
                                                 </x-button>
                                             </form>
+                                        @endif
+                                        @if ($item->trashed() && $canManageItems && $canViewArchive)
+                                            <x-confirm-modal
+                                                id="force_delete_item_{{ (int) $item->id }}"
+                                                :action="route('admin.menu.items.force-delete', ['item' => (int) $item->id])"
+                                                :title="__('menu.confirm.force_delete_item_title')"
+                                                :message="__('menu.confirm.force_delete_item_message')"
+                                                :trigger-label="__('menu.actions.force_delete')"
+                                                :confirm-label="__('menu.actions.force_delete')"
+                                            />
                                         @endif
                                     </div>
                                 </td>

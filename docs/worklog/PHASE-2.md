@@ -290,12 +290,18 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   cover non-superadmin 403, foreign tenant 404, route middleware, and database
   removal. Gates green: Pint pass, PHPStan pass, Pest 54 passed / 2 skipped /
   397 assertions.
-- [ ] Stage 1.11.5.4 (Part A review): superadmin-only archive UI. Hide the
+- [x] Stage 1.11.5.4 (Part A review): superadmin-only archive UI. Hide the
   `show_archived` filter, archived rows, archived badges, restore, and force
   delete controls from non-superadmins; add hard confirm-modal copy for force
   delete in `hy`/`ru`/`en`; keep normal manager archive behavior unchanged so
   archived records disappear for that user. Run `make pint && make stan &&
-  make test` and commit.
+  make test` and commit. Result: Menu index ignores `show_archived` unless the
+  authenticated user is superadmin, hides archive filters/badges/rows/actions
+  from non-superadmins, renders restore and force-delete controls only for
+  superadmins, adds irreversible force-delete confirm copy and flash messages
+  in `hy`/`ru`/`en`, and tests prove manager archive disappearance plus
+  superadmin archive controls. Gates green: Pint pass, PHPStan pass, Pest
+  54 passed / 2 skipped / 411 assertions.
 - [ ] Stage 1.11.5.5 (Part A review): final verification and handoff. Run
   `make fresh`, curl-smoke manager archive then hidden/no archive access,
   owner archive visibility/restore/force-delete, final `make pint && make stan
@@ -458,6 +464,9 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   Application actions and superadmin routes are implemented for archived Menu
   categories/items, with cascade physical deletion and tenant/branch isolation
   coverage.
+- 2026-07-20: Stage 1.11.5.4 Part A review UI complete. Archive visibility is
+  now superadmin-only in the Menu index; managers can archive but cannot see
+  archive filters, archived rows, badges, restore, or force-delete controls.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -491,8 +500,8 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   with a push/CI handoff after each part and owner-created PRs only.
 
 ## Next steps
-Continue Stage 1.11 Part A owner review with Stage 1.11.5.4: make archive
-visibility superadmin-only in the Menu index, hide `show_archived` and
-archived rows from non-superadmins, add restore/force-delete UI controls for
-superadmins only, add irreversible confirm copy in `hy`/`ru`/`en`, and run
-full gates.
+Continue Stage 1.11 Part A owner review with Stage 1.11.5.5: run `make
+fresh`, curl-smoke manager archive then hidden/no archive access, owner
+archive visibility/restore/force-delete, final `make pint && make stan &&
+make test`, push `phase-2-stage-1.11-menu-ux`, wait for both CI jobs green,
+update worklog, and do not create or merge a PR.

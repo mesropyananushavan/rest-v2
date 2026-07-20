@@ -13,11 +13,13 @@ final class MenuIndexController
 {
     public function __invoke(Request $request, ListMenuCategories $categories, ListMenuItems $items): View
     {
-        $showArchived = $request->boolean('show_archived');
+        $canViewArchive = (bool) data_get($request->user(), 'is_superadmin');
+        $showArchived = $canViewArchive && $request->boolean('show_archived');
 
         return view('modules.menu.index', [
             'categories' => $categories(includeArchived: $showArchived),
             'items' => $items(includeArchived: $showArchived),
+            'canViewArchive' => $canViewArchive,
             'showArchived' => $showArchived,
         ]);
     }
