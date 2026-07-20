@@ -106,13 +106,18 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29727485150
   `menu.items.manage`, and action/permission tests including 403 denial.
   Gates green: Pint pass, PHPStan pass, Pest 31 passed / 2 skipped /
   191 assertions.
-- [ ] Stage 3.2.3: Blade Menu CRUD routes/controllers/views/i18n. Add
+- [x] Stage 3.2.3: Blade Menu CRUD routes/controllers/views/i18n. Add
   authenticated `/admin/menu/...` Blade-only list/create/edit/delete flows for
   categories and items, controllers that only validate/authorize/call actions,
   Bootstrap/tokens.css-compatible views with no new design system, and
   `hy`/`ru`/`en` translation keys for every user-facing string. Include tenant
   isolation tests proving foreign tenant resource IDs return 404. Run
-  `make pint && make stan && make test`, commit.
+  `make pint && make stan && make test`, commit. Result: added authenticated
+  Blade-only Menu CRUD routes, thin controllers/FormRequests, minimal
+  Bootstrap/tokens admin layout and Menu views, translations for all three
+  locales, HTTP CRUD feature tests, 403 coverage, and foreign-tenant 404
+  coverage for category/item ids. Gates green: Pint pass, PHPStan pass, Pest
+  34 passed / 2 skipped / 222 assertions.
 - [ ] Stage 3.2.4: deterministic menu demo seed data. Add `MenuDemoSeeder`
   for both tenants, connect it to `DemoSeeder`, ensure data is visible after
   `make fresh`, and update tests if seeder assumptions change. Run `make pint
@@ -266,6 +271,6 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29727485150
   Pest runs and breaks sqlite/RLS expectations.
 
 ## Next steps
-Continue with Stage 3.2.3: add authenticated Blade-only Menu CRUD routes,
-thin controllers/requests/views, `hy`/`ru`/`en` translations, and HTTP tenant
-isolation tests proving foreign tenant Menu resource IDs return 404.
+Continue with Stage 3.2.4: add deterministic `MenuDemoSeeder` data for both
+tenants, wire it into `DemoSeeder`, verify it is visible after `make fresh`,
+and update tests if seeder assumptions change.
