@@ -1,7 +1,7 @@
 # Worklog — Phase 1: Walking Skeleton
 
-Status: Stage 3.1 login auth UI merged to main
-Branch: main
+Status: Stage 3.2 Menu CRUD complete; awaiting owner PR
+Branch: phase-1-stage-3.2-menu
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
 
@@ -84,8 +84,59 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29727485150
   testing/sqlite env. Local rebuild/fresh/curl/gates green; pushed at
   `8b607d9`; CI run 29727485150 passed both `quality` and
   `tenant-isolation-pgsql`.
-- [ ] Stage 3.2: menu vertical slice (actions, Blade UI, API, i18n, audit,
-  tests, demo seeders)
+- [x] Stage 3.2.1: menu schema, RLS, models, and contracts. Add
+  `menu_categories` and `menu_items` with `tenant_id` indexes, branch
+  ownership for items, PostgreSQL RLS policies matching existing tenant-owned
+  tables, tenant-scoped Eloquent models using `BelongsToTenant`/`TenantScoped`,
+  Money value-object usage for prices, and focused migration/model/RLS tests.
+  Run `make pint && make stan && make test`, commit. Result: added
+  tenant-owned Menu schema, pgsql RLS policies, tenant-scoped Menu models, a
+  minimal Money value object for integer minor-unit prices, sqlite tenant-scope
+  tests, and pgsql menu RLS coverage in the tenant isolation suite. Gates green:
+  Pint pass, PHPStan pass, Pest 27 passed / 2 skipped / 172 assertions.
+- [x] Stage 3.2.2: Menu Application actions and permissions. Add thin
+  Application actions for list/create/update/delete categories and items,
+  stable structured action logging, domain validation where needed, new menu
+  permission codes via Identity contracts, Identity demo seeder permission
+  assignment, and tests proving a user without permission receives 403. Run
+  `make pint && make stan && make test`, commit. Result: added Menu CRUD
+  Application actions, `LocalizedText` value object for JSON translations,
+  branch-context enforcement for branch-owned item actions, structured action
+  logging, `menu.categories.manage` demo permission alongside
+  `menu.items.manage`, and action/permission tests including 403 denial.
+  Gates green: Pint pass, PHPStan pass, Pest 31 passed / 2 skipped /
+  191 assertions.
+- [x] Stage 3.2.3: Blade Menu CRUD routes/controllers/views/i18n. Add
+  authenticated `/admin/menu/...` Blade-only list/create/edit/delete flows for
+  categories and items, controllers that only validate/authorize/call actions,
+  Bootstrap/tokens.css-compatible views with no new design system, and
+  `hy`/`ru`/`en` translation keys for every user-facing string. Include tenant
+  isolation tests proving foreign tenant resource IDs return 404. Run
+  `make pint && make stan && make test`, commit. Result: added authenticated
+  Blade-only Menu CRUD routes, thin controllers/FormRequests, minimal
+  Bootstrap/tokens admin layout and Menu views, translations for all three
+  locales, HTTP CRUD feature tests, 403 coverage, and foreign-tenant 404
+  coverage for category/item ids. Gates green: Pint pass, PHPStan pass, Pest
+  34 passed / 2 skipped / 222 assertions.
+- [x] Stage 3.2.4: deterministic menu demo seed data. Add `MenuDemoSeeder`
+  for both tenants, connect it to `DemoSeeder`, ensure data is visible after
+  `make fresh`, and update tests if seeder assumptions change. Run `make pint
+  && make stan && make test`, commit. Result: added deterministic
+  `MenuDemoSeeder` for both tenants and all demo branches, wired it into
+  `DemoSeeder`, added real-login demo visibility coverage for both managers,
+  and verified `make fresh` runs migrations plus demo seeds successfully.
+  Gates green: `make fresh` pass, Pint pass, PHPStan pass, Pest 35 passed /
+  2 skipped / 236 assertions.
+- [x] Stage 3.2.5: final verification, push, and CI handoff. Run `make fresh`,
+  curl-smoke the primary menu pages, run full `make pint && make stan &&
+  make test`, push `phase-1-stage-3.2-menu`, wait for both GitHub Actions jobs
+  green, update this worklog with final local/CI results, and do not create or
+  merge a PR. Result: final `make fresh` pass; curl smoke pass after demo
+  login (`POST /login` 302 to `/`, `GET /admin/menu` 200,
+  `GET /admin/menu/categories/create` 200, `GET /admin/menu/items/create`
+  200, seeded menu content present); Pint pass; PHPStan pass; Pest 35 passed /
+  2 skipped / 237 assertions. Branch pushed at code head `db4e587`; CI run
+  29735218745 passed both `quality` and `tenant-isolation-pgsql`.
 
 ## Done log
 - 2026-07-17: Stage 1 complete. All gates green (composer validate, Pint,
@@ -172,6 +223,15 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29727485150
 - 2026-07-20: PR #3 merged to `main` at merge commit `0a0529b` after owner
   explicitly requested Codex PR creation/merge for this mini-fix. Local
   `main` fast-forwarded to `origin/main`.
+- 2026-07-20: Stage 3.2 Menu CRUD complete locally and pushed. Implemented
+  tenant-owned Menu schema/RLS/models, Menu Application CRUD actions with
+  structured logs, Blade-only authenticated CRUD UI, menu permissions, demo
+  seed data for both tenants, and tenant/RLS/403/404/CRUD tests. Final local
+  verification green: `make fresh` pass, curl-smoke Menu pages pass, Pint pass,
+  PHPStan pass, Pest 35 passed / 2 skipped / 237 assertions. Branch
+  `phase-1-stage-3.2-menu` pushed at code head `db4e587`; GitHub Actions run
+  29735218745 passed both `quality` and `tenant-isolation-pgsql`. PR is not
+  created by Codex.
 
 ## Gotchas / known issues
 - Host PHP is 8.1 — never run PHP on host, docker/make only.
@@ -228,8 +288,21 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29727485150
 - `make test` must explicitly override compose runtime env back to
   testing/sqlite; otherwise local PostgreSQL service env leaks into no-deps
   Pest runs and breaks sqlite/RLS expectations.
+- Real browser/curl login needs `tenant_id` stored in session immediately
+  after successful authentication. Otherwise the next request cannot rehydrate
+  the tenant-scoped `User` before `ResolveTenant` chooses a tenant; Laravel's
+  feature-test guard can mask this unless guards are forgotten between
+  requests.
+- Protected web routes that use tenant-scoped auth must run `ResolveTenant`
+  before Laravel auth middleware. Middleware priority now enforces
+  `ResolveTenant -> ResolveBranch -> auth`; route-level protected groups also
+  list `tenant`, `branch`, then `auth` explicitly for readability.
+- After `docker compose up --build` recreates `php-fpm`, an already-running
+  nginx container can briefly keep the old upstream IP and return 502. Restart
+  nginx before curl-smoke if this appears; it is a runtime DNS/cache issue, not
+  an app error.
 
 ## Next steps
-Await the owner's Stage 3.2 Menu CRUD prompt. Do not start Menu work until the
-prompt is provided; when it arrives, plan Stage 3.2 in this worklog before
-writing code.
+Owner creates and merges the PR for `phase-1-stage-3.2-menu`. Codex must not
+create or merge the PR. After owner merge, resume from `main` for the next
+approved phase/stage prompt.

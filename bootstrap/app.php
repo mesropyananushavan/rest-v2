@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Middleware\AttachLogContext;
 use App\Modules\Tenancy\Http\Middleware\ResolveBranch;
 use App\Modules\Tenancy\Http\Middleware\ResolveTenant;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -27,6 +28,9 @@ return Application::configure(basePath: dirname(__DIR__))
             ResolveTenant::class,
             ResolveBranch::class,
         ]);
+
+        $middleware->prependToPriorityList(AuthenticatesRequests::class, ResolveBranch::class);
+        $middleware->prependToPriorityList(ResolveBranch::class, ResolveTenant::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

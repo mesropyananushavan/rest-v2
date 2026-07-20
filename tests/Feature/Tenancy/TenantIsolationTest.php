@@ -7,6 +7,8 @@ use App\Modules\Identity\Infrastructure\Models\Permission;
 use App\Modules\Identity\Infrastructure\Models\Role;
 use App\Modules\Identity\Infrastructure\Models\User;
 use App\Modules\Identity\Infrastructure\Models\UserBranchAssignment;
+use App\Modules\Menu\Infrastructure\Models\MenuCategory;
+use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Modules\Tenancy\Contracts\TenantResolver;
 use App\Modules\Tenancy\Infrastructure\Models\Branch;
@@ -224,6 +226,63 @@ it('enforces PostgreSQL row level security when tenant setting is missing', func
     expect(rawBranchIds())->toBe([(int) $tenantB['branch']->id]);
 });
 
+it('enforces PostgreSQL row level security for menu tables', function (): void {
+    if (! usesPostgresRowLevelSecurity()) {
+        $this->markTestSkipped('PostgreSQL RLS coverage runs only on pgsql.');
+    }
+
+    $tenantA = tenantWithUser('tenant-a', 'manager-a', ['menu.items.manage']);
+    $tenantB = tenantWithUser('tenant-b', 'manager-b', ['menu.items.manage']);
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+    app(BranchContext::class)->set((int) $tenantA['branch']->id);
+
+    $categoryA = MenuCategory::query()->create([
+        'translated_name' => ['hy' => 'Tenant A', 'ru' => 'Tenant A', 'en' => 'Tenant A'],
+        'active' => true,
+    ]);
+
+    $itemA = MenuItem::query()->create([
+        'branch_id' => (int) $tenantA['branch']->id,
+        'category_id' => (int) $categoryA->id,
+        'translated_name' => ['hy' => 'Tenant A Item', 'ru' => 'Tenant A Item', 'en' => 'Tenant A Item'],
+        'translated_description' => ['hy' => 'Tenant A Description', 'ru' => 'Tenant A Description', 'en' => 'Tenant A Description'],
+        'price_minor' => 100000,
+        'currency' => 'AMD',
+        'active' => true,
+    ]);
+
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+    app(BranchContext::class)->set((int) $tenantB['branch']->id);
+
+    $categoryB = MenuCategory::query()->create([
+        'translated_name' => ['hy' => 'Tenant B', 'ru' => 'Tenant B', 'en' => 'Tenant B'],
+        'active' => true,
+    ]);
+
+    $itemB = MenuItem::query()->create([
+        'branch_id' => (int) $tenantB['branch']->id,
+        'category_id' => (int) $categoryB->id,
+        'translated_name' => ['hy' => 'Tenant B Item', 'ru' => 'Tenant B Item', 'en' => 'Tenant B Item'],
+        'translated_description' => ['hy' => 'Tenant B Description', 'ru' => 'Tenant B Description', 'en' => 'Tenant B Description'],
+        'price_minor' => 200000,
+        'currency' => 'AMD',
+        'active' => true,
+    ]);
+
+    app(TenantResolver::class)->clear();
+
+    expect(rawMenuItemIds())->toBe([]);
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+
+    expect(rawMenuItemIds())->toBe([(int) $itemA->id]);
+
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+
+    expect(rawMenuItemIds())->toBe([(int) $itemB->id]);
+});
+
 it('checks action permissions through the identity authorizer contract', function (): void {
     $tenant = tenantWithUser('tenant-a', 'manager-a', ['menu.items.manage']);
 
@@ -312,6 +371,16 @@ function usesPostgresRowLevelSecurity(): bool
 function rawBranchIds(): array
 {
     return collect(DB::select('select id from branches order by id'))
+        ->map(fn (object $row): int => (int) $row->id)
+        ->all();
+}
+
+/**
+ * @return list<int>
+ */
+function rawMenuItemIds(): array
+{
+    return collect(DB::select('select id from menu_items order by id'))
         ->map(fn (object $row): int => (int) $row->id)
         ->all();
 }
