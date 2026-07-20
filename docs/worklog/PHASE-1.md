@@ -38,7 +38,7 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29590252242
   `make pint && make stan && make test`, commit.
 - [x] Stage 2.5.4: strict types sweep. Add `declare(strict_types=1)` to all
   PHP files missing it, run `make pint && make stan && make test`, commit.
-- [ ] Stage 2.5.5: scaffold cleanup. Remove Laravel ExampleTests, fix
+- [x] Stage 2.5.5: scaffold cleanup. Remove Laravel ExampleTests, fix
   `UserFactory` hardcoded `tenant_id => 1` via factory/state, replace welcome
   page with minimal translated placeholder, run `make pint && make stan &&
   make test`, commit.
@@ -91,6 +91,12 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29590252242
   now include `declare(strict_types=1)`; ignored generated cache/view files
   were left untouched. Gates green: Pint pass, PHPStan pass, Pest 18 passed /
   1 skipped / 96 assertions.
+- 2026-07-20: Stage 2.5.5 scaffold cleanup complete. Removed Laravel
+  ExampleTests, replaced `UserFactory` hardcoded `tenant_id => 1` with
+  TenantFactory/default state plus `forTenant()` state, replaced Laravel
+  welcome page with minimal translated placeholder and `hy`/`ru`/`en`
+  translations, and added a focused welcome placeholder test. Gates green:
+  Pint pass, PHPStan pass, Pest 17 passed / 1 skipped / 103 assertions.
 
 ## Gotchas / known issues
 - Host PHP is 8.1 — never run PHP on host, docker/make only.
@@ -122,7 +128,6 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29590252242
   a local `.env`.
 
 ## Next steps
-Continue Stage 2.5.5: remove Laravel ExampleTests, fix UserFactory hardcoded
-`tenant_id => 1` via factory/state, replace welcome page with a minimal
-translated placeholder, run `make pint && make stan && make test`, then commit
-the completed step. Do NOT start Stage 3.
+Push `phase-1-stage-2.5-hardening`, wait for GitHub Actions, record CI result
+in this worklog, then hand off to owner for PR creation/merge. Do NOT create a
+PR and do NOT start Stage 3.
