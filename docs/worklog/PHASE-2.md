@@ -127,11 +127,16 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   merge commit `fe26e7e`, Stage 1.9 head `b65af49` verified through the merge
   history, branch `phase-2-stage-1.10-ui-stack` created from fresh `main`, and
   this Stage 1.10 plan written before implementation.
-- [ ] Stage 1.10.2: Tailwind foundation and ADR. Install the latest stable
+- [x] Stage 1.10.2: Tailwind foundation and ADR. Install the latest stable
   Tailwind CSS through Vite, remove Bootstrap from the CSS/JS entry points,
   move `resources/css/smartrest/tokens.css` values into a SmartRest Tailwind
   theme, and record the Tailwind decision in `docs/DECISIONS.md`. Run focused
-  asset/build checks and commit.
+  asset/build checks and commit. Result: installed `tailwindcss` 4.3.3 and
+  `@tailwindcss/vite` 4.3.3, added SmartRest Tailwind theme tokens in
+  `tailwind.config.js`, replaced the Bootstrap CSS import with Tailwind,
+  removed the Bootstrap JS import, recorded the Tailwind decision, and verified
+  `npm run build` passes. Bootstrap packages remain until Stage 1.10.5 after
+  Blade views no longer depend on Bootstrap classes.
 - [ ] Stage 1.10.3: Livewire + Alpine foundation and proof component. Install
   the latest stable Livewire version compatible with Laravel 13 plus Alpine.js,
   wire Blade/Vite/Livewire assets, convert dashboard counters into a simple
@@ -251,4 +256,4 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   approval and a separate commit.
 
 ## Next steps
-Continue with Stage 1.10.2 Tailwind foundation and ADR.
+Continue with Stage 1.10.3 Livewire + Alpine foundation and proof component.

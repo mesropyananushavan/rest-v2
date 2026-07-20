@@ -46,3 +46,13 @@ login-first UI exists, but production isolation must be bound to trusted
 authentication/session state.
 Rejected: allowing `X-Tenant-ID` in production or giving it precedence over
 authenticated users — both would make tenant spoofing possible.
+
+## 2026-07-20 — Tailwind CSS as admin UI foundation
+Decision: admin UI styling moves from Bootstrap to Tailwind CSS through the
+official Vite plugin, with SmartRest design tokens maintained in the Tailwind
+theme.
+Reason: Tailwind fits the Livewire/Alpine ecosystem, gives SmartRest a more
+custom product look than Bootstrap defaults, and keeps colors, radius,
+spacing, and shadow decisions centralized in a tokens model.
+Rejected: continuing Bootstrap 5 — fast for scaffolding but pushes the admin
+UI toward generic layouts and couples interactive components to Bootstrap JS.
