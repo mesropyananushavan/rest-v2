@@ -1,6 +1,6 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.6 complete; Stage 1.7 ready
+Status: Stage 1.7 complete; Stage 1.8 ready
 Branch: phase-2-stage-1-admin-ui
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
@@ -64,10 +64,14 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   changed Menu forms to accept `price_major` while storing `price_minor`, and
   covered AMD plus decimal currencies. Gates green: Pint pass, PHPStan pass,
   Pest 44 passed / 2 skipped / 289 assertions.
-- [ ] Stage 1.7: admin error pages and UI Definition of Done. Add translated
+- [x] Stage 1.7: admin error pages and UI Definition of Done. Add translated
   403/404/500 pages styled with the admin visual system, then update
   `AGENTS.md` with the requested "UI Definition of Done" rule for future
-  stages. Run `make pint && make stan && make test`, commit. Result: pending.
+  stages. Run `make pint && make stan && make test`, commit. Result: added
+  translated 403/404/500 pages using the admin layout/components, made the
+  admin shell guest-safe for error rendering, covered all error pages, and
+  added the requested UI Definition of Done to `AGENTS.md`. Gates green: Pint
+  pass, PHPStan pass, Pest 47 passed / 2 skipped / 298 assertions.
 - [ ] Stage 1.8: final verification, push, and CI handoff. Run `make fresh`,
   curl-smoke login -> `/admin` -> `/admin/menu` -> locale switch -> branch
   switch, then run full `make pint && make stan && make test`, push
@@ -102,6 +106,11 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   strings and convert to stored integer minor units, and unit/feature coverage
   proves AMD and USD behavior. Gates green: Pint pass, PHPStan pass, Pest
   44 passed / 2 skipped / 289 assertions.
+- 2026-07-20: Stage 1.7 admin error pages and UI Definition of Done complete
+  locally. Added translated admin-styled 403/404/500 views, regression tests,
+  guest-safe admin layout behavior for error rendering, and the requested
+  `AGENTS.md` UI rules. Gates green: Pint pass, PHPStan pass, Pest 47 passed /
+  2 skipped / 298 assertions.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -113,6 +122,6 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   correct reference target for component migration.
 
 ## Next steps
-Implement Stage 1.7 admin error pages and UI Definition of Done: translated
-403/404/500 views styled with the admin visual system, then update
-`AGENTS.md` with the future-screen UI rules.
+Run Stage 1.8 final verification: `make fresh`, curl-smoke login -> `/admin`
+-> `/admin/menu` -> locale switch -> branch switch, full gates, push branch,
+wait for both CI jobs green, then update this worklog with final results.

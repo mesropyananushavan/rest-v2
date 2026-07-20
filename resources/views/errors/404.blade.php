@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+?>
+
+@extends('layouts.admin')
+
+@section('title', __('admin.errors.404.title'))
+
+@section('content')
+    <x-page-header
+        :eyebrow="__('admin.errors.eyebrow')"
+        :title="__('admin.errors.404.title')"
+        :subtitle="__('admin.errors.404.message')"
+    />
+
+    <x-card>
+        <x-button :href="route('admin.dashboard')" variant="outline-secondary">
+            {{ __('admin.errors.actions.dashboard') }}
+        </x-button>
+    </x-card>
+@endsection

@@ -109,16 +109,22 @@ $locale = $adminShell['locale'] ?? app()->getLocale();
                     </div>
 
                     <div class="sr-user-menu">
-                        <div class="text-end">
-                            <span class="d-block text-muted small">{{ __('admin.shell.signed_in_as') }}</span>
-                            <strong class="small">{{ auth()->user()?->name }}</strong>
-                        </div>
-                        <form method="post" action="{{ route('logout') }}">
-                            @csrf
-                            <button type="submit" class="btn btn-outline-secondary btn-sm">
-                                {{ __('auth.logout.submit') }}
-                            </button>
-                        </form>
+                        @auth
+                            <div class="text-end">
+                                <span class="d-block text-muted small">{{ __('admin.shell.signed_in_as') }}</span>
+                                <strong class="small">{{ auth()->user()?->name }}</strong>
+                            </div>
+                            <form method="post" action="{{ route('logout') }}">
+                                @csrf
+                                <button type="submit" class="btn btn-outline-secondary btn-sm">
+                                    {{ __('auth.logout.submit') }}
+                                </button>
+                            </form>
+                        @else
+                            <x-button :href="route('login')" variant="outline-secondary" size="sm">
+                                {{ __('auth.login.submit') }}
+                            </x-button>
+                        @endauth
                     </div>
                 </header>
 

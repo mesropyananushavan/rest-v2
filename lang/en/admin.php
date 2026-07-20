@@ -59,4 +59,22 @@ return [
             ],
         ],
     ],
+    'errors' => [
+        'eyebrow' => 'Request status',
+        'actions' => [
+            'dashboard' => 'Back to dashboard',
+        ],
+        '403' => [
+            'title' => 'Access denied',
+            'message' => 'You do not have permission to open this admin page.',
+        ],
+        '404' => [
+            'title' => 'Page not found',
+            'message' => 'The requested admin resource does not exist in this workspace.',
+        ],
+        '500' => [
+            'title' => 'Unexpected error',
+            'message' => 'The request failed unexpectedly. Try again or contact support with the request id.',
+        ],
+    ],
 ];
