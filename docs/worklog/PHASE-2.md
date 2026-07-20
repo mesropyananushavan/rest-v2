@@ -1,6 +1,6 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.11 Part B local verification complete; push/CI handoff pending
+Status: Stage 1.11 Part B complete; owner PR/review pending
 Branch: phase-2-stage-1.11b-item-images
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
@@ -357,18 +357,19 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   seeding uses two small PNG fixtures through the same image processing action
   while other items remain image-empty. Verified `make pint`, `make stan`,
   `make test` (Pest 63 passed / 2 skipped / 502 assertions), and `make build`.
-- [ ] Stage 1.11.9 (Part B): final verification, push, and CI handoff. Run
+- [x] Stage 1.11.9 (Part B): final verification, push, and CI handoff. Run
   `make fresh`, curl/HTTP smoke for Livewire upload, thumbnail rendering, and
   placeholder fallback, then final `make pint && make stan && make test`.
   Push `phase-2-stage-1.11b-item-images`, wait for both GitHub Actions jobs
   green, update this worklog with local/CI results, and do not create or merge
-  a PR. Local progress: `make fresh` passed after adding `storage:link` to the
-  Make target; curl smoke passed for manager login, create form Livewire upload
+  a PR. Result: `make fresh` passed after adding `storage:link` to the Make
+  target; curl smoke passed for manager login, create form Livewire upload
   fields, real Livewire `_startUpload` -> multipart temporary upload ->
   `_finishUpload` -> `save`, item list visibility, thumbnail `200 image/png`,
   and placeholder `200 image/svg+xml`; final local gates green: Pint pass,
-  PHPStan pass, Pest 64 passed / 2 skipped / 503 assertions. Push and CI are
-  still pending.
+  PHPStan pass, Pest 64 passed / 2 skipped / 503 assertions. Branch pushed at
+  implementation code head `d0065ae`; GitHub Actions run 29753190555 passed
+  both `quality` and `tenant-isolation-pgsql`. PR is not created by Codex.
 - [ ] Stage 1.11.10 (Part C): Menu master-detail/search redesign architecture.
   After Part B is merged by owner, continue from fresh `main`; decide and
   document JSONB search indexing strategy and any searchable-select approach,
@@ -571,7 +572,6 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   produce broken `APP_URL`-based image URLs.
 
 ## Next steps
-Continue with Stage 1.11.9 Part B on
-`phase-2-stage-1.11b-item-images`: commit the final storage-link/public URL
-fix, push the branch, wait for both GitHub Actions jobs green, then update
-this worklog with the CI run and final handoff state. Do not create a PR.
+After the owner merges Part B, continue with Stage 1.11.10 Part C from fresh
+`main`: verify the merge, create the Part C branch, then plan the Menu
+master-detail/search redesign architecture before code. Do not create a PR.
