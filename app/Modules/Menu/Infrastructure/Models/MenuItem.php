@@ -19,6 +19,8 @@ use UnexpectedValueException;
     'category_id',
     'translated_name',
     'translated_description',
+    'internal_image',
+    'public_image',
     'price_minor',
     'currency',
     'sort_order',
@@ -76,6 +78,8 @@ final class MenuItem extends Model
         return [
             'translated_name' => 'array',
             'translated_description' => 'array',
+            'internal_image' => 'array',
+            'public_image' => 'array',
             'price_minor' => 'integer',
             'sort_order' => 'integer',
             'active' => 'boolean',

@@ -313,12 +313,19 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   PHPStan pass, Pest 54 passed / 2 skipped / 411 assertions. Branch pushed at
   code head `0d11d6d`; CI run 29749417502 passed both `quality` and
   `tenant-isolation-pgsql`.
-- [ ] Stage 1.11.6 (Part B): branch baseline, image architecture, and
+- [x] Stage 1.11.6 (Part B): branch baseline, image architecture, and
   dependency decision. Verify Part A is merged to fresh `main`, create
   `phase-2-stage-1.11b-item-images`, choose the image processing dependency
   and Storage-backed path policy, record file lifecycle and dependency
   decisions in `docs/DECISIONS.md`, add `internal_image` / `public_image`
-  metadata columns and config, and commit with focused schema checks.
+  metadata columns and config, and commit with focused schema checks. Result:
+  `origin/main` fast-forwarded to merge commit `08f3321`, Part A head
+  `dd4a395` verified as an ancestor, local `main` fast-forwarded, branch
+  `phase-2-stage-1.11b-item-images` created, `intervention/image-laravel` 4.x
+  selected for processing, Storage-backed tenant path and lifecycle policy
+  recorded in `docs/DECISIONS.md`, nullable JSON metadata columns plus
+  `config/menu_images.php` added, and schema/model tests updated. Gates green:
+  Pint pass, PHPStan pass, Pest 55 passed / 2 skipped / 415 assertions.
 - [ ] Stage 1.11.7 (Part B): image processing service and lifecycle actions.
   Install/configure the image library, implement tenant-scoped upload
   processing through Laravel Storage with resized originals and thumbnails,

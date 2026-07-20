@@ -87,6 +87,55 @@ it('stores menu archive columns and deleted-at-aware indexes', function (): void
         ->and($itemIndexes)->toContain(['tenant_id', 'archived_with_category_id', 'deleted_at']);
 });
 
+it('stores optional menu item image metadata without changing query indexes', function (): void {
+    expect(Schema::hasColumn('menu_items', 'internal_image'))->toBeTrue()
+        ->and(Schema::hasColumn('menu_items', 'public_image'))->toBeTrue();
+
+    $tenant = Tenant::query()->create([
+        'name' => 'Tenant Images',
+        'slug' => 'tenant-images',
+        'default_locale' => 'hy',
+        'currency' => 'AMD',
+        'status' => 'active',
+    ]);
+
+    app(TenantResolver::class)->set((int) $tenant->id);
+
+    $branch = Branch::query()->create([
+        'name' => 'Tenant Images Branch',
+        'timezone' => 'Asia/Yerevan',
+        'status' => 'active',
+    ]);
+
+    app(BranchContext::class)->set((int) $branch->id);
+
+    $category = MenuCategory::query()->create([
+        'translated_name' => ['hy' => 'Նկարներ', 'ru' => 'Изображения', 'en' => 'Images'],
+        'active' => true,
+    ]);
+
+    $item = MenuItem::query()->create([
+        'branch_id' => (int) $branch->id,
+        'category_id' => (int) $category->id,
+        'translated_name' => ['hy' => 'Թեստ', 'ru' => 'Тест', 'en' => 'Test'],
+        'price_minor' => 100000,
+        'currency' => 'AMD',
+        'internal_image' => [
+            'path' => 'tenants/1/menu/items/1/internal/original.webp',
+            'thumbnail_path' => 'tenants/1/menu/items/1/internal/thumb.webp',
+            'mime_type' => 'image/webp',
+            'width' => 800,
+            'height' => 600,
+            'size' => 12345,
+        ],
+        'public_image' => null,
+        'active' => true,
+    ]);
+
+    expect($item->internal_image['thumbnail_path'] ?? null)->toBe('tenants/1/menu/items/1/internal/thumb.webp')
+        ->and($item->public_image)->toBeNull();
+});
+
 it('prevents menu records from leaking across tenants through tenant-scoped models', function (): void {
     $tenantA = tenantWithMenuRecords('tenant-a', 'Tenant A');
     $tenantB = tenantWithMenuRecords('tenant-b', 'Tenant B');
