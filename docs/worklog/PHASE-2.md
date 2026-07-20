@@ -1,7 +1,7 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.10 UI stack migration complete; awaiting owner PR
-Branch: phase-2-stage-1.10-ui-stack
+Status: Stage 1.11 Part A owner review complete; awaiting owner PR/merge
+Branch: phase-2-stage-1.11-menu-ux
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
 
@@ -202,6 +202,141 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   local `npm ci` plus `npm run build`; retry pushed at code head `7ad9506`,
   and CI run 29744773070 passed both `quality` and
   `tenant-isolation-pgsql`.
+- [x] Stage 1.11.1: branch baseline and Menu UX plan. Update fresh `main`,
+  verify Stage 1.10 merge is present, create
+  `phase-2-stage-1.11-menu-ux`, and write the A/B/C plan before code.
+  Result: `origin/main` fast-forwarded to merge commit `a7cdc36`, Stage 1.10
+  head `ea82eb4` verified as an ancestor of `origin/main`, local `main`
+  fast-forwarded, branch `phase-2-stage-1.11-menu-ux` created, and this
+  Stage 1.11 plan written before implementation.
+- [x] Stage 1.11.2 (Part A): soft-delete policy documentation and cascade
+  decision. Update `AGENTS.md` Product Principles so product deletion means
+  archive/soft delete, restoration is superadmin-only, and physical deletion
+  is not exposed in UI; record the Menu category cascade archive/restore
+  behavior in `docs/DECISIONS.md`. Run documentation/grep checks and commit.
+  Result: `AGENTS.md` now defines product deletion as archive/soft delete,
+  with normal manage permission for archive, superadmin-only restore, no
+  physical deletion through UI, and confirm-modal archive controls;
+  `docs/DECISIONS.md` records the explicit Menu category cascade marker
+  policy so category restore only restores items archived by that cascade.
+- [x] Stage 1.11.3 (Part A): schema, models, and actions for archive/restore.
+  Add `deleted_at` to `menu_categories` and `menu_items`, convert models to
+  Laravel `SoftDeletes`, replace `DeleteMenu*` behavior with archive actions,
+  add restore actions, make category archive cascade to non-archived child
+  items and restore only the items archived by that category cascade, and update
+  composite indexes for `tenant_id`/`branch_id`/`category_id`/`deleted_at`
+  filtering paths. Run focused action/schema tests and commit. Result: added
+  soft-delete migration, `SoftDeletes` models, explicit
+  `archived_with_category_id` marker, Archive/Restore Application actions,
+  compatibility wrappers for legacy Delete actions, deleted-at-aware indexes,
+  and tests proving default lists hide archived records, category restore only
+  restores cascade-marked items, manual archives stay archived, and item
+  restore is blocked while its category is archived. Gates green: Pint pass,
+  PHPStan pass, Pest 51 passed / 2 skipped / 339 assertions.
+- [x] Stage 1.11.4 (Part A): routes, controllers, UI, translations, and
+  permission tests. Remove `superadmin.delete` from archive routes while
+  retaining normal manage permissions, add superadmin-only restore routes,
+  rename UI copy from delete to archive, add archive filters and archived
+  badges/restores, ensure archived categories are not selectable in item
+  forms, update `hy`/`ru`/`en` translations, and cover archive permission,
+  restore `403` for normal users, hidden archived records, and tenant
+  isolation. Run `make pint && make stan && make test`, commit. Result:
+  archive routes now require only normal manage permissions, restore routes
+  use a new `superadmin` middleware alias, Menu controllers call Archive and
+  Restore actions, index has a show/hide archived filter, archived badges,
+  restore controls for superadmins only, category/item action visibility
+  follows permissions, archived categories are excluded from item forms and
+  rejected by create, all archive/restore strings are translated in `hy`,
+  `ru`, and `en`, and feature tests cover permission, restore 403, tenant
+  404s, hidden archived rows, and inaccessible category controls. Gates green:
+  Pint pass, PHPStan pass, Pest 53 passed / 2 skipped / 379 assertions.
+- [x] Stage 1.11.5 (Part A): final verification and handoff for soft delete.
+  Run `make fresh`, curl-smoke manager archive/category cascade/hidden
+  archive filter plus owner restore, final `make pint && make stan &&
+  make test`, push `phase-2-stage-1.11-menu-ux`, wait for both CI jobs green,
+  update this worklog, and do not create or merge a PR. Result: `make fresh`
+  passed on PostgreSQL with the new soft-delete migration; curl smoke passed
+  by creating a temporary category/item as `manager@arat.test`, archiving the
+  category, confirming default `/admin/menu` hid it, `show_archived=1` showed
+  the localized archived badge, manager restore returned 403, `owner@arat.test`
+  restore returned 302, and the cascade item was restored with
+  `archived_with_category_id` cleared; final gates green: Pint pass, PHPStan
+  pass, Pest 53 passed / 2 skipped / 379 assertions. Branch pushed at code
+  head `9374d4b`; CI run 29747861501 passed both `quality` and
+  `tenant-isolation-pgsql`.
+- [x] Stage 1.11.5.1 (Part A review): review-change plan. Continue on the
+  existing `phase-2-stage-1.11-menu-ux` branch without touching `main`, read
+  the required session documents, verify the working tree, and write this
+  owner-review plan before code. Result: branch was already clean and tracking
+  `origin/phase-2-stage-1.11-menu-ux` at Part A handoff head; owner requested
+  superadmin-only archive visibility plus superadmin force delete.
+- [x] Stage 1.11.5.2 (Part A review): archive visibility and policy docs.
+  Update `AGENTS.md` and `docs/DECISIONS.md` so archive viewing,
+  `show_archived`, badges, restore, and force delete are superadmin-only;
+  record that `show_archived=1` from non-superadmins is ignored rather than
+  forbidden. Commit with the worklog result. Result: product policy now states
+  archive is by manage permission while archive viewing, restore, and
+  permanent delete are superadmin-only; `docs/DECISIONS.md` records ignored
+  `show_archived` for non-superadmins and superadmin-only force delete.
+- [x] Stage 1.11.5.3 (Part A review): force-delete application and routes.
+  Add superadmin-only force-delete actions/routes for categories/items,
+  permanently delete archived categories with their archived items, keep tenant
+  and branch isolation at 404 for foreign ids, and update tests for
+  non-superadmin restore/force-delete 403 and force delete database removal.
+  Run focused tests and commit. Result: added `ForceDeleteMenuCategory` and
+  `ForceDeleteMenuItem`, superadmin-only force-delete routes/controllers,
+  category force delete permanently removes archived child items, item force
+  delete is branch-scoped and only applies to archived rows, and feature tests
+  cover non-superadmin 403, foreign tenant 404, route middleware, and database
+  removal. Gates green: Pint pass, PHPStan pass, Pest 54 passed / 2 skipped /
+  397 assertions.
+- [x] Stage 1.11.5.4 (Part A review): superadmin-only archive UI. Hide the
+  `show_archived` filter, archived rows, archived badges, restore, and force
+  delete controls from non-superadmins; add hard confirm-modal copy for force
+  delete in `hy`/`ru`/`en`; keep normal manager archive behavior unchanged so
+  archived records disappear for that user. Run `make pint && make stan &&
+  make test` and commit. Result: Menu index ignores `show_archived` unless the
+  authenticated user is superadmin, hides archive filters/badges/rows/actions
+  from non-superadmins, renders restore and force-delete controls only for
+  superadmins, adds irreversible force-delete confirm copy and flash messages
+  in `hy`/`ru`/`en`, and tests prove manager archive disappearance plus
+  superadmin archive controls. Gates green: Pint pass, PHPStan pass, Pest
+  54 passed / 2 skipped / 411 assertions.
+- [x] Stage 1.11.5.5 (Part A review): final verification and handoff. Run
+  `make fresh`, curl-smoke manager archive then hidden/no archive access,
+  owner archive visibility/restore/force-delete, final `make pint && make stan
+  && make test`, push `phase-2-stage-1.11-menu-ux`, wait for both CI jobs
+  green, update this worklog, and do not create or merge a PR. Result:
+  `make fresh` passed; curl smoke passed for manager archive disappearance,
+  ignored manager `show_archived`, owner archive visibility, owner restore,
+  and owner force-delete category cascade; final gates green: Pint pass,
+  PHPStan pass, Pest 54 passed / 2 skipped / 411 assertions. Branch pushed at
+  code head `0d11d6d`; CI run 29749417502 passed both `quality` and
+  `tenant-isolation-pgsql`.
+- [ ] Stage 1.11.6 (Part B): menu item image architecture and dependency
+  decision. After Part A is merged by owner, continue on the same Stage 1.11
+  branch from fresh `main`; choose the image processing dependency/storage
+  approach, record it in `docs/DECISIONS.md`, add schema/storage path design
+  for `internal_image` and `public_image`, and commit with focused checks.
+- [ ] Stage 1.11.7 (Part B): uploads, thumbnails, UI, tests, and verification.
+  Implement tenant-scoped Storage-backed optional images with default
+  placeholder, validation, resizing/thumbnails, Livewire upload previews,
+  remove/replace flows, list thumbnails, upload/isolation tests, full gates,
+  push, CI handoff, and no PR creation.
+- [ ] Stage 1.11.8 (Part C): Menu master-detail/search redesign architecture.
+  After Part B is merged by owner, continue from fresh `main`; decide and
+  document JSONB search indexing strategy and any searchable-select approach,
+  then implement the Livewire master-detail category panel, global item
+  search, URL category context, paginated item list, activity toggle, empty
+  states, context-preserving forms, and responsive tablet behavior in
+  atomic commits with focused tests.
+- [ ] Stage 1.11.9 (Part C): load seeder, measurements, final verification,
+  and CI handoff. Add the artisan load-data command outside `DemoSeeder`, seed
+  about 200 categories and 20000 items per tenant, measure index, global
+  search, pages, and category panel timings, fix slow paths with indexes
+  rather than cache, run `make fresh` plus smoke including upload/load data,
+  final gates, push, wait for both CI jobs green, record measurements, and do
+  not create or merge a PR.
 
 ## Done log
 - 2026-07-20: Phase 2 Stage 1 opened from fresh `origin/main` on branch
@@ -300,6 +435,49 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   by npm 11.16.0 and verified local `npm ci` plus `npm run build`; retry CI
   run 29744773070 passed both `quality` and `tenant-isolation-pgsql` at code
   head `7ad9506`. PR is not created by Codex.
+- 2026-07-20: Stage 1.11 started from fresh `main` after owner merged Stage
+  1.10. Stage 1.10 merge commit `a7cdc36` includes Stage 1.10 head `ea82eb4`;
+  branch `phase-2-stage-1.11-menu-ux` created. Stage is intentionally split
+  into independently reviewable parts: A soft delete, B images, C Menu UX
+  redesign and load measurements.
+- 2026-07-20: Stage 1.11.2 Part A documentation complete. Product deletion
+  now means archive in `AGENTS.md`, restore is superadmin-only, and
+  `docs/DECISIONS.md` records explicit Menu category cascade restore
+  semantics.
+- 2026-07-20: Stage 1.11.3 Part A schema/action layer complete. Menu
+  categories/items now use `deleted_at`, item cascade membership is tracked
+  by `archived_with_category_id`, archive/restore Application actions cover
+  item/category behavior, and focused schema/action tests plus full Pest,
+  Pint, and PHPStan are green.
+- 2026-07-20: Stage 1.11.4 Part A HTTP/UI layer complete. Delete routes now
+  archive by normal manage permission, restore routes are superadmin-only,
+  Menu index shows archived rows only via filter with translated badges and
+  restore controls, archived categories are unavailable in item forms, and
+  permission/tenant-isolation feature coverage is updated.
+- 2026-07-20: Stage 1.11.5 Part A final verification complete. Local
+  `make fresh`, curl smoke, Pint, PHPStan, and Pest are green. Branch
+  `phase-2-stage-1.11-menu-ux` pushed at code head `9374d4b`; GitHub Actions
+  run 29747861501 passed both `quality` and `tenant-isolation-pgsql`. PR is
+  not created by Codex.
+- 2026-07-20: Stage 1.11 Part A owner review opened on the existing
+  `phase-2-stage-1.11-menu-ux` branch. Scope is limited to superadmin-only
+  archive visibility and superadmin force delete; `main` is not touched.
+- 2026-07-20: Stage 1.11.5.2 Part A review documentation complete.
+  `AGENTS.md` and `docs/DECISIONS.md` now make archive visibility, restore,
+  and permanent delete superadmin-only, while normal managers may still
+  archive by permission.
+- 2026-07-20: Stage 1.11.5.3 Part A review backend complete. Force-delete
+  Application actions and superadmin routes are implemented for archived Menu
+  categories/items, with cascade physical deletion and tenant/branch isolation
+  coverage.
+- 2026-07-20: Stage 1.11.5.4 Part A review UI complete. Archive visibility is
+  now superadmin-only in the Menu index; managers can archive but cannot see
+  archive filters, archived rows, badges, restore, or force-delete controls.
+- 2026-07-20: Stage 1.11.5.5 Part A review final verification complete.
+  Local `make fresh`, curl smoke, Pint, PHPStan, and Pest are green. Branch
+  `phase-2-stage-1.11-menu-ux` pushed at code head `0d11d6d`; GitHub Actions
+  run 29749417502 passed both `quality` and `tenant-isolation-pgsql`. PR is
+  not created by Codex.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -329,7 +507,11 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   verification: it rejected `package-lock.json` until optional
   `@emnapi/core` / `@emnapi/runtime` package entries for Rolldown's wasm
   binding were present at the lockfile root.
+- Stage 1.11 is too large for one safe review chunk. Work it as A -> B -> C,
+  with a push/CI handoff after each part and owner-created PRs only.
 
 ## Next steps
-Owner creates the PR for `phase-2-stage-1.10-ui-stack`; Codex must not create
-or merge a PR.
+Owner creates and merges the Stage 1.11 Part A PR from
+`phase-2-stage-1.11-menu-ux`. After that merge, continue with Stage 1.11.6
+Part B from fresh `main`: menu item image architecture and dependency/storage
+decision.

@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Menu\Http\Controllers;
 
+use App\Modules\Menu\Application\ArchiveMenuItem;
 use App\Modules\Menu\Application\CreateMenuItem;
-use App\Modules\Menu\Application\DeleteMenuItem;
+use App\Modules\Menu\Application\ForceDeleteMenuItem;
 use App\Modules\Menu\Application\ListMenuCategories;
+use App\Modules\Menu\Application\RestoreMenuItem;
 use App\Modules\Menu\Application\UpdateMenuItem;
 use App\Modules\Menu\Http\Requests\MenuItemRequest;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
@@ -69,13 +71,31 @@ final class MenuItemController
             ->with('status', __('menu.flash.item_updated'));
     }
 
-    public function destroy(int $item, DeleteMenuItem $delete): RedirectResponse
+    public function destroy(int $item, ArchiveMenuItem $archive): RedirectResponse
     {
-        $delete($item);
+        $archive($item);
 
         return redirect()
             ->route('admin.menu.index')
-            ->with('status', __('menu.flash.item_deleted'));
+            ->with('status', __('menu.flash.item_archived'));
+    }
+
+    public function restore(int $item, RestoreMenuItem $restore): RedirectResponse
+    {
+        $restore($item);
+
+        return redirect()
+            ->route('admin.menu.index', ['show_archived' => '1'])
+            ->with('status', __('menu.flash.item_restored'));
+    }
+
+    public function forceDelete(int $item, ForceDeleteMenuItem $forceDelete): RedirectResponse
+    {
+        $forceDelete($item);
+
+        return redirect()
+            ->route('admin.menu.index', ['show_archived' => '1'])
+            ->with('status', __('menu.flash.item_force_deleted'));
     }
 
     private function findItem(int $item, BranchContext $branches): MenuItem

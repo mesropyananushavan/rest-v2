@@ -9,6 +9,7 @@ use App\Modules\Tenancy\Contracts\TenantResolver;
 use App\Modules\Tenancy\Infrastructure\Models\Branch;
 use App\Modules\Tenancy\Infrastructure\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 
 uses(RefreshDatabase::class);
 
@@ -70,6 +71,20 @@ it('stores menu categories and items as tenant-scoped records with integer money
         ->and($item->translatedDescription()?->forLocale('en'))->toBe('Fresh vegetables')
         ->and($item->price()->minor)->toBe(250000)
         ->and($item->price()->currency)->toBe('AMD');
+});
+
+it('stores menu archive columns and deleted-at-aware indexes', function (): void {
+    expect(Schema::hasColumn('menu_categories', 'deleted_at'))->toBeTrue()
+        ->and(Schema::hasColumn('menu_items', 'deleted_at'))->toBeTrue()
+        ->and(Schema::hasColumn('menu_items', 'archived_with_category_id'))->toBeTrue();
+
+    $categoryIndexes = collect(Schema::getIndexes('menu_categories'))->pluck('columns')->all();
+    $itemIndexes = collect(Schema::getIndexes('menu_items'))->pluck('columns')->all();
+
+    expect($categoryIndexes)->toContain(['tenant_id', 'deleted_at', 'active', 'sort_order'])
+        ->and($itemIndexes)->toContain(['tenant_id', 'branch_id', 'deleted_at', 'active'])
+        ->and($itemIndexes)->toContain(['tenant_id', 'category_id', 'deleted_at', 'sort_order'])
+        ->and($itemIndexes)->toContain(['tenant_id', 'archived_with_category_id', 'deleted_at']);
 });
 
 it('prevents menu records from leaking across tenants through tenant-scoped models', function (): void {

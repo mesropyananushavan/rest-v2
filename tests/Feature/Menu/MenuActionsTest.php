@@ -6,12 +6,14 @@ use App\Modules\Identity\Infrastructure\Models\Permission;
 use App\Modules\Identity\Infrastructure\Models\Role;
 use App\Modules\Identity\Infrastructure\Models\User;
 use App\Modules\Identity\Infrastructure\Models\UserBranchAssignment;
+use App\Modules\Menu\Application\ArchiveMenuCategory;
+use App\Modules\Menu\Application\ArchiveMenuItem;
 use App\Modules\Menu\Application\CreateMenuCategory;
 use App\Modules\Menu\Application\CreateMenuItem;
-use App\Modules\Menu\Application\DeleteMenuCategory;
-use App\Modules\Menu\Application\DeleteMenuItem;
 use App\Modules\Menu\Application\ListMenuCategories;
 use App\Modules\Menu\Application\ListMenuItems;
+use App\Modules\Menu\Application\RestoreMenuCategory;
+use App\Modules\Menu\Application\RestoreMenuItem;
 use App\Modules\Menu\Application\UpdateMenuCategory;
 use App\Modules\Menu\Application\UpdateMenuItem;
 use App\Modules\Menu\Domain\MenuDomainException;
@@ -35,7 +37,7 @@ afterEach(function (): void {
     app(TenantResolver::class)->clear();
 });
 
-it('creates updates lists and deletes menu categories and items through application actions', function (): void {
+it('creates updates lists archives and restores menu categories and items through application actions', function (): void {
     $tenant = menuActionsTenant('tenant-a', 'Tenant A');
 
     app(TenantResolver::class)->set((int) $tenant['tenant']->id);
@@ -60,7 +62,7 @@ it('creates updates lists and deletes menu categories and items through applicat
         ->and($updatedCategory->sort_order)->toBe(7)
         ->and($updatedCategory->active)->toBeFalse();
 
-    $item = app(CreateMenuItem::class)(
+    $manuallyArchivedItem = app(CreateMenuItem::class)(
         (int) $category->id,
         menuActionsText('Omelette'),
         menuActionsText('Eggs and greens'),
@@ -69,12 +71,24 @@ it('creates updates lists and deletes menu categories and items through applicat
         active: true,
     );
 
-    expect((int) $item->branch_id)->toBe((int) $tenant['branch']->id)
-        ->and($item->price()->minor)->toBe(180000)
-        ->and(app(ListMenuItems::class)()->pluck('id')->all())->toBe([(int) $item->id]);
+    $cascadeArchivedItem = app(CreateMenuItem::class)(
+        (int) $category->id,
+        menuActionsText('Toast'),
+        null,
+        new Money(90000, 'AMD'),
+        sortOrder: 4,
+        active: true,
+    );
+
+    expect((int) $manuallyArchivedItem->branch_id)->toBe((int) $tenant['branch']->id)
+        ->and($manuallyArchivedItem->price()->minor)->toBe(180000)
+        ->and(app(ListMenuItems::class)()->pluck('id')->all())->toBe([
+            (int) $manuallyArchivedItem->id,
+            (int) $cascadeArchivedItem->id,
+        ]);
 
     $updatedItem = app(UpdateMenuItem::class)(
-        (int) $item->id,
+        (int) $manuallyArchivedItem->id,
         (int) $category->id,
         menuActionsText('Cheese omelette'),
         null,
@@ -88,13 +102,46 @@ it('creates updates lists and deletes menu categories and items through applicat
         ->and($updatedItem->price()->minor)->toBe(210000)
         ->and($updatedItem->active)->toBeFalse();
 
-    app(DeleteMenuItem::class)((int) $item->id);
+    app(ArchiveMenuItem::class)((int) $manuallyArchivedItem->id);
 
-    expect(MenuItem::query()->find((int) $item->id))->toBeNull();
+    $manuallyArchivedItem = MenuItem::withTrashed()->findOrFail((int) $manuallyArchivedItem->id);
 
-    app(DeleteMenuCategory::class)((int) $category->id);
+    expect($manuallyArchivedItem->trashed())->toBeTrue()
+        ->and($manuallyArchivedItem->archived_with_category_id)->toBeNull()
+        ->and(app(ListMenuItems::class)()->pluck('id')->all())->toBe([(int) $cascadeArchivedItem->id]);
 
-    expect(MenuCategory::query()->find((int) $category->id))->toBeNull();
+    app(ArchiveMenuCategory::class)((int) $category->id);
+
+    $category = MenuCategory::withTrashed()->findOrFail((int) $category->id);
+    $cascadeArchivedItem = MenuItem::withTrashed()->findOrFail((int) $cascadeArchivedItem->id);
+
+    expect($category->trashed())->toBeTrue()
+        ->and($cascadeArchivedItem->trashed())->toBeTrue()
+        ->and($cascadeArchivedItem->archived_with_category_id)->toBe((int) $category->id)
+        ->and(app(ListMenuCategories::class)()->pluck('id')->all())->toBe([])
+        ->and(app(ListMenuItems::class)()->pluck('id')->all())->toBe([]);
+
+    expect(fn () => app(RestoreMenuItem::class)((int) $cascadeArchivedItem->id))
+        ->toThrow(MenuDomainException::class, 'Menu items cannot be restored while their category is archived.');
+
+    app(RestoreMenuCategory::class)((int) $category->id);
+
+    $category = MenuCategory::query()->findOrFail((int) $category->id);
+    $manuallyArchivedItem = MenuItem::withTrashed()->findOrFail((int) $manuallyArchivedItem->id);
+    $cascadeArchivedItem = MenuItem::query()->findOrFail((int) $cascadeArchivedItem->id);
+
+    expect($category->trashed())->toBeFalse()
+        ->and($manuallyArchivedItem->trashed())->toBeTrue()
+        ->and($cascadeArchivedItem->trashed())->toBeFalse()
+        ->and($cascadeArchivedItem->archived_with_category_id)->toBeNull()
+        ->and(app(ListMenuItems::class)()->pluck('id')->all())->toBe([(int) $cascadeArchivedItem->id]);
+
+    app(RestoreMenuItem::class)((int) $manuallyArchivedItem->id);
+
+    expect(MenuItem::query()->pluck('id')->all())->toBe([
+        (int) $manuallyArchivedItem->id,
+        (int) $cascadeArchivedItem->id,
+    ]);
 });
 
 it('requires a resolved branch context for branch-owned item actions', function (): void {
@@ -148,7 +195,7 @@ it('does not update or delete menu items outside the current branch context', fu
         sortOrder: 0,
         active: true,
     ))->toThrow(ModelNotFoundException::class)
-        ->and(fn () => app(DeleteMenuItem::class)((int) $item->id))
+        ->and(fn () => app(ArchiveMenuItem::class)((int) $item->id))
         ->toThrow(ModelNotFoundException::class);
 });
 

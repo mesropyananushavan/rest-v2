@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Menu\Http\Controllers;
 
+use App\Modules\Menu\Application\ArchiveMenuCategory;
 use App\Modules\Menu\Application\CreateMenuCategory;
-use App\Modules\Menu\Application\DeleteMenuCategory;
+use App\Modules\Menu\Application\ForceDeleteMenuCategory;
+use App\Modules\Menu\Application\RestoreMenuCategory;
 use App\Modules\Menu\Application\UpdateMenuCategory;
 use App\Modules\Menu\Http\Requests\MenuCategoryRequest;
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
@@ -46,12 +48,30 @@ final class MenuCategoryController
             ->with('status', __('menu.flash.category_updated'));
     }
 
-    public function destroy(int $category, DeleteMenuCategory $delete): RedirectResponse
+    public function destroy(int $category, ArchiveMenuCategory $archive): RedirectResponse
     {
-        $delete($category);
+        $archive($category);
 
         return redirect()
             ->route('admin.menu.index')
-            ->with('status', __('menu.flash.category_deleted'));
+            ->with('status', __('menu.flash.category_archived'));
+    }
+
+    public function restore(int $category, RestoreMenuCategory $restore): RedirectResponse
+    {
+        $restore($category);
+
+        return redirect()
+            ->route('admin.menu.index', ['show_archived' => '1'])
+            ->with('status', __('menu.flash.category_restored'));
+    }
+
+    public function forceDelete(int $category, ForceDeleteMenuCategory $forceDelete): RedirectResponse
+    {
+        $forceDelete($category);
+
+        return redirect()
+            ->route('admin.menu.index', ['show_archived' => '1'])
+            ->with('status', __('menu.flash.category_force_deleted'));
     }
 }

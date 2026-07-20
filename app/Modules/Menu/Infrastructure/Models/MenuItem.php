@@ -10,6 +10,7 @@ use App\Support\Money\Money;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use UnexpectedValueException;
 
 #[Fillable([
@@ -22,17 +23,19 @@ use UnexpectedValueException;
     'currency',
     'sort_order',
     'active',
+    'archived_with_category_id',
 ])]
 final class MenuItem extends Model
 {
     use BelongsToTenant;
+    use SoftDeletes;
 
     /**
      * @return BelongsTo<MenuCategory, $this>
      */
     public function category(): BelongsTo
     {
-        return $this->belongsTo(MenuCategory::class, 'category_id');
+        return $this->belongsTo(MenuCategory::class, 'category_id')->withTrashed();
     }
 
     public function price(): Money
@@ -76,6 +79,8 @@ final class MenuItem extends Model
             'price_minor' => 'integer',
             'sort_order' => 'integer',
             'active' => 'boolean',
+            'archived_with_category_id' => 'integer',
+            'deleted_at' => 'datetime',
         ];
     }
 }

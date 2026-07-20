@@ -14,17 +14,19 @@ final class ListMenuCategories
     /**
      * @return EloquentCollection<int, MenuCategory>
      */
-    public function __invoke(): EloquentCollection
+    public function __invoke(bool $includeArchived = false): EloquentCollection
     {
         $startedAt = microtime(true);
 
         $categories = MenuCategory::query()
+            ->when($includeArchived, fn ($query) => $query->withTrashed())
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get();
 
         $this->logSuccess('menu.categories.list', $startedAt, [
             'category_count' => $categories->count(),
+            'include_archived' => $includeArchived,
         ]);
 
         return $categories;
