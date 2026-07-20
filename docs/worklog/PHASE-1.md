@@ -1,12 +1,12 @@
 # Worklog — Phase 1: Walking Skeleton
 
-Status: Stage 3.1 login auth UI in progress
+Status: Stage 3.1 login auth UI complete; branch pushed; awaiting owner PR
 Branch: phase-1-stage-3-login
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
 
-CI status: green on pushed Stage 2.5 branch. Run:
-https://github.com/mesropyananushavan/rest-v2/actions/runs/29724811580
+CI status: green on pushed Stage 3.1 branch. Run:
+https://github.com/mesropyananushavan/rest-v2/actions/runs/29725976561
 
 ## Plan
 - [x] Stage 1: Laravel 13 scaffold, module skeletons (Tenancy/Identity/Menu),
@@ -67,9 +67,11 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29724811580
   && make test`, commit. Result: `/login` POST uses `throttle:5,1`; regression
   test covers 429 after five failed attempts; gates green with Stage 3.1.1-
   3.1.4 combined.
-- [ ] Stage 3.1.5: final verification and handoff. Run full local gates,
+- [x] Stage 3.1.5: final verification and handoff. Run full local gates,
   push `phase-1-stage-3-login`, wait for both CI jobs green, update this
-  worklog with CI links/results, no PR creation.
+  worklog with CI links/results, no PR creation. Result: local `make fresh`,
+  Pint, PHPStan, and Pest green; branch pushed at code head `bf13432`; CI run
+  29725976561 passed both `quality` and `tenant-isolation-pgsql`.
 - [ ] Stage 3.2: menu vertical slice (actions, Blade UI, API, i18n, audit,
   tests, demo seeders)
 
@@ -140,6 +142,10 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29724811580
   redirects, demo user login smoke test, and explicit tenant keys in Identity
   demo seeder rows. Demo verification green: `make fresh` pass. Gates green:
   Pint pass, PHPStan pass, Pest 25 passed / 1 skipped / 160 assertions.
+- 2026-07-20: Stage 3.1 CI confirmed green. Branch
+  `phase-1-stage-3-login` pushed at code head `bf13432`; GitHub Actions run
+  29725976561 passed both `quality` and `tenant-isolation-pgsql`. PR is not
+  created by Codex.
 
 ## Gotchas / known issues
 - Host PHP is 8.1 — never run PHP on host, docker/make only.
@@ -188,6 +194,6 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29724811580
   failed during `make fresh` for permissions.
 
 ## Next steps
-Continue Stage 3.1.5: commit the login slice, push
-`phase-1-stage-3-login`, then wait for both CI jobs green and record the run
-link/results here. Codex must not create a PR.
+Await owner PR creation/review/merge for `phase-1-stage-3-login`. Codex must
+not create the PR. After the owner confirms merge to `main`, continue with
+Stage 3.2 Menu CRUD (Blade) planning before code.
