@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Modules\Menu\Application;
 
 use App\Modules\Menu\Domain\MenuDomainException;
+use App\Modules\Menu\Domain\MenuItemImageSlot;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use App\Modules\Menu\Infrastructure\Storage\MenuItemImageStorage;
 use App\Modules\Tenancy\Contracts\BranchContext;
 
-final class ForceDeleteMenuItem
+final class RemoveMenuItemImage
 {
     use RecordsMenuAction;
 
@@ -18,36 +19,39 @@ final class ForceDeleteMenuItem
         private readonly MenuItemImageStorage $storage,
     ) {}
 
-    public function __invoke(int $itemId): void
+    public function __invoke(int $itemId, MenuItemImageSlot $slot): MenuItem
     {
         $startedAt = microtime(true);
         $branchId = $this->branches->id();
 
         if ($branchId === null) {
             $exception = MenuDomainException::branchContextRequired();
-            $this->logDomainFailure('menu.items.force_delete', $exception, $startedAt, [
+            $this->logDomainFailure('menu.items.images.remove', $exception, $startedAt, [
                 'item_id' => $itemId,
+                'slot' => $slot->value,
             ]);
 
             throw $exception;
         }
 
-        $item = MenuItem::onlyTrashed()
+        $item = MenuItem::query()
             ->where('branch_id', $branchId)
             ->findOrFail($itemId);
+        $column = $slot->column();
+        $oldImage = $this->imageMetadata($item, $column);
 
-        $internalImage = $this->imageMetadata($item, 'internal_image');
-        $publicImage = $this->imageMetadata($item, 'public_image');
+        if ($oldImage !== null) {
+            $item->forceFill([$column => null])->save();
+            $this->storage->delete($oldImage);
+        }
 
-        $item->forceDelete();
-
-        $this->storage->delete($internalImage);
-        $this->storage->delete($publicImage);
-
-        $this->logSuccess('menu.items.force_delete', $startedAt, [
+        $this->logSuccess('menu.items.images.remove', $startedAt, [
             'branch_id' => $branchId,
             'item_id' => $itemId,
+            'slot' => $slot->value,
         ]);
+
+        return $item->refresh();
     }
 
     /**

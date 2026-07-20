@@ -121,7 +121,9 @@ files safely. Configured disk/path access keeps local development on the
 `public` disk but allows moving to S3-compatible storage without changing
 application code. Intervention Image is popular, maintained, supports PHP 8.3
 and Laravel 13 through the Laravel integration package, and works with GD now
-while allowing Imagick/libvips later.
+while allowing Imagick/libvips later. The PHP runtime image installs GD with
+jpeg/png/webp support so local tests, uploads, and resizing use the same
+driver.
 Rejected: storing public URLs in the database — ties records to a specific
 host/disk and makes S3 migration harder; storing binary images in PostgreSQL —
 unnecessary database bloat and slower backup/restore paths; custom GD-only

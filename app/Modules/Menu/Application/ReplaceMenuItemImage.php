@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Modules\Menu\Application;
 
 use App\Modules\Menu\Domain\MenuDomainException;
+use App\Modules\Menu\Domain\MenuItemImageSlot;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use App\Modules\Menu\Infrastructure\Storage\MenuItemImageStorage;
 use App\Modules\Tenancy\Contracts\BranchContext;
+use Illuminate\Http\UploadedFile;
+use Throwable;
 
-final class ForceDeleteMenuItem
+final class ReplaceMenuItemImage
 {
     use RecordsMenuAction;
 
@@ -18,36 +21,45 @@ final class ForceDeleteMenuItem
         private readonly MenuItemImageStorage $storage,
     ) {}
 
-    public function __invoke(int $itemId): void
+    public function __invoke(int $itemId, MenuItemImageSlot $slot, UploadedFile $file): MenuItem
     {
         $startedAt = microtime(true);
         $branchId = $this->branches->id();
 
         if ($branchId === null) {
             $exception = MenuDomainException::branchContextRequired();
-            $this->logDomainFailure('menu.items.force_delete', $exception, $startedAt, [
+            $this->logDomainFailure('menu.items.images.replace', $exception, $startedAt, [
                 'item_id' => $itemId,
+                'slot' => $slot->value,
             ]);
 
             throw $exception;
         }
 
-        $item = MenuItem::onlyTrashed()
+        $item = MenuItem::query()
             ->where('branch_id', $branchId)
             ->findOrFail($itemId);
+        $column = $slot->column();
+        $oldImage = $this->imageMetadata($item, $column);
+        $newImage = $this->storage->store($item, $slot, $file);
 
-        $internalImage = $this->imageMetadata($item, 'internal_image');
-        $publicImage = $this->imageMetadata($item, 'public_image');
+        try {
+            $item->forceFill([$column => $newImage])->save();
+        } catch (Throwable $exception) {
+            $this->storage->delete($newImage);
 
-        $item->forceDelete();
+            throw $exception;
+        }
 
-        $this->storage->delete($internalImage);
-        $this->storage->delete($publicImage);
+        $this->storage->delete($oldImage);
 
-        $this->logSuccess('menu.items.force_delete', $startedAt, [
+        $this->logSuccess('menu.items.images.replace', $startedAt, [
             'branch_id' => $branchId,
             'item_id' => $itemId,
+            'slot' => $slot->value,
         ]);
+
+        return $item->refresh();
     }
 
     /**

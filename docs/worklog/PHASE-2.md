@@ -326,14 +326,23 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   recorded in `docs/DECISIONS.md`, nullable JSON metadata columns plus
   `config/menu_images.php` added, and schema/model tests updated. Gates green:
   Pint pass, PHPStan pass, Pest 55 passed / 2 skipped / 415 assertions.
-- [ ] Stage 1.11.7 (Part B): image processing service and lifecycle actions.
+- [x] Stage 1.11.7 (Part B): image processing service and lifecycle actions.
   Install/configure the image library, implement tenant-scoped upload
   processing through Laravel Storage with resized originals and thumbnails,
   add replace/remove helpers for both image slots, delete old files on
   replacement/removal, delete image files during superadmin force delete, keep
   archive/restore file-preserving, and cover upload/replace/remove/force-delete
   behavior with `Storage::fake` tests. Run `make pint && make stan &&
-  make test`, then commit.
+  make test`, then commit. Result: installed `intervention/image-laravel`
+  4.1.0 (`intervention/image` 4.2.0), added `MenuItemImageSlot`, Storage-backed
+  processing service, replace/remove Application actions, old-file cleanup on
+  replacement/removal, archive-preserving behavior, and item/category
+  force-delete file cleanup. The PHP Docker image now installs GD with
+  jpeg/png/webp support because the previous runtime lacked any image driver.
+  Tests cover both image slots, validation for unsupported type/size, tenant
+  isolation on id tampering, archive preserving files, and force delete removing
+  files. Gates green: Pint pass, PHPStan pass, Pest 59 passed / 2 skipped /
+  464 assertions.
 - [ ] Stage 1.11.8 (Part B): Livewire upload UI, placeholders, translations,
   and demo fixtures. Convert the menu item form to a thin Livewire adapter for
   two optional image upload zones with current preview, replace, and remove
@@ -533,9 +542,17 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   binding were present at the lockfile root.
 - Stage 1.11 is too large for one safe review chunk. Work it as A -> B -> C,
   with a push/CI handoff after each part and owner-created PRs only.
+- During Stage 1.11 Part B, running host Composer updated `composer.json` and
+  `composer.lock` but failed package discovery because host PHP is 8.1.2. The
+  fix was to complete install/discovery through Docker-backed `make build`.
+  Do not use host Composer again in this repo.
+- The pre-existing PHP Docker image had no `gd` extension, so Laravel fake
+  image generation and Intervention's default GD driver failed. Stage 1.11.7
+  added GD with jpeg/png/webp libraries to `docker/php/Dockerfile` and rebuilt
+  services with `make up`; `php -m` now lists `gd`.
 
 ## Next steps
-Owner creates and merges the Stage 1.11 Part A PR from
-`phase-2-stage-1.11-menu-ux`. After that merge, continue with Stage 1.11.6
-Part B from fresh `main`: menu item image architecture and dependency/storage
-decision.
+Continue with Stage 1.11.8 Part B on
+`phase-2-stage-1.11b-item-images`: Livewire menu item upload UI, shared
+placeholder asset, list thumbnails, translations, and deterministic demo image
+fixtures.
