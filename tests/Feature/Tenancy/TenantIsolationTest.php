@@ -10,9 +10,15 @@ use App\Modules\Tenancy\Contracts\TenantResolver;
 use App\Modules\Tenancy\Infrastructure\Models\Branch;
 use App\Modules\Tenancy\Infrastructure\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Queue\Events\JobProcessed;
+use Illuminate\Queue\Events\JobProcessing;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Route;
+use Tests\Support\Jobs\RecordTenantScopedBranchIdsJob;
 
 uses(RefreshDatabase::class);
 
@@ -155,6 +161,43 @@ it('does not allow tenant header to override an authenticated user tenant', func
         ->assertJson([
             'tenant_id' => (int) $tenantA['tenant']->id,
         ]);
+});
+
+it('restores tenant and branch context for tenant-scoped queries inside queued jobs', function (): void {
+    $tenantA = tenantWithUser('tenant-a', 'manager-a', ['menu.items.manage']);
+    $tenantB = tenantWithUser('tenant-b', 'manager-b', ['menu.items.manage']);
+    $cacheKey = 'tenant-scoped-queued-job-result';
+
+    config(['queue.default' => 'database']);
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+    app(BranchContext::class)->set((int) $tenantA['branch']->id);
+
+    Queue::connection('database')->push(new RecordTenantScopedBranchIdsJob($cacheKey));
+
+    app(BranchContext::class)->clear();
+    app(TenantResolver::class)->clear();
+
+    expect(Branch::query()->count())->toBe(0);
+
+    $job = Queue::connection('database')->pop('default');
+
+    expect($job)->not->toBeNull();
+    assert($job !== null);
+
+    Event::dispatch(new JobProcessing('database', $job));
+    $job->fire();
+    Event::dispatch(new JobProcessed('database', $job));
+
+    expect(Cache::get($cacheKey))->toBe([
+        'tenant_id' => (int) $tenantA['tenant']->id,
+        'branch_id' => (int) $tenantA['branch']->id,
+        'visible_branch_ids' => [(int) $tenantA['branch']->id],
+    ])->and(app(TenantResolver::class)->id())->toBeNull()
+        ->and(app(BranchContext::class)->id())->toBeNull()
+        ->and(Branch::withoutGlobalScopes()->pluck('id')->all())->toContain(
+            (int) $tenantA['branch']->id,
+            (int) $tenantB['branch']->id,
+        );
 });
 
 it('checks action permissions through the identity authorizer contract', function (): void {

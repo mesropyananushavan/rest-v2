@@ -54,12 +54,12 @@ class AppServiceProvider extends ServiceProvider
 
             if (is_array($context)) {
                 /** @var array<string, mixed> $context */
-                LogContext::restore($context);
+                $this->restoreQueueContext($context);
             }
         });
 
         Queue::after(function (JobProcessed $event): void {
-            LogContext::clear();
+            $this->clearQueueContext();
         });
 
         Queue::failing(function (JobFailed $event): void {
@@ -68,7 +68,7 @@ class AppServiceProvider extends ServiceProvider
 
             if (is_array($context)) {
                 /** @var array<string, mixed> $context */
-                LogContext::restore($context);
+                $this->restoreQueueContext($context);
             }
 
             Log::error('queue job failed', Redactor::context([
@@ -78,7 +78,7 @@ class AppServiceProvider extends ServiceProvider
                 'exception' => $event->exception::class,
             ]));
 
-            LogContext::clear();
+            $this->clearQueueContext();
         });
 
         Gate::before(function (Authenticatable $user, string $ability): ?bool {
@@ -88,5 +88,29 @@ class AppServiceProvider extends ServiceProvider
 
             return app(Authorizer::class)->allows($user, $ability);
         });
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    private function restoreQueueContext(array $context): void
+    {
+        app(TenantResolver::class)->set($this->intOrNull($context['tenant_id'] ?? null));
+        app(BranchContext::class)->set($this->intOrNull($context['branch_id'] ?? null));
+
+        LogContext::restore($context);
+    }
+
+    private function clearQueueContext(): void
+    {
+        app(BranchContext::class)->clear();
+        app(TenantResolver::class)->clear();
+
+        LogContext::clear();
+    }
+
+    private function intOrNull(mixed $value): ?int
+    {
+        return is_numeric($value) ? (int) $value : null;
     }
 }

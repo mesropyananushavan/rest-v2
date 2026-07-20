@@ -28,7 +28,7 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29590252242
   outside production, ensure header never overrides authenticated user tenant,
   add tests, record DECISIONS.md entry, run `make pint && make stan &&
   make test`, commit.
-- [ ] Stage 2.5.2: queue context propagation hardening. Restore
+- [x] Stage 2.5.2: queue context propagation hardening. Restore
   TenantResolver and BranchContext inside queued jobs from payload, add a test
   proving tenant-scoped queries inside a job see only that job tenant, run
   `make pint && make stan && make test`, commit.
@@ -74,6 +74,12 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29590252242
   `X-Tenant-ID`; header cannot override authenticated user tenant. Decision
   recorded in DECISIONS.md. Gates green: Pint pass, PHPStan pass, Pest
   17 passed / 91 assertions.
+- 2026-07-20: Stage 2.5.2 queue context propagation hardening complete.
+  Queue listeners restore TenantResolver and BranchContext from
+  `smartrest_context`, then clear runtime context after job processing. Added
+  database-queue regression test proving tenant-scoped queries inside a job
+  only see that job tenant. Gates green: Pint pass, PHPStan pass, Pest
+  18 passed / 98 assertions.
 
 ## Gotchas / known issues
 - Host PHP is 8.1 — never run PHP on host, docker/make only.
@@ -105,7 +111,8 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29590252242
   a local `.env`.
 
 ## Next steps
-Continue Stage 2.5.2: harden queue context propagation so queued jobs restore
-TenantResolver and BranchContext from payload, add a tenant-scoped query test
-inside a job, run `make pint && make stan && make test`, then commit the
-completed step. Do NOT start Stage 3.
+Continue Stage 2.5.3: add a separate GitHub Actions PostgreSQL 17 tenant
+isolation job that runs focused tenant isolation tests on real pgsql, including
+coverage that no `smartrest.tenant_id` RLS setting sees no other tenant data,
+run `make pint && make stan && make test`, then commit the completed step. Do
+NOT start Stage 3.
