@@ -1,14 +1,11 @@
 # Worklog — Phase 1: Walking Skeleton
 
-Status: Branch pushed; PR not created; awaiting owner PR review and merge
-Branch: phase-1-walking-skeleton
+Status: Stage 2.5 hardening in progress
+Branch: phase-1-stage-2.5-hardening
 
-PR state: `phase-1-walking-skeleton` is pushed to origin. PR is NOT yet
-created; only the GitHub `/pull/new` link exists. The OWNER creates and
-reviews the PR himself:
-https://github.com/mesropyananushavan/rest-v2/pull/new/phase-1-walking-skeleton
+PR state: owner creates and merges PRs; Codex does not create PRs.
 
-CI status: green after end-of-day CI fix. Run:
+Previous CI status: green after end-of-day CI fix. Run:
 https://github.com/mesropyananushavan/rest-v2/actions/runs/29590252242
 
 ## Plan
@@ -26,6 +23,25 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29590252242
   permissions, seeders, isolation tests) — STOP checkpoint after
 - [x] Pre-Stage-3: extend tenant isolation tests for write/create/HTTP 404
   invariants and add standing AGENTS rule for every new resourceful route
+- [ ] Stage 2.5.1: tenant header policy hardening. Implement tenant resolve
+  order `authenticated user -> session -> X-Tenant-ID`, accept header only
+  outside production, ensure header never overrides authenticated user tenant,
+  add tests, record DECISIONS.md entry, run `make pint && make stan &&
+  make test`, commit.
+- [ ] Stage 2.5.2: queue context propagation hardening. Restore
+  TenantResolver and BranchContext inside queued jobs from payload, add a test
+  proving tenant-scoped queries inside a job see only that job tenant, run
+  `make pint && make stan && make test`, commit.
+- [ ] Stage 2.5.3: PostgreSQL tenant isolation CI job. Add separate GitHub
+  Actions job using PostgreSQL 17 service that runs tenant isolation tests on
+  real pgsql, including no-`smartrest.tenant_id` RLS visibility coverage, run
+  `make pint && make stan && make test`, commit.
+- [ ] Stage 2.5.4: strict types sweep. Add `declare(strict_types=1)` to all
+  PHP files missing it, run `make pint && make stan && make test`, commit.
+- [ ] Stage 2.5.5: scaffold cleanup. Remove Laravel ExampleTests, fix
+  `UserFactory` hardcoded `tenant_id => 1` via factory/state, replace welcome
+  page with minimal translated placeholder, run `make pint && make stan &&
+  make test`, commit.
 - [ ] Stage 3: menu vertical slice (actions, Blade UI, API, i18n, audit,
   tests, demo seeders)
 
@@ -84,4 +100,7 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29590252242
   a local `.env`.
 
 ## Next steps
-Awaiting owner: PR review and merge to main. Do NOT start Stage 3, do NOT create new branches, do NOT touch main. After the owner confirms the merge, create branch phase-1-stage-3 from fresh main and begin Stage 3 (menu vertical slice) per the Phase 1 task prompt and BLUEPRINT section 9.
+Continue Stage 2.5.1: implement tenant header policy hardening in
+`ResolveTenant`, add production/header and authenticated-user precedence tests,
+record the owner decision in `docs/DECISIONS.md`, run `make pint &&
+make stan && make test`, then commit the completed step. Do NOT start Stage 3.
