@@ -1,7 +1,7 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1 Admin UI Foundation complete; awaiting owner PR
-Branch: phase-2-stage-1-admin-ui
+Status: Stage 1.9 Product Principles + superadmin-only delete complete; awaiting owner PR
+Branch: phase-2-stage-1.9-principles-superadmin
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
 
@@ -85,6 +85,41 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   PHPStan pass, Pest 47 passed / 2 skipped / 298 assertions. Branch pushed at
   code head `e392736`; CI run 29738507952 passed both `quality` and
   `tenant-isolation-pgsql`.
+- [x] Stage 1.9.1: branch baseline and worklog plan. Update fresh `main`,
+  verify Stage 1 merge is present, create
+  `phase-2-stage-1.9-principles-superadmin`, and write this plan before code.
+  Result: `main` fast-forwarded to merge commit `9425cdf`, Stage 1 head
+  `e392736` verified as an ancestor of `origin/main`, branch created from
+  fresh `main`, and this Stage 1.9 plan written before implementation.
+- [x] Stage 1.9.2: Product Principles documentation. Add the mandatory
+  `Product Principles` section to `AGENTS.md` covering restaurant-worker
+  simplicity, superadmin-only destructive actions, and scale-from-day-one
+  constraints. Commit documentation with the worklog result. Result:
+  `AGENTS.md` now makes UI simplicity, superadmin-only deletes, and
+  scale-from-day-one query/list/concurrency rules mandatory for all future
+  stages.
+- [x] Stage 1.9.3: superadmin-only delete enforcement. Add the user
+  `is_superadmin` flag, seed deterministic demo superadmins, enforce
+  superadmin authorization on current destructive admin routes, hide Menu
+  delete UI for non-superadmins, and cover allowed/denied behavior with
+  feature tests. Run `make pint && make stan && make test`, commit with the
+  worklog result. Result: added `users.is_superadmin`, model/factory casts,
+  deterministic owner superadmins, `superadmin.delete` middleware on all
+  current `DELETE` routes, hidden Menu delete controls for non-superadmins,
+  and tests proving superadmin delete succeeds, normal manager delete is
+  `403`, foreign resource delete remains `404`, demo flags are seeded, and
+  every delete route carries the middleware. Gates green: Pint pass, PHPStan
+  pass, Pest 49 passed / 2 skipped / 313 assertions.
+- [x] Stage 1.9.4: final verification and handoff. Run final
+  `make pint && make stan && make test`, push the branch, check GitHub
+  Actions status for both jobs if available, update this worklog, and do not
+  create or merge a PR. Result: final Pint pass, PHPStan pass, Pest 49 passed
+  / 2 skipped / 313 assertions; `make fresh` pass; curl-smoke pass
+  (`manager@arat.test` login 302 to `/admin`, `/admin` 200, `/admin/menu` 200
+  with `Լոռի ձվածեղ` and no delete controls; `owner@arat.test` `/admin/menu`
+  200 with delete controls; manager direct `DELETE /admin/menu/items/1`
+  returned 403). Branch pushed at code head `b65af49`; CI run 29740192312
+  passed both `quality` and `tenant-isolation-pgsql`.
 
 ## Done log
 - 2026-07-20: Phase 2 Stage 1 opened from fresh `origin/main` on branch
@@ -125,6 +160,27 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   2 skipped / 298 assertions. Branch `phase-2-stage-1-admin-ui` pushed at
   code head `e392736`; GitHub Actions run 29738507952 passed both `quality`
   and `tenant-isolation-pgsql`. PR is not created by Codex.
+- 2026-07-20: Stage 1.9 started from fresh `main` after owner merged Stage 1.
+  Stage 1 merge commit `9425cdf` includes Stage 1 head `e392736`; branch
+  `phase-2-stage-1.9-principles-superadmin` created and implementation plan
+  written before code.
+- 2026-07-20: Stage 1.9.2 Product Principles documentation complete.
+  `AGENTS.md` now records mandatory simplicity, superadmin-only delete, and
+  scale-from-day-one rules for current and future modules.
+- 2026-07-20: Stage 1.9.3 superadmin-only delete enforcement complete
+  locally. Added `users.is_superadmin`, deterministic demo owner superadmins,
+  route middleware enforcement for current admin destructive routes, hidden
+  Menu delete controls for non-superadmins, and regression tests. Gates green:
+  Pint pass, PHPStan pass, Pest 49 passed / 2 skipped / 313 assertions.
+- 2026-07-20: Stage 1.9.4 final verification and CI handoff complete. Final
+  local gates green: Pint pass, PHPStan pass, Pest 49 passed / 2 skipped /
+  313 assertions. `make fresh` passed with the new `users.is_superadmin`
+  migration and `DemoSeeder`. Curl smoke passed for manager login, `/admin`,
+  `/admin/menu`, manager hidden delete controls, owner visible delete controls,
+  and manager direct delete returning 403. Branch
+  `phase-2-stage-1.9-principles-superadmin` pushed at code head `b65af49`;
+  GitHub Actions run 29740192312 passed both `quality` and
+  `tenant-isolation-pgsql`. PR is not created by Codex.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -138,7 +194,12 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   `app-redis` occupied host port 6379. Owner-approved remediation was to
   temporarily stop `app-redis`, run verification, then stop this project's
   containers and restart `app-redis` after curl smoke.
+- Stage 1.9 intentionally treats delete as an additional superadmin gate on
+  top of normal permissions, not as a replacement for existing
+  create/read/update permission checks.
+- GitHub Actions emitted non-blocking Node.js 20 deprecation annotations for
+  `actions/checkout@v4` / `actions/setup-node@v4` while the jobs still passed.
 
 ## Next steps
-Owner creates the PR for `phase-2-stage-1-admin-ui`. Codex must not create or
-merge the PR.
+Owner creates the PR for `phase-2-stage-1.9-principles-superadmin`. Codex must
+not create or merge the PR.

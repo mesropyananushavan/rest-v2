@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Identity\Infrastructure\Models\User;
 use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Modules\Tenancy\Contracts\TenantResolver;
 use Database\Seeders\DemoSeeder;
@@ -16,6 +17,11 @@ afterEach(function (): void {
 
 it('seeds deterministic menu data visible to demo managers by tenant', function (): void {
     $this->seed(DemoSeeder::class);
+
+    expect(User::withoutGlobalScopes()->where('email', 'owner@arat.test')->firstOrFail()->is_superadmin)->toBeTrue()
+        ->and(User::withoutGlobalScopes()->where('email', 'manager@arat.test')->firstOrFail()->is_superadmin)->toBeFalse()
+        ->and(User::withoutGlobalScopes()->where('email', 'owner@northstar.test')->firstOrFail()->is_superadmin)->toBeTrue()
+        ->and(User::withoutGlobalScopes()->where('email', 'manager@northstar.test')->firstOrFail()->is_superadmin)->toBeFalse();
 
     $this->withSession(['_token' => menuDemoCsrfToken()])
         ->post(route('login.store'), menuDemoLoginPayload('manager@arat.test'))

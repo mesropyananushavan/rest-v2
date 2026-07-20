@@ -48,6 +48,34 @@
 - Seeders must be deterministic, cover two tenants, and refuse to run
   outside local/testing environments.
 
+## Product Principles
+- **Simplicity is the competitive advantage:** frontend is never built for
+  frontend's sake. Every screen must be as simple and convenient as possible
+  for real restaurant workers: waiters, managers, and cashiers who are often
+  non-technical, often using a tablet, and often in a hurry.
+- **Minimize operational friction:** the target action should take the fewest
+  practical clicks, and the most frequent action must be the most visible
+  action on the screen.
+- **Do not add unused UI:** never add elements, features, settings, filters, or
+  configuration that are not needed right now. If a screen needs explanation,
+  it is designed incorrectly. SmartRest competes by being easier to use than
+  alternatives.
+- **Destructive actions are superadmin-only:** deleting any entity is allowed
+  only for users with `is_superadmin = true`. Normal roles and permissions
+  control create/read/update, but delete always requires the additional
+  superadmin gate. Delete controls must not be rendered for non-superadmins.
+  This applies to every current and future module.
+- **Scale from day one:** every design and code review must ask what happens at
+  1000 tenants, 100 active users per tenant, and millions of rows per table.
+  New code must avoid unindexed filtering paths, especially tenant/branch
+  access paths such as `tenant_id`, `branch_id`, and the working fields used
+  with them; use composite indexes where the query path requires them.
+- **Operational lists must scale:** every list is paginated and never loads a
+  full table into memory. Avoid N+1 queries by eager loading relationships and
+  checking query behavior in review. Heavy operations run in queues, not in
+  HTTP requests. Concurrent writes, especially order/status flows, must be
+  designed with locking and contention in mind.
+
 ## Code style
 - PHP 8.3, `declare(strict_types=1)` in every file, typed properties and
   return types everywhere, `final` classes by default, constructor property

@@ -62,7 +62,7 @@ Route::middleware(['tenant', 'branch', 'auth'])->prefix('/admin/menu')->name('ad
         ->middleware('can:menu.categories.manage')
         ->name('categories.update');
     Route::delete('/categories/{category}', [MenuCategoryController::class, 'destroy'])
-        ->middleware('can:menu.categories.manage')
+        ->middleware(['can:menu.categories.manage', 'superadmin.delete'])
         ->name('categories.destroy');
 
     Route::get('/items/create', [MenuItemController::class, 'create'])
@@ -78,6 +78,6 @@ Route::middleware(['tenant', 'branch', 'auth'])->prefix('/admin/menu')->name('ad
         ->middleware('can:menu.items.manage')
         ->name('items.update');
     Route::delete('/items/{item}', [MenuItemController::class, 'destroy'])
-        ->middleware('can:menu.items.manage')
+        ->middleware(['can:menu.items.manage', 'superadmin.delete'])
         ->name('items.destroy');
 });
