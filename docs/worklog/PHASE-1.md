@@ -6,7 +6,7 @@ Branch: phase-1-stage-2.5-hardening
 PR state: owner creates and merges PRs; Codex does not create PRs.
 
 CI status: green on pushed Stage 2.5 branch. Run:
-https://github.com/mesropyananushavan/rest-v2/actions/runs/29724722579
+https://github.com/mesropyananushavan/rest-v2/actions/runs/29724811580
 
 ## Plan
 - [x] Stage 1: Laravel 13 scaffold, module skeletons (Tenancy/Identity/Menu),
@@ -98,8 +98,8 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29724722579
   translations, and added a focused welcome placeholder test. Gates green:
   Pint pass, PHPStan pass, Pest 17 passed / 1 skipped / 103 assertions.
 - 2026-07-20: Stage 2.5 CI confirmed green after CI hardening fix. Branch
-  `phase-1-stage-2.5-hardening` pushed to origin at head `98bb750`; GitHub
-  Actions run 29724722579 passed both `quality` and
+  `phase-1-stage-2.5-hardening` pushed to origin at head `f82ce2f`; GitHub
+  Actions run 29724811580 passed both `quality` and
   `tenant-isolation-pgsql`. Earlier failed run 29724577844 exposed two CI-only
   issues: welcome placeholder depended on Vite manifest before build, and the
   pgsql service user bypassed RLS. Fix: remove direct `@vite` from the
