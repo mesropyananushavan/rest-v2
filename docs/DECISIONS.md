@@ -46,3 +46,24 @@ login-first UI exists, but production isolation must be bound to trusted
 authentication/session state.
 Rejected: allowing `X-Tenant-ID` in production or giving it precedence over
 authenticated users — both would make tenant spoofing possible.
+
+## 2026-07-20 — Tailwind CSS as admin UI foundation
+Decision: admin UI styling moves from Bootstrap to Tailwind CSS through the
+official Vite plugin, with SmartRest design tokens maintained in the Tailwind
+theme.
+Reason: Tailwind fits the Livewire/Alpine ecosystem, gives SmartRest a more
+custom product look than Bootstrap defaults, and keeps colors, radius,
+spacing, and shadow decisions centralized in a tokens model.
+Rejected: continuing Bootstrap 5 — fast for scaffolding but pushes the admin
+UI toward generic layouts and couples interactive components to Bootstrap JS.
+
+## 2026-07-20 — Livewire and Alpine as admin interaction layer
+Decision: admin UI interactions use Livewire 4 with its Vite-bundled Alpine
+runtime; `@livewireScriptConfig` is rendered by the admin layout and the
+single JavaScript entry starts Livewire.
+Reason: Livewire keeps server-rendered Blade as the primary UI model while
+adding real HTTP-driven interactive components, and Alpine is the right
+lightweight layer for local disclosure/modal behavior without a SPA framework.
+Rejected: React/Vue/Angular SPA foundations — unnecessary for current
+restaurant admin workflows and heavier than the server-rendered product
+principles require; Bootstrap JS — tied to the outgoing Bootstrap UI stack.

@@ -1,2 +1,11 @@
-@import "bootstrap/dist/css/bootstrap.min.css";
-@import "./smartrest/tokens.css";
+@import "tailwindcss";
+@config "../../tailwind.config.js";
+
+@layer base {
+    body {
+        background:
+            radial-gradient(circle at top left, rgb(92 184 92 / 14%), transparent 30rem),
+            linear-gradient(135deg, #f7f8fb 0%, #f1f2f7 46%, #ebeef5 100%);
+        color: #2e2e2e;
+    }
+}

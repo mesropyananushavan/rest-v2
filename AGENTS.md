@@ -186,9 +186,18 @@ each other and you cannot resolve it safely.
 - Delete/destructive actions use the shared confirm-modal component, never a
   bare delete button.
 - Mutating actions return translated success/error flash messages.
-- Screens are responsive for desktop, tablets, and mobile using Bootstrap 5
-  plus existing SmartRest tokens; no new JS framework or package is added
-  without explicit approval.
+- Screens are responsive for desktop, tablets, and mobile using Blade,
+  Livewire, Alpine.js, and Tailwind CSS with the SmartRest Tailwind theme.
+- SPA frameworks (React, Vue, Angular, etc.) are not used for admin screens.
+- Focused UI libraries for specific widgets are allowed and encouraged when a
+  real widget need exists, for example searchable selects, calendars/date
+  pickers, or input masks.
+- Every new UI library must be popular and actively maintained, lightweight,
+  jQuery-free, compatible with Livewire, installed through npm/Vite rather
+  than a CDN, and documented in `docs/DECISIONS.md` with what was chosen and
+  why.
+- Building custom complex widgets is forbidden when a good maintained library
+  exists.
 
 
 ## Logging (mandatory from Phase 1)

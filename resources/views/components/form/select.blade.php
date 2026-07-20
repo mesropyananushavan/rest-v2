@@ -26,12 +26,12 @@ declare(strict_types=1);
     $selectedValue = old($name, $selected);
 @endphp
 
-<div {{ $attributes->class(['mb-3']) }}>
-    <label for="{{ $fieldId }}" class="form-label">{{ $label }}</label>
+<div {{ $attributes->class(['mb-4']) }}>
+    <label for="{{ $fieldId }}" class="mb-1.5 block text-sm font-semibold text-slate-700">{{ $label }}</label>
     <select
         id="{{ $fieldId }}"
         name="{{ $name }}"
-        class="form-select @error($name) is-invalid @enderror"
+        class="block w-full rounded-sr-control border bg-white px-3 py-2 text-sm text-smartrest-text shadow-sm outline-none transition focus:border-smartrest-success focus:ring-4 focus:ring-smartrest-success/10 @error($name) border-smartrest-danger focus:border-smartrest-danger focus:ring-smartrest-danger/10 @else border-slate-200 @enderror"
         @required($required)
     >
         @if ($placeholder !== null)
@@ -44,6 +44,6 @@ declare(strict_types=1);
         @endforeach
     </select>
     @error($name)
-        <div class="invalid-feedback">{{ $message }}</div>
+        <div class="mt-1.5 text-sm text-red-700">{{ $message }}</div>
     @enderror
 </div>

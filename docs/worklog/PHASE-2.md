@@ -1,7 +1,7 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.9 Product Principles + superadmin-only delete complete; awaiting owner PR
-Branch: phase-2-stage-1.9-principles-superadmin
+Status: Stage 1.10 UI stack migration complete; awaiting owner PR
+Branch: phase-2-stage-1.10-ui-stack
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
 
@@ -120,6 +120,88 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   200 with delete controls; manager direct `DELETE /admin/menu/items/1`
   returned 403). Branch pushed at code head `b65af49`; CI run 29740192312
   passed both `quality` and `tenant-isolation-pgsql`.
+- [x] Stage 1.10.1: branch baseline and UI stack plan. Update fresh `main`,
+  verify Stage 1.9 merge is present, create
+  `phase-2-stage-1.10-ui-stack`, and write this plan before code. Commit only
+  documentation for the Stage 1.10 baseline. Result: `main` fast-forwarded to
+  merge commit `fe26e7e`, Stage 1.9 head `b65af49` verified through the merge
+  history, branch `phase-2-stage-1.10-ui-stack` created from fresh `main`, and
+  this Stage 1.10 plan written before implementation.
+- [x] Stage 1.10.2: Tailwind foundation and ADR. Install the latest stable
+  Tailwind CSS through Vite, remove Bootstrap from the CSS/JS entry points,
+  move `resources/css/smartrest/tokens.css` values into a SmartRest Tailwind
+  theme, and record the Tailwind decision in `docs/DECISIONS.md`. Run focused
+  asset/build checks and commit. Result: installed `tailwindcss` 4.3.3 and
+  `@tailwindcss/vite` 4.3.3, added SmartRest Tailwind theme tokens in
+  `tailwind.config.js`, replaced the Bootstrap CSS import with Tailwind,
+  removed the Bootstrap JS import, recorded the Tailwind decision, and verified
+  `npm run build` passes. Bootstrap packages remain until Stage 1.10.5 after
+  Blade views no longer depend on Bootstrap classes.
+- [x] Stage 1.10.3: Livewire + Alpine foundation and proof component. Install
+  the latest stable Livewire version compatible with Laravel 13 plus Alpine.js,
+  wire Blade/Vite/Livewire assets, convert dashboard counters into a simple
+  Livewire component served over normal HTTP, add/adjust tests for the proof,
+  and record the Livewire/Alpine decision in `docs/DECISIONS.md`. Run focused
+  checks and commit. Result: installed `livewire/livewire` 4.3.3, started
+  Livewire through the Vite ESM bundle with its Alpine runtime, added
+  `App\Livewire\Admin\DashboardCounters` and a Menu Application metric action,
+  rendered dashboard counters as a Livewire component over the admin HTTP
+  route, recorded the Livewire/Alpine decision, and verified `npm run build`,
+  `make test` (Pest 50 passed / 2 skipped / 318 assertions), `make pint`, and
+  `make stan`.
+- [x] Stage 1.10.4: Tailwind admin shell and shared components. Rewrite
+  `resources/views/layouts/admin.blade.php`, login, error pages, dashboard,
+  and all existing `x-` Blade components to Tailwind while preserving current
+  behavior, translations, tablet responsiveness, flash messages, branch/locale
+  switching, and superadmin-only destructive controls. Replace Bootstrap
+  modals/collapse behavior with Alpine. Run focused feature/component tests
+  and commit. Result: admin layout, login, dashboard counters, and all shared
+  `x-` components now render Tailwind classes; mobile sidebar and confirm
+  modal use Alpine instead of Bootstrap collapse/modal JS; error pages inherit
+  the Tailwind component system; markup-coupled component/delete assertions
+  were updated. Verified `npm run build`, `make test` (Pest 50 passed /
+  2 skipped / 318 assertions), `make pint`, and `make stan`.
+- [x] Stage 1.10.5: Tailwind Menu views and Bootstrap removal audit. Rewrite
+  existing Menu CRUD views to the Tailwind component system without starting
+  the future Menu UX redesign, remove Bootstrap dependencies from
+  `package.json` / lockfile, audit views/assets/tests for leftover
+  Bootstrap-only classes or JS hooks, and update only markup-coupled tests.
+  Run focused Menu/admin tests and commit. Result: Menu index/category/item
+  forms and localized-name partial now use Tailwind layout utilities while
+  preserving existing CRUD behavior and superadmin-only delete rendering;
+  removed `bootstrap` and `@popperjs/core` from npm dependencies; deleted the
+  unused legacy `resources/css/smartrest/tokens.css`; grep audit found no
+  Bootstrap/Popper imports or `data-bs-*` usage. Verified `npm run build`,
+  `make test` (Pest 50 passed / 2 skipped / 318 assertions), `make pint`, and
+  `make stan`.
+- [x] Stage 1.10.6: AGENTS UI stack update. Update `AGENTS.md` UI Definition
+  of Done to declare Blade + Livewire + Alpine + Tailwind as the admin UI
+  base, forbid SPA frameworks, and document allowed criteria for focused
+  npm/Vite UI widget libraries with mandatory `DECISIONS.md` entries. Run
+  documentation/grep checks and commit. Result: `AGENTS.md` now names Blade +
+  Livewire + Alpine + Tailwind as the UI base, forbids SPA frameworks for
+  admin screens, and documents criteria for focused npm/Vite UI widget
+  libraries plus mandatory `DECISIONS.md` entries.
+- [x] Stage 1.10.7: final verification, push, and CI handoff. Run
+  `make fresh`, curl-smoke login -> `/admin` -> `/admin/menu` -> create/edit
+  category and item -> locale switch -> branch switch -> 403/404 pages, audit
+  markup/assets for no Bootstrap remnants, run `make pint && make stan &&
+  make test`, push `phase-2-stage-1.10-ui-stack`, wait for both GitHub
+  Actions jobs green, update this worklog, and do not create or merge a PR.
+  Result: local `make fresh` passed; full curl-smoke passed (`GET /login`
+  200, owner login 302, `/admin` 200 with Livewire `wire:snapshot`,
+  `/admin/menu` 200, category create/edit/update 302/200/302, item
+  create/edit/update 302/200/302, locale switch 302, branch switch to Arat
+  Dilijan Terrace 302, 404 page 404, manager delete 403 page 403); final audit
+  found no Bootstrap/Popper imports or `data-bs-*` usage; final gates green:
+  Pint pass, PHPStan pass, Pest 50 passed / 2 skipped / 318 assertions.
+  First CI run 29744439073 passed `tenant-isolation-pgsql` but failed
+  `quality` at `npm ci` because npm 11.16.0 required root lockfile package
+  entries for optional `@emnapi/core` / `@emnapi/runtime` dependencies used by
+  Rolldown's wasm binding. Added the missing lockfile entries and verified
+  local `npm ci` plus `npm run build`; retry pushed at code head `7ad9506`,
+  and CI run 29744773070 passed both `quality` and
+  `tenant-isolation-pgsql`.
 
 ## Done log
 - 2026-07-20: Phase 2 Stage 1 opened from fresh `origin/main` on branch
@@ -181,6 +263,43 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   `phase-2-stage-1.9-principles-superadmin` pushed at code head `b65af49`;
   GitHub Actions run 29740192312 passed both `quality` and
   `tenant-isolation-pgsql`. PR is not created by Codex.
+- 2026-07-20: Stage 1.10 started from fresh `main` after owner merged Stage
+  1.9. Stage 1.9 merge commit `fe26e7e` includes Stage 1.9 head `b65af49`;
+  branch `phase-2-stage-1.10-ui-stack` created and implementation plan
+  written before code.
+- 2026-07-20: Stage 1.10.2 Tailwind foundation complete. Installed Tailwind
+  CSS 4.3.3 and the official Vite plugin, moved SmartRest token values into
+  `tailwind.config.js`, removed Bootstrap from CSS/JS entry imports, recorded
+  the Tailwind decision, and verified `npm run build`.
+- 2026-07-20: Stage 1.10.3 Livewire/Alpine foundation complete. Installed
+  Livewire 4.3.3, started Livewire through Vite ESM with its Alpine runtime,
+  converted dashboard counters to a Livewire component, added coverage, and
+  verified `npm run build`, `make test`, `make pint`, and `make stan`.
+- 2026-07-20: Stage 1.10.4 Tailwind admin shell/components complete. Admin
+  layout, login, dashboard counters, and all shared `x-` components now use
+  Tailwind; sidebar and confirm modal use Alpine instead of Bootstrap JS.
+  Gates green: build, Pest 50 passed / 2 skipped / 318 assertions, Pint,
+  PHPStan.
+- 2026-07-20: Stage 1.10.5 Menu Tailwind rewrite and Bootstrap removal
+  complete. Menu CRUD views use Tailwind without starting the future Menu UX
+  redesign; Bootstrap and Popper npm dependencies were removed; legacy
+  `resources/css/smartrest/tokens.css` was deleted after token migration.
+  Gates green: build, Pest 50 passed / 2 skipped / 318 assertions, Pint,
+  PHPStan.
+- 2026-07-20: Stage 1.10.6 AGENTS UI stack update complete. UI DoD now names
+  Blade + Livewire + Alpine + Tailwind as the base, forbids SPA frameworks for
+  admin screens, and documents criteria for focused npm/Vite UI widget
+  libraries.
+- 2026-07-20: Stage 1.10.7 final local verification complete. `make fresh`
+  passed; curl-smoke passed for login, `/admin`, `/admin/menu`, category/item
+  create/edit/update, locale switch, branch switch, 404 page, and manager 403
+  page; final gates green: Pint pass, PHPStan pass, Pest 50 passed / 2 skipped
+  / 318 assertions. Branch pushed at `80dd575`; first CI run 29744439073
+  passed `tenant-isolation-pgsql` but failed `quality` at `npm ci`. Added the
+  missing optional `@emnapi/core` / `@emnapi/runtime` lockfile entries required
+  by npm 11.16.0 and verified local `npm ci` plus `npm run build`; retry CI
+  run 29744773070 passed both `quality` and `tenant-isolation-pgsql` at code
+  head `7ad9506`. PR is not created by Codex.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -199,7 +318,18 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   create/read/update permission checks.
 - GitHub Actions emitted non-blocking Node.js 20 deprecation annotations for
   `actions/checkout@v4` / `actions/setup-node@v4` while the jobs still passed.
+- `docs/BLUEPRINT.md` ADR-004 still names Bootstrap 5 in the original v1.0
+  frontend decision. Stage 1.10 is intentionally superseding that via
+  `docs/DECISIONS.md`; do not edit `docs/BLUEPRINT.md` without explicit owner
+  approval and a separate commit.
+- After `make up` rebuilt/recreated `php-fpm`, nginx temporarily returned 502
+  because it held the old Docker upstream IP. `make restart` recreated nginx
+  and resolved the smoke-test issue.
+- CI npm 11.16.0 is stricter than the local npm 11.6.2 used during initial
+  verification: it rejected `package-lock.json` until optional
+  `@emnapi/core` / `@emnapi/runtime` package entries for Rolldown's wasm
+  binding were present at the lockfile root.
 
 ## Next steps
-Owner creates the PR for `phase-2-stage-1.9-principles-superadmin`. Codex must
-not create or merge the PR.
+Owner creates the PR for `phase-2-stage-1.10-ui-stack`; Codex must not create
+or merge a PR.

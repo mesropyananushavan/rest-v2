@@ -8,9 +8,9 @@ use App\Modules\Menu\Infrastructure\Models\MenuItem;
 /** @var MenuCategory|MenuItem|null $model */
 ?>
 
-<div class="row g-3 mb-3">
+<div class="mb-4 grid gap-3 lg:grid-cols-3">
     @foreach (['hy', 'ru', 'en'] as $locale)
-        <div class="col-12 col-lg-4">
+        <div>
             <x-form.input
                 name="name_{{ $locale }}"
                 :label="__('menu.fields.name_'.$locale)"

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Livewire\Admin\DashboardCounters;
 use App\Modules\Identity\Infrastructure\Models\User;
 use App\Modules\Identity\Infrastructure\Models\UserBranchAssignment;
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
@@ -12,6 +13,7 @@ use App\Modules\Tenancy\Infrastructure\Models\Branch;
 use App\Modules\Tenancy\Infrastructure\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
@@ -71,8 +73,42 @@ it('renders the SmartRest admin shell and current tenant dashboard counters', fu
         ->assertSee($record['user']->name, false)
         ->assertSee(__('admin.dashboard.metrics.categories.label'), false)
         ->assertSee(__('admin.dashboard.metrics.items.label'), false)
+        ->assertSeeLivewire(DashboardCounters::class)
         ->assertSee('2', false)
         ->assertSee('3', false);
+});
+
+it('loads dashboard counters through the Livewire component', function (): void {
+    $record = adminDashboardUser();
+
+    app(TenantResolver::class)->set((int) $record['tenant']->id);
+    app(BranchContext::class)->set((int) $record['branch']->id);
+
+    $category = MenuCategory::query()->create([
+        'translated_name' => adminDashboardText('Breakfast'),
+        'sort_order' => 0,
+        'active' => true,
+    ]);
+
+    foreach (range(1, 2) as $index) {
+        MenuItem::query()->create([
+            'branch_id' => (int) $record['branch']->id,
+            'category_id' => (int) $category->id,
+            'translated_name' => adminDashboardText("Item {$index}"),
+            'translated_description' => null,
+            'price_minor' => 100000,
+            'currency' => 'AMD',
+            'sort_order' => $index,
+            'active' => true,
+        ]);
+    }
+
+    Livewire::actingAs($record['user'])
+        ->test(DashboardCounters::class)
+        ->assertSet('categoryCount', 1)
+        ->assertSet('itemCount', 2)
+        ->assertSee(__('admin.dashboard.metrics.categories.label'), false)
+        ->assertSee(__('admin.dashboard.metrics.items.label'), false);
 });
 
 /**
