@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Menu\Infrastructure\Models;
 
 use App\Modules\Tenancy\Contracts\BelongsToTenant;
+use App\Support\I18n\LocalizedText;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -22,15 +23,12 @@ final class MenuCategory extends Model
         return $this->hasMany(MenuItem::class, 'category_id');
     }
 
-    /**
-     * @return array<string, string>
-     */
-    public function translatedName(): array
+    public function translatedName(): LocalizedText
     {
-        /** @var array<string, string> $translatedName */
+        /** @var array<string, mixed> $translatedName */
         $translatedName = $this->getAttribute('translated_name') ?? [];
 
-        return $translatedName;
+        return LocalizedText::fromArray($translatedName);
     }
 
     protected function casts(): array

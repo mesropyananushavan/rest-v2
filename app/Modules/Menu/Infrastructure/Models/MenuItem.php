@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Menu\Infrastructure\Models;
 
 use App\Modules\Tenancy\Contracts\BelongsToTenant;
+use App\Support\I18n\LocalizedText;
 use App\Support\Money\Money;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
@@ -46,26 +47,25 @@ final class MenuItem extends Model
         return new Money($minor, $currency);
     }
 
-    /**
-     * @return array<string, string>
-     */
-    public function translatedName(): array
+    public function translatedName(): LocalizedText
     {
-        /** @var array<string, string> $translatedName */
+        /** @var array<string, mixed> $translatedName */
         $translatedName = $this->getAttribute('translated_name') ?? [];
 
-        return $translatedName;
+        return LocalizedText::fromArray($translatedName);
     }
 
-    /**
-     * @return array<string, string>
-     */
-    public function translatedDescription(): array
+    public function translatedDescription(): ?LocalizedText
     {
-        /** @var array<string, string> $translatedDescription */
-        $translatedDescription = $this->getAttribute('translated_description') ?? [];
+        $translatedDescription = $this->getAttribute('translated_description');
 
-        return $translatedDescription;
+        if ($translatedDescription === null) {
+            return null;
+        }
+
+        /** @var array<string, mixed> $translatedDescription */
+
+        return LocalizedText::fromArray($translatedDescription);
     }
 
     protected function casts(): array

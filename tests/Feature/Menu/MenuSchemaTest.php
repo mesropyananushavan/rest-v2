@@ -66,8 +66,8 @@ it('stores menu categories and items as tenant-scoped records with integer money
 
     expect((int) $category->tenant_id)->toBe((int) $tenant->id)
         ->and((int) $item->tenant_id)->toBe((int) $tenant->id)
-        ->and($category->translatedName()['en'])->toBe('Salads')
-        ->and($item->translatedDescription()['en'])->toBe('Fresh vegetables')
+        ->and($category->translatedName()->forLocale('en'))->toBe('Salads')
+        ->and($item->translatedDescription()?->forLocale('en'))->toBe('Fresh vegetables')
         ->and($item->price()->minor)->toBe(250000)
         ->and($item->price()->currency)->toBe('AMD');
 });

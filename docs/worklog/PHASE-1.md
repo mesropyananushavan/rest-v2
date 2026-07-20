@@ -94,12 +94,18 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29727485150
   minimal Money value object for integer minor-unit prices, sqlite tenant-scope
   tests, and pgsql menu RLS coverage in the tenant isolation suite. Gates green:
   Pint pass, PHPStan pass, Pest 27 passed / 2 skipped / 172 assertions.
-- [ ] Stage 3.2.2: Menu Application actions and permissions. Add thin
+- [x] Stage 3.2.2: Menu Application actions and permissions. Add thin
   Application actions for list/create/update/delete categories and items,
   stable structured action logging, domain validation where needed, new menu
   permission codes via Identity contracts, Identity demo seeder permission
   assignment, and tests proving a user without permission receives 403. Run
-  `make pint && make stan && make test`, commit.
+  `make pint && make stan && make test`, commit. Result: added Menu CRUD
+  Application actions, `LocalizedText` value object for JSON translations,
+  branch-context enforcement for branch-owned item actions, structured action
+  logging, `menu.categories.manage` demo permission alongside
+  `menu.items.manage`, and action/permission tests including 403 denial.
+  Gates green: Pint pass, PHPStan pass, Pest 31 passed / 2 skipped /
+  191 assertions.
 - [ ] Stage 3.2.3: Blade Menu CRUD routes/controllers/views/i18n. Add
   authenticated `/admin/menu/...` Blade-only list/create/edit/delete flows for
   categories and items, controllers that only validate/authorize/call actions,
@@ -260,6 +266,6 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29727485150
   Pest runs and breaks sqlite/RLS expectations.
 
 ## Next steps
-Continue with Stage 3.2.2: add Menu Application actions, structured action
-logging, new menu permission codes through Identity, Identity demo seeder
-permissions, and tests proving users without menu permission receive 403.
+Continue with Stage 3.2.3: add authenticated Blade-only Menu CRUD routes,
+thin controllers/requests/views, `hy`/`ru`/`en` translations, and HTTP tenant
+isolation tests proving foreign tenant Menu resource IDs return 404.
