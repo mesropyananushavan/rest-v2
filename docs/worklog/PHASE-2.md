@@ -1,15 +1,17 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1 planned; implementation not started
+Status: Stage 1.1 complete; Stage 1.2 ready
 Branch: phase-2-stage-1-admin-ui
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
 
 ## Plan
-- [ ] Stage 1.1: session setup and branch baseline. Create this Phase 2
+- [x] Stage 1.1: session setup and branch baseline. Create this Phase 2
   worklog, branch from fresh `main`, confirm Phase 1 Menu CRUD is present on
   `main`, and run the starting status checks. Commit only documentation for
-  the worklog/bootstrap state. Result: pending.
+  the worklog/bootstrap state. Result: branch created from fresh
+  `origin/main` at `531d82f`, Phase 1 Menu CRUD confirmed on `main`, and
+  worklog bootstrap committed at `25a8bdf`.
 - [ ] Stage 1.2: admin shell, navigation, and dashboard. Replace the skeletal
   admin layout with SmartRest branding, responsive Bootstrap 5 sidebar/topbar,
   user/tenant/branch display, logout, flash messages, `/admin` dashboard with
@@ -54,7 +56,7 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
 
 ## Done log
 - 2026-07-20: Phase 2 Stage 1 opened from fresh `origin/main` on branch
-  `phase-2-stage-1-admin-ui`; implementation pending.
+  `phase-2-stage-1-admin-ui`; Stage 1.1 worklog/bootstrap complete.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -66,6 +68,5 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   correct reference target for component migration.
 
 ## Next steps
-Start Stage 1.1 by committing this worklog bootstrap, then implement Stage
-1.2 admin shell, navigation, dashboard, login redirect, translations, and
-tests.
+Implement Stage 1.2 admin shell, navigation, dashboard, login redirect,
+translations, and tests.
