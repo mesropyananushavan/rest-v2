@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Modules\Identity\Contracts\Authorizer;
 use App\Modules\Identity\Infrastructure\Models\Permission;
 use App\Modules\Identity\Infrastructure\Models\Role;

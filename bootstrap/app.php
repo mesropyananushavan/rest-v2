@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Http\Middleware\AttachLogContext;
 use App\Modules\Tenancy\Http\Middleware\ResolveBranch;
 use App\Modules\Tenancy\Http\Middleware\ResolveTenant;

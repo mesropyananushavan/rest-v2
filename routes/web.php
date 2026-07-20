@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Modules\Tenancy\Http\Controllers\BranchShowController;
 use Illuminate\Support\Facades\Route;
 

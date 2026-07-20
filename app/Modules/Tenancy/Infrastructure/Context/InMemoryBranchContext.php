@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Modules\Tenancy\Infrastructure\Context;
 
 use App\Modules\Tenancy\Contracts\BranchContext;

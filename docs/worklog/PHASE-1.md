@@ -36,7 +36,7 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29590252242
   Actions job using PostgreSQL 17 service that runs tenant isolation tests on
   real pgsql, including no-`smartrest.tenant_id` RLS visibility coverage, run
   `make pint && make stan && make test`, commit.
-- [ ] Stage 2.5.4: strict types sweep. Add `declare(strict_types=1)` to all
+- [x] Stage 2.5.4: strict types sweep. Add `declare(strict_types=1)` to all
   PHP files missing it, run `make pint && make stan && make test`, commit.
 - [ ] Stage 2.5.5: scaffold cleanup. Remove Laravel ExampleTests, fix
   `UserFactory` hardcoded `tenant_id => 1` via factory/state, replace welcome
@@ -87,6 +87,10 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29590252242
   sees only its own branch. Local gates green: Pint pass, PHPStan pass, Pest
   18 passed / 1 skipped / 96 assertions. CI confirmation pending until branch
   push.
+- 2026-07-20: Stage 2.5.4 strict types sweep complete. All tracked PHP files
+  now include `declare(strict_types=1)`; ignored generated cache/view files
+  were left untouched. Gates green: Pint pass, PHPStan pass, Pest 18 passed /
+  1 skipped / 96 assertions.
 
 ## Gotchas / known issues
 - Host PHP is 8.1 — never run PHP on host, docker/make only.
@@ -118,6 +122,7 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29590252242
   a local `.env`.
 
 ## Next steps
-Continue Stage 2.5.4: add `declare(strict_types=1)` to all PHP files missing
-it, run `make pint && make stan && make test`, then commit the completed step.
-Do NOT start Stage 3.
+Continue Stage 2.5.5: remove Laravel ExampleTests, fix UserFactory hardcoded
+`tenant_id => 1` via factory/state, replace welcome page with a minimal
+translated placeholder, run `make pint && make stan && make test`, then commit
+the completed step. Do NOT start Stage 3.
