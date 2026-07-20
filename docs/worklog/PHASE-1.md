@@ -1,7 +1,7 @@
 # Worklog — Phase 1: Walking Skeleton
 
-Status: Stage 3.1 login auth UI merged to main
-Branch: main
+Status: Stage 3.2 Menu CRUD in progress
+Branch: phase-1-stage-3.2-menu
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
 
@@ -84,8 +84,38 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29727485150
   testing/sqlite env. Local rebuild/fresh/curl/gates green; pushed at
   `8b607d9`; CI run 29727485150 passed both `quality` and
   `tenant-isolation-pgsql`.
-- [ ] Stage 3.2: menu vertical slice (actions, Blade UI, API, i18n, audit,
-  tests, demo seeders)
+- [x] Stage 3.2.1: menu schema, RLS, models, and contracts. Add
+  `menu_categories` and `menu_items` with `tenant_id` indexes, branch
+  ownership for items, PostgreSQL RLS policies matching existing tenant-owned
+  tables, tenant-scoped Eloquent models using `BelongsToTenant`/`TenantScoped`,
+  Money value-object usage for prices, and focused migration/model/RLS tests.
+  Run `make pint && make stan && make test`, commit. Result: added
+  tenant-owned Menu schema, pgsql RLS policies, tenant-scoped Menu models, a
+  minimal Money value object for integer minor-unit prices, sqlite tenant-scope
+  tests, and pgsql menu RLS coverage in the tenant isolation suite. Gates green:
+  Pint pass, PHPStan pass, Pest 27 passed / 2 skipped / 172 assertions.
+- [ ] Stage 3.2.2: Menu Application actions and permissions. Add thin
+  Application actions for list/create/update/delete categories and items,
+  stable structured action logging, domain validation where needed, new menu
+  permission codes via Identity contracts, Identity demo seeder permission
+  assignment, and tests proving a user without permission receives 403. Run
+  `make pint && make stan && make test`, commit.
+- [ ] Stage 3.2.3: Blade Menu CRUD routes/controllers/views/i18n. Add
+  authenticated `/admin/menu/...` Blade-only list/create/edit/delete flows for
+  categories and items, controllers that only validate/authorize/call actions,
+  Bootstrap/tokens.css-compatible views with no new design system, and
+  `hy`/`ru`/`en` translation keys for every user-facing string. Include tenant
+  isolation tests proving foreign tenant resource IDs return 404. Run
+  `make pint && make stan && make test`, commit.
+- [ ] Stage 3.2.4: deterministic menu demo seed data. Add `MenuDemoSeeder`
+  for both tenants, connect it to `DemoSeeder`, ensure data is visible after
+  `make fresh`, and update tests if seeder assumptions change. Run `make pint
+  && make stan && make test`, commit.
+- [ ] Stage 3.2.5: final verification, push, and CI handoff. Run `make fresh`,
+  curl-smoke the primary menu pages, run full `make pint && make stan &&
+  make test`, push `phase-1-stage-3.2-menu`, wait for both GitHub Actions jobs
+  green, update this worklog with final local/CI results, and do not create or
+  merge a PR.
 
 ## Done log
 - 2026-07-17: Stage 1 complete. All gates green (composer validate, Pint,
@@ -230,6 +260,6 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29727485150
   Pest runs and breaks sqlite/RLS expectations.
 
 ## Next steps
-Await the owner's Stage 3.2 Menu CRUD prompt. Do not start Menu work until the
-prompt is provided; when it arrives, plan Stage 3.2 in this worklog before
-writing code.
+Continue with Stage 3.2.2: add Menu Application actions, structured action
+logging, new menu permission codes through Identity, Identity demo seeder
+permissions, and tests proving users without menu permission receive 403.
