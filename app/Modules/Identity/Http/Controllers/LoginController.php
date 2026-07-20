@@ -32,6 +32,6 @@ final class LoginController
         $request->session()->regenerate();
         $request->session()->put('tenant_id', (int) $user->tenant_id);
 
-        return redirect()->intended('/');
+        return redirect()->intended(route('admin.dashboard'));
     }
 }

@@ -1,6 +1,6 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.1 complete; Stage 1.2 ready
+Status: Stage 1.2 complete; Stage 1.3 ready
 Branch: phase-2-stage-1-admin-ui
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
@@ -12,12 +12,16 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   the worklog/bootstrap state. Result: branch created from fresh
   `origin/main` at `531d82f`, Phase 1 Menu CRUD confirmed on `main`, and
   worklog bootstrap committed at `25a8bdf`.
-- [ ] Stage 1.2: admin shell, navigation, and dashboard. Replace the skeletal
+- [x] Stage 1.2: admin shell, navigation, and dashboard. Replace the skeletal
   admin layout with SmartRest branding, responsive Bootstrap 5 sidebar/topbar,
   user/tenant/branch display, logout, flash messages, `/admin` dashboard with
   current-tenant menu counters, and login redirect to `/admin`. Add
   `hy`/`ru`/`en` translations and focused feature tests. Run `make pint &&
-  make stan && make test`, commit. Result: pending.
+  make stan && make test`, commit. Result: added SmartRest admin shell,
+  `/admin` dashboard, tenant/branch/user topbar context, sidebar navigation,
+  login redirect to `/admin`, admin translations for all three locales, and
+  dashboard/login regression tests. Gates green: Pint pass, PHPStan pass,
+  Pest 37 passed / 2 skipped / 250 assertions.
 - [ ] Stage 1.3: branch and locale switching. Add topbar branch switch using
   the Identity `UserDirectory` assignments contract without changing tenant,
   persist selected branch in session, reject foreign/unassigned branches with
@@ -57,6 +61,10 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
 ## Done log
 - 2026-07-20: Phase 2 Stage 1 opened from fresh `origin/main` on branch
   `phase-2-stage-1-admin-ui`; Stage 1.1 worklog/bootstrap complete.
+- 2026-07-20: Stage 1.2 admin shell/dashboard complete locally. SmartRest
+  branded responsive layout, `/admin` dashboard counters, login redirect to
+  `/admin`, and translated admin shell strings implemented. Gates green:
+  Pint pass, PHPStan pass, Pest 37 passed / 2 skipped / 250 assertions.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -68,5 +76,5 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   correct reference target for component migration.
 
 ## Next steps
-Implement Stage 1.2 admin shell, navigation, dashboard, login redirect,
-translations, and tests.
+Implement Stage 1.3 branch and locale switching: topbar forms, session-backed
+branch/locale updates, tenant default locale fallback, and switch tests.

@@ -19,7 +19,7 @@ it('seeds deterministic menu data visible to demo managers by tenant', function 
 
     $this->withSession(['_token' => menuDemoCsrfToken()])
         ->post(route('login.store'), menuDemoLoginPayload('manager@arat.test'))
-        ->assertRedirect('/');
+        ->assertRedirect(route('admin.dashboard'));
 
     $this->get(route('admin.menu.index'))
         ->assertOk()
@@ -33,7 +33,7 @@ it('seeds deterministic menu data visible to demo managers by tenant', function 
 
     $this->withSession(['_token' => menuDemoCsrfToken()])
         ->post(route('login.store'), menuDemoLoginPayload('manager@northstar.test'))
-        ->assertRedirect('/');
+        ->assertRedirect(route('admin.dashboard'));
 
     $this->get(route('admin.menu.index'))
         ->assertOk()

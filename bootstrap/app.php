@@ -29,6 +29,8 @@ return Application::configure(basePath: dirname(__DIR__))
             ResolveBranch::class,
         ]);
 
+        $middleware->redirectUsersTo('/admin');
+
         $middleware->prependToPriorityList(AuthenticatesRequests::class, ResolveBranch::class);
         $middleware->prependToPriorityList(ResolveBranch::class, ResolveTenant::class);
     })

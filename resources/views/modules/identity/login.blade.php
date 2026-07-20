@@ -15,7 +15,7 @@
                 <div class="col-12 col-sm-10 col-md-7 col-lg-5">
                     <section class="sr-card card border-0">
                         <div class="card-body p-4 p-md-5">
-                            <p class="text-uppercase text-muted small mb-2">{{ config('app.name') }}</p>
+                            <p class="text-uppercase text-muted small mb-2">{{ __('admin.brand.name') }}</p>
                             <h1 class="h3 mb-2">{{ __('auth.login.heading') }}</h1>
                             <p class="text-muted mb-4">{{ __('auth.login.subtitle') }}</p>
 
