@@ -1,6 +1,6 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.10 UI stack migration planned; Tailwind/Livewire/Alpine implementation next
+Status: Stage 1.10 UI stack migration complete; awaiting owner PR
 Branch: phase-2-stage-1.10-ui-stack
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
@@ -182,12 +182,20 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   Livewire + Alpine + Tailwind as the UI base, forbids SPA frameworks for
   admin screens, and documents criteria for focused npm/Vite UI widget
   libraries plus mandatory `DECISIONS.md` entries.
-- [ ] Stage 1.10.7: final verification, push, and CI handoff. Run
+- [x] Stage 1.10.7: final verification, push, and CI handoff. Run
   `make fresh`, curl-smoke login -> `/admin` -> `/admin/menu` -> create/edit
   category and item -> locale switch -> branch switch -> 403/404 pages, audit
   markup/assets for no Bootstrap remnants, run `make pint && make stan &&
   make test`, push `phase-2-stage-1.10-ui-stack`, wait for both GitHub
   Actions jobs green, update this worklog, and do not create or merge a PR.
+  Result: local `make fresh` passed; full curl-smoke passed (`GET /login`
+  200, owner login 302, `/admin` 200 with Livewire `wire:snapshot`,
+  `/admin/menu` 200, category create/edit/update 302/200/302, item
+  create/edit/update 302/200/302, locale switch 302, branch switch to Arat
+  Dilijan Terrace 302, 404 page 404, manager delete 403 page 403); final audit
+  found no Bootstrap/Popper imports or `data-bs-*` usage; final gates green:
+  Pint pass, PHPStan pass, Pest 50 passed / 2 skipped / 318 assertions.
+  Branch push and CI status are recorded below after push.
 
 ## Done log
 - 2026-07-20: Phase 2 Stage 1 opened from fresh `origin/main` on branch
@@ -253,6 +261,34 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   1.9. Stage 1.9 merge commit `fe26e7e` includes Stage 1.9 head `b65af49`;
   branch `phase-2-stage-1.10-ui-stack` created and implementation plan
   written before code.
+- 2026-07-20: Stage 1.10.2 Tailwind foundation complete. Installed Tailwind
+  CSS 4.3.3 and the official Vite plugin, moved SmartRest token values into
+  `tailwind.config.js`, removed Bootstrap from CSS/JS entry imports, recorded
+  the Tailwind decision, and verified `npm run build`.
+- 2026-07-20: Stage 1.10.3 Livewire/Alpine foundation complete. Installed
+  Livewire 4.3.3, started Livewire through Vite ESM with its Alpine runtime,
+  converted dashboard counters to a Livewire component, added coverage, and
+  verified `npm run build`, `make test`, `make pint`, and `make stan`.
+- 2026-07-20: Stage 1.10.4 Tailwind admin shell/components complete. Admin
+  layout, login, dashboard counters, and all shared `x-` components now use
+  Tailwind; sidebar and confirm modal use Alpine instead of Bootstrap JS.
+  Gates green: build, Pest 50 passed / 2 skipped / 318 assertions, Pint,
+  PHPStan.
+- 2026-07-20: Stage 1.10.5 Menu Tailwind rewrite and Bootstrap removal
+  complete. Menu CRUD views use Tailwind without starting the future Menu UX
+  redesign; Bootstrap and Popper npm dependencies were removed; legacy
+  `resources/css/smartrest/tokens.css` was deleted after token migration.
+  Gates green: build, Pest 50 passed / 2 skipped / 318 assertions, Pint,
+  PHPStan.
+- 2026-07-20: Stage 1.10.6 AGENTS UI stack update complete. UI DoD now names
+  Blade + Livewire + Alpine + Tailwind as the base, forbids SPA frameworks for
+  admin screens, and documents criteria for focused npm/Vite UI widget
+  libraries.
+- 2026-07-20: Stage 1.10.7 final local verification complete. `make fresh`
+  passed; curl-smoke passed for login, `/admin`, `/admin/menu`, category/item
+  create/edit/update, locale switch, branch switch, 404 page, and manager 403
+  page; final gates green: Pint pass, PHPStan pass, Pest 50 passed / 2 skipped
+  / 318 assertions. Push/CI handoff pending.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -275,6 +311,10 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   frontend decision. Stage 1.10 is intentionally superseding that via
   `docs/DECISIONS.md`; do not edit `docs/BLUEPRINT.md` without explicit owner
   approval and a separate commit.
+- After `make up` rebuilt/recreated `php-fpm`, nginx temporarily returned 502
+  because it held the old Docker upstream IP. `make restart` recreated nginx
+  and resolved the smoke-test issue.
 
 ## Next steps
-Continue with Stage 1.10.7 final verification, push, and CI handoff.
+Push `phase-2-stage-1.10-ui-stack`, wait for both GitHub Actions jobs green,
+record CI result here, and do not create or merge a PR.
