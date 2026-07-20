@@ -35,83 +35,81 @@ $categoryOptions = $categories
         </x-slot:actions>
     </x-page-header>
 
-    <div class="row justify-content-center">
-        <div class="col-12 col-xl-9">
-            <x-card>
-                <form method="post" action="{{ $isEdit ? route('admin.menu.items.update', ['item' => (int) $item->id]) : route('admin.menu.items.store') }}" novalidate>
-                    @csrf
-                    @if ($isEdit)
-                        @method('put')
-                    @endif
+    <div class="mx-auto max-w-5xl">
+        <x-card>
+            <form method="post" action="{{ $isEdit ? route('admin.menu.items.update', ['item' => (int) $item->id]) : route('admin.menu.items.store') }}" novalidate>
+                @csrf
+                @if ($isEdit)
+                    @method('put')
+                @endif
 
-                    <x-form.select
-                        name="category_id"
-                        :label="__('menu.fields.category')"
-                        :options="$categoryOptions"
-                        :selected="$item?->category_id"
-                        :placeholder="__('menu.placeholders.select_category')"
-                        required
-                    />
+                <x-form.select
+                    name="category_id"
+                    :label="__('menu.fields.category')"
+                    :options="$categoryOptions"
+                    :selected="$item?->category_id"
+                    :placeholder="__('menu.placeholders.select_category')"
+                    required
+                />
 
-                    @include('modules.menu.partials.localized-name-fields', ['model' => $item])
+                @include('modules.menu.partials.localized-name-fields', ['model' => $item])
 
-                    <div class="row g-3 mb-3">
-                        @foreach (['hy', 'ru', 'en'] as $locale)
-                            <div class="col-12 col-lg-4">
-                                <label for="description_{{ $locale }}" class="form-label">{{ __('menu.fields.description_'.$locale) }}</label>
-                                <textarea id="description_{{ $locale }}" name="description_{{ $locale }}" rows="3" class="form-control @error('description_'.$locale) is-invalid @enderror">{{ old('description_'.$locale, $item?->translatedDescription()?->forLocale($locale, $locale) ?? '') }}</textarea>
-                                @error('description_'.$locale)
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        @endforeach
+                <div class="mb-4 grid gap-3 lg:grid-cols-3">
+                    @foreach (['hy', 'ru', 'en'] as $locale)
+                        <div>
+                            <label for="description_{{ $locale }}" class="mb-1.5 block text-sm font-semibold text-slate-700">{{ __('menu.fields.description_'.$locale) }}</label>
+                            <textarea id="description_{{ $locale }}" name="description_{{ $locale }}" rows="3" class="block w-full rounded-sr-control border bg-white px-3 py-2 text-sm text-smartrest-text shadow-sm outline-none transition focus:border-smartrest-success focus:ring-4 focus:ring-smartrest-success/10 @error('description_'.$locale) border-smartrest-danger focus:border-smartrest-danger focus:ring-smartrest-danger/10 @else border-slate-200 @enderror">{{ old('description_'.$locale, $item?->translatedDescription()?->forLocale($locale, $locale) ?? '') }}</textarea>
+                            @error('description_'.$locale)
+                                <div class="mt-1.5 text-sm text-red-700">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    @endforeach
+                </div>
+
+                <div class="grid gap-3 md:grid-cols-3">
+                    <div>
+                        <x-form.input
+                            name="price_major"
+                            :label="__('menu.fields.price_major')"
+                            :value="$priceMajor"
+                            required
+                        />
                     </div>
-
-                    <div class="row g-3">
-                        <div class="col-12 col-md-4">
-                            <x-form.input
-                                name="price_major"
-                                :label="__('menu.fields.price_major')"
-                                :value="$priceMajor"
-                                required
-                            />
-                        </div>
-                        <div class="col-12 col-md-4">
-                            <x-form.input
-                                name="currency"
-                                :label="__('menu.fields.currency')"
-                                :value="$item?->currency ?? $defaultCurrency"
-                                required
-                            />
-                        </div>
-                        <div class="col-12 col-md-4">
-                            <x-form.input
-                                name="sort_order"
-                                type="number"
-                                :label="__('menu.fields.sort_order')"
-                                :value="$item?->sort_order ?? 0"
-                                required
-                            />
-                        </div>
-                        <div class="col-12">
-                            <x-form.toggle
-                                name="active"
-                                :label="__('menu.fields.active')"
-                                :checked="$item?->active ?? true"
-                            />
-                        </div>
+                    <div>
+                        <x-form.input
+                            name="currency"
+                            :label="__('menu.fields.currency')"
+                            :value="$item?->currency ?? $defaultCurrency"
+                            required
+                        />
                     </div>
-
-                    <div class="mt-4 d-flex gap-2">
-                        <x-button type="submit">
-                            {{ $isEdit ? __('menu.actions.save') : __('menu.actions.create') }}
-                        </x-button>
-                        <x-button :href="route('admin.menu.index')" variant="outline-secondary">
-                            {{ __('menu.actions.cancel') }}
-                        </x-button>
+                    <div>
+                        <x-form.input
+                            name="sort_order"
+                            type="number"
+                            :label="__('menu.fields.sort_order')"
+                            :value="$item?->sort_order ?? 0"
+                            required
+                        />
                     </div>
-                </form>
-            </x-card>
-        </div>
+                    <div class="md:col-span-3">
+                        <x-form.toggle
+                            name="active"
+                            :label="__('menu.fields.active')"
+                            :checked="$item?->active ?? true"
+                        />
+                    </div>
+                </div>
+
+                <div class="mt-6 flex flex-col gap-2 sm:flex-row">
+                    <x-button type="submit">
+                        {{ $isEdit ? __('menu.actions.save') : __('menu.actions.create') }}
+                    </x-button>
+                    <x-button :href="route('admin.menu.index')" variant="outline-secondary">
+                        {{ __('menu.actions.cancel') }}
+                    </x-button>
+                </div>
+            </form>
+        </x-card>
     </div>
 @endsection

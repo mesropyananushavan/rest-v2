@@ -161,12 +161,19 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   the Tailwind component system; markup-coupled component/delete assertions
   were updated. Verified `npm run build`, `make test` (Pest 50 passed /
   2 skipped / 318 assertions), `make pint`, and `make stan`.
-- [ ] Stage 1.10.5: Tailwind Menu views and Bootstrap removal audit. Rewrite
+- [x] Stage 1.10.5: Tailwind Menu views and Bootstrap removal audit. Rewrite
   existing Menu CRUD views to the Tailwind component system without starting
   the future Menu UX redesign, remove Bootstrap dependencies from
   `package.json` / lockfile, audit views/assets/tests for leftover
   Bootstrap-only classes or JS hooks, and update only markup-coupled tests.
-  Run focused Menu/admin tests and commit.
+  Run focused Menu/admin tests and commit. Result: Menu index/category/item
+  forms and localized-name partial now use Tailwind layout utilities while
+  preserving existing CRUD behavior and superadmin-only delete rendering;
+  removed `bootstrap` and `@popperjs/core` from npm dependencies; deleted the
+  unused legacy `resources/css/smartrest/tokens.css`; grep audit found no
+  Bootstrap/Popper imports or `data-bs-*` usage. Verified `npm run build`,
+  `make test` (Pest 50 passed / 2 skipped / 318 assertions), `make pint`, and
+  `make stan`.
 - [ ] Stage 1.10.6: AGENTS UI stack update. Update `AGENTS.md` UI Definition
   of Done to declare Blade + Livewire + Alpine + Tailwind as the admin UI
   base, forbid SPA frameworks, and document allowed criteria for focused
@@ -267,4 +274,4 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   approval and a separate commit.
 
 ## Next steps
-Continue with Stage 1.10.5 Tailwind Menu views and Bootstrap removal audit.
+Continue with Stage 1.10.6 AGENTS UI stack update.
