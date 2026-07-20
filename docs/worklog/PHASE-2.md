@@ -149,13 +149,18 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   route, recorded the Livewire/Alpine decision, and verified `npm run build`,
   `make test` (Pest 50 passed / 2 skipped / 318 assertions), `make pint`, and
   `make stan`.
-- [ ] Stage 1.10.4: Tailwind admin shell and shared components. Rewrite
+- [x] Stage 1.10.4: Tailwind admin shell and shared components. Rewrite
   `resources/views/layouts/admin.blade.php`, login, error pages, dashboard,
   and all existing `x-` Blade components to Tailwind while preserving current
   behavior, translations, tablet responsiveness, flash messages, branch/locale
   switching, and superadmin-only destructive controls. Replace Bootstrap
   modals/collapse behavior with Alpine. Run focused feature/component tests
-  and commit.
+  and commit. Result: admin layout, login, dashboard counters, and all shared
+  `x-` components now render Tailwind classes; mobile sidebar and confirm
+  modal use Alpine instead of Bootstrap collapse/modal JS; error pages inherit
+  the Tailwind component system; markup-coupled component/delete assertions
+  were updated. Verified `npm run build`, `make test` (Pest 50 passed /
+  2 skipped / 318 assertions), `make pint`, and `make stan`.
 - [ ] Stage 1.10.5: Tailwind Menu views and Bootstrap removal audit. Rewrite
   existing Menu CRUD views to the Tailwind component system without starting
   the future Menu UX redesign, remove Bootstrap dependencies from
@@ -262,4 +267,4 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   approval and a separate commit.
 
 ## Next steps
-Continue with Stage 1.10.4 Tailwind admin shell and shared components.
+Continue with Stage 1.10.5 Tailwind Menu views and Bootstrap removal audit.

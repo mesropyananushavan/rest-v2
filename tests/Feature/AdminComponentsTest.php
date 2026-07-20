@@ -25,10 +25,11 @@ it('renders the reusable admin Blade components', function (): void {
     BLADE);
 
     expect($html)
-        ->toContain('sr-page-hero')
-        ->toContain('sr-card card')
-        ->toContain('sr-dense-table')
-        ->toContain('text-bg-success')
+        ->toContain('rounded-sr-panel')
+        ->toContain('rounded-sr-card')
+        ->toContain('min-w-full')
+        ->toContain('bg-smartrest-success/10')
+        ->toContain('x-data')
         ->toContain('delete_test')
         ->toContain('Lavash')
         ->toContain('Breakfast')

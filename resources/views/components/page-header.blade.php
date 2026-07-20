@@ -13,19 +13,19 @@ declare(strict_types=1);
     'subtitle' => null,
 ])
 
-<div {{ $attributes->class(['sr-page-hero mb-4']) }}>
+<div {{ $attributes->class(['mb-6 flex flex-col gap-4 rounded-sr-panel border border-black/5 bg-white/75 p-5 shadow-sm backdrop-blur-sr md:flex-row md:items-center md:justify-between']) }}>
     <div>
         @if ($eyebrow !== null)
-            <p class="text-uppercase text-muted small mb-2">{{ $eyebrow }}</p>
+            <p class="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-smartrest-muted">{{ $eyebrow }}</p>
         @endif
-        <h1 class="display-6 fw-semibold mb-2">{{ $title }}</h1>
+        <h1 class="mb-2 text-3xl font-semibold tracking-tight text-smartrest-ink md:text-4xl">{{ $title }}</h1>
         @if ($subtitle !== null)
-            <p class="text-muted mb-0">{{ $subtitle }}</p>
+            <p class="max-w-2xl text-sm leading-6 text-smartrest-muted">{{ $subtitle }}</p>
         @endif
     </div>
 
     @isset($actions)
-        <div class="d-flex flex-wrap gap-2">
+        <div class="flex flex-wrap gap-2">
             {{ $actions }}
         </div>
     @endisset

@@ -23,28 +23,49 @@ declare(strict_types=1);
     'method' => 'delete',
 ])
 
-<button type="button" {{ $attributes->class(['btn btn-sm btn-outline-danger']) }} data-bs-toggle="modal" data-bs-target="#{{ $id }}">
-    {{ $triggerLabel }}
-</button>
+<div x-data="{ open: false }" class="inline-flex" @keydown.escape.window="open = false">
+    <button
+        type="button"
+        {{ $attributes->class(['inline-flex items-center justify-center rounded-sr-brand border border-smartrest-danger/30 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-smartrest-danger']) }}
+        @click="open = true"
+    >
+        {{ $triggerLabel }}
+    </button>
 
-<div class="modal fade" id="{{ $id }}" tabindex="-1" aria-labelledby="{{ $id }}_title" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title h5" id="{{ $id }}_title">{{ $title }}</h2>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ $cancelLabel }}"></button>
+    <div
+        x-cloak
+        x-show="open"
+        x-transition.opacity
+        id="{{ $id }}"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="{{ $id }}_title"
+    >
+        <button type="button" class="absolute inset-0 bg-slate-950/55" aria-label="{{ $cancelLabel }}" @click="open = false"></button>
+
+        <div
+            x-show="open"
+            x-transition
+            class="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/10"
+        >
+            <div class="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
+                <h2 class="text-lg font-semibold text-smartrest-ink" id="{{ $id }}_title">{{ $title }}</h2>
+                <button type="button" class="rounded-full px-2 py-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" aria-label="{{ $cancelLabel }}" @click="open = false">
+                    &times;
+                </button>
             </div>
-            <div class="modal-body">
-                <p class="mb-0">{{ $message }}</p>
+            <div class="px-5 py-4">
+                <p class="text-sm text-slate-600">{{ $message }}</p>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <div class="flex flex-col-reverse gap-2 bg-slate-50 px-5 py-4 sm:flex-row sm:justify-end">
+                <button type="button" class="inline-flex items-center justify-center rounded-sr-brand border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" @click="open = false">
                     {{ $cancelLabel }}
                 </button>
                 <form method="post" action="{{ $action }}">
                     @csrf
                     @method($method)
-                    <button type="submit" class="btn btn-danger">
+                    <button type="submit" class="inline-flex w-full items-center justify-center rounded-sr-brand bg-smartrest-danger px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 sm:w-auto">
                         {{ $confirmLabel }}
                     </button>
                 </form>

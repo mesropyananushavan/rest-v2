@@ -13,15 +13,15 @@ declare(strict_types=1);
     'bodyClass' => 'p-4',
 ])
 
-<section {{ $attributes->class(['sr-card card']) }}>
+<section {{ $attributes->class(['overflow-hidden rounded-sr-card border border-black/5 bg-white shadow-sr-card']) }}>
     @if ($title !== null || isset($actions))
-        <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+        <div class="flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-4 py-3">
             @if ($title !== null)
-                <h2 class="h5 mb-0">{{ $title }}</h2>
+                <h2 class="text-base font-semibold text-smartrest-ink">{{ $title }}</h2>
             @endif
-            <div class="d-flex align-items-center gap-2">
+            <div class="flex items-center gap-2">
                 @if ($count !== null)
-                    <span class="badge text-bg-light">{{ $count }}</span>
+                    <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">{{ $count }}</span>
                 @endif
                 @isset($actions)
                     {{ $actions }}
@@ -30,7 +30,7 @@ declare(strict_types=1);
         </div>
     @endif
 
-    <div @class(['card-body', $bodyClass])>
+    <div @class([$bodyClass])>
         {{ $slot }}
     </div>
 </section>
