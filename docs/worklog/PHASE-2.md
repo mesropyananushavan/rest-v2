@@ -1,7 +1,7 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.10 UI stack migration complete; awaiting owner PR
-Branch: phase-2-stage-1.10-ui-stack
+Status: Stage 1.11 Menu UX started; Part A soft delete in progress
+Branch: phase-2-stage-1.11-menu-ux
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
 
@@ -202,6 +202,62 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   local `npm ci` plus `npm run build`; retry pushed at code head `7ad9506`,
   and CI run 29744773070 passed both `quality` and
   `tenant-isolation-pgsql`.
+- [x] Stage 1.11.1: branch baseline and Menu UX plan. Update fresh `main`,
+  verify Stage 1.10 merge is present, create
+  `phase-2-stage-1.11-menu-ux`, and write the A/B/C plan before code.
+  Result: `origin/main` fast-forwarded to merge commit `a7cdc36`, Stage 1.10
+  head `ea82eb4` verified as an ancestor of `origin/main`, local `main`
+  fast-forwarded, branch `phase-2-stage-1.11-menu-ux` created, and this
+  Stage 1.11 plan written before implementation.
+- [ ] Stage 1.11.2 (Part A): soft-delete policy documentation and cascade
+  decision. Update `AGENTS.md` Product Principles so product deletion means
+  archive/soft delete, restoration is superadmin-only, and physical deletion
+  is not exposed in UI; record the Menu category cascade archive/restore
+  behavior in `docs/DECISIONS.md`. Run documentation/grep checks and commit.
+- [ ] Stage 1.11.3 (Part A): schema, models, and actions for archive/restore.
+  Add `deleted_at` to `menu_categories` and `menu_items`, convert models to
+  Laravel `SoftDeletes`, replace `DeleteMenu*` behavior with archive actions,
+  add restore actions, make category archive cascade to active child items and
+  restore only the items archived by that category cascade, and update
+  composite indexes for `tenant_id`/`branch_id`/`category_id`/`deleted_at`
+  filtering paths. Run focused action/schema tests and commit.
+- [ ] Stage 1.11.4 (Part A): routes, controllers, UI, translations, and
+  permission tests. Remove `superadmin.delete` from archive routes while
+  retaining normal manage permissions, add superadmin-only restore routes,
+  rename UI copy from delete to archive, add archive filters and archived
+  badges/restores, ensure archived categories are not selectable in item
+  forms, update `hy`/`ru`/`en` translations, and cover archive permission,
+  restore `403` for normal users, hidden archived records, and tenant
+  isolation. Run `make pint && make stan && make test`, commit.
+- [ ] Stage 1.11.5 (Part A): final verification and handoff for soft delete.
+  Run `make fresh`, curl-smoke manager archive/category cascade/hidden
+  archive filter plus owner restore, final `make pint && make stan &&
+  make test`, push `phase-2-stage-1.11-menu-ux`, wait for both CI jobs green,
+  update this worklog, and do not create or merge a PR.
+- [ ] Stage 1.11.6 (Part B): menu item image architecture and dependency
+  decision. After Part A is merged by owner, continue on the same Stage 1.11
+  branch from fresh `main`; choose the image processing dependency/storage
+  approach, record it in `docs/DECISIONS.md`, add schema/storage path design
+  for `internal_image` and `public_image`, and commit with focused checks.
+- [ ] Stage 1.11.7 (Part B): uploads, thumbnails, UI, tests, and verification.
+  Implement tenant-scoped Storage-backed optional images with default
+  placeholder, validation, resizing/thumbnails, Livewire upload previews,
+  remove/replace flows, list thumbnails, upload/isolation tests, full gates,
+  push, CI handoff, and no PR creation.
+- [ ] Stage 1.11.8 (Part C): Menu master-detail/search redesign architecture.
+  After Part B is merged by owner, continue from fresh `main`; decide and
+  document JSONB search indexing strategy and any searchable-select approach,
+  then implement the Livewire master-detail category panel, global item
+  search, URL category context, paginated item list, activity toggle, empty
+  states, context-preserving forms, and responsive tablet behavior in
+  atomic commits with focused tests.
+- [ ] Stage 1.11.9 (Part C): load seeder, measurements, final verification,
+  and CI handoff. Add the artisan load-data command outside `DemoSeeder`, seed
+  about 200 categories and 20000 items per tenant, measure index, global
+  search, pages, and category panel timings, fix slow paths with indexes
+  rather than cache, run `make fresh` plus smoke including upload/load data,
+  final gates, push, wait for both CI jobs green, record measurements, and do
+  not create or merge a PR.
 
 ## Done log
 - 2026-07-20: Phase 2 Stage 1 opened from fresh `origin/main` on branch
@@ -300,6 +356,11 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   by npm 11.16.0 and verified local `npm ci` plus `npm run build`; retry CI
   run 29744773070 passed both `quality` and `tenant-isolation-pgsql` at code
   head `7ad9506`. PR is not created by Codex.
+- 2026-07-20: Stage 1.11 started from fresh `main` after owner merged Stage
+  1.10. Stage 1.10 merge commit `a7cdc36` includes Stage 1.10 head `ea82eb4`;
+  branch `phase-2-stage-1.11-menu-ux` created. Stage is intentionally split
+  into independently reviewable parts: A soft delete, B images, C Menu UX
+  redesign and load measurements.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -329,7 +390,11 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   verification: it rejected `package-lock.json` until optional
   `@emnapi/core` / `@emnapi/runtime` package entries for Rolldown's wasm
   binding were present at the lockfile root.
+- Stage 1.11 is too large for one safe review chunk. Work it as A -> B -> C,
+  with a push/CI handoff after each part and owner-created PRs only.
 
 ## Next steps
-Owner creates the PR for `phase-2-stage-1.10-ui-stack`; Codex must not create
-or merge a PR.
+Continue Stage 1.11 Part A with Stage 1.11.2: update archive/restore product
+policy in `AGENTS.md`, record the category cascade archive/restore decision in
+`docs/DECISIONS.md`, run documentation/grep checks, and commit the
+documentation step.
