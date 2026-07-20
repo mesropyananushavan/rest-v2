@@ -1,15 +1,12 @@
 # Worklog — Phase 1: Walking Skeleton
 
-Status: Branch pushed; PR not created; awaiting owner PR review and merge
-Branch: phase-1-walking-skeleton
+Status: Stage 2.5 hardening complete; branch pushed; awaiting owner PR
+Branch: phase-1-stage-2.5-hardening
 
-PR state: `phase-1-walking-skeleton` is pushed to origin. PR is NOT yet
-created; only the GitHub `/pull/new` link exists. The OWNER creates and
-reviews the PR himself:
-https://github.com/mesropyananushavan/rest-v2/pull/new/phase-1-walking-skeleton
+PR state: owner creates and merges PRs; Codex does not create PRs.
 
-CI status: green after end-of-day CI fix. Run:
-https://github.com/mesropyananushavan/rest-v2/actions/runs/29590252242
+CI status: green on pushed Stage 2.5 branch. Run:
+https://github.com/mesropyananushavan/rest-v2/actions/runs/29724811580
 
 ## Plan
 - [x] Stage 1: Laravel 13 scaffold, module skeletons (Tenancy/Identity/Menu),
@@ -26,6 +23,25 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29590252242
   permissions, seeders, isolation tests) — STOP checkpoint after
 - [x] Pre-Stage-3: extend tenant isolation tests for write/create/HTTP 404
   invariants and add standing AGENTS rule for every new resourceful route
+- [x] Stage 2.5.1: tenant header policy hardening. Implement tenant resolve
+  order `authenticated user -> session -> X-Tenant-ID`, accept header only
+  outside production, ensure header never overrides authenticated user tenant,
+  add tests, record DECISIONS.md entry, run `make pint && make stan &&
+  make test`, commit.
+- [x] Stage 2.5.2: queue context propagation hardening. Restore
+  TenantResolver and BranchContext inside queued jobs from payload, add a test
+  proving tenant-scoped queries inside a job see only that job tenant, run
+  `make pint && make stan && make test`, commit.
+- [x] Stage 2.5.3: PostgreSQL tenant isolation CI job. Add separate GitHub
+  Actions job using PostgreSQL 17 service that runs tenant isolation tests on
+  real pgsql, including no-`smartrest.tenant_id` RLS visibility coverage, run
+  `make pint && make stan && make test`, commit.
+- [x] Stage 2.5.4: strict types sweep. Add `declare(strict_types=1)` to all
+  PHP files missing it, run `make pint && make stan && make test`, commit.
+- [x] Stage 2.5.5: scaffold cleanup. Remove Laravel ExampleTests, fix
+  `UserFactory` hardcoded `tenant_id => 1` via factory/state, replace welcome
+  page with minimal translated placeholder, run `make pint && make stan &&
+  make test`, commit.
 - [ ] Stage 3: menu vertical slice (actions, Blade UI, API, i18n, audit,
   tests, demo seeders)
 
@@ -53,6 +69,41 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29590252242
   Stage 2 checkpoint approved, tenant isolation tests extended
   (TenantIsolationTest 6 tests / 27 assertions), logging foundation done.
   GitHub Actions CI is green at run 29590252242.
+- 2026-07-20: Stage 2.5.1 tenant header policy hardening complete. Tenant
+  resolution is authenticated user, session, then dev/test-only
+  `X-Tenant-ID`; header cannot override authenticated user tenant. Decision
+  recorded in DECISIONS.md. Gates green: Pint pass, PHPStan pass, Pest
+  17 passed / 91 assertions.
+- 2026-07-20: Stage 2.5.2 queue context propagation hardening complete.
+  Queue listeners restore TenantResolver and BranchContext from
+  `smartrest_context`, then clear runtime context after job processing. Added
+  database-queue regression test proving tenant-scoped queries inside a job
+  only see that job tenant. Gates green: Pint pass, PHPStan pass, Pest
+  18 passed / 98 assertions.
+- 2026-07-20: Stage 2.5.3 PostgreSQL tenant isolation CI job complete. Added
+  separate `tenant-isolation-pgsql` GitHub Actions job with PostgreSQL 17
+  service and focused tenancy suite; added pgsql-only raw SQL RLS regression
+  proving no `smartrest.tenant_id` sees no branch rows and each tenant setting
+  sees only its own branch. Local gates green: Pint pass, PHPStan pass, Pest
+  18 passed / 1 skipped / 96 assertions. CI confirmation pending until branch
+  push.
+- 2026-07-20: Stage 2.5.4 strict types sweep complete. All tracked PHP files
+  now include `declare(strict_types=1)`; ignored generated cache/view files
+  were left untouched. Gates green: Pint pass, PHPStan pass, Pest 18 passed /
+  1 skipped / 96 assertions.
+- 2026-07-20: Stage 2.5.5 scaffold cleanup complete. Removed Laravel
+  ExampleTests, replaced `UserFactory` hardcoded `tenant_id => 1` with
+  TenantFactory/default state plus `forTenant()` state, replaced Laravel
+  welcome page with minimal translated placeholder and `hy`/`ru`/`en`
+  translations, and added a focused welcome placeholder test. Gates green:
+  Pint pass, PHPStan pass, Pest 17 passed / 1 skipped / 103 assertions.
+- 2026-07-20: Stage 2.5 CI confirmed green after CI hardening fix. Branch
+  `phase-1-stage-2.5-hardening` pushed to origin at head `f82ce2f`; GitHub
+  Actions run 29724811580 passed both `quality` and
+  `tenant-isolation-pgsql`. Earlier failed run 29724577844 exposed two CI-only
+  issues: welcome placeholder depended on Vite manifest before build, and the
+  pgsql service user bypassed RLS. Fix: remove direct `@vite` from the
+  placeholder and test pgsql RLS through non-superuser `smartrest_app`.
 
 ## Gotchas / known issues
 - Host PHP is 8.1 — never run PHP on host, docker/make only.
@@ -82,6 +133,14 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29590252242
 - CI Pest requires an application key. `phpunit.xml` now sets a static
   testing-only `APP_KEY` so GitHub Actions can run Feature tests without
   a local `.env`.
+- PostgreSQL service users created by the GitHub Actions postgres image can
+  bypass RLS. The dedicated pgsql tenant isolation job creates and uses a
+  separate non-superuser `smartrest_app` role so FORCE RLS is actually tested.
+- The minimal welcome placeholder must not call `@vite` directly before the
+  CI build step creates `public/build/manifest.json`; otherwise the Pest step
+  fails before Vite Build runs.
 
 ## Next steps
-Awaiting owner: PR review and merge to main. Do NOT start Stage 3, do NOT create new branches, do NOT touch main. After the owner confirms the merge, create branch phase-1-stage-3 from fresh main and begin Stage 3 (menu vertical slice) per the Phase 1 task prompt and BLUEPRINT section 9.
+Await owner PR creation/review/merge for `phase-1-stage-2.5-hardening`.
+Codex must not create the PR and must not start Stage 3 until the owner
+confirms this branch is merged to `main`.

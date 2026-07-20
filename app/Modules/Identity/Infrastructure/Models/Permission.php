@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Modules\Identity\Infrastructure\Models;
 
 use App\Modules\Tenancy\Contracts\BelongsToTenant;

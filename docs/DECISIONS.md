@@ -36,3 +36,13 @@ the platform keeps the lock file installable in the project PHP-FPM image
 and CI runtime.
 Rejected: relying on the Composer image PHP version — it is unstable over
 time and can silently drift beyond the application runtime.
+
+## 2026-07-20 — Tenant header policy limited to dev/test
+Decision: tenant resolution order is authenticated user, then session, then
+`X-Tenant-ID`; the header is accepted only outside production and never
+overrides an authenticated user's tenant.
+Reason: local and test workflows need an easy tenant selector before the
+login-first UI exists, but production isolation must be bound to trusted
+authentication/session state.
+Rejected: allowing `X-Tenant-ID` in production or giving it precedence over
+authenticated users — both would make tenant spoofing possible.

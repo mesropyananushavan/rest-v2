@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Modules\Tenancy\Http\Middleware;
 
 use App\Modules\Tenancy\Contracts\TenantResolver;
@@ -36,10 +38,10 @@ final class ResolveTenant
 
     private function tenantIdFrom(Request $request): ?int
     {
-        $header = $request->headers->get('X-Tenant-ID');
+        $tenantId = data_get($request->user(), 'tenant_id');
 
-        if (is_numeric($header)) {
-            return (int) $header;
+        if (is_numeric($tenantId)) {
+            return (int) $tenantId;
         }
 
         if ($request->session()->has('tenant_id')) {
@@ -48,8 +50,12 @@ final class ResolveTenant
             return is_numeric($sessionTenantId) ? (int) $sessionTenantId : null;
         }
 
-        $tenantId = data_get($request->user(), 'tenant_id');
+        if (App::environment('production')) {
+            return null;
+        }
 
-        return is_numeric($tenantId) ? (int) $tenantId : null;
+        $header = $request->headers->get('X-Tenant-ID');
+
+        return is_numeric($header) ? (int) $header : null;
     }
 }

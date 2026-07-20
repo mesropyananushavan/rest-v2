@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Modules\Identity\Contracts\Authorizer;
 use App\Modules\Identity\Infrastructure\Models\Permission;
 use App\Modules\Identity\Infrastructure\Models\Role;
@@ -10,9 +12,16 @@ use App\Modules\Tenancy\Contracts\TenantResolver;
 use App\Modules\Tenancy\Infrastructure\Models\Branch;
 use App\Modules\Tenancy\Infrastructure\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Queue\Events\JobProcessed;
+use Illuminate\Queue\Events\JobProcessing;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Route;
+use Tests\Support\Jobs\RecordTenantScopedBranchIdsJob;
 
 uses(RefreshDatabase::class);
 
@@ -24,6 +33,7 @@ afterEach(function (): void {
 it('prevents a user from tenant A from seeing tenant B identity or branch data', function (): void {
     $tenantA = tenantWithUser('tenant-a', 'manager-a', ['menu.items.manage']);
     $tenantB = tenantWithUser('tenant-b', 'manager-b', ['menu.items.manage']);
+    $unscopedVisibleRows = usesPostgresRowLevelSecurity() ? 1 : 2;
 
     app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
 
@@ -33,8 +43,8 @@ it('prevents a user from tenant A from seeing tenant B identity or branch data',
         ->not->toContain('tenant-b Branch')
         ->and(User::query()->find((int) $tenantB['user']->id))->toBeNull()
         ->and(Branch::query()->find((int) $tenantB['branch']->id))->toBeNull()
-        ->and(User::withoutGlobalScopes()->count())->toBe(2)
-        ->and(Branch::withoutGlobalScopes()->count())->toBe(2);
+        ->and(User::withoutGlobalScopes()->count())->toBe($unscopedVisibleRows)
+        ->and(Branch::withoutGlobalScopes()->count())->toBe($unscopedVisibleRows);
 
     app(TenantResolver::class)->clear();
 
@@ -67,8 +77,11 @@ it('prevents writes and deletes against another tenant through scoped Eloquent o
     expect($updatedByWhere)->toBe(0)
         ->and($updatedByWhereKey)->toBe(0)
         ->and($deletedByWhere)->toBe(0)
-        ->and($deletedByWhereKey)->toBe(0)
-        ->and(User::withoutGlobalScopes()->find((int) $tenantB['user']->id)?->name)->toBe('manager-b')
+        ->and($deletedByWhereKey)->toBe(0);
+
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+
+    expect(User::withoutGlobalScopes()->find((int) $tenantB['user']->id)?->name)->toBe('manager-b')
         ->and(Branch::withoutGlobalScopes()->find((int) $tenantB['branch']->id)?->name)->toBe('tenant-b Branch');
 });
 
@@ -121,6 +134,94 @@ it('resolves tenant and branch context from request headers', function (): void 
             'branch_id' => (int) $tenant['branch']->id,
             'locale' => 'hy',
         ]);
+});
+
+it('ignores tenant header in production', function (): void {
+    $tenant = tenantWithUser('tenant-a', 'manager-a', ['menu.items.manage']);
+
+    app()->detectEnvironment(fn (): string => 'production');
+
+    Route::middleware('web')->get('/_test/production-context', fn () => response()->json([
+        'tenant_id' => app(TenantResolver::class)->id(),
+    ]));
+
+    $this->withHeader('X-Tenant-ID', (string) $tenant['tenant']->id)
+        ->get('/_test/production-context')
+        ->assertOk()
+        ->assertJson([
+            'tenant_id' => null,
+        ]);
+});
+
+it('does not allow tenant header to override an authenticated user tenant', function (): void {
+    $tenantA = tenantWithUser('tenant-a', 'manager-a', ['menu.items.manage']);
+    $tenantB = tenantWithUser('tenant-b', 'manager-b', ['menu.items.manage']);
+
+    Route::middleware(['web', 'auth'])->get('/_test/authenticated-context', fn () => response()->json([
+        'tenant_id' => app(TenantResolver::class)->id(),
+    ]));
+
+    $this->actingAs($tenantA['user'])
+        ->withHeader('X-Tenant-ID', (string) $tenantB['tenant']->id)
+        ->get('/_test/authenticated-context')
+        ->assertOk()
+        ->assertJson([
+            'tenant_id' => (int) $tenantA['tenant']->id,
+        ]);
+});
+
+it('restores tenant and branch context for tenant-scoped queries inside queued jobs', function (): void {
+    $tenantA = tenantWithUser('tenant-a', 'manager-a', ['menu.items.manage']);
+    $tenantB = tenantWithUser('tenant-b', 'manager-b', ['menu.items.manage']);
+    $cacheKey = 'tenant-scoped-queued-job-result';
+
+    config(['queue.default' => 'database']);
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+    app(BranchContext::class)->set((int) $tenantA['branch']->id);
+
+    Queue::connection('database')->push(new RecordTenantScopedBranchIdsJob($cacheKey));
+
+    app(BranchContext::class)->clear();
+    app(TenantResolver::class)->clear();
+
+    expect(Branch::query()->count())->toBe(0);
+
+    $job = Queue::connection('database')->pop('default');
+
+    expect($job)->not->toBeNull();
+    assert($job !== null);
+
+    Event::dispatch(new JobProcessing('database', $job));
+    $job->fire();
+    Event::dispatch(new JobProcessed('database', $job));
+
+    expect(Cache::get($cacheKey))->toBe([
+        'tenant_id' => (int) $tenantA['tenant']->id,
+        'branch_id' => (int) $tenantA['branch']->id,
+        'visible_branch_ids' => [(int) $tenantA['branch']->id],
+    ])->and(app(TenantResolver::class)->id())->toBeNull()
+        ->and(app(BranchContext::class)->id())->toBeNull();
+});
+
+it('enforces PostgreSQL row level security when tenant setting is missing', function (): void {
+    if (! usesPostgresRowLevelSecurity()) {
+        $this->markTestSkipped('PostgreSQL RLS coverage runs only on pgsql.');
+    }
+
+    $tenantA = tenantWithUser('tenant-a', 'manager-a', ['menu.items.manage']);
+    $tenantB = tenantWithUser('tenant-b', 'manager-b', ['menu.items.manage']);
+
+    app(TenantResolver::class)->clear();
+
+    expect(rawBranchIds())->toBe([]);
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+
+    expect(rawBranchIds())->toBe([(int) $tenantA['branch']->id]);
+
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+
+    expect(rawBranchIds())->toBe([(int) $tenantB['branch']->id]);
 });
 
 it('checks action permissions through the identity authorizer contract', function (): void {
@@ -198,4 +299,19 @@ function tenantWithUser(string $slug, string $username, array $permissionCodes):
         'role' => $role,
         'user' => $user,
     ];
+}
+
+function usesPostgresRowLevelSecurity(): bool
+{
+    return DB::connection()->getDriverName() === 'pgsql';
+}
+
+/**
+ * @return list<int>
+ */
+function rawBranchIds(): array
+{
+    return collect(DB::select('select id from branches order by id'))
+        ->map(fn (object $row): int => (int) $row->id)
+        ->all();
 }

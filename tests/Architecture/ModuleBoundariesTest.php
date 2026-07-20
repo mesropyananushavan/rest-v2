@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Support\Facades\File;
 
 it('contains only the phase one module directories', function (): void {
