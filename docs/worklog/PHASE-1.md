@@ -32,7 +32,7 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29590252242
   TenantResolver and BranchContext inside queued jobs from payload, add a test
   proving tenant-scoped queries inside a job see only that job tenant, run
   `make pint && make stan && make test`, commit.
-- [ ] Stage 2.5.3: PostgreSQL tenant isolation CI job. Add separate GitHub
+- [x] Stage 2.5.3: PostgreSQL tenant isolation CI job. Add separate GitHub
   Actions job using PostgreSQL 17 service that runs tenant isolation tests on
   real pgsql, including no-`smartrest.tenant_id` RLS visibility coverage, run
   `make pint && make stan && make test`, commit.
@@ -80,6 +80,13 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29590252242
   database-queue regression test proving tenant-scoped queries inside a job
   only see that job tenant. Gates green: Pint pass, PHPStan pass, Pest
   18 passed / 98 assertions.
+- 2026-07-20: Stage 2.5.3 PostgreSQL tenant isolation CI job complete. Added
+  separate `tenant-isolation-pgsql` GitHub Actions job with PostgreSQL 17
+  service and focused tenancy suite; added pgsql-only raw SQL RLS regression
+  proving no `smartrest.tenant_id` sees no branch rows and each tenant setting
+  sees only its own branch. Local gates green: Pint pass, PHPStan pass, Pest
+  18 passed / 1 skipped / 96 assertions. CI confirmation pending until branch
+  push.
 
 ## Gotchas / known issues
 - Host PHP is 8.1 — never run PHP on host, docker/make only.
@@ -111,8 +118,6 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29590252242
   a local `.env`.
 
 ## Next steps
-Continue Stage 2.5.3: add a separate GitHub Actions PostgreSQL 17 tenant
-isolation job that runs focused tenant isolation tests on real pgsql, including
-coverage that no `smartrest.tenant_id` RLS setting sees no other tenant data,
-run `make pint && make stan && make test`, then commit the completed step. Do
-NOT start Stage 3.
+Continue Stage 2.5.4: add `declare(strict_types=1)` to all PHP files missing
+it, run `make pint && make stan && make test`, then commit the completed step.
+Do NOT start Stage 3.
