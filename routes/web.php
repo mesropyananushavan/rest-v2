@@ -67,6 +67,9 @@ Route::middleware(['tenant', 'branch', 'auth'])->prefix('/admin/menu')->name('ad
     Route::post('/categories/{category}/restore', [MenuCategoryController::class, 'restore'])
         ->middleware(['can:menu.categories.manage', 'superadmin'])
         ->name('categories.restore');
+    Route::delete('/categories/{category}/force-delete', [MenuCategoryController::class, 'forceDelete'])
+        ->middleware(['can:menu.categories.manage', 'superadmin'])
+        ->name('categories.force-delete');
 
     Route::get('/items/create', [MenuItemController::class, 'create'])
         ->middleware('can:menu.items.manage')
@@ -86,4 +89,7 @@ Route::middleware(['tenant', 'branch', 'auth'])->prefix('/admin/menu')->name('ad
     Route::post('/items/{item}/restore', [MenuItemController::class, 'restore'])
         ->middleware(['can:menu.items.manage', 'superadmin'])
         ->name('items.restore');
+    Route::delete('/items/{item}/force-delete', [MenuItemController::class, 'forceDelete'])
+        ->middleware(['can:menu.items.manage', 'superadmin'])
+        ->name('items.force-delete');
 });

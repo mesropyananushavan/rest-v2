@@ -6,6 +6,7 @@ namespace App\Modules\Menu\Http\Controllers;
 
 use App\Modules\Menu\Application\ArchiveMenuCategory;
 use App\Modules\Menu\Application\CreateMenuCategory;
+use App\Modules\Menu\Application\ForceDeleteMenuCategory;
 use App\Modules\Menu\Application\RestoreMenuCategory;
 use App\Modules\Menu\Application\UpdateMenuCategory;
 use App\Modules\Menu\Http\Requests\MenuCategoryRequest;
@@ -63,5 +64,14 @@ final class MenuCategoryController
         return redirect()
             ->route('admin.menu.index', ['show_archived' => '1'])
             ->with('status', __('menu.flash.category_restored'));
+    }
+
+    public function forceDelete(int $category, ForceDeleteMenuCategory $forceDelete): RedirectResponse
+    {
+        $forceDelete($category);
+
+        return redirect()
+            ->route('admin.menu.index', ['show_archived' => '1'])
+            ->with('status', __('menu.flash.category_force_deleted'));
     }
 }

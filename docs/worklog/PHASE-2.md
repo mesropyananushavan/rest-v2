@@ -278,12 +278,18 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   archive is by manage permission while archive viewing, restore, and
   permanent delete are superadmin-only; `docs/DECISIONS.md` records ignored
   `show_archived` for non-superadmins and superadmin-only force delete.
-- [ ] Stage 1.11.5.3 (Part A review): force-delete application and routes.
+- [x] Stage 1.11.5.3 (Part A review): force-delete application and routes.
   Add superadmin-only force-delete actions/routes for categories/items,
   permanently delete archived categories with their archived items, keep tenant
   and branch isolation at 404 for foreign ids, and update tests for
   non-superadmin restore/force-delete 403 and force delete database removal.
-  Run focused tests and commit.
+  Run focused tests and commit. Result: added `ForceDeleteMenuCategory` and
+  `ForceDeleteMenuItem`, superadmin-only force-delete routes/controllers,
+  category force delete permanently removes archived child items, item force
+  delete is branch-scoped and only applies to archived rows, and feature tests
+  cover non-superadmin 403, foreign tenant 404, route middleware, and database
+  removal. Gates green: Pint pass, PHPStan pass, Pest 54 passed / 2 skipped /
+  397 assertions.
 - [ ] Stage 1.11.5.4 (Part A review): superadmin-only archive UI. Hide the
   `show_archived` filter, archived rows, archived badges, restore, and force
   delete controls from non-superadmins; add hard confirm-modal copy for force
@@ -448,6 +454,10 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   `AGENTS.md` and `docs/DECISIONS.md` now make archive visibility, restore,
   and permanent delete superadmin-only, while normal managers may still
   archive by permission.
+- 2026-07-20: Stage 1.11.5.3 Part A review backend complete. Force-delete
+  Application actions and superadmin routes are implemented for archived Menu
+  categories/items, with cascade physical deletion and tenant/branch isolation
+  coverage.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -481,7 +491,8 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   with a push/CI handoff after each part and owner-created PRs only.
 
 ## Next steps
-Continue Stage 1.11 Part A owner review with Stage 1.11.5.3: add
-force-delete Application actions/routes, superadmin middleware enforcement,
-database-removal tests, non-superadmin 403 tests, and tenant-isolation 404
-tests for force-delete routes.
+Continue Stage 1.11 Part A owner review with Stage 1.11.5.4: make archive
+visibility superadmin-only in the Menu index, hide `show_archived` and
+archived rows from non-superadmins, add restore/force-delete UI controls for
+superadmins only, add irreversible confirm copy in `hy`/`ru`/`en`, and run
+full gates.

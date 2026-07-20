@@ -179,6 +179,11 @@ it('allows managers to archive and requires superadmin to restore menu records',
         ->post(route('admin.menu.categories.restore', ['category' => (int) $records['category']->id]))
         ->assertForbidden();
 
+    $this->actingAs($manager['user'])
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->delete(route('admin.menu.categories.force-delete', ['category' => (int) $records['category']->id]))
+        ->assertForbidden();
+
     $manager['user']->forceFill(['is_superadmin' => true])->save();
 
     $this->actingAs($manager['user']->refresh())
@@ -188,6 +193,45 @@ it('allows managers to archive and requires superadmin to restore menu records',
 
     expect(MenuCategory::query()->count())->toBe(1)
         ->and(MenuItem::query()->count())->toBe(1);
+});
+
+it('force deletes archived menu items and categories for superadmins only', function (): void {
+    $owner = menuBladeUser('tenant-a', 'owner-a', ['menu.categories.manage', 'menu.items.manage'], superadmin: true);
+    $itemRecords = menuBladeRecords($owner, 'Item archive');
+
+    $this->actingAs($owner['user'])
+        ->withSession(['branch_id' => (int) $owner['branch']->id])
+        ->delete(route('admin.menu.items.destroy', ['item' => (int) $itemRecords['item']->id]))
+        ->assertRedirect(route('admin.menu.index'));
+
+    $this->actingAs($owner['user'])
+        ->withSession(['branch_id' => (int) $owner['branch']->id])
+        ->delete(route('admin.menu.items.force-delete', ['item' => (int) $itemRecords['item']->id]))
+        ->assertRedirect(route('admin.menu.index', ['show_archived' => '1']));
+
+    app(TenantResolver::class)->set((int) $owner['tenant']->id);
+    app(BranchContext::class)->set((int) $owner['branch']->id);
+
+    expect(MenuItem::withTrashed()->find((int) $itemRecords['item']->id))->toBeNull()
+        ->and(MenuCategory::query()->find((int) $itemRecords['category']->id))->not->toBeNull();
+
+    $categoryRecords = menuBladeRecords($owner, 'Category archive');
+
+    $this->actingAs($owner['user'])
+        ->withSession(['branch_id' => (int) $owner['branch']->id])
+        ->delete(route('admin.menu.categories.destroy', ['category' => (int) $categoryRecords['category']->id]))
+        ->assertRedirect(route('admin.menu.index'));
+
+    $this->actingAs($owner['user'])
+        ->withSession(['branch_id' => (int) $owner['branch']->id])
+        ->delete(route('admin.menu.categories.force-delete', ['category' => (int) $categoryRecords['category']->id]))
+        ->assertRedirect(route('admin.menu.index', ['show_archived' => '1']));
+
+    app(TenantResolver::class)->set((int) $owner['tenant']->id);
+    app(BranchContext::class)->set((int) $owner['branch']->id);
+
+    expect(MenuCategory::withTrashed()->find((int) $categoryRecords['category']->id))->toBeNull()
+        ->and(MenuItem::withTrashed()->find((int) $categoryRecords['item']->id))->toBeNull();
 });
 
 it('does not show archived categories in item forms or accept them in item creation', function (): void {
@@ -267,6 +311,11 @@ it('returns 404 when a user requests another tenant menu resource by id', functi
 
     $this->actingAs($tenantA['user'])
         ->withSession(['branch_id' => (int) $tenantA['branch']->id])
+        ->delete(route('admin.menu.categories.force-delete', ['category' => (int) $foreign['category']->id]))
+        ->assertNotFound();
+
+    $this->actingAs($tenantA['user'])
+        ->withSession(['branch_id' => (int) $tenantA['branch']->id])
         ->post(route('admin.menu.items.store'), menuBladeItemPayload((int) $foreign['category']->id, 'Compromised'))
         ->assertNotFound();
 
@@ -289,11 +338,17 @@ it('returns 404 when a user requests another tenant menu resource by id', functi
         ->withSession(['branch_id' => (int) $tenantA['branch']->id])
         ->post(route('admin.menu.items.restore', ['item' => (int) $foreign['item']->id]))
         ->assertNotFound();
+
+    $this->actingAs($tenantA['user'])
+        ->withSession(['branch_id' => (int) $tenantA['branch']->id])
+        ->delete(route('admin.menu.items.force-delete', ['item' => (int) $foreign['item']->id]))
+        ->assertNotFound();
 });
 
 it('allows archive routes by permission and protects restore routes with superadmin middleware', function (): void {
     $deleteRoutes = [];
     $restoreRoutes = [];
+    $forceDeleteRoutes = [];
 
     foreach (Route::getRoutes() as $route) {
         if (in_array('DELETE', $route->methods(), true)) {
@@ -303,18 +358,32 @@ it('allows archive routes by permission and protects restore routes with superad
         if (str_ends_with((string) $route->getName(), '.restore')) {
             $restoreRoutes[] = $route;
         }
+
+        if (str_ends_with((string) $route->getName(), '.force-delete')) {
+            $forceDeleteRoutes[] = $route;
+        }
     }
 
     expect($deleteRoutes)->not->toBeEmpty();
     expect($restoreRoutes)->not->toBeEmpty();
+    expect($forceDeleteRoutes)->not->toBeEmpty();
 
     /** @var RoutingRoute $route */
     foreach ($deleteRoutes as $route) {
-        expect($route->gatherMiddleware())->not->toContain('superadmin.delete');
+        if (str_ends_with((string) $route->getName(), '.force-delete')) {
+            continue;
+        }
+
+        expect($route->gatherMiddleware())->not->toContain('superadmin');
     }
 
     /** @var RoutingRoute $route */
     foreach ($restoreRoutes as $route) {
+        expect($route->gatherMiddleware())->toContain('superadmin');
+    }
+
+    /** @var RoutingRoute $route */
+    foreach ($forceDeleteRoutes as $route) {
         expect($route->gatherMiddleware())->toContain('superadmin');
     }
 });
