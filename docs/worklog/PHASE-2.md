@@ -1,7 +1,7 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.11 Part A owner review complete; awaiting owner PR/merge
-Branch: phase-2-stage-1.11-menu-ux
+Status: Stage 1.11 Part B in progress; baseline branch created from fresh main
+Branch: phase-2-stage-1.11b-item-images
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
 
@@ -313,24 +313,41 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   PHPStan pass, Pest 54 passed / 2 skipped / 411 assertions. Branch pushed at
   code head `0d11d6d`; CI run 29749417502 passed both `quality` and
   `tenant-isolation-pgsql`.
-- [ ] Stage 1.11.6 (Part B): menu item image architecture and dependency
-  decision. After Part A is merged by owner, continue on the same Stage 1.11
-  branch from fresh `main`; choose the image processing dependency/storage
-  approach, record it in `docs/DECISIONS.md`, add schema/storage path design
-  for `internal_image` and `public_image`, and commit with focused checks.
-- [ ] Stage 1.11.7 (Part B): uploads, thumbnails, UI, tests, and verification.
-  Implement tenant-scoped Storage-backed optional images with default
-  placeholder, validation, resizing/thumbnails, Livewire upload previews,
-  remove/replace flows, list thumbnails, upload/isolation tests, full gates,
-  push, CI handoff, and no PR creation.
-- [ ] Stage 1.11.8 (Part C): Menu master-detail/search redesign architecture.
+- [ ] Stage 1.11.6 (Part B): branch baseline, image architecture, and
+  dependency decision. Verify Part A is merged to fresh `main`, create
+  `phase-2-stage-1.11b-item-images`, choose the image processing dependency
+  and Storage-backed path policy, record file lifecycle and dependency
+  decisions in `docs/DECISIONS.md`, add `internal_image` / `public_image`
+  metadata columns and config, and commit with focused schema checks.
+- [ ] Stage 1.11.7 (Part B): image processing service and lifecycle actions.
+  Install/configure the image library, implement tenant-scoped upload
+  processing through Laravel Storage with resized originals and thumbnails,
+  add replace/remove helpers for both image slots, delete old files on
+  replacement/removal, delete image files during superadmin force delete, keep
+  archive/restore file-preserving, and cover upload/replace/remove/force-delete
+  behavior with `Storage::fake` tests. Run `make pint && make stan &&
+  make test`, then commit.
+- [ ] Stage 1.11.8 (Part B): Livewire upload UI, placeholders, translations,
+  and demo fixtures. Convert the menu item form to a thin Livewire adapter for
+  two optional image upload zones with current preview, replace, and remove
+  controls; render thumbnails with the shared default placeholder in the item
+  list; add `hy`/`ru`/`en` translations; add deterministic demo image fixtures
+  for a few seeded items while leaving other items empty. Run focused UI tests,
+  `npm run build`, full gates, and commit.
+- [ ] Stage 1.11.9 (Part B): final verification, push, and CI handoff. Run
+  `make fresh`, curl/HTTP smoke for Livewire upload, thumbnail rendering, and
+  placeholder fallback, then final `make pint && make stan && make test`.
+  Push `phase-2-stage-1.11b-item-images`, wait for both GitHub Actions jobs
+  green, update this worklog with local/CI results, and do not create or merge
+  a PR.
+- [ ] Stage 1.11.10 (Part C): Menu master-detail/search redesign architecture.
   After Part B is merged by owner, continue from fresh `main`; decide and
   document JSONB search indexing strategy and any searchable-select approach,
   then implement the Livewire master-detail category panel, global item
   search, URL category context, paginated item list, activity toggle, empty
   states, context-preserving forms, and responsive tablet behavior in
   atomic commits with focused tests.
-- [ ] Stage 1.11.9 (Part C): load seeder, measurements, final verification,
+- [ ] Stage 1.11.11 (Part C): load seeder, measurements, final verification,
   and CI handoff. Add the artisan load-data command outside `DemoSeeder`, seed
   about 200 categories and 20000 items per tenant, measure index, global
   search, pages, and category panel timings, fix slow paths with indexes
