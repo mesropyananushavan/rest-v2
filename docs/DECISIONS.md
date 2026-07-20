@@ -67,3 +67,22 @@ lightweight layer for local disclosure/modal behavior without a SPA framework.
 Rejected: React/Vue/Angular SPA foundations — unnecessary for current
 restaurant admin workflows and heavier than the server-rendered product
 principles require; Bootstrap JS — tied to the outgoing Bootstrap UI stack.
+
+## 2026-07-20 — Menu archive and restore cascade policy
+Decision: menu category and item deletion in the product is archive
+(`deleted_at`) rather than physical deletion. Users with the relevant Menu
+manage permission may archive categories/items; restoring archived records is
+superadmin-only. Archiving a category also archives its currently active child
+items and marks those items as archived by that category cascade. Restoring
+the category restores only items carrying that cascade marker; items archived
+independently before the category archive remain archived. An item cannot be
+restored while its category is still archived.
+Reason: Menu catalog records can be referenced by historical orders later, so
+retaining rows preserves history and tenant isolation while still removing
+records from normal workflows. The explicit cascade marker avoids relying on
+timestamp equality and prevents accidental restoration of items that a manager
+had intentionally archived before the category was archived.
+Rejected: physical deletion from admin UI — unsafe for catalog history;
+restoring every item in a category — would revive independently archived
+items; inferring cascade membership from matching `deleted_at` timestamps —
+fragile and hard to reason about under retries or concurrent requests.

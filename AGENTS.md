@@ -60,11 +60,14 @@
   configuration that are not needed right now. If a screen needs explanation,
   it is designed incorrectly. SmartRest competes by being easier to use than
   alternatives.
-- **Destructive actions are superadmin-only:** deleting any entity is allowed
-  only for users with `is_superadmin = true`. Normal roles and permissions
-  control create/read/update, but delete always requires the additional
-  superadmin gate. Delete controls must not be rendered for non-superadmins.
-  This applies to every current and future module.
+- **Deletion means archive:** product-level "delete" is always soft delete
+  (archive) for entities where restoration is valid. A user with the normal
+  manage permission for that entity may archive it. Restoring an archived
+  entity is superadmin-only (`is_superadmin = true`). Physical deletion is not
+  exposed through the UI to anyone and is reserved for explicit maintenance or
+  retention workflows outside normal product screens. Archive controls must
+  use the shared confirm-modal component; restore controls must not be rendered
+  for non-superadmins. This applies to every current and future module.
 - **Scale from day one:** every design and code review must ask what happens at
   1000 tenants, 100 active users per tenant, and millions of rows per table.
   New code must avoid unindexed filtering paths, especially tenant/branch

@@ -209,11 +209,16 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   head `ea82eb4` verified as an ancestor of `origin/main`, local `main`
   fast-forwarded, branch `phase-2-stage-1.11-menu-ux` created, and this
   Stage 1.11 plan written before implementation.
-- [ ] Stage 1.11.2 (Part A): soft-delete policy documentation and cascade
+- [x] Stage 1.11.2 (Part A): soft-delete policy documentation and cascade
   decision. Update `AGENTS.md` Product Principles so product deletion means
   archive/soft delete, restoration is superadmin-only, and physical deletion
   is not exposed in UI; record the Menu category cascade archive/restore
   behavior in `docs/DECISIONS.md`. Run documentation/grep checks and commit.
+  Result: `AGENTS.md` now defines product deletion as archive/soft delete,
+  with normal manage permission for archive, superadmin-only restore, no
+  physical deletion through UI, and confirm-modal archive controls;
+  `docs/DECISIONS.md` records the explicit Menu category cascade marker
+  policy so category restore only restores items archived by that cascade.
 - [ ] Stage 1.11.3 (Part A): schema, models, and actions for archive/restore.
   Add `deleted_at` to `menu_categories` and `menu_items`, convert models to
   Laravel `SoftDeletes`, replace `DeleteMenu*` behavior with archive actions,
@@ -361,6 +366,10 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   branch `phase-2-stage-1.11-menu-ux` created. Stage is intentionally split
   into independently reviewable parts: A soft delete, B images, C Menu UX
   redesign and load measurements.
+- 2026-07-20: Stage 1.11.2 Part A documentation complete. Product deletion
+  now means archive in `AGENTS.md`, restore is superadmin-only, and
+  `docs/DECISIONS.md` records explicit Menu category cascade restore
+  semantics.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -394,7 +403,6 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   with a push/CI handoff after each part and owner-created PRs only.
 
 ## Next steps
-Continue Stage 1.11 Part A with Stage 1.11.2: update archive/restore product
-policy in `AGENTS.md`, record the category cascade archive/restore decision in
-`docs/DECISIONS.md`, run documentation/grep checks, and commit the
-documentation step.
+Continue Stage 1.11 Part A with Stage 1.11.3: add soft-delete schema/model
+support, archive/restore Application actions, explicit category cascade
+marker behavior, deleted-at-aware indexes, and focused action/schema tests.
