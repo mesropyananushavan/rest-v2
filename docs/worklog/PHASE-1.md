@@ -131,7 +131,11 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29727485150
   curl-smoke the primary menu pages, run full `make pint && make stan &&
   make test`, push `phase-1-stage-3.2-menu`, wait for both GitHub Actions jobs
   green, update this worklog with final local/CI results, and do not create or
-  merge a PR.
+  merge a PR. Local result so far: final `make fresh` pass; curl smoke pass
+  after demo login (`POST /login` 302 to `/`, `GET /admin/menu` 200,
+  `GET /admin/menu/categories/create` 200, `GET /admin/menu/items/create`
+  200, seeded menu content present); Pint pass; PHPStan pass; Pest 35 passed /
+  2 skipped / 237 assertions. Push and CI confirmation pending.
 
 ## Done log
 - 2026-07-17: Stage 1 complete. All gates green (composer validate, Pint,
@@ -274,10 +278,21 @@ https://github.com/mesropyananushavan/rest-v2/actions/runs/29727485150
 - `make test` must explicitly override compose runtime env back to
   testing/sqlite; otherwise local PostgreSQL service env leaks into no-deps
   Pest runs and breaks sqlite/RLS expectations.
+- Real browser/curl login needs `tenant_id` stored in session immediately
+  after successful authentication. Otherwise the next request cannot rehydrate
+  the tenant-scoped `User` before `ResolveTenant` chooses a tenant; Laravel's
+  feature-test guard can mask this unless guards are forgotten between
+  requests.
+- Protected web routes that use tenant-scoped auth must run `ResolveTenant`
+  before Laravel auth middleware. Middleware priority now enforces
+  `ResolveTenant -> ResolveBranch -> auth`; route-level protected groups also
+  list `tenant`, `branch`, then `auth` explicitly for readability.
+- After `docker compose up --build` recreates `php-fpm`, an already-running
+  nginx container can briefly keep the old upstream IP and return 502. Restart
+  nginx before curl-smoke if this appears; it is a runtime DNS/cache issue, not
+  an app error.
 
 ## Next steps
-Continue with Stage 3.2.5: run final `make fresh`, curl-smoke primary Menu
-pages through a demo login session, run full `make pint`, `make stan`, and
-`make test`, push `phase-1-stage-3.2-menu`, wait for both GitHub Actions jobs
-green, update this worklog with final local/CI results, and do not create or
-merge a PR.
+Continue with Stage 3.2.5: commit the final local verification/auth-session
+fixes, push `phase-1-stage-3.2-menu`, wait for both GitHub Actions jobs green,
+update this worklog with CI links/results, and do not create or merge a PR.

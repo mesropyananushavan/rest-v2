@@ -18,7 +18,13 @@ final class ResolveTenant
 
     public function handle(Request $request, Closure $next): Response
     {
-        $tenantId = $this->tenantIdFrom($request);
+        $sessionTenantId = $this->sessionTenantId($request);
+
+        if ($sessionTenantId !== null) {
+            $this->tenants->set($sessionTenantId);
+        }
+
+        $tenantId = $this->tenantIdFrom($request, $sessionTenantId);
 
         if ($tenantId !== null) {
             $tenant = Tenant::query()->findOrFail($tenantId);
@@ -36,7 +42,7 @@ final class ResolveTenant
         return $response;
     }
 
-    private function tenantIdFrom(Request $request): ?int
+    private function tenantIdFrom(Request $request, ?int $sessionTenantId): ?int
     {
         $tenantId = data_get($request->user(), 'tenant_id');
 
@@ -44,10 +50,8 @@ final class ResolveTenant
             return (int) $tenantId;
         }
 
-        if ($request->session()->has('tenant_id')) {
-            $sessionTenantId = $request->session()->get('tenant_id');
-
-            return is_numeric($sessionTenantId) ? (int) $sessionTenantId : null;
+        if ($sessionTenantId !== null) {
+            return $sessionTenantId;
         }
 
         if (App::environment('production')) {
@@ -57,5 +61,16 @@ final class ResolveTenant
         $header = $request->headers->get('X-Tenant-ID');
 
         return is_numeric($header) ? (int) $header : null;
+    }
+
+    private function sessionTenantId(Request $request): ?int
+    {
+        if (! $request->session()->has('tenant_id')) {
+            return null;
+        }
+
+        $sessionTenantId = $request->session()->get('tenant_id');
+
+        return is_numeric($sessionTenantId) ? (int) $sessionTenantId : null;
     }
 }

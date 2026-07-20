@@ -10,6 +10,7 @@ use App\Modules\Tenancy\Infrastructure\Models\Branch;
 use App\Modules\Tenancy\Infrastructure\Models\Tenant;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 
@@ -41,7 +42,8 @@ it('authenticates and logs out an active user with session auth', function (): v
             'email' => 'manager-a@smartrest.test',
             'password' => 'password',
         ]))
-        ->assertRedirect('/');
+        ->assertRedirect('/')
+        ->assertSessionHas('tenant_id', (int) $record['tenant']->id);
 
     $this->assertAuthenticatedAs($record['user']);
 
@@ -96,6 +98,8 @@ it('resolves tenant and branch context from the logged-in user through middlewar
             'password' => 'password',
         ]))
         ->assertRedirect('/');
+
+    Auth::forgetGuards();
 
     $this->get('/_test/login-context')
         ->assertOk()

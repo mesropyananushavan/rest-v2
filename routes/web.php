@@ -22,14 +22,14 @@ Route::middleware('guest')->group(function (): void {
 });
 
 Route::post('/logout', LogoutController::class)
-    ->middleware('auth')
+    ->middleware(['tenant', 'branch', 'auth'])
     ->name('logout');
 
 Route::get('/admin/branches/{branch}', BranchShowController::class)
-    ->middleware('auth')
+    ->middleware(['tenant', 'branch', 'auth'])
     ->name('admin.branches.show');
 
-Route::middleware(['auth'])->prefix('/admin/menu')->name('admin.menu.')->group(function (): void {
+Route::middleware(['tenant', 'branch', 'auth'])->prefix('/admin/menu')->name('admin.menu.')->group(function (): void {
     Route::get('/', MenuIndexController::class)
         ->middleware('can:menu.items.manage')
         ->name('index');
