@@ -381,7 +381,7 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   `phase-2-stage-1.11c-menu-ux` was created from `origin/main`; worktree was
   clean; decisions recorded for `pg_trgm` GIN expression search over JSONB
   names and a Livewire + Alpine category combobox with no new UI library.
-- [ ] Stage 1.11.10.2 (Part C): scalable query foundation. Add PostgreSQL
+- [x] Stage 1.11.10.2 (Part C): scalable query foundation. Add PostgreSQL
   migration(s) for `pg_trgm`, Menu item localized-name expression GIN index,
   category localized-name expression GIN index if the category panel search
   needs it, and composite btree indexes for selected-category list paths:
@@ -389,7 +389,17 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   `sort_order`, and `id`. Replace full-collection list actions with paginated
   query actions for category panel, selected-category items, and global item
   search, preserving tenant and branch isolation. Add focused schema/action
-  tests and run the relevant checks before commit.
+  tests and run the relevant checks before commit. Result: added a PostgreSQL
+  `pg_trgm` migration with localized-name GIN expression indexes for
+  `menu_categories` and `menu_items`, added btree indexes for category panel,
+  selected-category item pages, global item pages, inactive filtering, and
+  archive-aware paths, and introduced paginated Application query actions for
+  category search, selected-category items, and global multilingual item
+  search. Empty global search returns an empty paginator instead of scanning
+  all items. Legacy collection actions remain temporarily for the pre-redesign
+  Blade screen/forms and will be removed from the hot path in Stage 1.11.10.3
+  / 1.11.10.5. Gates green: Pint pass, PHPStan pass, Pest 70 passed /
+  2 skipped / 530 assertions.
 - [ ] Stage 1.11.10.3 (Part C): Livewire master-detail index. Replace the
   current two-table Menu index with one thin Livewire adapter that renders a
   tablet-first master-detail screen: prominent global item search, left
@@ -424,11 +434,13 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
 - [ ] Stage 1.11.11 (Part C): final verification, load smoke, push, and CI
   handoff. Run `make fresh`, run the load-data command, capture curl/HTTP
   timings for Menu index, category panel pagination/search, category switching,
-  global item search, item pagination, and activity toggle, run final
-  `make pint && make stan && make test`, push
+  global item search, item pagination, create-item write latency, and activity
+  toggle write latency on the filled table so GIN index write overhead is
+  visible. If writes noticeably regress, record it in this worklog for owner
+  discussion. Then run final `make pint && make stan && make test`, push
   `phase-2-stage-1.11c-menu-ux`, wait for both GitHub Actions jobs green,
-  record measurements/CI/handoff in this worklog, and do not create or merge
-  a PR.
+  record measurements/CI/handoff in this worklog, and do not create or merge a
+  PR.
 
 ## Done log
 - 2026-07-20: Phase 2 Stage 1 opened from fresh `origin/main` on branch
@@ -615,9 +627,14 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   `php artisan storage:link --force`; the local public disk defaults to the
   relative `FILESYSTEM_PUBLIC_URL=/storage` so Docker port changes do not
   produce broken `APP_URL`-based image URLs.
+- Stage 1.11 Part C owner checkpoint approved the `pg_trgm` JSONB localized
+  name expression index and Livewire + Alpine category combobox decisions on
+  2026-07-21. Final load measurements must include write latency for creating
+  a menu item and toggling activity on the filled table, not only read paths.
 
 ## Next steps
-Await owner OK for Stage 1.11.10.2. Pending decision checkpoint: approve the
-recorded `pg_trgm` GIN expression index over JSONB localized names and the
-Livewire + Alpine category combobox with no new UI library, then implement the
-scalable query foundation. Do not create a PR.
+Continue with Stage 1.11.10.3: replace the current Menu index with the
+Livewire master-detail screen using the new paginated query actions, including
+global item search, category panel search/show-more, URL `?category=` state,
+selected-category item pagination, empty states, thumbnails, and responsive
+tablet behavior. Do not create a PR.

@@ -9,6 +9,7 @@ use App\Modules\Tenancy\Contracts\TenantResolver;
 use App\Modules\Tenancy\Infrastructure\Models\Branch;
 use App\Modules\Tenancy\Infrastructure\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 uses(RefreshDatabase::class);
@@ -134,6 +135,36 @@ it('stores optional menu item image metadata without changing query indexes', fu
 
     expect($item->internal_image['thumbnail_path'] ?? null)->toBe('tenants/1/menu/items/1/internal/thumb.webp')
         ->and($item->public_image)->toBeNull();
+});
+
+it('stores menu search and pagination indexes', function (): void {
+    $categoryIndexes = collect(Schema::getIndexes('menu_categories'))->pluck('columns')->all();
+    $itemIndexes = collect(Schema::getIndexes('menu_items'))->pluck('columns')->all();
+
+    expect($categoryIndexes)->toContain(['tenant_id', 'deleted_at', 'sort_order', 'id'])
+        ->and($itemIndexes)->toContain(['tenant_id', 'branch_id', 'category_id', 'deleted_at', 'active', 'sort_order', 'id'])
+        ->and($itemIndexes)->toContain(['tenant_id', 'branch_id', 'category_id', 'deleted_at', 'sort_order', 'id'])
+        ->and($itemIndexes)->toContain(['tenant_id', 'branch_id', 'deleted_at', 'active', 'sort_order', 'id']);
+});
+
+it('creates PostgreSQL trigram expression indexes for localized menu search', function (): void {
+    if (Schema::getConnection()->getDriverName() !== 'pgsql') {
+        expect(true)->toBeTrue();
+
+        return;
+    }
+
+    $indexes = collect(DB::select("select indexname, indexdef from pg_indexes where schemaname = 'public' and tablename in ('menu_categories', 'menu_items')"))
+        ->mapWithKeys(fn (stdClass $index): array => [(string) $index->indexname => (string) $index->indexdef]);
+
+    expect($indexes->get('menu_categories_translated_name_trgm_idx'))
+        ->toContain('USING gin')
+        ->toContain('gin_trgm_ops')
+        ->toContain("translated_name ->> 'hy'")
+        ->and($indexes->get('menu_items_translated_name_trgm_idx'))
+        ->toContain('USING gin')
+        ->toContain('gin_trgm_ops')
+        ->toContain("translated_name ->> 'ru'");
 });
 
 it('prevents menu records from leaking across tenants through tenant-scoped models', function (): void {
