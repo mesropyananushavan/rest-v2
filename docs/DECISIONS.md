@@ -133,3 +133,41 @@ unnecessary database bloat and slower backup/restore paths; custom GD-only
 processing — more brittle than a maintained image library; queuing every
 thumbnail immediately — extra operational complexity before this bounded admin
 upload path shows measurable latency.
+
+## 2026-07-21 — Menu global search indexing
+Decision: Menu item global live search will use PostgreSQL `pg_trgm` with a
+GIN expression index over a normalized lower-case concatenation of the
+supported localized JSONB name values (`hy`, `ru`, `en`). Queries stay
+server-side and tenant/branch-scoped, combine the trigram search predicate with
+composite btree indexes for `tenant_id`, `branch_id`, `category_id`,
+`deleted_at`, `active`, and `sort_order`, and remain paginated. Existing
+`translated_name` JSONB remains the source of truth; no separate mutable search
+column is introduced.
+Reason: the critical user workflow is contains-style search across about
+20000 items per tenant on tablets. A trigram expression index supports fast
+`LIKE`/`ILIKE` matching without loading all rows or duplicating localized names
+into an application-maintained column. Keeping JSONB as the only stored name
+avoids sync bugs and preserves the existing localized value-object model.
+Data migration: no row backfill is required for existing menu items because
+the index is computed from current JSONB values when the migration creates it.
+Rejected: querying JSONB names with unindexed `ILIKE` scans — unacceptable at
+1000 tenants and millions of rows; a manually maintained normalized
+`search_text` column — faster to query but adds write-path coupling and
+backfill/sync failure modes before measured need; full-text search only —
+less suitable for short substrings, partial dish names, and multilingual
+operator input.
+
+## 2026-07-21 — Menu category searchable select
+Decision: Menu item create/edit will replace the bare category `<select>` with
+a Livewire + Alpine searchable combobox backed by a server-side, debounced,
+paginated category lookup. No third-party UI library is added for this stage.
+Reason: the expected category scale is about 200 categories per tenant, which
+does not justify adding an npm widget dependency when Livewire already handles
+server-side filtering and Alpine can handle the small local disclosure state.
+This keeps the form consistent with the existing Blade/Livewire/Tailwind stack
+and avoids introducing a library that must be maintained for one simple
+combobox.
+Rejected: rendering all categories in a native select — poor tablet UX and
+violates the Part C scope; installing Tom Select or another widget now —
+unnecessary dependency surface until a measured accessibility or behavior gap
+appears that Livewire + Alpine cannot cover cleanly.

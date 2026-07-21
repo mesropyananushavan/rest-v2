@@ -1,7 +1,7 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.11 Part B complete; owner PR/review pending
-Branch: phase-2-stage-1.11b-item-images
+Status: Stage 1.11 Part C planning checkpoint; awaiting owner OK before code
+Branch: phase-2-stage-1.11c-menu-ux
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
 
@@ -370,20 +370,65 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   PHPStan pass, Pest 64 passed / 2 skipped / 503 assertions. Branch pushed at
   implementation code head `d0065ae`; GitHub Actions run 29753190555 passed
   both `quality` and `tenant-isolation-pgsql`. PR is not created by Codex.
-- [ ] Stage 1.11.10 (Part C): Menu master-detail/search redesign architecture.
-  After Part B is merged by owner, continue from fresh `main`; decide and
-  document JSONB search indexing strategy and any searchable-select approach,
-  then implement the Livewire master-detail category panel, global item
-  search, URL category context, paginated item list, activity toggle, empty
-  states, context-preserving forms, and responsive tablet behavior in
-  atomic commits with focused tests.
-- [ ] Stage 1.11.11 (Part C): load seeder, measurements, final verification,
-  and CI handoff. Add the artisan load-data command outside `DemoSeeder`, seed
-  about 200 categories and 20000 items per tenant, measure index, global
-  search, pages, and category panel timings, fix slow paths with indexes
-  rather than cache, run `make fresh` plus smoke including upload/load data,
-  final gates, push, wait for both CI jobs green, record measurements, and do
-  not create or merge a PR.
+- [x] Stage 1.11.10.1 (Part C): branch baseline, plan, and decisions. Verify
+  Part A and Part B are merged to `origin/main`, create/switch to
+  `phase-2-stage-1.11c-menu-ux` from fresh `origin/main`, confirm `git status`
+  and `git log --oneline -8`, decide the JSONB item-search indexing strategy
+  and category searchable-select approach, record both in `docs/DECISIONS.md`,
+  and stop for owner OK before code because the indexing choice affects
+  migrations. Result: Part A merge `08f3321` and Part B merge `5b72b93` are on
+  `origin/main`; Part B head `278c4b5` is an ancestor of `origin/main`; branch
+  `phase-2-stage-1.11c-menu-ux` was created from `origin/main`; worktree was
+  clean; decisions recorded for `pg_trgm` GIN expression search over JSONB
+  names and a Livewire + Alpine category combobox with no new UI library.
+- [ ] Stage 1.11.10.2 (Part C): scalable query foundation. Add PostgreSQL
+  migration(s) for `pg_trgm`, Menu item localized-name expression GIN index,
+  category localized-name expression GIN index if the category panel search
+  needs it, and composite btree indexes for selected-category list paths:
+  `tenant_id`, `branch_id`, `category_id`, `deleted_at`, optional `active`,
+  `sort_order`, and `id`. Replace full-collection list actions with paginated
+  query actions for category panel, selected-category items, and global item
+  search, preserving tenant and branch isolation. Add focused schema/action
+  tests and run the relevant checks before commit.
+- [ ] Stage 1.11.10.3 (Part C): Livewire master-detail index. Replace the
+  current two-table Menu index with one thin Livewire adapter that renders a
+  tablet-first master-detail screen: prominent global item search, left
+  category panel search with page-size-limited results and "show more",
+  selected `?category=` URL state with first-category default, right-side
+  paginated item list, category-visible search results, item thumbnails with
+  placeholder fallback, empty states, and responsive collapse behavior on
+  narrow screens. Add Pest Livewire tests for global search, category panel
+  search, category URL selection, and empty states.
+- [ ] Stage 1.11.10.4 (Part C): item row operations and archive controls.
+  Add an Application action for toggling item activity, wire an inline
+  Livewire row toggle without full-page reload, keep title click -> edit, move
+  archive into the row overflow menu, and preserve Part A superadmin-only
+  archive visibility/restore/force-delete behavior with confirm-modal usage.
+  Cover toggle, item pagination, inactive filter, archived filter visibility,
+  restore/force-delete visibility, and permission/tenant-isolation regressions.
+- [ ] Stage 1.11.10.5 (Part C): context-preserving forms and searchable
+  category combobox. Replace the item form's all-options category select with
+  a Livewire + Alpine server-search combobox, prefill category from
+  `?category=`, preserve return context after save/cancel (`category`,
+  category page, item page, global search query, inactive/archive filters),
+  and keep image upload behavior from Part B intact. Add `hy`/`ru`/`en`
+  translations and Pest coverage for create/edit context and searchable
+  category selection.
+- [ ] Stage 1.11.10.6 (Part C): load-data command and performance fixes. Add
+  an artisan command outside `DemoSeeder` to generate about 200 categories and
+  20000 items per tenant with deterministic localized names, prices, active
+  distribution, sort values, and placeholder-image coverage compatible with
+  Part B. Run `EXPLAIN` on category panel, selected-category page, global
+  search, inactive filter, and archive paths; fix slow paths with indexes, not
+  cache.
+- [ ] Stage 1.11.11 (Part C): final verification, load smoke, push, and CI
+  handoff. Run `make fresh`, run the load-data command, capture curl/HTTP
+  timings for Menu index, category panel pagination/search, category switching,
+  global item search, item pagination, and activity toggle, run final
+  `make pint && make stan && make test`, push
+  `phase-2-stage-1.11c-menu-ux`, wait for both GitHub Actions jobs green,
+  record measurements/CI/handoff in this worklog, and do not create or merge
+  a PR.
 
 ## Done log
 - 2026-07-20: Phase 2 Stage 1 opened from fresh `origin/main` on branch
@@ -572,6 +617,7 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   produce broken `APP_URL`-based image URLs.
 
 ## Next steps
-After the owner merges Part B, continue with Stage 1.11.10 Part C from fresh
-`main`: verify the merge, create the Part C branch, then plan the Menu
-master-detail/search redesign architecture before code. Do not create a PR.
+Await owner OK for Stage 1.11.10.2. Pending decision checkpoint: approve the
+recorded `pg_trgm` GIN expression index over JSONB localized names and the
+Livewire + Alpine category combobox with no new UI library, then implement the
+scalable query foundation. Do not create a PR.
