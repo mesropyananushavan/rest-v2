@@ -98,3 +98,38 @@ fragile and hard to reason about under retries or concurrent requests;
 returning 403 for `show_archived=1` from non-superadmins — more disruptive
 than needed because the same index page is otherwise valid for their normal
 workflow.
+
+## 2026-07-20 — Menu item image storage and processing
+Decision: menu items have two optional image slots: `internal_image` for staff
+UI/POS usage and `public_image` for future guest QR menu usage. Each slot
+stores nullable JSON metadata on `menu_items` (`path`, `thumbnail_path`,
+dimensions, MIME type, and byte size), while files are stored through Laravel
+Storage using the configured `MENU_IMAGES_DISK` and tenant-scoped
+`MENU_IMAGES_PATH_TEMPLATE` (`tenants/{tenant_id}/menu/items/{item_id}/{slot}`
+locally on the `public` disk). The local public disk uses a relative
+`FILESYSTEM_PUBLIC_URL=/storage` by default so Docker ports do not leak into
+stored/rendered URLs; deployments may set an absolute CDN/object-storage URL
+without changing application code. UI code resolves URLs through Storage only and
+uses one shared placeholder asset when a slot is empty. Replacing or removing
+an image deletes the old original and thumbnail files; archiving/restoring a
+menu item keeps files; superadmin force delete removes the files with the
+record. Image processing uses `intervention/image-laravel` 4.x with bounded
+synchronous resizing for the current admin upload flow: originals are resized
+to configured maximum dimensions and list thumbnails are generated at upload
+time. Queue-based thumbnail generation remains an implementation option if
+measured HTTP latency becomes noticeable.
+Reason: JSON metadata avoids adding query-only columns because images are not
+filtered or sorted, while keeping enough information to render and clean up
+files safely. Configured disk/path access keeps local development on the
+`public` disk but allows moving to S3-compatible storage without changing
+application code. Intervention Image is popular, maintained, supports PHP 8.3
+and Laravel 13 through the Laravel integration package, and works with GD now
+while allowing Imagick/libvips later. The PHP runtime image installs GD with
+jpeg/png/webp support so local tests, uploads, and resizing use the same
+driver.
+Rejected: storing public URLs in the database — ties records to a specific
+host/disk and makes S3 migration harder; storing binary images in PostgreSQL —
+unnecessary database bloat and slower backup/restore paths; custom GD-only
+processing — more brittle than a maintained image library; queuing every
+thumbnail immediately — extra operational complexity before this bounded admin
+upload path shows measurable latency.

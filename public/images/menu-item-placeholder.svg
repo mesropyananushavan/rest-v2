@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320" role="img" aria-label="Menu item placeholder">
+  <defs>
+    <linearGradient id="bg" x1="35" y1="30" x2="285" y2="290" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8FAF7"/>
+      <stop offset="1" stop-color="#E6EFE6"/>
+    </linearGradient>
+    <linearGradient id="plate" x1="86" y1="98" x2="234" y2="236" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#DDE8DD"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="320" rx="56" fill="url(#bg)"/>
+  <circle cx="160" cy="168" r="82" fill="url(#plate)" stroke="#B8C7B8" stroke-width="8"/>
+  <circle cx="160" cy="168" r="42" fill="none" stroke="#CAD7CA" stroke-width="7"/>
+  <path d="M91 76v63M77 76v63M105 76v63M77 139c0 14 7 25 21 25s21-11 21-25" stroke="#879987" stroke-width="8" stroke-linecap="round"/>
+  <path d="M237 78c-18 16-26 38-24 68 1 15 10 25 24 25V78Z" fill="#879987"/>
+  <path d="M90 248h140" stroke="#B8C7B8" stroke-width="8" stroke-linecap="round"/>
+  <path d="M112 268h96" stroke="#CAD7CA" stroke-width="6" stroke-linecap="round"/>
+</svg>

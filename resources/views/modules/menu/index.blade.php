@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
+use App\Modules\Menu\Domain\MenuItemImageSlot;
+use App\Modules\Menu\Infrastructure\Storage\MenuItemImageUrlResolver;
 use App\Support\Money\MoneyFormatter;
 
 /** @var \Illuminate\Database\Eloquent\Collection<int, MenuCategory> $categories */
 /** @var \Illuminate\Database\Eloquent\Collection<int, MenuItem> $items */
 /** @var bool $canViewArchive */
 /** @var bool $showArchived */
+/** @var MenuItemImageUrlResolver $imageUrls */
 
 $locale = app()->getLocale();
 $canManageCategories = auth()->user()?->can('menu.categories.manage') ?? false;
@@ -126,6 +129,7 @@ $canManageItems = auth()->user()?->can('menu.items.manage') ?? false;
                 <x-table>
                     <thead>
                         <tr>
+                            <th>{{ __('menu.fields.image') }}</th>
                             <th>{{ __('menu.fields.name') }}</th>
                             <th>{{ __('menu.fields.category') }}</th>
                             <th>{{ __('menu.fields.price') }}</th>
@@ -136,6 +140,13 @@ $canManageItems = auth()->user()?->can('menu.items.manage') ?? false;
                     <tbody>
                         @forelse ($items as $item)
                             <tr>
+                                <td>
+                                    <img
+                                        src="{{ $imageUrls->thumbnailUrl($item, MenuItemImageSlot::Internal) }}"
+                                        alt="{{ __('menu.images.list_thumbnail_alt') }}"
+                                        class="h-14 w-14 rounded-2xl border border-slate-200 bg-slate-50 object-cover shadow-sm"
+                                    >
+                                </td>
                                 <td>
                                     <div class="flex flex-wrap items-center gap-2">
                                         <span class="font-semibold text-smartrest-ink">{{ $item->translatedName()->forLocale($locale) }}</span>
@@ -196,7 +207,7 @@ $canManageItems = auth()->user()?->can('menu.items.manage') ?? false;
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="py-6 text-center text-sm text-smartrest-muted">{{ __('menu.empty.items') }}</td>
+                                <td colspan="6" class="py-6 text-center text-sm text-smartrest-muted">{{ __('menu.empty.items') }}</td>
                             </tr>
                         @endforelse
                     </tbody>

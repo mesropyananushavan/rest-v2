@@ -1,7 +1,7 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.11 Part A owner review complete; awaiting owner PR/merge
-Branch: phase-2-stage-1.11-menu-ux
+Status: Stage 1.11 Part B complete; owner PR/review pending
+Branch: phase-2-stage-1.11b-item-images
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
 
@@ -313,24 +313,71 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   PHPStan pass, Pest 54 passed / 2 skipped / 411 assertions. Branch pushed at
   code head `0d11d6d`; CI run 29749417502 passed both `quality` and
   `tenant-isolation-pgsql`.
-- [ ] Stage 1.11.6 (Part B): menu item image architecture and dependency
-  decision. After Part A is merged by owner, continue on the same Stage 1.11
-  branch from fresh `main`; choose the image processing dependency/storage
-  approach, record it in `docs/DECISIONS.md`, add schema/storage path design
-  for `internal_image` and `public_image`, and commit with focused checks.
-- [ ] Stage 1.11.7 (Part B): uploads, thumbnails, UI, tests, and verification.
-  Implement tenant-scoped Storage-backed optional images with default
-  placeholder, validation, resizing/thumbnails, Livewire upload previews,
-  remove/replace flows, list thumbnails, upload/isolation tests, full gates,
-  push, CI handoff, and no PR creation.
-- [ ] Stage 1.11.8 (Part C): Menu master-detail/search redesign architecture.
+- [x] Stage 1.11.6 (Part B): branch baseline, image architecture, and
+  dependency decision. Verify Part A is merged to fresh `main`, create
+  `phase-2-stage-1.11b-item-images`, choose the image processing dependency
+  and Storage-backed path policy, record file lifecycle and dependency
+  decisions in `docs/DECISIONS.md`, add `internal_image` / `public_image`
+  metadata columns and config, and commit with focused schema checks. Result:
+  `origin/main` fast-forwarded to merge commit `08f3321`, Part A head
+  `dd4a395` verified as an ancestor, local `main` fast-forwarded, branch
+  `phase-2-stage-1.11b-item-images` created, `intervention/image-laravel` 4.x
+  selected for processing, Storage-backed tenant path and lifecycle policy
+  recorded in `docs/DECISIONS.md`, nullable JSON metadata columns plus
+  `config/menu_images.php` added, and schema/model tests updated. Gates green:
+  Pint pass, PHPStan pass, Pest 55 passed / 2 skipped / 415 assertions.
+- [x] Stage 1.11.7 (Part B): image processing service and lifecycle actions.
+  Install/configure the image library, implement tenant-scoped upload
+  processing through Laravel Storage with resized originals and thumbnails,
+  add replace/remove helpers for both image slots, delete old files on
+  replacement/removal, delete image files during superadmin force delete, keep
+  archive/restore file-preserving, and cover upload/replace/remove/force-delete
+  behavior with `Storage::fake` tests. Run `make pint && make stan &&
+  make test`, then commit. Result: installed `intervention/image-laravel`
+  4.1.0 (`intervention/image` 4.2.0), added `MenuItemImageSlot`, Storage-backed
+  processing service, replace/remove Application actions, old-file cleanup on
+  replacement/removal, archive-preserving behavior, and item/category
+  force-delete file cleanup. The PHP Docker image now installs GD with
+  jpeg/png/webp support because the previous runtime lacked any image driver.
+  Tests cover both image slots, validation for unsupported type/size, tenant
+  isolation on id tampering, archive preserving files, and force delete removing
+  files. Gates green: Pint pass, PHPStan pass, Pest 59 passed / 2 skipped /
+  464 assertions.
+- [x] Stage 1.11.8 (Part B): Livewire upload UI, placeholders, translations,
+  and demo fixtures. Convert the menu item form to a thin Livewire adapter for
+  two optional image upload zones with current preview, replace, and remove
+  controls; render thumbnails with the shared default placeholder in the item
+  list; add `hy`/`ru`/`en` translations; add deterministic demo image fixtures
+  for a few seeded items while leaving other items empty. Run focused UI tests,
+  `npm run build`, full gates, and commit. Result: item create/edit now renders
+  a Livewire form with staff/internal and guest/public upload zones, previews,
+  replace/remove controls, Livewire validation for jpeg/png/webp and max size,
+  and translated labels/help in `hy`/`ru`/`en`; the item list renders an
+  internal staff thumbnail with the shared SVG placeholder fallback; demo
+  seeding uses two small PNG fixtures through the same image processing action
+  while other items remain image-empty. Verified `make pint`, `make stan`,
+  `make test` (Pest 63 passed / 2 skipped / 502 assertions), and `make build`.
+- [x] Stage 1.11.9 (Part B): final verification, push, and CI handoff. Run
+  `make fresh`, curl/HTTP smoke for Livewire upload, thumbnail rendering, and
+  placeholder fallback, then final `make pint && make stan && make test`.
+  Push `phase-2-stage-1.11b-item-images`, wait for both GitHub Actions jobs
+  green, update this worklog with local/CI results, and do not create or merge
+  a PR. Result: `make fresh` passed after adding `storage:link` to the Make
+  target; curl smoke passed for manager login, create form Livewire upload
+  fields, real Livewire `_startUpload` -> multipart temporary upload ->
+  `_finishUpload` -> `save`, item list visibility, thumbnail `200 image/png`,
+  and placeholder `200 image/svg+xml`; final local gates green: Pint pass,
+  PHPStan pass, Pest 64 passed / 2 skipped / 503 assertions. Branch pushed at
+  implementation code head `d0065ae`; GitHub Actions run 29753190555 passed
+  both `quality` and `tenant-isolation-pgsql`. PR is not created by Codex.
+- [ ] Stage 1.11.10 (Part C): Menu master-detail/search redesign architecture.
   After Part B is merged by owner, continue from fresh `main`; decide and
   document JSONB search indexing strategy and any searchable-select approach,
   then implement the Livewire master-detail category panel, global item
   search, URL category context, paginated item list, activity toggle, empty
   states, context-preserving forms, and responsive tablet behavior in
   atomic commits with focused tests.
-- [ ] Stage 1.11.9 (Part C): load seeder, measurements, final verification,
+- [ ] Stage 1.11.11 (Part C): load seeder, measurements, final verification,
   and CI handoff. Add the artisan load-data command outside `DemoSeeder`, seed
   about 200 categories and 20000 items per tenant, measure index, global
   search, pages, and category panel timings, fix slow paths with indexes
@@ -509,9 +556,22 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   binding were present at the lockfile root.
 - Stage 1.11 is too large for one safe review chunk. Work it as A -> B -> C,
   with a push/CI handoff after each part and owner-created PRs only.
+- During Stage 1.11 Part B, running host Composer updated `composer.json` and
+  `composer.lock` but failed package discovery because host PHP is 8.1.2. The
+  fix was to complete install/discovery through Docker-backed `make build`.
+  Do not use host Composer again in this repo.
+- The pre-existing PHP Docker image had no `gd` extension, so Laravel fake
+  image generation and Intervention's default GD driver failed. Stage 1.11.7
+  added GD with jpeg/png/webp libraries to `docker/php/Dockerfile` and rebuilt
+  services with `make up`; `php -m` now lists `gd`.
+- During Stage 1.11 Part B final smoke, generated local thumbnails existed in
+  `storage/app/public` but nginx returned 403 until the standard Laravel
+  `public/storage` link was created. `make fresh` and `make build` now run
+  `php artisan storage:link --force`; the local public disk defaults to the
+  relative `FILESYSTEM_PUBLIC_URL=/storage` so Docker port changes do not
+  produce broken `APP_URL`-based image URLs.
 
 ## Next steps
-Owner creates and merges the Stage 1.11 Part A PR from
-`phase-2-stage-1.11-menu-ux`. After that merge, continue with Stage 1.11.6
-Part B from fresh `main`: menu item image architecture and dependency/storage
-decision.
+After the owner merges Part B, continue with Stage 1.11.10 Part C from fresh
+`main`: verify the merge, create the Part C branch, then plan the Menu
+master-detail/search redesign architecture before code. Do not create a PR.
