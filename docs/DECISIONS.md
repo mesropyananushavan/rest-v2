@@ -222,3 +222,21 @@ for PostgreSQL trgm/GIN behavior must run on PostgreSQL, not only SQLite.
 Blueprint amendment required: `docs/BLUEPRINT.md` currently documents `Category
 -> Item` and `menu_categories` without `parent_id`; update the blueprint
 separately with explicit owner approval before or with the schema change.
+
+## 2026-07-22 — Runtime database role must not bypass RLS
+Decision: runtime application traffic uses a dedicated unprivileged role
+`smartrest_app` with no `SUPERUSER` and no `BYPASSRLS`; privileged role
+`smartrest` is used only for migrations and admin database operations.
+Implementation is deferred until the gate below.
+Reason: tenant isolation is a security boundary, not only an ORM convention.
+PostgreSQL row-level security policies and `FORCE ROW LEVEL SECURITY` must be
+exercised by the same role that serves application traffic. Using a superuser or
+`BYPASSRLS` role for runtime traffic bypasses those policies for raw SQL.
+Gate: RLS role separation MUST be implemented before the first real restaurant
+or tenant is onboarded onto v2 in production. Until then, tenant isolation
+relies solely on Eloquent global scopes, which is acceptable only while there
+are no live tenants.
+Operational note: `smartrest_app` was mentioned earlier in the Phase 1 worklog,
+but current migrations and configuration do not create or use it. Current
+`docker-compose.yml`, `.env.example`, and `config/database.php` point
+application runtime traffic at `smartrest`.
