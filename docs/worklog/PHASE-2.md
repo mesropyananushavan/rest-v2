@@ -747,7 +747,7 @@ Stage 1.11 Part C subcategory implementation order after owner-approved
   (`20 passed / 172 assertions`), and PostgreSQL `TenantIsolationTest` still
   has exactly the 3 known RLS/BYPASSRLS failures with no new structure
   failures. Committed as `69a37fc`.
-- [ ] Step E: implement `menu:seed-load` last, after parent_id schema and UI
+- [x] Step E: implement `menu:seed-load` last, after parent_id schema and UI
   paths are final. Support production-like and giant-menu modes with raw batch
   insert/COPY and optional drop/rebuild trgm index flow. Scope: standalone
   Artisan command only, not `make fresh` and not `DemoSeeder`; generate
@@ -761,10 +761,24 @@ Stage 1.11 Part C subcategory implementation order after owner-approved
   drop/rebuild. Safe checks passed: Artisan help renders and focused Pint
   passed for changed PHP files. No actual load was run. Full `make stan` still
   fails only on pre-existing Step B/C/D PHPStan issues outside the new command.
+  Committed as `ae0436b`.
+- [ ] Step F: clean up pre-existing Step B/C/D PHPStan typing errors without
+  changing runtime behavior. Scope: typed subcategory id collection in
+  archive/restore/force-delete cascade actions, builder callback annotations
+  for tree archive filtering, safe nullable parent-id comparison in
+  `UpdateMenuCategory`, and `MenuCategoryRequest` rule PHPDoc. Result:
+  review-ready on 2026-07-22; `make stan` passed with no errors, focused
+  PostgreSQL `MenuActionsTest`, `MenuQueryActionsTest`, and `MenuSchemaTest`
+  passed (`31 passed / 259 assertions`). A broader ad-hoc PostgreSQL
+  `tests/Feature/Menu` run through a temporary phpunit config still showed
+  unrelated HTTP/Livewire bootstrap symptoms (`419` CSRF responses and missing
+  `assertSeeLivewire` macro); no code changes were made for that. Follow-up
+  verification confirmed the issue is not caused by Step F: full SQLite
+  `make test` passed (`88 passed / 2 skipped / 693 assertions`), and the same
+  ad-hoc PostgreSQL full `tests/Feature/Menu` runner produced the same 8
+  HTTP/Livewire failures on pre-Step-F commit `ae0436b`.
 
-Next action: owner review and owner-run small load check, expected first command
-`php artisan menu:seed-load --mode=production-like --restaurants=5` (optionally
-with `--drop-rebuild-trgm`). Do not run the full default load, do not edit
+Next action: owner review of Step F typing cleanup. Do not edit
 `docs/BLUEPRINT.md`, do not create PRs/merges/pushes, and do not commit without
 explicit owner approval.
 

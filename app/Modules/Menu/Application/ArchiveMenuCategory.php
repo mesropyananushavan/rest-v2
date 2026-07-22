@@ -7,6 +7,7 @@ namespace App\Modules\Menu\Application;
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use Illuminate\Support\Facades\DB;
+use UnexpectedValueException;
 
 final class ArchiveMenuCategory
 {
@@ -44,11 +45,14 @@ final class ArchiveMenuCategory
                 return;
             }
 
-            $subcategoryIds = MenuCategory::query()
+            $subcategories = MenuCategory::query()
                 ->where('parent_id', $categoryId)
-                ->pluck('id')
-                ->map(fn (mixed $id): int => (int) $id)
-                ->all();
+                ->get(['id']);
+            $subcategoryIds = [];
+
+            foreach ($subcategories as $subcategory) {
+                $subcategoryIds[] = $this->categoryId($subcategory);
+            }
 
             $archivedItemCount = MenuItem::query()
                 ->whereIn('category_id', $subcategoryIds)
@@ -82,5 +86,20 @@ final class ArchiveMenuCategory
             'archived_subcategory_count' => $archivedSubcategoryCount,
             'archived_item_count' => $archivedItemCount,
         ]);
+    }
+
+    private function categoryId(MenuCategory $category): int
+    {
+        $id = $category->getKey();
+
+        if (is_int($id)) {
+            return $id;
+        }
+
+        if (is_string($id) && $id !== '') {
+            return (int) $id;
+        }
+
+        throw new UnexpectedValueException('Menu category id is not hydrated.');
     }
 }

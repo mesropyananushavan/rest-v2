@@ -18,8 +18,10 @@ final class UpdateMenuCategory
 
         $category = MenuCategory::query()->findOrFail($categoryId);
         $parent = $this->findValidParent($parentId, (int) $category->id);
+        $currentParentId = $category->parent_id === null ? 0 : (int) $category->parent_id;
+        $newParentId = $parent instanceof MenuCategory ? (int) $parent->id : 0;
 
-        if ((int) ($category->parent_id ?? 0) !== (int) ($parent?->id ?? 0) && $this->hasChildren($category)) {
+        if ($currentParentId !== $newParentId && $this->hasChildren($category)) {
             throw MenuDomainException::categoryParentChangeBlocked();
         }
 

@@ -40,7 +40,12 @@ trait BuildsMenuCategoryTreeQueries
                 ->where(
                     fn (Builder $query): Builder => $query
                         ->whereNotNull('deleted_at')
-                        ->orWhereHas('items', fn (Builder $query): Builder => $query->onlyTrashed()),
+                        ->orWhereHas('items', function (Builder $query): Builder {
+                            /** @phpstan-ignore-next-line SoftDeletes adds onlyTrashed() to this MenuItem relation query at runtime. */
+                            $query->onlyTrashed();
+
+                            return $query;
+                        }),
                 ),
             'all' => $query->withTrashed(),
         };

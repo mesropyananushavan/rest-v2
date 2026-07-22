@@ -8,6 +8,7 @@ use App\Modules\Tenancy\Contracts\TenantResolver;
 use App\Support\I18n\LocalizedText;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Exists;
 
 final class MenuCategoryRequest extends FormRequest
 {
@@ -17,7 +18,7 @@ final class MenuCategoryRequest extends FormRequest
     }
 
     /**
-     * @return array<string, list<string>>
+     * @return array<string, list<string|Exists>>
      */
     public function rules(): array
     {

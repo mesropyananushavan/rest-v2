@@ -9,6 +9,7 @@ use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use App\Modules\Menu\Infrastructure\Storage\MenuItemImageStorage;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\DB;
+use UnexpectedValueException;
 
 final class ForceDeleteMenuCategory
 {
@@ -38,11 +39,14 @@ final class ForceDeleteMenuCategory
                 return;
             }
 
-            $subcategoryIds = MenuCategory::withTrashed()
+            $subcategories = MenuCategory::withTrashed()
                 ->where('parent_id', $categoryId)
-                ->pluck('id')
-                ->map(fn (mixed $id): int => (int) $id)
-                ->all();
+                ->get(['id']);
+            $subcategoryIds = [];
+
+            foreach ($subcategories as $subcategory) {
+                $subcategoryIds[] = $this->categoryId($subcategory);
+            }
 
             $deletedItemCount = $this->forceDeleteItemsForCategories($subcategoryIds, $imagesToDelete);
 
@@ -105,6 +109,21 @@ final class ForceDeleteMenuCategory
             });
 
         return $deletedItemCount;
+    }
+
+    private function categoryId(MenuCategory $category): int
+    {
+        $id = $category->getKey();
+
+        if (is_int($id)) {
+            return $id;
+        }
+
+        if (is_string($id) && $id !== '') {
+            return (int) $id;
+        }
+
+        throw new UnexpectedValueException('Menu category id is not hydrated.');
     }
 
     /**

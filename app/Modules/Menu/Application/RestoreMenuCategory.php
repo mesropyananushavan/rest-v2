@@ -8,6 +8,7 @@ use App\Modules\Menu\Domain\MenuDomainException;
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use Illuminate\Support\Facades\DB;
+use UnexpectedValueException;
 
 final class RestoreMenuCategory
 {
@@ -56,11 +57,14 @@ final class RestoreMenuCategory
                 return;
             }
 
-            $subcategoryIds = MenuCategory::withTrashed()
+            $subcategories = MenuCategory::withTrashed()
                 ->where('parent_id', $categoryId)
-                ->pluck('id')
-                ->map(fn (mixed $id): int => (int) $id)
-                ->all();
+                ->get(['id']);
+            $subcategoryIds = [];
+
+            foreach ($subcategories as $subcategory) {
+                $subcategoryIds[] = $this->categoryId($subcategory);
+            }
 
             $category->forceFill([
                 'deleted_at' => null,
@@ -93,5 +97,20 @@ final class RestoreMenuCategory
             'restored_subcategory_count' => $restoredSubcategoryCount,
             'restored_item_count' => $restoredItemCount,
         ]);
+    }
+
+    private function categoryId(MenuCategory $category): int
+    {
+        $id = $category->getKey();
+
+        if (is_int($id)) {
+            return $id;
+        }
+
+        if (is_string($id) && $id !== '') {
+            return (int) $id;
+        }
+
+        throw new UnexpectedValueException('Menu category id is not hydrated.');
     }
 }
