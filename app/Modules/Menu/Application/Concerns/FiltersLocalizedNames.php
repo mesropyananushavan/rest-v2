@@ -24,9 +24,10 @@ trait FiltersLocalizedNames
         $needle = $driver === 'sqlite'
             ? $normalizedSearch
             : mb_strtolower($normalizedSearch, 'UTF-8');
+        $escapeClause = $driver === 'pgsql' ? " ESCAPE E'\\\\'" : " ESCAPE '\\'";
 
         $query->whereRaw(
-            $this->localizedNameSearchExpression($query, $column)." LIKE ? ESCAPE '\\'",
+            $this->localizedNameSearchExpression($query, $column).' LIKE ?'.$escapeClause,
             ['%'.$this->escapeLike($needle).'%'],
         );
     }

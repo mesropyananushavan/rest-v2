@@ -677,6 +677,11 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
 - Menu search/index coverage must run against PostgreSQL for trgm/GIN behavior.
   SQLite feature tests are still useful for fast behavior checks, but they do
   not prove PostgreSQL expression indexes, `pg_trgm`, or planner behavior.
+- 2026-07-22 PostgreSQL-only diagnostics found pre-Step-A failures hidden by
+  the default SQLite test target: localized Menu search currently fails on
+  PostgreSQL with `SQLSTATE[HY093]` in `FiltersLocalizedNames` when a non-empty
+  LIKE search is bound, and RLS expectations fail because the local/test
+  `smartrest` database role is a superuser with `BYPASSRLS`.
 
 ## Next steps
 Await owner review of Stage 1.11.10.3 archive-mode WIP: `showArchived` is
@@ -688,3 +693,13 @@ superadmins, redirects use `archive_mode=archived`, focused tests are updated,
 assertions`). After owner approval, continue with Step 2 by presenting the
 final `DECISIONS.md` text for the parent_id subcategory decision and wait for
 explicit go before writing it. Do not create a PR.
+
+Immediate fix before subcategory Step B: repair PostgreSQL localized LIKE
+binding in `FiltersLocalizedNames` without changing the indexed
+`lower(coalesce(...) || ...)` expression, then run the four failing PostgreSQL
+Menu search tests. Do not touch RLS implementation until the owner decides on
+the production DB role.
+Result: review-ready on 2026-07-22; the PostgreSQL escape literal now uses
+`ESCAPE E'\\'` only for pgsql while other drivers keep the existing escape
+clause, and the four previously failing PostgreSQL Menu search tests passed
+(`4 passed / 26 assertions`). RLS code remains untouched.
