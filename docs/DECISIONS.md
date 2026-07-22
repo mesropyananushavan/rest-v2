@@ -171,3 +171,54 @@ Rejected: rendering all categories in a native select — poor tablet UX and
 violates the Part C scope; installing Tom Select or another widget now —
 unnecessary dependency surface until a measured accessibility or behavior gap
 appears that Livewire + Alpine cannot cover cleanly.
+
+## 2026-07-22 — Menu category hierarchy uses parent_id subcategories
+Decision: Menu hierarchy is strictly three levels: root category -> subcategory
+-> item. `menu_categories` will use a self-referencing nullable `parent_id`
+adjacency list. Root categories have `parent_id = null`; subcategories have
+`parent_id` pointing to a root category. `menu_items.category_id` must reference
+a subcategory row, not a root category. Items cannot be attached directly to
+root categories.
+Reason: a single `menu_categories` table preserves the existing localized name,
+active/archive, sort, tenant scope, search, and permission model for both
+categories and subcategories. It avoids duplicating CRUD, archive/restore
+cascade behavior, trgm search indexes, translations, and UI code across separate
+category and subcategory tables. Requiring items to live only under
+subcategories keeps the master-detail UI and query paths unambiguous at scale.
+Rejected: a separate `menu_subcategories` table, because it duplicates category
+behavior and complicates search, archive cascade, restore, and item forms
+without adding enough value. Rejected allowing items directly under root
+categories, because it creates ambiguous UI sections and more complex
+query/index paths.
+
+Depth invariant: category depth is exactly two category levels: root and
+subcategory. A row with `parent_id !== null` cannot have children, so creating a
+subcategory under another subcategory is forbidden. This rule lives in
+Application actions and tests because PostgreSQL CHECK constraints cannot
+validate parent-of-parent state without a trigger. The database enforces only
+the self-referencing FK `menu_categories.parent_id -> menu_categories.id` and a
+CHECK preventing `parent_id = id`.
+
+Archive invariants:
+- Root cascade: archiving a root category archives its non-archived
+  subcategories and those subcategories' currently non-archived items, marking
+  descendants with the root-category cascade marker. Restoring that root
+  category restores only descendants carrying that cascade marker; subcategories
+  or items archived independently before the root archive remain archived.
+- Subcategory cascade: archiving one subcategory without archiving its root
+  archives only that subcategory's currently non-archived items, marking those
+  items with that subcategory's cascade marker. Restoring that subcategory
+  restores only items carrying that subcategory cascade marker and does not
+  affect sibling subcategories or their items.
+- Force-delete: force-deleting an archived root category permanently deletes the
+  entire archived subtree under it, including archived subcategories and
+  archived items. Force-delete remains superadmin-only and irreversible.
+
+Query/index notes: query and index work must cover `tenant_id`, `parent_id`,
+`deleted_at`, `active`, `sort_order`, selected-root category paths,
+selected-subcategory item paths, and global item search. Menu search/index tests
+for PostgreSQL trgm/GIN behavior must run on PostgreSQL, not only SQLite.
+
+Blueprint amendment required: `docs/BLUEPRINT.md` currently documents `Category
+-> Item` and `menu_categories` without `parent_id`; update the blueprint
+separately with explicit owner approval before or with the schema change.
