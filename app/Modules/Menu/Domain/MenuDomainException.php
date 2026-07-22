@@ -25,6 +25,11 @@ final class MenuDomainException extends RuntimeException
         return new self('menu.category_archived', 'Menu items cannot be restored while their category is archived.');
     }
 
+    public static function restoreParentCategoryFirst(): self
+    {
+        return new self('menu.restore_parent_category_first', 'Restore the parent category before restoring this subcategory.');
+    }
+
     public static function invalidCategoryParent(): self
     {
         return new self('menu.invalid_category_parent', 'Menu subcategories must belong to a root category in the current tenant.');

@@ -699,17 +699,27 @@ Stage 1.11 Part C subcategory implementation order after owner-approved
   relations/casts, and PostgreSQL schema tests. Result: review-ready on
   2026-07-22; focused PostgreSQL `MenuSchemaTest` passed (`8 passed / 54
   assertions`).
-- [ ] Step B: enforce depth=2 and item-only-under-subcategory in Application
+- [x] Step B: enforce depth=2 and item-only-under-subcategory in Application
   actions/requests/tests. Scope: explicit tenant-scoped parent/category lookups,
   parent_id request validation, no moving non-empty category nodes, and focused
   PostgreSQL tests. Result: review-ready on 2026-07-22; PostgreSQL
-  `tests/Feature/Menu` passed (`43 passed / 405 assertions`). No cascade
-  changes, no DemoSeeder update yet, and no new seed-load command.
-- [ ] Step C: implement root/subcategory archive/restore/force-delete cascade
+  `tests/Feature/Menu` passed (`43 passed / 405 assertions`), and committed as
+  `1f416b8`. No cascade changes, no DemoSeeder update yet, and no new
+  seed-load command.
+- [x] Step C: implement root/subcategory archive/restore/force-delete cascade
   semantics with cascade markers. Batch archive updates must only touch
   currently non-trashed rows with `archived_with_category_id is null`, so
-  independently archived descendants keep their marker/state. Update demo
-  seed data to root+subcategory structure before running full `make fresh`.
+  independently archived descendants keep their marker/state. DB cascade
+  operations must run inside `DB::transaction()`, while storage cleanup for
+  force-deleted item images runs only after successful commit. No
+  `MenuCategory`/`MenuItem` observers or lifecycle event hooks were found, so
+  batch updates do not bypass current domain side effects. Update demo seed
+  data to root+subcategory structure before running full `make fresh`. Result:
+  review-ready on 2026-07-22; focused PostgreSQL `tests/Feature/Menu` passed
+  (`47 passed / 462 assertions`), then force-delete root edge coverage was
+  extended for independently archived subcategories and PostgreSQL
+  `MenuActionsTest` passed (`17 passed / 169 assertions`). No DemoSeeder
+  update yet, no Step D UI/query changes, and no seed-load command.
 - [ ] Step D: adapt Menu query actions and Livewire master-detail to the
   root -> subcategory -> item tree, reusing existing paginated actions where
   possible and collapsing duplicated archive container logic.
@@ -717,10 +727,11 @@ Stage 1.11 Part C subcategory implementation order after owner-approved
   paths are final. Support production-like and giant-menu modes with raw batch
   insert/COPY and optional drop/rebuild trgm index flow.
 
-Next action: owner review of Step B diff. After approval, commit Step B only,
-then proceed to Step C cascade/archive semantics. Do not edit
-`docs/BLUEPRINT.md`, do not create PRs/merges/pushes, and do not commit without
-explicit owner approval.
+Next action: read-only plan for converting demo seed data and test fixtures to
+the root -> subcategory -> item structure, then wait for owner approval before
+editing seeders. Demo seed data must be updated before any full `make fresh`.
+Do not edit `docs/BLUEPRINT.md`, do not create PRs/merges/pushes, and do not
+commit without explicit owner approval.
 
 Immediate fix before subcategory Step B: repair PostgreSQL localized LIKE
 binding in `FiltersLocalizedNames` without changing the indexed

@@ -8,6 +8,7 @@ use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use App\Modules\Menu\Infrastructure\Storage\MenuItemImageStorage;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Support\Facades\DB;
 
 final class ForceDeleteMenuCategory
 {
@@ -20,33 +21,90 @@ final class ForceDeleteMenuCategory
     public function __invoke(int $categoryId): void
     {
         $startedAt = microtime(true);
+        $deletedSubcategoryCount = 0;
+        $deletedItemCount = 0;
+        $categoryLevel = 'root';
+        $imagesToDelete = [];
+
+        DB::transaction(function () use ($categoryId, &$deletedSubcategoryCount, &$deletedItemCount, &$categoryLevel, &$imagesToDelete): void {
+            $category = MenuCategory::onlyTrashed()->findOrFail($categoryId);
+
+            if ($category->parent_id !== null) {
+                $categoryLevel = 'subcategory';
+                $deletedItemCount = $this->forceDeleteItemsForCategories([$categoryId], $imagesToDelete);
+
+                $category->forceDelete();
+
+                return;
+            }
+
+            $subcategoryIds = MenuCategory::withTrashed()
+                ->where('parent_id', $categoryId)
+                ->pluck('id')
+                ->map(fn (mixed $id): int => (int) $id)
+                ->all();
+
+            $deletedItemCount = $this->forceDeleteItemsForCategories($subcategoryIds, $imagesToDelete);
+
+            MenuCategory::withTrashed()
+                ->whereIn('id', $subcategoryIds)
+                ->orderBy('id')
+                ->get()
+                ->each(function (MenuCategory $subcategory) use (&$deletedSubcategoryCount): void {
+                    $subcategory->forceDelete();
+                    $deletedSubcategoryCount++;
+                });
+
+            $category->forceDelete();
+        });
+
+        foreach ($imagesToDelete as $metadata) {
+            $this->storage->delete($metadata);
+        }
+
+        $this->logSuccess('menu.categories.force_delete', $startedAt, [
+            'category_id' => $categoryId,
+            'category_level' => $categoryLevel,
+            'deleted_subcategory_count' => $deletedSubcategoryCount,
+            'deleted_item_count' => $deletedItemCount,
+        ]);
+    }
+
+    /**
+     * @param  list<int>  $categoryIds
+     * @param  list<array<string, mixed>>  $imagesToDelete
+     */
+    private function forceDeleteItemsForCategories(array $categoryIds, array &$imagesToDelete): int
+    {
         $deletedItemCount = 0;
 
-        $category = MenuCategory::onlyTrashed()->findOrFail($categoryId);
+        if ($categoryIds === []) {
+            return 0;
+        }
 
-        MenuItem::onlyTrashed()
-            ->where('category_id', $categoryId)
+        MenuItem::withTrashed()
+            ->whereIn('category_id', $categoryIds)
             ->select(['id', 'internal_image', 'public_image'])
-            ->chunkById(100, function (EloquentCollection $items) use (&$deletedItemCount): void {
+            ->chunkById(100, function (EloquentCollection $items) use (&$deletedItemCount, &$imagesToDelete): void {
                 /** @var EloquentCollection<int, MenuItem> $items */
                 foreach ($items as $item) {
                     $internalImage = $this->imageMetadata($item, 'internal_image');
                     $publicImage = $this->imageMetadata($item, 'public_image');
 
+                    if ($internalImage !== null) {
+                        $imagesToDelete[] = $internalImage;
+                    }
+
+                    if ($publicImage !== null) {
+                        $imagesToDelete[] = $publicImage;
+                    }
+
                     $item->forceDelete();
                     $deletedItemCount++;
-
-                    $this->storage->delete($internalImage);
-                    $this->storage->delete($publicImage);
                 }
             });
 
-        $category->forceDelete();
-
-        $this->logSuccess('menu.categories.force_delete', $startedAt, [
-            'category_id' => $categoryId,
-            'deleted_item_count' => $deletedItemCount,
-        ]);
+        return $deletedItemCount;
     }
 
     /**

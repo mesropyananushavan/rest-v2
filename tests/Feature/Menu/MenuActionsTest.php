@@ -275,6 +275,277 @@ it('blocks parent changes for categories with subcategories or items', function 
     expect((int) $movedEmptySubcategory->parent_id)->toBe((int) $otherRoot->id);
 });
 
+it('root category archive and restore only cascades descendants marked by that root', function (): void {
+    $tenant = menuActionsTenant('tenant-a', 'Tenant A');
+
+    app(TenantResolver::class)->set((int) $tenant['tenant']->id);
+    app(BranchContext::class)->set((int) $tenant['branch']->id);
+
+    $root = app(CreateMenuCategory::class)(menuActionsText('Menu'));
+    $breakfast = app(CreateMenuCategory::class)(menuActionsText('Breakfast'), parentId: (int) $root->id);
+    $lunch = app(CreateMenuCategory::class)(menuActionsText('Lunch'), parentId: (int) $root->id);
+    $independent = app(CreateMenuCategory::class)(menuActionsText('Archived before root'), parentId: (int) $root->id);
+
+    $omelette = app(CreateMenuItem::class)(
+        (int) $breakfast->id,
+        menuActionsText('Omelette'),
+        null,
+        new Money(180000, 'AMD'),
+    );
+    $toast = app(CreateMenuItem::class)(
+        (int) $breakfast->id,
+        menuActionsText('Toast'),
+        null,
+        new Money(90000, 'AMD'),
+    );
+    $salad = app(CreateMenuItem::class)(
+        (int) $lunch->id,
+        menuActionsText('Salad'),
+        null,
+        new Money(120000, 'AMD'),
+    );
+    $independentItem = app(CreateMenuItem::class)(
+        (int) $independent->id,
+        menuActionsText('Already archived item'),
+        null,
+        new Money(110000, 'AMD'),
+    );
+
+    app(ArchiveMenuItem::class)((int) $toast->id);
+    app(ArchiveMenuCategory::class)((int) $independent->id);
+    app(ArchiveMenuCategory::class)((int) $root->id);
+
+    $root = MenuCategory::withTrashed()->findOrFail((int) $root->id);
+    $breakfast = MenuCategory::withTrashed()->findOrFail((int) $breakfast->id);
+    $lunch = MenuCategory::withTrashed()->findOrFail((int) $lunch->id);
+    $independent = MenuCategory::withTrashed()->findOrFail((int) $independent->id);
+    $omelette = MenuItem::withTrashed()->findOrFail((int) $omelette->id);
+    $toast = MenuItem::withTrashed()->findOrFail((int) $toast->id);
+    $salad = MenuItem::withTrashed()->findOrFail((int) $salad->id);
+    $independentItem = MenuItem::withTrashed()->findOrFail((int) $independentItem->id);
+
+    expect($root->trashed())->toBeTrue()
+        ->and($breakfast->trashed())->toBeTrue()
+        ->and($breakfast->archived_with_category_id)->toBe((int) $root->id)
+        ->and($lunch->trashed())->toBeTrue()
+        ->and($lunch->archived_with_category_id)->toBe((int) $root->id)
+        ->and($omelette->trashed())->toBeTrue()
+        ->and($omelette->archived_with_category_id)->toBe((int) $root->id)
+        ->and($salad->trashed())->toBeTrue()
+        ->and($salad->archived_with_category_id)->toBe((int) $root->id)
+        ->and($toast->trashed())->toBeTrue()
+        ->and($toast->archived_with_category_id)->toBeNull()
+        ->and($independent->trashed())->toBeTrue()
+        ->and($independent->archived_with_category_id)->toBeNull()
+        ->and($independentItem->trashed())->toBeTrue()
+        ->and($independentItem->archived_with_category_id)->toBe((int) $independent->id);
+
+    app(RestoreMenuCategory::class)((int) $root->id);
+
+    $root = MenuCategory::query()->findOrFail((int) $root->id);
+    $breakfast = MenuCategory::query()->findOrFail((int) $breakfast->id);
+    $lunch = MenuCategory::query()->findOrFail((int) $lunch->id);
+    $independent = MenuCategory::withTrashed()->findOrFail((int) $independent->id);
+    $omelette = MenuItem::query()->findOrFail((int) $omelette->id);
+    $salad = MenuItem::query()->findOrFail((int) $salad->id);
+    $toast = MenuItem::withTrashed()->findOrFail((int) $toast->id);
+    $independentItem = MenuItem::withTrashed()->findOrFail((int) $independentItem->id);
+
+    expect($root->trashed())->toBeFalse()
+        ->and($breakfast->trashed())->toBeFalse()
+        ->and($breakfast->archived_with_category_id)->toBeNull()
+        ->and($lunch->trashed())->toBeFalse()
+        ->and($lunch->archived_with_category_id)->toBeNull()
+        ->and($omelette->trashed())->toBeFalse()
+        ->and($omelette->archived_with_category_id)->toBeNull()
+        ->and($salad->trashed())->toBeFalse()
+        ->and($salad->archived_with_category_id)->toBeNull()
+        ->and($toast->trashed())->toBeTrue()
+        ->and($toast->archived_with_category_id)->toBeNull()
+        ->and($independent->trashed())->toBeTrue()
+        ->and($independent->archived_with_category_id)->toBeNull()
+        ->and($independentItem->trashed())->toBeTrue()
+        ->and($independentItem->archived_with_category_id)->toBe((int) $independent->id);
+});
+
+it('subcategory archive and restore only cascades its own item marker', function (): void {
+    $tenant = menuActionsTenant('tenant-a', 'Tenant A');
+
+    app(TenantResolver::class)->set((int) $tenant['tenant']->id);
+    app(BranchContext::class)->set((int) $tenant['branch']->id);
+
+    $root = app(CreateMenuCategory::class)(menuActionsText('Menu'));
+    $breakfast = app(CreateMenuCategory::class)(menuActionsText('Breakfast'), parentId: (int) $root->id);
+    $lunch = app(CreateMenuCategory::class)(menuActionsText('Lunch'), parentId: (int) $root->id);
+    $omelette = app(CreateMenuItem::class)(
+        (int) $breakfast->id,
+        menuActionsText('Omelette'),
+        null,
+        new Money(180000, 'AMD'),
+    );
+    $salad = app(CreateMenuItem::class)(
+        (int) $lunch->id,
+        menuActionsText('Salad'),
+        null,
+        new Money(120000, 'AMD'),
+    );
+
+    app(ArchiveMenuCategory::class)((int) $breakfast->id);
+
+    $breakfast = MenuCategory::withTrashed()->findOrFail((int) $breakfast->id);
+    $lunch = MenuCategory::query()->findOrFail((int) $lunch->id);
+    $omelette = MenuItem::withTrashed()->findOrFail((int) $omelette->id);
+    $salad = MenuItem::query()->findOrFail((int) $salad->id);
+
+    expect($breakfast->trashed())->toBeTrue()
+        ->and($breakfast->archived_with_category_id)->toBeNull()
+        ->and($lunch->trashed())->toBeFalse()
+        ->and($omelette->trashed())->toBeTrue()
+        ->and($omelette->archived_with_category_id)->toBe((int) $breakfast->id)
+        ->and($salad->trashed())->toBeFalse()
+        ->and($salad->archived_with_category_id)->toBeNull();
+
+    app(RestoreMenuCategory::class)((int) $breakfast->id);
+
+    $breakfast = MenuCategory::query()->findOrFail((int) $breakfast->id);
+    $omelette = MenuItem::query()->findOrFail((int) $omelette->id);
+    $salad = MenuItem::query()->findOrFail((int) $salad->id);
+
+    expect($breakfast->trashed())->toBeFalse()
+        ->and($omelette->trashed())->toBeFalse()
+        ->and($omelette->archived_with_category_id)->toBeNull()
+        ->and($salad->trashed())->toBeFalse()
+        ->and($salad->archived_with_category_id)->toBeNull();
+});
+
+it('blocks restoring a subcategory while its root category is archived', function (): void {
+    $tenant = menuActionsTenant('tenant-a', 'Tenant A');
+
+    app(TenantResolver::class)->set((int) $tenant['tenant']->id);
+    app(BranchContext::class)->set((int) $tenant['branch']->id);
+
+    $root = app(CreateMenuCategory::class)(menuActionsText('Menu'));
+    $subcategory = app(CreateMenuCategory::class)(menuActionsText('Breakfast'), parentId: (int) $root->id);
+
+    app(ArchiveMenuCategory::class)((int) $root->id);
+
+    expect(fn () => app(RestoreMenuCategory::class)((int) $subcategory->id))
+        ->toThrow(MenuDomainException::class, 'Restore the parent category before restoring this subcategory.');
+
+    $subcategory = MenuCategory::withTrashed()->findOrFail((int) $subcategory->id);
+
+    expect($subcategory->trashed())->toBeTrue()
+        ->and($subcategory->archived_with_category_id)->toBe((int) $root->id);
+});
+
+it('force deletes a root category subtree and removes all descendant item images', function (): void {
+    Storage::fake('public');
+
+    $tenant = menuActionsTenant('tenant-a', 'Tenant A');
+
+    app(TenantResolver::class)->set((int) $tenant['tenant']->id);
+    app(BranchContext::class)->set((int) $tenant['branch']->id);
+
+    $root = app(CreateMenuCategory::class)(menuActionsText('Menu'));
+    $breakfast = app(CreateMenuCategory::class)(menuActionsText('Breakfast'), parentId: (int) $root->id);
+    $lunch = app(CreateMenuCategory::class)(menuActionsText('Lunch'), parentId: (int) $root->id);
+
+    $rootMarkedItem = app(CreateMenuItem::class)(
+        (int) $breakfast->id,
+        menuActionsText('Omelette'),
+        null,
+        new Money(180000, 'AMD'),
+    );
+    $independentlyArchivedItem = app(CreateMenuItem::class)(
+        (int) $lunch->id,
+        menuActionsText('Salad'),
+        null,
+        new Money(120000, 'AMD'),
+    );
+
+    $rootMarkedItem = app(ReplaceMenuItemImage::class)(
+        (int) $rootMarkedItem->id,
+        MenuItemImageSlot::Internal,
+        UploadedFile::fake()->image('omelette.jpg', 500, 400)->size(128),
+    );
+    $independentlyArchivedItem = app(ReplaceMenuItemImage::class)(
+        (int) $independentlyArchivedItem->id,
+        MenuItemImageSlot::Public,
+        UploadedFile::fake()->image('salad.jpg', 500, 400)->size(128),
+    );
+    $rootMarkedImage = menuActionImageMetadata($rootMarkedItem, 'internal_image');
+    $independentlyArchivedImage = menuActionImageMetadata($independentlyArchivedItem, 'public_image');
+
+    app(ArchiveMenuItem::class)((int) $independentlyArchivedItem->id);
+    app(ArchiveMenuCategory::class)((int) $root->id);
+    app(ForceDeleteMenuCategory::class)((int) $root->id);
+
+    expect(MenuCategory::withTrashed()->find((int) $root->id))->toBeNull()
+        ->and(MenuCategory::withTrashed()->find((int) $breakfast->id))->toBeNull()
+        ->and(MenuCategory::withTrashed()->find((int) $lunch->id))->toBeNull()
+        ->and(MenuItem::withTrashed()->find((int) $rootMarkedItem->id))->toBeNull()
+        ->and(MenuItem::withTrashed()->find((int) $independentlyArchivedItem->id))->toBeNull();
+
+    Storage::disk('public')->assertMissing($rootMarkedImage['path']);
+    Storage::disk('public')->assertMissing($rootMarkedImage['thumbnail_path']);
+    Storage::disk('public')->assertMissing($independentlyArchivedImage['path']);
+    Storage::disk('public')->assertMissing($independentlyArchivedImage['thumbnail_path']);
+});
+
+it('force deletes independently archived subcategories inside a root subtree', function (): void {
+    Storage::fake('public');
+
+    $tenant = menuActionsTenant('tenant-a', 'Tenant A');
+
+    app(TenantResolver::class)->set((int) $tenant['tenant']->id);
+    app(BranchContext::class)->set((int) $tenant['branch']->id);
+
+    $root = app(CreateMenuCategory::class)(menuActionsText('Menu'));
+    $breakfast = app(CreateMenuCategory::class)(menuActionsText('Breakfast'), parentId: (int) $root->id);
+    $archivedBeforeRoot = app(CreateMenuCategory::class)(menuActionsText('Archived before root'), parentId: (int) $root->id);
+
+    $rootMarkedItem = app(CreateMenuItem::class)(
+        (int) $breakfast->id,
+        menuActionsText('Omelette'),
+        null,
+        new Money(180000, 'AMD'),
+    );
+    $independentItem = app(CreateMenuItem::class)(
+        (int) $archivedBeforeRoot->id,
+        menuActionsText('Archived category item'),
+        null,
+        new Money(120000, 'AMD'),
+    );
+    $independentItem = app(ReplaceMenuItemImage::class)(
+        (int) $independentItem->id,
+        MenuItemImageSlot::Internal,
+        UploadedFile::fake()->image('archived-category-item.jpg', 500, 400)->size(128),
+    );
+    $independentImage = menuActionImageMetadata($independentItem, 'internal_image');
+
+    app(ArchiveMenuCategory::class)((int) $archivedBeforeRoot->id);
+
+    $archivedBeforeRoot = MenuCategory::withTrashed()->findOrFail((int) $archivedBeforeRoot->id);
+    $independentItem = MenuItem::withTrashed()->findOrFail((int) $independentItem->id);
+
+    expect($archivedBeforeRoot->trashed())->toBeTrue()
+        ->and($archivedBeforeRoot->archived_with_category_id)->toBeNull()
+        ->and($independentItem->trashed())->toBeTrue()
+        ->and($independentItem->archived_with_category_id)->toBe((int) $archivedBeforeRoot->id);
+
+    app(ArchiveMenuCategory::class)((int) $root->id);
+    app(ForceDeleteMenuCategory::class)((int) $root->id);
+
+    expect(MenuCategory::withTrashed()->find((int) $root->id))->toBeNull()
+        ->and(MenuCategory::withTrashed()->find((int) $breakfast->id))->toBeNull()
+        ->and(MenuCategory::withTrashed()->find((int) $archivedBeforeRoot->id))->toBeNull()
+        ->and(MenuItem::withTrashed()->find((int) $rootMarkedItem->id))->toBeNull()
+        ->and(MenuItem::withTrashed()->find((int) $independentItem->id))->toBeNull();
+
+    Storage::disk('public')->assertMissing($independentImage['path']);
+    Storage::disk('public')->assertMissing($independentImage['thumbnail_path']);
+});
+
 it('requires a resolved branch context for branch-owned item actions', function (): void {
     $tenant = menuActionsTenant('tenant-a', 'Tenant A');
 
