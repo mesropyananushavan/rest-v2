@@ -1,6 +1,6 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.11 Part C planning checkpoint; awaiting owner OK before code
+Status: Stage 1.11 Part C Step E `menu:seed-load` review checkpoint
 Branch: phase-2-stage-1.11c-menu-ux
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
@@ -727,7 +727,7 @@ Stage 1.11 Part C subcategory implementation order after owner-approved
   extended for independently archived subcategories and PostgreSQL
   `MenuActionsTest` passed (`17 passed / 169 assertions`). No DemoSeeder
   update yet, no Step D UI/query changes, and no seed-load command.
-- [ ] Step D: adapt Menu query actions and Livewire master-detail to the
+- [x] Step D: adapt Menu query actions and Livewire master-detail to the
   root -> subcategory -> item tree, reusing existing paginated actions where
   possible and collapsing duplicated archive container logic. Result:
   review-ready on 2026-07-22; added tree-aware selection via
@@ -749,13 +749,24 @@ Stage 1.11 Part C subcategory implementation order after owner-approved
   failures. Committed as `69a37fc`.
 - [ ] Step E: implement `menu:seed-load` last, after parent_id schema and UI
   paths are final. Support production-like and giant-menu modes with raw batch
-  insert/COPY and optional drop/rebuild trgm index flow.
+  insert/COPY and optional drop/rebuild trgm index flow. Scope: standalone
+  Artisan command only, not `make fresh` and not `DemoSeeder`; generate
+  diverse deterministic localized names, stream inserts in bounded batches,
+  preserve root -> subcategory -> item invariants, optionally drop/rebuild
+  PostgreSQL trgm indexes, and guard non-local/testing environments behind
+  `--force`. Result: review-ready on 2026-07-22; added standalone
+  `menu:seed-load` command with production-like and giant-menu modes,
+  deterministic diverse hy/ru/en localized names, bounded raw insert batches,
+  real-ID parent lookup after each parent stage, and optional PostgreSQL trgm
+  drop/rebuild. Safe checks passed: Artisan help renders and focused Pint
+  passed for changed PHP files. No actual load was run. Full `make stan` still
+  fails only on pre-existing Step B/C/D PHPStan issues outside the new command.
 
-Next action: owner review of Step D tree-aware Menu master-detail diff. After
-approval, commit Step D only, then continue toward remaining Part C polish and
-the deferred `menu:seed-load` command last. Do not edit `docs/BLUEPRINT.md`,
-do not create PRs/merges/pushes, and do not commit without explicit owner
-approval.
+Next action: owner review and owner-run small load check, expected first command
+`php artisan menu:seed-load --mode=production-like --restaurants=5` (optionally
+with `--drop-rebuild-trgm`). Do not run the full default load, do not edit
+`docs/BLUEPRINT.md`, do not create PRs/merges/pushes, and do not commit without
+explicit owner approval.
 
 Immediate fix before subcategory Step B: repair PostgreSQL localized LIKE
 binding in `FiltersLocalizedNames` without changing the indexed
