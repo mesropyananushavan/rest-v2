@@ -38,12 +38,15 @@ it('stores menu categories and items as tenant-scoped records with integer money
 
     app(BranchContext::class)->set((int) $branch->id);
 
+    $rootCategory = MenuCategory::query()->create([
+        'translated_name' => ['hy' => 'Մենյու', 'ru' => 'Меню', 'en' => 'Menu'],
+        'sort_order' => 100,
+        'active' => true,
+    ]);
+
     $category = MenuCategory::query()->create([
-        'translated_name' => [
-            'hy' => 'Աղցաններ',
-            'ru' => 'Салаты',
-            'en' => 'Salads',
-        ],
+        'parent_id' => (int) $rootCategory->id,
+        'translated_name' => ['hy' => 'Աղցաններ', 'ru' => 'Салаты', 'en' => 'Salads'],
         'sort_order' => 10,
         'active' => true,
     ]);
@@ -68,6 +71,7 @@ it('stores menu categories and items as tenant-scoped records with integer money
 
     expect((int) $category->tenant_id)->toBe((int) $tenant->id)
         ->and((int) $item->tenant_id)->toBe((int) $tenant->id)
+        ->and($category->parent_id)->toBe((int) $rootCategory->id)
         ->and($category->translatedName()->forLocale('en'))->toBe('Salads')
         ->and($item->translatedDescription()?->forLocale('en'))->toBe('Fresh vegetables')
         ->and($item->price()->minor)->toBe(250000)
@@ -185,8 +189,16 @@ it('stores optional menu item image metadata without changing query indexes', fu
 
     app(BranchContext::class)->set((int) $branch->id);
 
+    $rootCategory = MenuCategory::query()->create([
+        'translated_name' => ['hy' => 'Մենյու', 'ru' => 'Меню', 'en' => 'Menu'],
+        'sort_order' => 100,
+        'active' => true,
+    ]);
+
     $category = MenuCategory::query()->create([
+        'parent_id' => (int) $rootCategory->id,
         'translated_name' => ['hy' => 'Նկարներ', 'ru' => 'Изображения', 'en' => 'Images'],
+        'sort_order' => 10,
         'active' => true,
     ]);
 
@@ -248,7 +260,18 @@ it('prevents menu records from leaking across tenants through tenant-scoped mode
 
     app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
 
-    expect(MenuCategory::query()->pluck('id')->all())->toBe([(int) $tenantA['category']->id])
+    $categoryIds = MenuCategory::query()
+        ->pluck('id')
+        ->map(fn (mixed $id): int => (int) $id)
+        ->sort()
+        ->values()
+        ->all();
+    $expectedCategoryIds = collect([(int) $tenantA['root']->id, (int) $tenantA['category']->id])
+        ->sort()
+        ->values()
+        ->all();
+
+    expect($categoryIds)->toBe($expectedCategoryIds)
         ->and(MenuItem::query()->pluck('id')->all())->toBe([(int) $tenantA['item']->id])
         ->and(MenuCategory::query()->find((int) $tenantB['category']->id))->toBeNull()
         ->and(MenuItem::query()->find((int) $tenantB['item']->id))->toBeNull();
@@ -260,7 +283,7 @@ it('prevents menu records from leaking across tenants through tenant-scoped mode
 });
 
 /**
- * @return array{tenant: Tenant, branch: Branch, category: MenuCategory, item: MenuItem}
+ * @return array{tenant: Tenant, branch: Branch, root: MenuCategory, category: MenuCategory, item: MenuItem}
  */
 function tenantWithMenuRecords(string $slug, string $name): array
 {
@@ -282,8 +305,16 @@ function tenantWithMenuRecords(string $slug, string $name): array
 
     app(BranchContext::class)->set((int) $branch->id);
 
+    $root = MenuCategory::query()->create([
+        'translated_name' => ['hy' => "{$name} Menu", 'ru' => "{$name} Menu", 'en' => "{$name} Menu"],
+        'sort_order' => 100,
+        'active' => true,
+    ]);
+
     $category = MenuCategory::query()->create([
+        'parent_id' => (int) $root->id,
         'translated_name' => ['hy' => $name, 'ru' => $name, 'en' => $name],
+        'sort_order' => 10,
         'active' => true,
     ]);
 
@@ -303,6 +334,7 @@ function tenantWithMenuRecords(string $slug, string $name): array
     return [
         'tenant' => $tenant,
         'branch' => $branch,
+        'root' => $root,
         'category' => $category,
         'item' => $item,
     ];

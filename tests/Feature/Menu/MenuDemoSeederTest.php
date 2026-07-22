@@ -48,6 +48,10 @@ it('seeds deterministic menu data visible to demo managers by tenant', function 
         ->whereJsonContains('translated_name->en', 'Chicken khorovats')
         ->firstOrFail();
 
+    expectMenuDemoItemInSubcategory($loriOmelette);
+    expectMenuDemoItemInSubcategory($yerevanSalad);
+    expectMenuDemoItemInSubcategory($chickenKhorovats);
+
     $this->get(route('admin.menu.index', ['category' => (int) $yerevanSalad->category_id]))
         ->assertOk()
         ->assertSee('Երեւանյան աղցան', false)
@@ -85,6 +89,8 @@ it('seeds deterministic menu data visible to demo managers by tenant', function 
         ->whereJsonContains('translated_name->en', 'Northstar burger')
         ->firstOrFail();
 
+    expectMenuDemoItemInSubcategory($northstarBurger);
+
     $this->get(route('admin.menu.index', ['category' => (int) $northstarBurger->category_id]))
         ->assertOk()
         ->assertSee('Northstar burger', false)
@@ -107,6 +113,11 @@ function menuDemoLoginPayload(string $email): array
         'email' => $email,
         'password' => 'password',
     ];
+}
+
+function expectMenuDemoItemInSubcategory(MenuItem $item): void
+{
+    expect($item->category()->firstOrFail()->parent_id)->not->toBeNull();
 }
 
 /**

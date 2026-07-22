@@ -690,6 +690,10 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   subcategories where the current master-detail default selection would
   otherwise pick an empty root. Revisit and remove this test accommodation in
   Step D when the UI becomes tree-aware.
+- Step C.1 demo seed data also gives root categories a higher `sort_order`
+  than subcategories so the current master-detail default still lands on a
+  populated subcategory after `make fresh`. Revisit this together with the
+  Step B test accommodation in Step D tree-aware UI.
 
 ## Next steps
 Stage 1.11 Part C subcategory implementation order after owner-approved
@@ -723,15 +727,24 @@ Stage 1.11 Part C subcategory implementation order after owner-approved
 - [ ] Step D: adapt Menu query actions and Livewire master-detail to the
   root -> subcategory -> item tree, reusing existing paginated actions where
   possible and collapsing duplicated archive container logic.
+- [ ] Step C.1: convert demo seed data and raw test fixtures to the root ->
+  subcategory -> item structure before full `make fresh`. Scope:
+  `MenuDemoSeeder`, `MenuDemoSeederTest`, and raw fixtures in dashboard,
+  schema, and tenant-isolation tests. Do not change RLS expectations in
+  `TenantIsolationTest`; the `BYPASSRLS` role failure remains accepted
+  security debt. Result: review-ready on 2026-07-22; `make fresh` passed,
+  focused PostgreSQL DemoSeeder/Login/dashboard/schema tests passed
+  (`20 passed / 172 assertions`), and PostgreSQL `TenantIsolationTest` still
+  has exactly the 3 known RLS/BYPASSRLS failures with no new structure
+  failures.
 - [ ] Step E: implement `menu:seed-load` last, after parent_id schema and UI
   paths are final. Support production-like and giant-menu modes with raw batch
   insert/COPY and optional drop/rebuild trgm index flow.
 
-Next action: read-only plan for converting demo seed data and test fixtures to
-the root -> subcategory -> item structure, then wait for owner approval before
-editing seeders. Demo seed data must be updated before any full `make fresh`.
-Do not edit `docs/BLUEPRINT.md`, do not create PRs/merges/pushes, and do not
-commit without explicit owner approval.
+Next action: owner review of Step C.1 seed/fixture conversion diff. After
+approval, commit Step C.1 only, then continue to Step D tree-aware Menu
+queries/Livewire UI. Do not edit `docs/BLUEPRINT.md`, do not create
+PRs/merges/pushes, and do not commit without explicit owner approval.
 
 Immediate fix before subcategory Step B: repair PostgreSQL localized LIKE
 binding in `FiltersLocalizedNames` without changing the indexed

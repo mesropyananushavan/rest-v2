@@ -33,15 +33,23 @@ it('renders the SmartRest admin shell and current tenant dashboard counters', fu
     app(TenantResolver::class)->set((int) $record['tenant']->id);
     app(BranchContext::class)->set((int) $record['branch']->id);
 
-    $firstCategory = MenuCategory::query()->create([
-        'translated_name' => adminDashboardText('Breakfast'),
+    $rootCategory = MenuCategory::query()->create([
+        'translated_name' => adminDashboardText('Menu'),
         'sort_order' => 0,
         'active' => true,
     ]);
 
-    $secondCategory = MenuCategory::query()->create([
-        'translated_name' => adminDashboardText('Lunch'),
+    $firstCategory = MenuCategory::query()->create([
+        'parent_id' => (int) $rootCategory->id,
+        'translated_name' => adminDashboardText('Breakfast'),
         'sort_order' => 1,
+        'active' => true,
+    ]);
+
+    $secondCategory = MenuCategory::query()->create([
+        'parent_id' => (int) $rootCategory->id,
+        'translated_name' => adminDashboardText('Lunch'),
+        'sort_order' => 2,
         'active' => true,
     ]);
 
@@ -74,7 +82,6 @@ it('renders the SmartRest admin shell and current tenant dashboard counters', fu
         ->assertSee(__('admin.dashboard.metrics.categories.label'), false)
         ->assertSee(__('admin.dashboard.metrics.items.label'), false)
         ->assertSeeLivewire(DashboardCounters::class)
-        ->assertSee('2', false)
         ->assertSee('3', false);
 });
 
@@ -84,9 +91,16 @@ it('loads dashboard counters through the Livewire component', function (): void 
     app(TenantResolver::class)->set((int) $record['tenant']->id);
     app(BranchContext::class)->set((int) $record['branch']->id);
 
-    $category = MenuCategory::query()->create([
-        'translated_name' => adminDashboardText('Breakfast'),
+    $rootCategory = MenuCategory::query()->create([
+        'translated_name' => adminDashboardText('Menu'),
         'sort_order' => 0,
+        'active' => true,
+    ]);
+
+    $category = MenuCategory::query()->create([
+        'parent_id' => (int) $rootCategory->id,
+        'translated_name' => adminDashboardText('Breakfast'),
+        'sort_order' => 1,
         'active' => true,
     ]);
 
@@ -105,7 +119,7 @@ it('loads dashboard counters through the Livewire component', function (): void 
 
     Livewire::actingAs($record['user'])
         ->test(DashboardCounters::class)
-        ->assertSet('categoryCount', 1)
+        ->assertSet('categoryCount', 2)
         ->assertSet('itemCount', 2)
         ->assertSee(__('admin.dashboard.metrics.categories.label'), false)
         ->assertSee(__('admin.dashboard.metrics.items.label'), false);

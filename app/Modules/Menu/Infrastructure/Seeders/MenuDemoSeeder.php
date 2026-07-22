@@ -34,6 +34,17 @@ final class MenuDemoSeeder extends Seeder
             $tenantResolver->set($tenantId);
 
             $categories = [];
+            $rootCategory = MenuCategory::query()->updateOrCreate(
+                [
+                    'tenant_id' => $tenantId,
+                    'sort_order' => $tenantMenu['root']['sort_order'],
+                ],
+                [
+                    'parent_id' => null,
+                    'translated_name' => $tenantMenu['root']['name'],
+                    'active' => true,
+                ],
+            );
 
             foreach ($tenantMenu['categories'] as $categoryRow) {
                 $category = MenuCategory::query()->updateOrCreate(
@@ -42,6 +53,7 @@ final class MenuDemoSeeder extends Seeder
                         'sort_order' => $categoryRow['sort_order'],
                     ],
                     [
+                        'parent_id' => (int) $rootCategory->id,
                         'translated_name' => $categoryRow['name'],
                         'active' => true,
                     ],
@@ -85,6 +97,7 @@ final class MenuDemoSeeder extends Seeder
     /**
      * @return array<string, array{
      *     currency: string,
+     *     root: array{sort_order: int, name: array{hy: string, ru: string, en: string}},
      *     categories: list<array{key: string, sort_order: int, name: array{hy: string, ru: string, en: string}}>,
      *     branches: array<string, list<array{
      *         category: string,
@@ -102,6 +115,7 @@ final class MenuDemoSeeder extends Seeder
         return [
             'arat-riverside' => [
                 'currency' => 'AMD',
+                'root' => ['sort_order' => 100, 'name' => $this->localized('Մենյու', 'Меню', 'Menu')],
                 'categories' => [
                     ['key' => 'breakfast', 'sort_order' => 10, 'name' => $this->localized('Նախաճաշ', 'Завтраки', 'Breakfast')],
                     ['key' => 'salads', 'sort_order' => 20, 'name' => $this->localized('Աղցաններ', 'Салаты', 'Salads')],
@@ -121,6 +135,7 @@ final class MenuDemoSeeder extends Seeder
             ],
             'northstar-bistro' => [
                 'currency' => 'USD',
+                'root' => ['sort_order' => 100, 'name' => $this->localized('Մենյու', 'Меню', 'Menu')],
                 'categories' => [
                     ['key' => 'starters', 'sort_order' => 10, 'name' => $this->localized('Նախուտեստներ', 'Закуски', 'Starters')],
                     ['key' => 'burgers', 'sort_order' => 20, 'name' => $this->localized('Բուրգերներ', 'Бургеры', 'Burgers')],

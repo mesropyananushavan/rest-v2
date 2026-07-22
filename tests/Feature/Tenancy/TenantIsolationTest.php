@@ -237,8 +237,16 @@ it('enforces PostgreSQL row level security for menu tables', function (): void {
     app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
     app(BranchContext::class)->set((int) $tenantA['branch']->id);
 
+    $rootCategoryA = MenuCategory::query()->create([
+        'translated_name' => ['hy' => 'Tenant A Menu', 'ru' => 'Tenant A Menu', 'en' => 'Tenant A Menu'],
+        'sort_order' => 100,
+        'active' => true,
+    ]);
+
     $categoryA = MenuCategory::query()->create([
+        'parent_id' => (int) $rootCategoryA->id,
         'translated_name' => ['hy' => 'Tenant A', 'ru' => 'Tenant A', 'en' => 'Tenant A'],
+        'sort_order' => 10,
         'active' => true,
     ]);
 
@@ -255,8 +263,16 @@ it('enforces PostgreSQL row level security for menu tables', function (): void {
     app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
     app(BranchContext::class)->set((int) $tenantB['branch']->id);
 
+    $rootCategoryB = MenuCategory::query()->create([
+        'translated_name' => ['hy' => 'Tenant B Menu', 'ru' => 'Tenant B Menu', 'en' => 'Tenant B Menu'],
+        'sort_order' => 100,
+        'active' => true,
+    ]);
+
     $categoryB = MenuCategory::query()->create([
+        'parent_id' => (int) $rootCategoryB->id,
         'translated_name' => ['hy' => 'Tenant B', 'ru' => 'Tenant B', 'en' => 'Tenant B'],
+        'sort_order' => 10,
         'active' => true,
     ]);
 
