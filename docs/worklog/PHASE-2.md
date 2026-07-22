@@ -684,15 +684,31 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   `smartrest` database role is a superuser with `BYPASSRLS`.
 
 ## Next steps
-Await owner review of Stage 1.11.10.3 archive-mode WIP: `showArchived` is
-replaced by URL-backed `archive_mode=active|archived|all`, query actions use
-`active` / `onlyTrashed()` / `withTrashed()` semantics, non-superadmins are
-forced to `active`, Livewire renders a segmented archive switch for
-superadmins, redirects use `archive_mode=archived`, focused tests are updated,
-`make fresh` is green, and Menu feature tests are green (`37 passed / 359
-assertions`). After owner approval, continue with Step 2 by presenting the
-final `DECISIONS.md` text for the parent_id subcategory decision and wait for
-explicit go before writing it. Do not create a PR.
+Stage 1.11 Part C subcategory implementation order after owner-approved
+`docs/DECISIONS.md` entry:
+- [x] Step A: add schema/model foundation for `menu_categories.parent_id` and
+  `menu_categories.archived_with_category_id`, self-FK/check/indexes, model
+  relations/casts, and PostgreSQL schema tests. Result: review-ready on
+  2026-07-22; focused PostgreSQL `MenuSchemaTest` passed (`8 passed / 54
+  assertions`).
+- [ ] Step B: enforce depth=2 and item-only-under-subcategory in Application
+  actions/requests/tests. No new seed-load command.
+- [ ] Step C: implement root/subcategory archive/restore/force-delete cascade
+  semantics with cascade markers. Batch archive updates must only touch
+  currently non-trashed rows with `archived_with_category_id is null`, so
+  independently archived descendants keep their marker/state. Update demo
+  seed data to root+subcategory structure before running full `make fresh`.
+- [ ] Step D: adapt Menu query actions and Livewire master-detail to the
+  root -> subcategory -> item tree, reusing existing paginated actions where
+  possible and collapsing duplicated archive container logic.
+- [ ] Step E: implement `menu:seed-load` last, after parent_id schema and UI
+  paths are final. Support production-like and giant-menu modes with raw batch
+  insert/COPY and optional drop/rebuild trgm index flow.
+
+Next action: await owner direction on documenting/fixing the RLS runtime-role
+security debt, then proceed to Step B only after explicit approval. Do not edit
+`docs/BLUEPRINT.md`, do not create PRs/merges/pushes, and do not commit without
+explicit owner approval.
 
 Immediate fix before subcategory Step B: repair PostgreSQL localized LIKE
 binding in `FiltersLocalizedNames` without changing the indexed

@@ -76,6 +76,8 @@ it('stores menu categories and items as tenant-scoped records with integer money
 
 it('stores menu archive columns and deleted-at-aware indexes', function (): void {
     expect(Schema::hasColumn('menu_categories', 'deleted_at'))->toBeTrue()
+        ->and(Schema::hasColumn('menu_categories', 'parent_id'))->toBeTrue()
+        ->and(Schema::hasColumn('menu_categories', 'archived_with_category_id'))->toBeTrue()
         ->and(Schema::hasColumn('menu_items', 'deleted_at'))->toBeTrue()
         ->and(Schema::hasColumn('menu_items', 'archived_with_category_id'))->toBeTrue();
 
@@ -83,9 +85,82 @@ it('stores menu archive columns and deleted-at-aware indexes', function (): void
     $itemIndexes = collect(Schema::getIndexes('menu_items'))->pluck('columns')->all();
 
     expect($categoryIndexes)->toContain(['tenant_id', 'deleted_at', 'active', 'sort_order'])
+        ->and($categoryIndexes)->toContain(['tenant_id', 'parent_id', 'deleted_at', 'active', 'sort_order', 'id'])
+        ->and($categoryIndexes)->toContain(['tenant_id', 'archived_with_category_id', 'deleted_at'])
         ->and($itemIndexes)->toContain(['tenant_id', 'branch_id', 'deleted_at', 'active'])
         ->and($itemIndexes)->toContain(['tenant_id', 'category_id', 'deleted_at', 'sort_order'])
         ->and($itemIndexes)->toContain(['tenant_id', 'archived_with_category_id', 'deleted_at']);
+});
+
+it('stores menu category tree foreign keys and self-parent check on PostgreSQL', function (): void {
+    if (Schema::getConnection()->getDriverName() !== 'pgsql') {
+        expect(true)->toBeTrue();
+
+        return;
+    }
+
+    $constraints = collect(DB::select(<<<'SQL'
+        select conname, contype, pg_get_constraintdef(oid) as definition
+        from pg_constraint
+        where conrelid = 'menu_categories'::regclass
+        SQL))
+        ->mapWithKeys(fn (stdClass $constraint): array => [
+            (string) $constraint->conname => [
+                'type' => (string) $constraint->contype,
+                'definition' => (string) $constraint->definition,
+            ],
+        ]);
+
+    expect($constraints->get('menu_categories_parent_id_foreign'))
+        ->toMatchArray([
+            'type' => 'f',
+            'definition' => 'FOREIGN KEY (parent_id) REFERENCES menu_categories(id) ON DELETE RESTRICT',
+        ])
+        ->and($constraints->get('menu_categories_archived_with_category_id_foreign'))
+        ->toMatchArray([
+            'type' => 'f',
+            'definition' => 'FOREIGN KEY (archived_with_category_id) REFERENCES menu_categories(id) ON DELETE RESTRICT',
+        ])
+        ->and($constraints->get('menu_categories_parent_not_self_chk'))
+        ->toMatchArray([
+            'type' => 'c',
+            'definition' => 'CHECK (((parent_id IS NULL) OR (parent_id <> id)))',
+        ]);
+});
+
+it('models menu category parent subcategories and archive marker relations', function (): void {
+    $tenant = Tenant::query()->create([
+        'name' => 'Tenant Tree',
+        'slug' => 'tenant-tree',
+        'default_locale' => 'hy',
+        'currency' => 'AMD',
+        'status' => 'active',
+    ]);
+
+    app(TenantResolver::class)->set((int) $tenant->id);
+
+    $root = MenuCategory::query()->create([
+        'translated_name' => ['hy' => 'Ճաշացանկ', 'ru' => 'Меню', 'en' => 'Menu'],
+        'sort_order' => 10,
+        'active' => true,
+    ]);
+
+    $subcategory = MenuCategory::query()->create([
+        'parent_id' => (int) $root->id,
+        'archived_with_category_id' => (int) $root->id,
+        'translated_name' => ['hy' => 'Աղցաններ', 'ru' => 'Салаты', 'en' => 'Salads'],
+        'sort_order' => 20,
+        'active' => true,
+    ]);
+
+    $subcategory = MenuCategory::query()->with(['parent', 'archivedWithCategory'])->findOrFail((int) $subcategory->id);
+    $root = MenuCategory::query()->with('subcategories')->findOrFail((int) $root->id);
+
+    expect($subcategory->parent_id)->toBe((int) $root->id)
+        ->and($subcategory->archived_with_category_id)->toBe((int) $root->id)
+        ->and($subcategory->parent?->is($root))->toBeTrue()
+        ->and($subcategory->archivedWithCategory?->is($root))->toBeTrue()
+        ->and($root->subcategories->pluck('id')->all())->toBe([(int) $subcategory->id]);
 });
 
 it('stores optional menu item image metadata without changing query indexes', function (): void {
