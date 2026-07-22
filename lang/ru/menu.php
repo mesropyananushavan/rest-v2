@@ -18,6 +18,7 @@ return [
         'heading' => 'Позиции',
         'create_title' => 'Создать позицию',
         'edit_title' => 'Редактировать позицию',
+        'category_items' => 'Позиции категории',
     ],
     'fields' => [
         'actions' => 'Действия',
@@ -45,6 +46,7 @@ return [
         'cancel' => 'Отмена',
         'create' => 'Создать',
         'create_category' => 'Создать категорию',
+        'create_first_category' => 'Создать первую категорию',
         'create_item' => 'Создать позицию',
         'edit' => 'Редактировать',
         'force_delete' => 'Удалить навсегда',
@@ -53,8 +55,16 @@ return [
         'replace_image' => 'Заменить',
         'restore' => 'Восстановить',
         'save' => 'Сохранить',
+        'add_first_item' => 'Добавить первую позицию',
+        'reset_search' => 'Сбросить поиск',
         'show_archived' => 'Показать архив',
+        'show_inactive' => 'Показать неактивные',
         'upload_image' => 'Загрузить фото',
+    ],
+    'archive_modes' => [
+        'active' => 'Активные',
+        'archived' => 'Архив',
+        'all' => 'Все',
     ],
     'status' => [
         'active' => 'Активно',
@@ -74,6 +84,12 @@ return [
     'empty' => [
         'categories' => 'Категорий пока нет.',
         'items' => 'Позиций пока нет.',
+        'no_categories_title' => 'Категорий пока нет.',
+        'no_categories_body' => 'Создайте первую категорию, затем добавьте позиции.',
+        'no_items_title' => 'В этой категории нет позиций.',
+        'no_items_body' => 'Добавьте первую позицию для выбранной категории.',
+        'search_title' => 'Подходящих позиций нет.',
+        'search_body' => 'Попробуйте другое название или сбросьте поиск.',
     ],
     'flash' => [
         'category_created' => 'Категория создана.',
@@ -100,5 +116,17 @@ return [
     ],
     'placeholders' => [
         'select_category' => 'Выберите категорию',
+    ],
+    'pagination' => [
+        'next' => 'Далее',
+        'page_of' => 'Страница :page из :pages',
+        'previous' => 'Назад',
+    ],
+    'search' => [
+        'categories_placeholder' => 'Фильтр категорий',
+        'global_help' => 'Ищет названия позиций на армянском, русском и английском по всему меню филиала.',
+        'global_label' => 'Глобальный поиск позиций',
+        'global_placeholder' => 'Искать все позиции по названию',
+        'results_heading' => 'Результаты поиска',
     ],
 ];

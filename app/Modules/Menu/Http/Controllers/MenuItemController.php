@@ -85,7 +85,7 @@ final class MenuItemController
         $restore($item);
 
         return redirect()
-            ->route('admin.menu.index', ['show_archived' => '1'])
+            ->route('admin.menu.index', ['archive_mode' => 'archived'])
             ->with('status', __('menu.flash.item_restored'));
     }
 
@@ -94,7 +94,7 @@ final class MenuItemController
         $forceDelete($item);
 
         return redirect()
-            ->route('admin.menu.index', ['show_archived' => '1'])
+            ->route('admin.menu.index', ['archive_mode' => 'archived'])
             ->with('status', __('menu.flash.item_force_deleted'));
     }
 

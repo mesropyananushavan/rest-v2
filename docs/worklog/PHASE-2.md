@@ -409,6 +409,24 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   placeholder fallback, empty states, and responsive collapse behavior on
   narrow screens. Add Pest Livewire tests for global search, category panel
   search, category URL selection, and empty states.
+  Micro-plan for WIP reconciliation after owner review: remove the stale
+  full-collection query path from `MenuIndexController`; keep the current WIP
+  Livewire view structure without adding new category "show more" or mobile
+  collapse UX in this pass; check whether existing `PaginateMenuCategories`
+  / `ListMenuCategories` cover selected-category fallback before introducing
+  any new Application query action; add Livewire coverage for global search,
+  category search, category URL/fallback state, empty states, and archive /
+  permission visibility; update only translation keys and markup-coupled
+  assertions needed by the current WIP. Migration fix micro-plan: replace the
+  PostgreSQL `concat_ws` localized-name expressions in the Stage 1.11.10.2
+  trigram indexes and matching Menu search/order SQL with immutable-safe
+  `coalesce(...) || ' ' || ...` expressions, then stop for owner-run checks.
+  Archive-mode micro-plan: replace `showArchived` boolean with URL-backed
+  `archive_mode=active|archived|all`; make `archived` use `onlyTrashed()`,
+  `all` use `withTrashed()`, and force non-superadmins back to `active`;
+  update `PaginateMenuCategories`, `PaginateMenuItems`, `SearchMenuItems`,
+  Livewire UI, redirects, translations, and focused tests; stop for review
+  before commit.
 - [ ] Stage 1.11.10.4 (Part C): item row operations and archive controls.
   Add an Application action for toggling item activity, wire an inline
   Livewire row toggle without full-page reload, keep title click -> edit, move
@@ -631,10 +649,42 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   name expression index and Livewire + Alpine category combobox decisions on
   2026-07-21. Final load measurements must include write latency for creating
   a menu item and toggling activity on the filled table, not only read paths.
+- During Stage 1.11.10.3 WIP reconciliation, existing `PaginateMenuCategories`
+  covers category panel pagination/search and first-page lookup, but no
+  existing Application action fetches one selected category by id without
+  loading a full collection. Do not add a new selected-category query action
+  unless the owner approves it; `MenuIndex` still has the pre-existing direct
+  Eloquent selected-category lookup in the WIP.
+- `make fresh` failed on
+  `2026_07_21_000000_add_menu_search_and_pagination_indexes.php` because
+  PostgreSQL rejects `concat_ws` in expression indexes as not immutable. The
+  WIP now uses the same immutable-safe `coalesce(...) || ' ' || ...`
+  localized-name expression in both trigram indexes and PostgreSQL
+  search/order SQL, but owner-run `make fresh` is still pending.
+- Archive mode WIP intentionally treats `archive_mode=archived` category
+  panel rows as archived categories plus active categories that contain
+  archived items. Item lists and global item search still use `onlyTrashed()`,
+  so active items are not mixed into archived item results while individually
+  archived items remain discoverable under their active category container.
+- Archive-mode filtering currently duplicates the category container
+  interpretation in `PaginateMenuCategories` and `MenuIndex` selected-category
+  lookup. Leave it for this review slice; revisit when subcategory introduces
+  a proper selected-node query/action.
+- Technical debt for subcategory: archive-mode container filtering is
+  duplicated between Livewire selected-category lookup and the paginated query
+  action. Collapse it into one Application query path when the category tree
+  becomes a first-class parent/child selection model.
+- Menu search/index coverage must run against PostgreSQL for trgm/GIN behavior.
+  SQLite feature tests are still useful for fast behavior checks, but they do
+  not prove PostgreSQL expression indexes, `pg_trgm`, or planner behavior.
 
 ## Next steps
-Continue with Stage 1.11.10.3: replace the current Menu index with the
-Livewire master-detail screen using the new paginated query actions, including
-global item search, category panel search/show-more, URL `?category=` state,
-selected-category item pagination, empty states, thumbnails, and responsive
-tablet behavior. Do not create a PR.
+Await owner review of Stage 1.11.10.3 archive-mode WIP: `showArchived` is
+replaced by URL-backed `archive_mode=active|archived|all`, query actions use
+`active` / `onlyTrashed()` / `withTrashed()` semantics, non-superadmins are
+forced to `active`, Livewire renders a segmented archive switch for
+superadmins, redirects use `archive_mode=archived`, focused tests are updated,
+`make fresh` is green, and Menu feature tests are green (`37 passed / 359
+assertions`). After owner approval, continue with Step 2 by presenting the
+final `DECISIONS.md` text for the parent_id subcategory decision and wait for
+explicit go before writing it. Do not create a PR.

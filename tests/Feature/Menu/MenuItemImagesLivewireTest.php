@@ -164,7 +164,7 @@ it('renders the menu item form image zones and list placeholder thumbnail', func
         ->withSession(['branch_id' => (int) $records['branch']->id])
         ->get(route('admin.menu.index'))
         ->assertOk()
-        ->assertSee(__('menu.fields.image'), false)
+        ->assertSee(__('menu.images.list_thumbnail_alt'), false)
         ->assertSee('menu-item-placeholder.svg', false);
 });
 

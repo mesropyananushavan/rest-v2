@@ -75,14 +75,41 @@ it('paginates selected-category items and applies inactive and archive filters',
 
     $activeOnly = app(PaginateMenuItems::class)((int) $category->id, perPage: 25);
     $withInactive = app(PaginateMenuItems::class)((int) $category->id, includeInactive: true, perPage: 50);
-    $withArchived = app(PaginateMenuItems::class)((int) $category->id, includeInactive: true, includeArchived: true, perPage: 50);
+    $archivedOnly = app(PaginateMenuItems::class)((int) $category->id, archiveMode: 'archived', perPage: 50);
+    $withArchived = app(PaginateMenuItems::class)((int) $category->id, includeInactive: true, archiveMode: 'all', perPage: 50);
 
     expect($activeOnly->total())->toBe(25)
         ->and($activeOnly->count())->toBe(25)
         ->and($withInactive->total())->toBe(31)
+        ->and($archivedOnly->total())->toBe(1)
         ->and($withArchived->total())->toBe(32)
         ->and(collect($activeOnly->items())->contains(fn (MenuItem $item): bool => (int) $item->sort_order === 5))->toBeFalse()
+        ->and(collect($archivedOnly->items())->every(fn (MenuItem $item): bool => $item->trashed()))->toBeTrue()
+        ->and(collect($withArchived->items())->contains(fn (MenuItem $item): bool => ! $item->trashed()))->toBeTrue()
         ->and(collect($withArchived->items())->contains(fn (MenuItem $item): bool => $item->trashed()))->toBeTrue();
+});
+
+it('shows only archived category containers in archived category panel mode', function (): void {
+    $records = menuQueryTenant('tenant-a', 'Tenant A');
+
+    app(TenantResolver::class)->set((int) $records['tenant']->id);
+    app(BranchContext::class)->set((int) $records['branch']->id);
+
+    $breakfast = app(CreateMenuCategory::class)(menuQueryText('Breakfast'), sortOrder: 10);
+    app(CreateMenuCategory::class)(menuQueryText('Dinner'), sortOrder: 20);
+
+    $archivedItem = app(CreateMenuItem::class)(
+        (int) $breakfast->id,
+        menuQueryText('Archived Omelette'),
+        null,
+        new Money(100000, 'AMD'),
+    );
+    app(ArchiveMenuItem::class)((int) $archivedItem->id);
+
+    $archivedPanel = app(PaginateMenuCategories::class)(archiveMode: 'archived', perPage: 25);
+
+    expect($archivedPanel->total())->toBe(1)
+        ->and($archivedPanel->items()[0]->translatedName()->forLocale('en'))->toBe('Breakfast');
 });
 
 it('searches menu items across all localized names within the current branch only', function (): void {
@@ -94,6 +121,8 @@ it('searches menu items across all localized names within the current branch onl
     $category = app(CreateMenuCategory::class)(menuQueryText('Breakfast'));
     app(CreateMenuItem::class)((int) $category->id, menuQueryText('Lori Omelette', 'Լոռի ձվածեղ', 'Лорийский омлет'), null, new Money(180000, 'AMD'));
     app(CreateMenuItem::class)((int) $category->id, menuQueryText('Hidden Soup'), null, new Money(90000, 'AMD'), active: false);
+    $archivedItem = app(CreateMenuItem::class)((int) $category->id, menuQueryText('Archived Cutlet'), null, new Money(120000, 'AMD'));
+    app(ArchiveMenuItem::class)((int) $archivedItem->id);
 
     $otherBranch = Branch::query()->create([
         'name' => 'Tenant A Other Branch',
@@ -108,15 +137,22 @@ it('searches menu items across all localized names within the current branch onl
 
     $armenian = app(SearchMenuItems::class)('ձվածեղ');
     $russian = app(SearchMenuItems::class)('омлет');
+    $activeArchived = app(SearchMenuItems::class)('archived');
     $empty = app(SearchMenuItems::class)('   ');
     $withInactive = app(SearchMenuItems::class)('soup', includeInactive: true);
+    $archived = app(SearchMenuItems::class)('archived', archiveMode: 'archived');
+    $allArchived = app(SearchMenuItems::class)('archived', archiveMode: 'all');
 
     expect($armenian->total())->toBe(1)
         ->and($armenian->items()[0]->translatedName()->forLocale('en'))->toBe('Lori Omelette')
         ->and($russian->total())->toBe(1)
+        ->and($activeArchived->total())->toBe(0)
         ->and($empty->total())->toBe(0)
         ->and($withInactive->total())->toBe(1)
-        ->and($withInactive->items()[0]->active)->toBeFalse();
+        ->and($withInactive->items()[0]->active)->toBeFalse()
+        ->and($archived->total())->toBe(1)
+        ->and(collect($archived->items())->every(fn (MenuItem $item): bool => $item->trashed()))->toBeTrue()
+        ->and($allArchived->total())->toBe(1);
 });
 
 it('requires branch context for paginated item query actions', function (): void {

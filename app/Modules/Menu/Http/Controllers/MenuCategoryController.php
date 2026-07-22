@@ -62,7 +62,7 @@ final class MenuCategoryController
         $restore($category);
 
         return redirect()
-            ->route('admin.menu.index', ['show_archived' => '1'])
+            ->route('admin.menu.index', ['archive_mode' => 'archived'])
             ->with('status', __('menu.flash.category_restored'));
     }
 
@@ -71,7 +71,7 @@ final class MenuCategoryController
         $forceDelete($category);
 
         return redirect()
-            ->route('admin.menu.index', ['show_archived' => '1'])
+            ->route('admin.menu.index', ['archive_mode' => 'archived'])
             ->with('status', __('menu.flash.category_force_deleted'));
     }
 }

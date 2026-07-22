@@ -50,8 +50,8 @@ trait FiltersLocalizedNames
             $query,
             [
                 'pgsql' => [
-                    'menu_categories' => "lower(coalesce(menu_categories.translated_name->>'{$locale}', menu_categories.translated_name->>'{$fallbackLocale}', ''))",
-                    'menu_items' => "lower(coalesce(menu_items.translated_name->>'{$locale}', menu_items.translated_name->>'{$fallbackLocale}', ''))",
+                    'menu_categories' => "lower(coalesce(translated_name->>'hy', '') || ' ' || coalesce(translated_name->>'ru', '') || ' ' || coalesce(translated_name->>'en', ''))",
+                    'menu_items' => "lower(coalesce(translated_name->>'hy', '') || ' ' || coalesce(translated_name->>'ru', '') || ' ' || coalesce(translated_name->>'en', ''))",
                 ],
                 'sqlite' => [
                     'menu_categories' => "lower(coalesce(json_extract(menu_categories.translated_name, '$.{$locale}'), json_extract(menu_categories.translated_name, '$.{$fallbackLocale}'), ''))",
@@ -79,16 +79,16 @@ trait FiltersLocalizedNames
             $query,
             [
                 'pgsql' => [
-                    'menu_categories' => "lower(concat_ws(' ', menu_categories.translated_name->>'hy', menu_categories.translated_name->>'ru', menu_categories.translated_name->>'en'))",
-                    'menu_items' => "lower(concat_ws(' ', menu_items.translated_name->>'hy', menu_items.translated_name->>'ru', menu_items.translated_name->>'en'))",
+                    'menu_categories' => "lower(coalesce(translated_name->>'hy', '') || ' ' || coalesce(translated_name->>'ru', '') || ' ' || coalesce(translated_name->>'en', ''))",
+                    'menu_items' => "lower(coalesce(translated_name->>'hy', '') || ' ' || coalesce(translated_name->>'ru', '') || ' ' || coalesce(translated_name->>'en', ''))",
                 ],
                 'sqlite' => [
                     'menu_categories' => "lower(coalesce(json_extract(menu_categories.translated_name, '$.hy'), '') || ' ' || coalesce(json_extract(menu_categories.translated_name, '$.ru'), '') || ' ' || coalesce(json_extract(menu_categories.translated_name, '$.en'), ''))",
                     'menu_items' => "lower(coalesce(json_extract(menu_items.translated_name, '$.hy'), '') || ' ' || coalesce(json_extract(menu_items.translated_name, '$.ru'), '') || ' ' || coalesce(json_extract(menu_items.translated_name, '$.en'), ''))",
                 ],
                 'default' => [
-                    'menu_categories' => "lower(concat_ws(' ', json_unquote(json_extract(menu_categories.translated_name, '$.hy')), json_unquote(json_extract(menu_categories.translated_name, '$.ru')), json_unquote(json_extract(menu_categories.translated_name, '$.en'))))",
-                    'menu_items' => "lower(concat_ws(' ', json_unquote(json_extract(menu_items.translated_name, '$.hy')), json_unquote(json_extract(menu_items.translated_name, '$.ru')), json_unquote(json_extract(menu_items.translated_name, '$.en'))))",
+                    'menu_categories' => "lower(concat(coalesce(json_unquote(json_extract(menu_categories.translated_name, '$.hy')), ''), ' ', coalesce(json_unquote(json_extract(menu_categories.translated_name, '$.ru')), ''), ' ', coalesce(json_unquote(json_extract(menu_categories.translated_name, '$.en')), '')))",
+                    'menu_items' => "lower(concat(coalesce(json_unquote(json_extract(menu_items.translated_name, '$.hy')), ''), ' ', coalesce(json_unquote(json_extract(menu_items.translated_name, '$.ru')), ''), ' ', coalesce(json_unquote(json_extract(menu_items.translated_name, '$.en')), '')))",
                 ],
             ],
         );

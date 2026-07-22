@@ -18,6 +18,7 @@ return [
         'heading' => 'Items',
         'create_title' => 'Create item',
         'edit_title' => 'Edit item',
+        'category_items' => 'Category items',
     ],
     'fields' => [
         'actions' => 'Actions',
@@ -45,6 +46,7 @@ return [
         'cancel' => 'Cancel',
         'create' => 'Create',
         'create_category' => 'Create category',
+        'create_first_category' => 'Create first category',
         'create_item' => 'Create item',
         'edit' => 'Edit',
         'force_delete' => 'Delete forever',
@@ -53,8 +55,16 @@ return [
         'replace_image' => 'Replace',
         'restore' => 'Restore',
         'save' => 'Save',
+        'add_first_item' => 'Add first item',
+        'reset_search' => 'Reset search',
         'show_archived' => 'Show archived',
+        'show_inactive' => 'Show inactive',
         'upload_image' => 'Upload image',
+    ],
+    'archive_modes' => [
+        'active' => 'Active',
+        'archived' => 'Archived',
+        'all' => 'All',
     ],
     'status' => [
         'active' => 'Active',
@@ -74,6 +84,12 @@ return [
     'empty' => [
         'categories' => 'No categories yet.',
         'items' => 'No items yet.',
+        'no_categories_title' => 'No categories yet.',
+        'no_categories_body' => 'Create the first category before adding items.',
+        'no_items_title' => 'No items in this category.',
+        'no_items_body' => 'Add the first item for the selected category.',
+        'search_title' => 'No matching items.',
+        'search_body' => 'Try another name or reset the search.',
     ],
     'flash' => [
         'category_created' => 'Category created.',
@@ -100,5 +116,17 @@ return [
     ],
     'placeholders' => [
         'select_category' => 'Select a category',
+    ],
+    'pagination' => [
+        'next' => 'Next',
+        'page_of' => 'Page :page of :pages',
+        'previous' => 'Previous',
+    ],
+    'search' => [
+        'categories_placeholder' => 'Filter categories',
+        'global_help' => 'Searches item names across Armenian, Russian, and English in the whole branch menu.',
+        'global_label' => 'Global item search',
+        'global_placeholder' => 'Search every item by name',
+        'results_heading' => 'Search results',
     ],
 ];

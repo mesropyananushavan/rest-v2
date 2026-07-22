@@ -26,8 +26,8 @@ return new class extends Migration
         }
 
         DB::statement('CREATE EXTENSION IF NOT EXISTS pg_trgm');
-        DB::statement("CREATE INDEX menu_categories_translated_name_trgm_idx ON menu_categories USING gin ((lower(concat_ws(' ', translated_name->>'hy', translated_name->>'ru', translated_name->>'en'))) gin_trgm_ops)");
-        DB::statement("CREATE INDEX menu_items_translated_name_trgm_idx ON menu_items USING gin ((lower(concat_ws(' ', translated_name->>'hy', translated_name->>'ru', translated_name->>'en'))) gin_trgm_ops)");
+        DB::statement("CREATE INDEX menu_categories_translated_name_trgm_idx ON menu_categories USING gin ((lower(coalesce(translated_name->>'hy', '') || ' ' || coalesce(translated_name->>'ru', '') || ' ' || coalesce(translated_name->>'en', ''))) gin_trgm_ops)");
+        DB::statement("CREATE INDEX menu_items_translated_name_trgm_idx ON menu_items USING gin ((lower(coalesce(translated_name->>'hy', '') || ' ' || coalesce(translated_name->>'ru', '') || ' ' || coalesce(translated_name->>'en', ''))) gin_trgm_ops)");
     }
 
     public function down(): void

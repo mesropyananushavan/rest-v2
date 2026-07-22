@@ -18,6 +18,7 @@ return [
         'heading' => 'Դիրքեր',
         'create_title' => 'Ստեղծել դիրք',
         'edit_title' => 'Խմբագրել դիրքը',
+        'category_items' => 'Կատեգորիայի դիրքեր',
     ],
     'fields' => [
         'actions' => 'Գործողություններ',
@@ -45,6 +46,7 @@ return [
         'cancel' => 'Չեղարկել',
         'create' => 'Ստեղծել',
         'create_category' => 'Ստեղծել կատեգորիա',
+        'create_first_category' => 'Ստեղծել առաջին կատեգորիան',
         'create_item' => 'Ստեղծել դիրք',
         'edit' => 'Խմբագրել',
         'force_delete' => 'Ջնջել ընդմիշտ',
@@ -53,8 +55,16 @@ return [
         'replace_image' => 'Փոխարինել',
         'restore' => 'Վերականգնել',
         'save' => 'Պահպանել',
+        'add_first_item' => 'Ավելացնել առաջին դիրքը',
+        'reset_search' => 'Մաքրել որոնումը',
         'show_archived' => 'Ցույց տալ արխիվը',
+        'show_inactive' => 'Ցույց տալ ոչ ակտիվները',
         'upload_image' => 'Վերբեռնել նկար',
+    ],
+    'archive_modes' => [
+        'active' => 'Ակտիվ',
+        'archived' => 'Արխիվ',
+        'all' => 'Բոլորը',
     ],
     'status' => [
         'active' => 'Ակտիվ',
@@ -74,6 +84,12 @@ return [
     'empty' => [
         'categories' => 'Կատեգորիաներ դեռ չկան։',
         'items' => 'Դիրքեր դեռ չկան։',
+        'no_categories_title' => 'Կատեգորիաներ դեռ չկան։',
+        'no_categories_body' => 'Ստեղծեք առաջին կատեգորիան, հետո ավելացրեք դիրքեր։',
+        'no_items_title' => 'Այս կատեգորիայում դիրքեր չկան։',
+        'no_items_body' => 'Ավելացրեք առաջին դիրքը ընտրված կատեգորիայի համար։',
+        'search_title' => 'Համընկնող դիրքեր չկան։',
+        'search_body' => 'Փորձեք այլ անուն կամ մաքրեք որոնումը։',
     ],
     'flash' => [
         'category_created' => 'Կատեգորիան ստեղծվեց։',
@@ -100,5 +116,17 @@ return [
     ],
     'placeholders' => [
         'select_category' => 'Ընտրեք կատեգորիա',
+    ],
+    'pagination' => [
+        'next' => 'Հաջորդը',
+        'page_of' => 'Էջ :page / :pages',
+        'previous' => 'Նախորդը',
+    ],
+    'search' => [
+        'categories_placeholder' => 'Զտել կատեգորիաները',
+        'global_help' => 'Որոնում է դիրքերի անունները հայերեն, ռուսերեն և անգլերեն ամբողջ մասնաճյուղի մենյուում։',
+        'global_label' => 'Ընդհանուր դիրքերի որոնում',
+        'global_placeholder' => 'Որոնել բոլոր դիրքերը անունով',
+        'results_heading' => 'Որոնման արդյունքներ',
     ],
 ];

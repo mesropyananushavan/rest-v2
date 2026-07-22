@@ -35,7 +35,7 @@ it('seeds deterministic menu data visible to demo managers by tenant', function 
         ->assertOk()
         ->assertSee('Լոռի ձվածեղ', false)
         ->assertSee('2200 ֏', false)
-        ->assertSee('Երեւանյան աղցան', false)
+        ->assertDontSee('Երեւանյան աղցան', false)
         ->assertDontSee('Northstar burger', false);
 
     $loriOmelette = MenuItem::query()
@@ -47,6 +47,12 @@ it('seeds deterministic menu data visible to demo managers by tenant', function 
     $chickenKhorovats = MenuItem::query()
         ->whereJsonContains('translated_name->en', 'Chicken khorovats')
         ->firstOrFail();
+
+    $this->get(route('admin.menu.index', ['category' => (int) $yerevanSalad->category_id]))
+        ->assertOk()
+        ->assertSee('Երեւանյան աղցան', false)
+        ->assertSee('2600 ֏', false)
+        ->assertDontSee('Northstar burger', false);
 
     $loriInternalImage = menuDemoImageMetadata($loriOmelette, 'internal_image');
     $yerevanPublicImage = menuDemoImageMetadata($yerevanSalad, 'public_image');
@@ -70,9 +76,19 @@ it('seeds deterministic menu data visible to demo managers by tenant', function 
 
     $this->get(route('admin.menu.index'))
         ->assertOk()
+        ->assertSee('Corn chowder', false)
+        ->assertSee('$7.99', false)
+        ->assertDontSee('Northstar burger', false)
+        ->assertDontSee('Լոռի ձվածեղ', false);
+
+    $northstarBurger = MenuItem::query()
+        ->whereJsonContains('translated_name->en', 'Northstar burger')
+        ->firstOrFail();
+
+    $this->get(route('admin.menu.index', ['category' => (int) $northstarBurger->category_id]))
+        ->assertOk()
         ->assertSee('Northstar burger', false)
         ->assertSee('$14.99', false)
-        ->assertSee('Corn chowder', false)
         ->assertDontSee('Լոռի ձվածեղ', false);
 });
 

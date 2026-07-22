@@ -81,7 +81,7 @@ it('runs menu category and item CRUD through authenticated Blade routes', functi
 
     $this->actingAs($manager['user'])
         ->withSession(['branch_id' => (int) $manager['branch']->id])
-        ->get(route('admin.menu.index'))
+        ->get(route('admin.menu.index', ['show_inactive' => '1']))
         ->assertOk()
         ->assertSee('archive_category_', false)
         ->assertSee('archive_item_', false)
@@ -129,16 +129,18 @@ it('allows managers to archive and requires superadmin to restore menu records',
         ->withSession(['branch_id' => (int) $manager['branch']->id])
         ->get(route('admin.menu.index'))
         ->assertOk()
-        ->assertDontSee(__('menu.actions.show_archived'), false)
+        ->assertDontSee(__('menu.archive_modes.archived'), false)
+        ->assertDontSee(__('menu.archive_modes.all'), false)
         ->assertDontSee('Breakfast Item', false);
 
     $this->actingAs($manager['user'])
         ->withSession(['branch_id' => (int) $manager['branch']->id])
-        ->get(route('admin.menu.index', ['show_archived' => '1']))
+        ->get(route('admin.menu.index', ['archive_mode' => 'archived']))
         ->assertOk()
         ->assertDontSee('Breakfast Item', false)
         ->assertDontSee(__('menu.status.archived'), false)
-        ->assertDontSee(__('menu.actions.show_archived'), false)
+        ->assertDontSee(__('menu.archive_modes.archived'), false)
+        ->assertDontSee(__('menu.archive_modes.all'), false)
         ->assertDontSee(__('menu.actions.restore'), false)
         ->assertDontSee(__('menu.actions.force_delete'), false);
 
@@ -156,7 +158,7 @@ it('allows managers to archive and requires superadmin to restore menu records',
 
     $this->actingAs($manager['user']->refresh())
         ->withSession(['branch_id' => (int) $manager['branch']->id])
-        ->get(route('admin.menu.index', ['show_archived' => '1']))
+        ->get(route('admin.menu.index', ['archive_mode' => 'archived']))
         ->assertOk()
         ->assertSee('Breakfast Item', false)
         ->assertSee(__('menu.status.archived'), false)
@@ -166,7 +168,7 @@ it('allows managers to archive and requires superadmin to restore menu records',
     $this->actingAs($manager['user'])
         ->withSession(['branch_id' => (int) $manager['branch']->id])
         ->post(route('admin.menu.items.restore', ['item' => (int) $records['item']->id]))
-        ->assertRedirect(route('admin.menu.index', ['show_archived' => '1']));
+        ->assertRedirect(route('admin.menu.index', ['archive_mode' => 'archived']));
 
     expect(MenuItem::query()->count())->toBe(1);
 
@@ -200,7 +202,7 @@ it('allows managers to archive and requires superadmin to restore menu records',
     $this->actingAs($manager['user']->refresh())
         ->withSession(['branch_id' => (int) $manager['branch']->id])
         ->post(route('admin.menu.categories.restore', ['category' => (int) $records['category']->id]))
-        ->assertRedirect(route('admin.menu.index', ['show_archived' => '1']));
+        ->assertRedirect(route('admin.menu.index', ['archive_mode' => 'archived']));
 
     expect(MenuCategory::query()->count())->toBe(1)
         ->and(MenuItem::query()->count())->toBe(1);
@@ -217,7 +219,7 @@ it('force deletes archived menu items and categories for superadmins only', func
 
     $this->actingAs($owner['user'])
         ->withSession(['branch_id' => (int) $owner['branch']->id])
-        ->get(route('admin.menu.index', ['show_archived' => '1']))
+        ->get(route('admin.menu.index', ['archive_mode' => 'archived']))
         ->assertOk()
         ->assertSee('force_delete_item_', false)
         ->assertSee(__('menu.actions.force_delete'), false)
@@ -226,7 +228,7 @@ it('force deletes archived menu items and categories for superadmins only', func
     $this->actingAs($owner['user'])
         ->withSession(['branch_id' => (int) $owner['branch']->id])
         ->delete(route('admin.menu.items.force-delete', ['item' => (int) $itemRecords['item']->id]))
-        ->assertRedirect(route('admin.menu.index', ['show_archived' => '1']));
+        ->assertRedirect(route('admin.menu.index', ['archive_mode' => 'archived']));
 
     app(TenantResolver::class)->set((int) $owner['tenant']->id);
     app(BranchContext::class)->set((int) $owner['branch']->id);
@@ -243,7 +245,7 @@ it('force deletes archived menu items and categories for superadmins only', func
 
     $this->actingAs($owner['user'])
         ->withSession(['branch_id' => (int) $owner['branch']->id])
-        ->get(route('admin.menu.index', ['show_archived' => '1']))
+        ->get(route('admin.menu.index', ['archive_mode' => 'archived']))
         ->assertOk()
         ->assertSee('force_delete_category_', false)
         ->assertSee(__('menu.confirm.force_delete_category_message'), false);
@@ -251,7 +253,7 @@ it('force deletes archived menu items and categories for superadmins only', func
     $this->actingAs($owner['user'])
         ->withSession(['branch_id' => (int) $owner['branch']->id])
         ->delete(route('admin.menu.categories.force-delete', ['category' => (int) $categoryRecords['category']->id]))
-        ->assertRedirect(route('admin.menu.index', ['show_archived' => '1']));
+        ->assertRedirect(route('admin.menu.index', ['archive_mode' => 'archived']));
 
     app(TenantResolver::class)->set((int) $owner['tenant']->id);
     app(BranchContext::class)->set((int) $owner['branch']->id);

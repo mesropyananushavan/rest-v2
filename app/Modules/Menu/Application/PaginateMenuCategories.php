@@ -6,6 +6,7 @@ namespace App\Modules\Menu\Application;
 
 use App\Modules\Menu\Application\Concerns\FiltersLocalizedNames;
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 final class PaginateMenuCategories
@@ -18,11 +19,12 @@ final class PaginateMenuCategories
     private const MAX_PER_PAGE = 50;
 
     /**
+     * @param  'active'|'archived'|'all'  $archiveMode
      * @return LengthAwarePaginator<int, MenuCategory>
      */
     public function __invoke(
         ?string $search = null,
-        bool $includeArchived = false,
+        string $archiveMode = 'active',
         int $perPage = self::DEFAULT_PER_PAGE,
         int $page = 1,
     ): LengthAwarePaginator {
@@ -30,8 +32,8 @@ final class PaginateMenuCategories
         $perPage = $this->boundedPerPage($perPage);
         $page = max(1, $page);
 
-        $query = MenuCategory::query()
-            ->when($includeArchived, fn ($query) => $query->withTrashed());
+        $query = MenuCategory::query();
+        $this->applyArchiveMode($query, $archiveMode);
 
         $this->filterLocalizedName($query, 'translated_name', $search);
 
@@ -43,8 +45,8 @@ final class PaginateMenuCategories
             ->paginate($perPage, ['*'], 'page', $page);
 
         $this->logSuccess('menu.categories.paginate', $startedAt, [
+            'archive_mode' => $archiveMode,
             'category_count' => $categories->count(),
-            'include_archived' => $includeArchived,
             'page' => $page,
             'per_page' => $perPage,
             'search_present' => $this->normalizedSearch($search) !== null,
@@ -57,5 +59,24 @@ final class PaginateMenuCategories
     private function boundedPerPage(int $perPage): int
     {
         return min(self::MAX_PER_PAGE, max(1, $perPage));
+    }
+
+    /**
+     * @param  Builder<MenuCategory>  $query
+     * @param  'active'|'archived'|'all'  $archiveMode
+     */
+    private function applyArchiveMode(Builder $query, string $archiveMode): void
+    {
+        match ($archiveMode) {
+            'active' => null,
+            'archived' => $query
+                ->withTrashed()
+                ->where(
+                    fn (Builder $query): Builder => $query
+                        ->whereNotNull('deleted_at')
+                        ->orWhereHas('items', fn (Builder $query): Builder => $query->onlyTrashed()),
+                ),
+            'all' => $query->withTrashed(),
+        };
     }
 }
