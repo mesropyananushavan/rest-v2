@@ -40,7 +40,7 @@ it('stores menu categories and items as tenant-scoped records with integer money
 
     $rootCategory = MenuCategory::query()->create([
         'translated_name' => ['hy' => 'Մենյու', 'ru' => 'Меню', 'en' => 'Menu'],
-        'sort_order' => 100,
+        'sort_order' => 0,
         'active' => true,
     ]);
 
@@ -191,7 +191,7 @@ it('stores optional menu item image metadata without changing query indexes', fu
 
     $rootCategory = MenuCategory::query()->create([
         'translated_name' => ['hy' => 'Մենյու', 'ru' => 'Меню', 'en' => 'Menu'],
-        'sort_order' => 100,
+        'sort_order' => 0,
         'active' => true,
     ]);
 
@@ -307,7 +307,7 @@ function tenantWithMenuRecords(string $slug, string $name): array
 
     $root = MenuCategory::query()->create([
         'translated_name' => ['hy' => "{$name} Menu", 'ru' => "{$name} Menu", 'en' => "{$name} Menu"],
-        'sort_order' => 100,
+        'sort_order' => 0,
         'active' => true,
     ]);
 

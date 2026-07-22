@@ -115,7 +115,7 @@ final class MenuDemoSeeder extends Seeder
         return [
             'arat-riverside' => [
                 'currency' => 'AMD',
-                'root' => ['sort_order' => 100, 'name' => $this->localized('Մենյու', 'Меню', 'Menu')],
+                'root' => ['sort_order' => 0, 'name' => $this->localized('Մենյու', 'Меню', 'Menu')],
                 'categories' => [
                     ['key' => 'breakfast', 'sort_order' => 10, 'name' => $this->localized('Նախաճաշ', 'Завтраки', 'Breakfast')],
                     ['key' => 'salads', 'sort_order' => 20, 'name' => $this->localized('Աղցաններ', 'Салаты', 'Salads')],
@@ -135,7 +135,7 @@ final class MenuDemoSeeder extends Seeder
             ],
             'northstar-bistro' => [
                 'currency' => 'USD',
-                'root' => ['sort_order' => 100, 'name' => $this->localized('Մենյու', 'Меню', 'Menu')],
+                'root' => ['sort_order' => 0, 'name' => $this->localized('Մենյու', 'Меню', 'Menu')],
                 'categories' => [
                     ['key' => 'starters', 'sort_order' => 10, 'name' => $this->localized('Նախուտեստներ', 'Закуски', 'Starters')],
                     ['key' => 'burgers', 'sort_order' => 20, 'name' => $this->localized('Բուրգերներ', 'Бургеры', 'Burgers')],

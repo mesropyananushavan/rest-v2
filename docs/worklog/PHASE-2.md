@@ -686,14 +686,17 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   subcategory parent. Parent validation is tenant-scoped and non-trashed, but
   not `active`, so disabling a root does not block maintaining the menu
   structure under it.
-- Step B tests temporarily give root categories a higher `sort_order` than
-  subcategories where the current master-detail default selection would
-  otherwise pick an empty root. Revisit and remove this test accommodation in
-  Step D when the UI becomes tree-aware.
-- Step C.1 demo seed data also gives root categories a higher `sort_order`
-  than subcategories so the current master-detail default still lands on a
-  populated subcategory after `make fresh`. Revisit this together with the
-  Step B test accommodation in Step D tree-aware UI.
+- Step D removed the temporary root `sort_order=100` accommodations from demo
+  seed data and test fixtures. Default Menu selection is now resolved through
+  the tree-aware `ResolveMenuCategorySelection` action rather than flat row
+  ordering.
+- Step D keeps category-panel search scoped to selectable subcategory names.
+  Parent-name search is intentionally deferred so the PostgreSQL indexed
+  localized-name search expression remains untouched in this step.
+- Future task: add parent-name category-panel search so matching a root also
+  returns its selectable subcategories. Do this carefully around
+  `FiltersLocalizedNames` and PostgreSQL trgm expression-index compatibility;
+  the current helper is table-name based and not alias-aware for self-joins.
 
 ## Next steps
 Stage 1.11 Part C subcategory implementation order after owner-approved
@@ -726,8 +729,15 @@ Stage 1.11 Part C subcategory implementation order after owner-approved
   update yet, no Step D UI/query changes, and no seed-load command.
 - [ ] Step D: adapt Menu query actions and Livewire master-detail to the
   root -> subcategory -> item tree, reusing existing paginated actions where
-  possible and collapsing duplicated archive container logic.
-- [ ] Step C.1: convert demo seed data and raw test fixtures to the root ->
+  possible and collapsing duplicated archive container logic. Result:
+  review-ready on 2026-07-22; added tree-aware selection via
+  `ResolveMenuCategorySelection`, made roots non-clickable group headers,
+  selectable nodes subcategories only, removed direct Livewire Eloquent
+  selection queries, removed all root `sort_order=100` accommodations, and
+  verified PostgreSQL `tests/Feature/Menu` passed (`50 passed / 488
+  assertions`), `make fresh` passed, and `TenantIsolationTest` still has
+  exactly the 3 known RLS/BYPASSRLS failures.
+- [x] Step C.1: convert demo seed data and raw test fixtures to the root ->
   subcategory -> item structure before full `make fresh`. Scope:
   `MenuDemoSeeder`, `MenuDemoSeederTest`, and raw fixtures in dashboard,
   schema, and tenant-isolation tests. Do not change RLS expectations in
@@ -736,15 +746,16 @@ Stage 1.11 Part C subcategory implementation order after owner-approved
   focused PostgreSQL DemoSeeder/Login/dashboard/schema tests passed
   (`20 passed / 172 assertions`), and PostgreSQL `TenantIsolationTest` still
   has exactly the 3 known RLS/BYPASSRLS failures with no new structure
-  failures.
+  failures. Committed as `69a37fc`.
 - [ ] Step E: implement `menu:seed-load` last, after parent_id schema and UI
   paths are final. Support production-like and giant-menu modes with raw batch
   insert/COPY and optional drop/rebuild trgm index flow.
 
-Next action: owner review of Step C.1 seed/fixture conversion diff. After
-approval, commit Step C.1 only, then continue to Step D tree-aware Menu
-queries/Livewire UI. Do not edit `docs/BLUEPRINT.md`, do not create
-PRs/merges/pushes, and do not commit without explicit owner approval.
+Next action: owner review of Step D tree-aware Menu master-detail diff. After
+approval, commit Step D only, then continue toward remaining Part C polish and
+the deferred `menu:seed-load` command last. Do not edit `docs/BLUEPRINT.md`,
+do not create PRs/merges/pushes, and do not commit without explicit owner
+approval.
 
 Immediate fix before subcategory Step B: repair PostgreSQL localized LIKE
 binding in `FiltersLocalizedNames` without changing the indexed

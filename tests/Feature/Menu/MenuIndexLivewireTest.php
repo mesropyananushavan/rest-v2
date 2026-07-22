@@ -38,6 +38,8 @@ it('renders the menu index route through the Livewire master detail component', 
         ->assertOk()
         ->assertSeeLivewire(MenuIndex::class)
         ->assertSee(__('menu.index.heading'), false)
+        ->assertSee('Menu', false)
+        ->assertSee('Breakfast', false)
         ->assertSee('Lori Omelette', false)
         ->assertSee('menu-item-placeholder.svg', false);
 });
@@ -83,6 +85,20 @@ it('uses the category URL state and filters the category panel search', function
         ->assertDontSee('Lori Omelette', false)
         ->set('categorySearch', 'Break')
         ->assertSee('Breakfast', false);
+});
+
+it('normalizes root category URL state to the first selectable subcategory', function (): void {
+    $records = menuIndexLivewireRecords();
+
+    app(TenantResolver::class)->set((int) $records['tenant']->id);
+    app(BranchContext::class)->set((int) $records['branch']->id);
+
+    Livewire::withQueryParams(['category' => (int) $records['root']->id])
+        ->actingAs($records['user'])
+        ->test(MenuIndex::class)
+        ->assertSet('category', (int) $records['category']->id)
+        ->assertSee('Breakfast', false)
+        ->assertSee('Lori Omelette', false);
 });
 
 it('normalizes archive visibility for managers and exposes archive maintenance to superadmins', function (): void {
@@ -135,7 +151,7 @@ it('normalizes archive visibility for managers and exposes archive maintenance t
 });
 
 /**
- * @return array{tenant: Tenant, branch: Branch, user: User, category: MenuCategory, item: MenuItem}
+ * @return array{tenant: Tenant, branch: Branch, user: User, root: MenuCategory, category: MenuCategory, item: MenuItem}
  */
 function menuIndexLivewireRecords(): array
 {
@@ -157,7 +173,7 @@ function menuIndexLivewireRecords(): array
 
     app(BranchContext::class)->set((int) $branch->id);
 
-    $root = app(CreateMenuCategory::class)(menuIndexLivewireText('Menu'), sortOrder: 100);
+    $root = app(CreateMenuCategory::class)(menuIndexLivewireText('Menu'), sortOrder: 0);
     $category = app(CreateMenuCategory::class)(menuIndexLivewireText('Breakfast'), sortOrder: 10, parentId: (int) $root->id);
     $item = app(CreateMenuItem::class)(
         (int) $category->id,
@@ -185,6 +201,7 @@ function menuIndexLivewireRecords(): array
         'tenant' => $tenant,
         'branch' => $branch,
         'user' => $user,
+        'root' => $root,
         'category' => $category,
         'item' => $item,
     ];

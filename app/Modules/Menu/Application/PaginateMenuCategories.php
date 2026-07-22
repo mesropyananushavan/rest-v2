@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Modules\Menu\Application;
 
+use App\Modules\Menu\Application\Concerns\BuildsMenuCategoryTreeQueries;
 use App\Modules\Menu\Application\Concerns\FiltersLocalizedNames;
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 final class PaginateMenuCategories
 {
+    use BuildsMenuCategoryTreeQueries;
     use FiltersLocalizedNames;
     use RecordsMenuAction;
 
@@ -32,13 +33,15 @@ final class PaginateMenuCategories
         $perPage = $this->boundedPerPage($perPage);
         $page = max(1, $page);
 
-        $query = MenuCategory::query();
-        $this->applyArchiveMode($query, $archiveMode);
+        $query = $this->selectableSubcategoryQuery($archiveMode);
+        $normalizedSearch = $this->normalizedSearch($search);
 
-        $this->filterLocalizedName($query, 'translated_name', $search);
+        $this->filterLocalizedName($query, 'translated_name', $normalizedSearch);
 
         /** @var LengthAwarePaginator<int, MenuCategory> $categories */
         $categories = $query
+            ->orderByRaw('(select root_categories.sort_order from menu_categories as root_categories where root_categories.id = menu_categories.parent_id)')
+            ->orderByRaw('(select root_categories.id from menu_categories as root_categories where root_categories.id = menu_categories.parent_id)')
             ->orderBy('sort_order')
             ->orderByRaw($this->localizedNameOrderExpression($query, 'translated_name', app()->getLocale()))
             ->orderBy('id')
@@ -49,7 +52,7 @@ final class PaginateMenuCategories
             'category_count' => $categories->count(),
             'page' => $page,
             'per_page' => $perPage,
-            'search_present' => $this->normalizedSearch($search) !== null,
+            'search_present' => $normalizedSearch !== null,
             'total' => $categories->total(),
         ]);
 
@@ -61,22 +64,4 @@ final class PaginateMenuCategories
         return min(self::MAX_PER_PAGE, max(1, $perPage));
     }
 
-    /**
-     * @param  Builder<MenuCategory>  $query
-     * @param  'active'|'archived'|'all'  $archiveMode
-     */
-    private function applyArchiveMode(Builder $query, string $archiveMode): void
-    {
-        match ($archiveMode) {
-            'active' => null,
-            'archived' => $query
-                ->withTrashed()
-                ->where(
-                    fn (Builder $query): Builder => $query
-                        ->whereNotNull('deleted_at')
-                        ->orWhereHas('items', fn (Builder $query): Builder => $query->onlyTrashed()),
-                ),
-            'all' => $query->withTrashed(),
-        };
-    }
 }

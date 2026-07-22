@@ -72,7 +72,7 @@ final class MenuItemForm extends Component
     {
         $this->categoryOptions = $categories
             ->mapWithKeys(fn (MenuCategory $category): array => [
-                (int) $category->id => $category->translatedName()->forLocale(app()->getLocale()),
+                (int) $category->id => $this->categoryOptionLabel($category),
             ])
             ->all();
 
@@ -269,6 +269,19 @@ final class MenuItemForm extends Component
     private function categoryId(): int
     {
         return (int) $this->category_id;
+    }
+
+    private function categoryOptionLabel(MenuCategory $category): string
+    {
+        $locale = app()->getLocale();
+        $name = $category->translatedName()->forLocale($locale);
+        $parent = $category->parent;
+
+        if (! $parent instanceof MenuCategory) {
+            return $name;
+        }
+
+        return $parent->translatedName()->forLocale($locale).' / '.$name;
     }
 
     private function existingItemId(): int

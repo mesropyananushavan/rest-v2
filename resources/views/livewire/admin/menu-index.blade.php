@@ -49,7 +49,7 @@ $locale = app()->getLocale();
                     {{ __('menu.actions.create_category') }}
                 </x-button>
             @endif
-            @if ($canManageItems)
+            @if ($canManageItems && $selectedCategoryId !== null)
                 <x-button :href="route('admin.menu.items.create', array_filter(['category' => $selectedCategoryId]))">
                     {{ __('menu.actions.create_item') }}
                 </x-button>
@@ -88,62 +88,74 @@ $locale = app()->getLocale();
                     >
                 </div>
 
-                <div class="max-h-[55vh] overflow-y-auto p-2 md:max-h-[24rem] xl:max-h-[calc(100vh-18rem)]">
-                    @forelse ($categories as $category)
-                        <div class="mb-2 rounded-2xl border px-3 py-3 transition {{ $selectedCategoryId === (int) $category->id ? 'border-smartrest-success bg-emerald-50 shadow-sm' : 'border-transparent hover:border-slate-200 hover:bg-slate-50' }}">
-                            <button
-                                type="button"
-                                wire:click="selectCategory({{ (int) $category->id }})"
-                                class="flex w-full items-start justify-between gap-3 text-left"
-                            >
-                                <span class="min-w-0">
-                                    <span class="block truncate text-sm font-black text-smartrest-ink">{{ $category->translatedName()->forLocale($locale) }}</span>
-                                    <span class="mt-1 flex flex-wrap items-center gap-1 text-xs text-smartrest-muted">
-                                        <span>{{ __('menu.fields.sort_order') }}: {{ $category->sort_order }}</span>
-                                        @if (! $category->active)
-                                            <span class="rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-600">{{ __('menu.status.inactive') }}</span>
-                                        @endif
-                                        @if ($category->trashed() && $canViewArchive)
-                                            <span class="rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-800">{{ __('menu.status.archived') }}</span>
-                                        @endif
-                                    </span>
-                                </span>
-                                <span class="rounded-full bg-white px-2 py-1 text-xs font-bold text-slate-500 ring-1 ring-slate-200">#{{ (int) $category->id }}</span>
-                            </button>
+                @php
+                    $categoryGroups = $categories->getCollection()->groupBy(fn (MenuCategory $category): int => (int) $category->parent_id);
+                @endphp
 
-                            @if ($canManageCategories)
-                                <div class="mt-3 flex flex-wrap gap-2">
-                                    @if (! $category->trashed())
-                                        <x-button :href="route('admin.menu.categories.edit', ['category' => (int) $category->id])" variant="outline-secondary" size="sm">
-                                            {{ __('menu.actions.edit') }}
-                                        </x-button>
-                                        <x-confirm-modal
-                                            id="archive_category_{{ (int) $category->id }}"
-                                            :action="route('admin.menu.categories.destroy', ['category' => (int) $category->id])"
-                                            :title="__('menu.confirm.archive_category_title')"
-                                            :message="__('menu.confirm.archive_category_message')"
-                                            :trigger-label="__('menu.actions.archive')"
-                                            :confirm-label="__('menu.actions.archive')"
-                                        />
-                                    @elseif ($canViewArchive)
-                                        <form method="post" action="{{ route('admin.menu.categories.restore', ['category' => (int) $category->id]) }}">
-                                            @csrf
-                                            <x-button type="submit" variant="outline-primary" size="sm">
-                                                {{ __('menu.actions.restore') }}
-                                            </x-button>
-                                        </form>
-                                        <x-confirm-modal
-                                            id="force_delete_category_{{ (int) $category->id }}"
-                                            :action="route('admin.menu.categories.force-delete', ['category' => (int) $category->id])"
-                                            :title="__('menu.confirm.force_delete_category_title')"
-                                            :message="__('menu.confirm.force_delete_category_message')"
-                                            :trigger-label="__('menu.actions.force_delete')"
-                                            :confirm-label="__('menu.actions.force_delete')"
-                                        />
-                                    @endif
+                <div class="max-h-[55vh] overflow-y-auto p-2 md:max-h-[24rem] xl:max-h-[calc(100vh-18rem)]">
+                    @forelse ($categoryGroups as $subcategories)
+                        @php
+                            /** @var \Illuminate\Support\Collection<int, MenuCategory> $subcategories */
+                            $rootCategory = $subcategories->first()?->parent;
+                        @endphp
+
+                        @if ($rootCategory instanceof MenuCategory)
+                            <section class="mb-3 rounded-3xl border border-slate-200 bg-white/80 p-2">
+                                <div class="rounded-2xl bg-slate-50 px-3 py-3">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <div class="truncate text-xs font-black uppercase tracking-[0.18em] text-slate-500">{{ $rootCategory->translatedName()->forLocale($locale) }}</div>
+                                            <div class="mt-1 flex flex-wrap items-center gap-1 text-xs text-smartrest-muted">
+                                                @if (! $rootCategory->active)
+                                                    <span class="rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-600">{{ __('menu.status.inactive') }}</span>
+                                                @endif
+                                                @if ($rootCategory->trashed() && $canViewArchive)
+                                                    <span class="rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-800">{{ __('menu.status.archived') }}</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <span class="rounded-full bg-white px-2 py-1 text-xs font-bold text-slate-500 ring-1 ring-slate-200">#{{ (int) $rootCategory->id }}</span>
+                                    </div>
+
+                                    @include('livewire.admin.menu.partials.category-actions', [
+                                        'canManageCategories' => $canManageCategories,
+                                        'canViewArchive' => $canViewArchive,
+                                        'category' => $rootCategory,
+                                    ])
                                 </div>
-                            @endif
-                        </div>
+
+                                <div class="mt-2 space-y-2">
+                                    @foreach ($subcategories as $category)
+                                        <div class="rounded-2xl border px-3 py-3 transition {{ $selectedCategoryId === (int) $category->id ? 'border-smartrest-success bg-emerald-50 shadow-sm' : 'border-transparent hover:border-slate-200 hover:bg-slate-50' }}">
+                                            <button
+                                                type="button"
+                                                wire:click="selectCategory({{ (int) $category->id }})"
+                                                class="flex w-full items-start justify-between gap-3 text-left"
+                                            >
+                                                <span class="min-w-0">
+                                                    <span class="block truncate text-sm font-black text-smartrest-ink">{{ $category->translatedName()->forLocale($locale) }}</span>
+                                                    <span class="mt-1 flex flex-wrap items-center gap-1 text-xs text-smartrest-muted">
+                                                        @if (! $category->active)
+                                                            <span class="rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-600">{{ __('menu.status.inactive') }}</span>
+                                                        @endif
+                                                        @if ($category->trashed() && $canViewArchive)
+                                                            <span class="rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-800">{{ __('menu.status.archived') }}</span>
+                                                        @endif
+                                                    </span>
+                                                </span>
+                                                <span class="rounded-full bg-white px-2 py-1 text-xs font-bold text-slate-500 ring-1 ring-slate-200">#{{ (int) $category->id }}</span>
+                                            </button>
+
+                                            @include('livewire.admin.menu.partials.category-actions', [
+                                                'canManageCategories' => $canManageCategories,
+                                                'canViewArchive' => $canViewArchive,
+                                                'category' => $category,
+                                            ])
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </section>
+                        @endif
                     @empty
                         <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-center">
                             <div class="text-sm font-black text-smartrest-ink">{{ __('menu.empty.no_categories_title') }}</div>
@@ -214,7 +226,7 @@ $locale = app()->getLocale();
                     </div>
                 </x-card>
             @else
-                <x-card :title="$selectedCategory->translatedName()->forLocale($locale)" :count="$items?->total() ?? 0" body-class="p-0">
+                <x-card :title="($selectedCategory->parent?->translatedName()->forLocale($locale) === null ? '' : $selectedCategory->parent?->translatedName()->forLocale($locale).' / ').$selectedCategory->translatedName()->forLocale($locale)" :count="$items?->total() ?? 0" body-class="p-0">
                     <div class="flex flex-col gap-3 border-b border-slate-100 p-4 md:flex-row md:items-center md:justify-between">
                         <div>
                             <div class="text-sm font-semibold text-smartrest-muted">{{ __('menu.items.category_items') }}</div>

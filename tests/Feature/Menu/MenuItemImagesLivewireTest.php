@@ -205,7 +205,7 @@ function menuImageLivewireRecords(): array
 
     app(BranchContext::class)->set((int) $branch->id);
 
-    $root = app(CreateMenuCategory::class)(menuImageLivewireText('Menu'), sortOrder: 100);
+    $root = app(CreateMenuCategory::class)(menuImageLivewireText('Menu'), sortOrder: 0);
     $category = app(CreateMenuCategory::class)(menuImageLivewireText('Breakfast'), sortOrder: 10, parentId: (int) $root->id);
 
     return [

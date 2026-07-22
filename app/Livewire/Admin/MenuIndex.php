@@ -6,11 +6,11 @@ namespace App\Livewire\Admin;
 
 use App\Modules\Menu\Application\PaginateMenuCategories;
 use App\Modules\Menu\Application\PaginateMenuItems;
+use App\Modules\Menu\Application\ResolveMenuCategorySelection;
 use App\Modules\Menu\Application\SearchMenuItems;
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use App\Modules\Menu\Infrastructure\Storage\MenuItemImageUrlResolver;
 use Illuminate\Contracts\View\View;
-use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
@@ -57,11 +57,13 @@ final class MenuIndex extends Component
     public function render(
         PaginateMenuCategories $categories,
         PaginateMenuItems $items,
+        ResolveMenuCategorySelection $selection,
         SearchMenuItems $searchItems,
         MenuItemImageUrlResolver $imageUrls,
     ): View {
         $this->normalizeState();
-        $selectedCategoryId = $this->selectedCategoryId();
+        $selectedCategory = $this->selectedCategory($selection);
+        $selectedCategoryId = $selectedCategory instanceof MenuCategory ? (int) $selectedCategory->id : null;
         $isSearching = trim($this->search) !== '';
         $categoryPage = $categories(
             search: $this->categorySearch,
@@ -98,16 +100,16 @@ final class MenuIndex extends Component
             'imageUrls' => $imageUrls,
             'isSearching' => $isSearching,
             'items' => $itemPage,
-            'selectedCategory' => $selectedCategoryId === null ? null : $this->findCategory($selectedCategoryId),
+            'selectedCategory' => $selectedCategory,
             'selectedCategoryId' => $selectedCategoryId,
         ]);
     }
 
     public function selectCategory(int $categoryId): void
     {
-        $category = $this->findCategory($categoryId);
+        $category = app(ResolveMenuCategorySelection::class)($categoryId, $this->archiveMode());
 
-        if (! $category instanceof MenuCategory) {
+        if (! $category instanceof MenuCategory || (int) $category->id !== $categoryId) {
             return;
         }
 
@@ -185,37 +187,18 @@ final class MenuIndex extends Component
 
         $this->normalizeArchiveMode();
 
-        $selectedCategoryId = $this->selectedCategoryId();
-
-        if ($this->category !== $selectedCategoryId) {
-            $this->category = $selectedCategoryId;
-        }
     }
 
-    private function selectedCategoryId(): ?int
+    private function selectedCategory(ResolveMenuCategorySelection $selection): ?MenuCategory
     {
-        if ($this->category !== null && $this->findCategory($this->category) instanceof MenuCategory) {
-            return $this->category;
+        $category = $selection($this->category, $this->archiveMode());
+        $categoryId = $category instanceof MenuCategory ? (int) $category->id : null;
+
+        if ($this->category !== $categoryId) {
+            $this->category = $categoryId;
         }
 
-        $query = MenuCategory::query();
-        $this->applyCategoryArchiveMode($query);
-
-        /** @var int|null $categoryId */
-        $categoryId = $query
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->value('id');
-
-        return $categoryId;
-    }
-
-    private function findCategory(int $categoryId): ?MenuCategory
-    {
-        $query = MenuCategory::query();
-        $this->applyCategoryArchiveMode($query);
-
-        return $query->find($categoryId);
+        return $category;
     }
 
     private function normalizeArchiveMode(): void
@@ -252,27 +235,6 @@ final class MenuIndex extends Component
             self::ARCHIVE_MODE_ARCHIVED,
             self::ARCHIVE_MODE_ALL,
         ];
-    }
-
-    /**
-     * @param  Builder<MenuCategory>  $query
-     * @return Builder<MenuCategory>
-     */
-    private function applyCategoryArchiveMode(Builder $query): Builder
-    {
-        match ($this->archiveMode()) {
-            self::ARCHIVE_MODE_ACTIVE => null,
-            self::ARCHIVE_MODE_ARCHIVED => $query
-                ->withTrashed()
-                ->where(
-                    fn (Builder $query): Builder => $query
-                        ->whereNotNull('deleted_at')
-                        ->orWhereHas('items', fn (Builder $query): Builder => $query->onlyTrashed()),
-                ),
-            self::ARCHIVE_MODE_ALL => $query->withTrashed(),
-        };
-
-        return $query;
     }
 
     private function canViewArchive(): bool

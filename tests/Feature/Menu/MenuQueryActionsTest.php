@@ -7,6 +7,7 @@ use App\Modules\Menu\Application\CreateMenuCategory;
 use App\Modules\Menu\Application\CreateMenuItem;
 use App\Modules\Menu\Application\PaginateMenuCategories;
 use App\Modules\Menu\Application\PaginateMenuItems;
+use App\Modules\Menu\Application\ResolveMenuCategorySelection;
 use App\Modules\Menu\Application\SearchMenuItems;
 use App\Modules\Menu\Domain\MenuDomainException;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
@@ -31,10 +32,13 @@ it('paginates category panel results and searches localized names', function ():
     app(TenantResolver::class)->set((int) $records['tenant']->id);
     app(BranchContext::class)->set((int) $records['branch']->id);
 
+    $root = app(CreateMenuCategory::class)(menuQueryText('Menu'), sortOrder: 0);
+
     for ($index = 1; $index <= 30; $index++) {
         app(CreateMenuCategory::class)(
             menuQueryText("Category {$index}", "Բաժին {$index}", "Категория {$index}"),
             sortOrder: $index,
+            parentId: (int) $root->id,
         );
     }
 
@@ -48,6 +52,28 @@ it('paginates category panel results and searches localized names', function ():
         ->and($secondPage->items()[0]->translatedName()->forLocale('en'))->toBe('Category 11')
         ->and($armenianSearch->total())->toBe(11)
         ->and(collect($armenianSearch->items())->pluck('translated_name')->flatten()->contains('Բաժին 20'))->toBeTrue();
+});
+
+it('resolves selected subcategory defaults without relying on root sort order', function (): void {
+    $records = menuQueryTenant('tenant-a', 'Tenant A');
+
+    app(TenantResolver::class)->set((int) $records['tenant']->id);
+    app(BranchContext::class)->set((int) $records['branch']->id);
+
+    $root = app(CreateMenuCategory::class)(menuQueryText('Menu'), sortOrder: 0);
+    $breakfast = app(CreateMenuCategory::class)(menuQueryText('Breakfast'), sortOrder: 10, parentId: (int) $root->id);
+    $lunch = app(CreateMenuCategory::class)(menuQueryText('Lunch'), sortOrder: 20, parentId: (int) $root->id);
+    $otherRoot = app(CreateMenuCategory::class)(menuQueryText('Other Menu'), sortOrder: 1);
+    $dinner = app(CreateMenuCategory::class)(menuQueryText('Dinner'), sortOrder: 5, parentId: (int) $otherRoot->id);
+
+    $default = app(ResolveMenuCategorySelection::class)(archiveMode: 'active');
+    $rootSelection = app(ResolveMenuCategorySelection::class)((int) $root->id, 'active');
+    $directSelection = app(ResolveMenuCategorySelection::class)((int) $lunch->id, 'active');
+
+    expect($default?->is($breakfast))->toBeTrue()
+        ->and($rootSelection?->is($breakfast))->toBeTrue()
+        ->and($directSelection?->is($lunch))->toBeTrue()
+        ->and($dinner->parent_id)->toBe((int) $otherRoot->id);
 });
 
 it('paginates selected-category items and applies inactive and archive filters', function (): void {
@@ -98,7 +124,7 @@ it('shows only archived category containers in archived category panel mode', fu
 
     $root = app(CreateMenuCategory::class)(menuQueryText('Menu'), sortOrder: 1);
     $breakfast = app(CreateMenuCategory::class)(menuQueryText('Breakfast'), sortOrder: 10, parentId: (int) $root->id);
-    app(CreateMenuCategory::class)(menuQueryText('Dinner'), sortOrder: 20);
+    app(CreateMenuCategory::class)(menuQueryText('Dinner'), sortOrder: 20, parentId: (int) $root->id);
 
     $archivedItem = app(CreateMenuItem::class)(
         (int) $breakfast->id,

@@ -239,7 +239,7 @@ it('enforces PostgreSQL row level security for menu tables', function (): void {
 
     $rootCategoryA = MenuCategory::query()->create([
         'translated_name' => ['hy' => 'Tenant A Menu', 'ru' => 'Tenant A Menu', 'en' => 'Tenant A Menu'],
-        'sort_order' => 100,
+        'sort_order' => 0,
         'active' => true,
     ]);
 
@@ -265,7 +265,7 @@ it('enforces PostgreSQL row level security for menu tables', function (): void {
 
     $rootCategoryB = MenuCategory::query()->create([
         'translated_name' => ['hy' => 'Tenant B Menu', 'ru' => 'Tenant B Menu', 'en' => 'Tenant B Menu'],
-        'sort_order' => 100,
+        'sort_order' => 0,
         'active' => true,
     ]);
 

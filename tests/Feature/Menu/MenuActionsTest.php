@@ -62,7 +62,7 @@ it('creates updates lists archives and restores menu categories and items throug
         parentId: (int) $root->id,
     );
 
-    expect(app(ListMenuCategories::class)()->pluck('id')->all())->toBe([(int) $root->id, (int) $category->id]);
+    expect(app(ListMenuCategories::class)()->pluck('id')->all())->toBe([(int) $category->id]);
 
     $updatedCategory = app(UpdateMenuCategory::class)(
         (int) $category->id,
@@ -132,7 +132,7 @@ it('creates updates lists archives and restores menu categories and items throug
     expect($category->trashed())->toBeTrue()
         ->and($cascadeArchivedItem->trashed())->toBeTrue()
         ->and($cascadeArchivedItem->archived_with_category_id)->toBe((int) $category->id)
-        ->and(app(ListMenuCategories::class)()->pluck('id')->all())->toBe([(int) $root->id])
+        ->and(app(ListMenuCategories::class)()->pluck('id')->all())->toBe([])
         ->and(app(ListMenuItems::class)()->pluck('id')->all())->toBe([]);
 
     expect(fn () => app(RestoreMenuItem::class)((int) $cascadeArchivedItem->id))

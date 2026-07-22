@@ -19,7 +19,11 @@ final class ListMenuCategories
         $startedAt = microtime(true);
 
         $categories = MenuCategory::query()
+            ->with('parent')
+            ->whereNotNull('parent_id')
             ->when($includeArchived, fn ($query) => $query->withTrashed())
+            ->orderByRaw('(select root_categories.sort_order from menu_categories as root_categories where root_categories.id = menu_categories.parent_id)')
+            ->orderByRaw('(select root_categories.id from menu_categories as root_categories where root_categories.id = menu_categories.parent_id)')
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get();

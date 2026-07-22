@@ -40,7 +40,7 @@ it('runs menu category and item CRUD through authenticated Blade routes', functi
 
     $this->actingAs($manager['user'])
         ->withSession(['branch_id' => (int) $manager['branch']->id])
-        ->post(route('admin.menu.categories.store'), menuBladeCategoryPayload('Breakfast', sortOrder: 100))
+        ->post(route('admin.menu.categories.store'), menuBladeCategoryPayload('Breakfast'))
         ->assertRedirect(route('admin.menu.index'));
 
     app(TenantResolver::class)->set((int) $manager['tenant']->id);
@@ -56,7 +56,7 @@ it('runs menu category and item CRUD through authenticated Blade routes', functi
 
     $this->actingAs($manager['user'])
         ->withSession(['branch_id' => (int) $manager['branch']->id])
-        ->put(route('admin.menu.categories.update', ['category' => (int) $rootCategory->id]), menuBladeCategoryPayload('Morning menu', active: false, sortOrder: 100))
+        ->put(route('admin.menu.categories.update', ['category' => (int) $rootCategory->id]), menuBladeCategoryPayload('Morning menu', active: false))
         ->assertRedirect(route('admin.menu.index'));
 
     $this->actingAs($manager['user'])
@@ -498,7 +498,7 @@ function menuBladeRecords(array $user, string $name): array
     app(TenantResolver::class)->set((int) $user['tenant']->id);
     app(BranchContext::class)->set((int) $user['branch']->id);
 
-    $root = app(CreateMenuCategory::class)(menuBladeText('Menu'), sortOrder: 100);
+    $root = app(CreateMenuCategory::class)(menuBladeText('Menu'), sortOrder: 0);
     $category = app(CreateMenuCategory::class)(menuBladeText($name), parentId: (int) $root->id);
     $item = app(CreateMenuItem::class)(
         (int) $category->id,
