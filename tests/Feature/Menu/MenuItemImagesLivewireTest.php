@@ -205,7 +205,8 @@ function menuImageLivewireRecords(): array
 
     app(BranchContext::class)->set((int) $branch->id);
 
-    $category = app(CreateMenuCategory::class)(menuImageLivewireText('Breakfast'));
+    $root = app(CreateMenuCategory::class)(menuImageLivewireText('Menu'), sortOrder: 100);
+    $category = app(CreateMenuCategory::class)(menuImageLivewireText('Breakfast'), sortOrder: 10, parentId: (int) $root->id);
 
     return [
         'tenant' => $tenant,

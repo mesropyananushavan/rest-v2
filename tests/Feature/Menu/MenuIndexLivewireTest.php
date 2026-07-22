@@ -65,7 +65,8 @@ it('uses the category URL state and filters the category panel search', function
     app(TenantResolver::class)->set((int) $records['tenant']->id);
     app(BranchContext::class)->set((int) $records['branch']->id);
 
-    $dinner = app(CreateMenuCategory::class)(menuIndexLivewireText('Dinner'), sortOrder: 30);
+    $dinnerRoot = app(CreateMenuCategory::class)(menuIndexLivewireText('Dinner group'), sortOrder: 30);
+    $dinner = app(CreateMenuCategory::class)(menuIndexLivewireText('Dinner'), sortOrder: 31, parentId: (int) $dinnerRoot->id);
     app(CreateMenuItem::class)(
         (int) $dinner->id,
         menuIndexLivewireText('Grilled Trout'),
@@ -156,7 +157,8 @@ function menuIndexLivewireRecords(): array
 
     app(BranchContext::class)->set((int) $branch->id);
 
-    $category = app(CreateMenuCategory::class)(menuIndexLivewireText('Breakfast'), sortOrder: 10);
+    $root = app(CreateMenuCategory::class)(menuIndexLivewireText('Menu'), sortOrder: 100);
+    $category = app(CreateMenuCategory::class)(menuIndexLivewireText('Breakfast'), sortOrder: 10, parentId: (int) $root->id);
     $item = app(CreateMenuItem::class)(
         (int) $category->id,
         menuIndexLivewireText('Lori Omelette', 'Լոռի ձվածեղ', 'Лорийский омлет'),

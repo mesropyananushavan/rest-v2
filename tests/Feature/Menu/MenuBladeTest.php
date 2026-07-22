@@ -40,24 +40,31 @@ it('runs menu category and item CRUD through authenticated Blade routes', functi
 
     $this->actingAs($manager['user'])
         ->withSession(['branch_id' => (int) $manager['branch']->id])
-        ->post(route('admin.menu.categories.store'), menuBladeCategoryPayload('Breakfast'))
+        ->post(route('admin.menu.categories.store'), menuBladeCategoryPayload('Breakfast', sortOrder: 100))
         ->assertRedirect(route('admin.menu.index'));
 
     app(TenantResolver::class)->set((int) $manager['tenant']->id);
     app(BranchContext::class)->set((int) $manager['branch']->id);
 
-    $category = MenuCategory::query()->firstOrFail();
+    $rootCategory = MenuCategory::query()->firstOrFail();
 
     $this->actingAs($manager['user'])
         ->withSession(['branch_id' => (int) $manager['branch']->id])
-        ->get(route('admin.menu.categories.edit', ['category' => (int) $category->id]))
+        ->get(route('admin.menu.categories.edit', ['category' => (int) $rootCategory->id]))
         ->assertOk()
         ->assertSee('Breakfast', false);
 
     $this->actingAs($manager['user'])
         ->withSession(['branch_id' => (int) $manager['branch']->id])
-        ->put(route('admin.menu.categories.update', ['category' => (int) $category->id]), menuBladeCategoryPayload('Morning menu', active: false))
+        ->put(route('admin.menu.categories.update', ['category' => (int) $rootCategory->id]), menuBladeCategoryPayload('Morning menu', active: false, sortOrder: 100))
         ->assertRedirect(route('admin.menu.index'));
+
+    $this->actingAs($manager['user'])
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->post(route('admin.menu.categories.store'), menuBladeCategoryPayload('Breakfast plates') + ['parent_id' => (int) $rootCategory->id])
+        ->assertRedirect(route('admin.menu.index'));
+
+    $category = MenuCategory::query()->whereNotNull('parent_id')->firstOrFail();
 
     $this->actingAs($manager['user'])
         ->withSession(['branch_id' => (int) $manager['branch']->id])
@@ -98,7 +105,7 @@ it('runs menu category and item CRUD through authenticated Blade routes', functi
         ->assertRedirect(route('admin.menu.index'));
 
     expect(MenuItem::query()->count())->toBe(0)
-        ->and(MenuCategory::query()->count())->toBe(0);
+        ->and(MenuCategory::query()->pluck('id')->all())->toBe([(int) $rootCategory->id]);
 });
 
 it('allows managers to archive and requires superadmin to restore menu records', function (): void {
@@ -183,7 +190,7 @@ it('allows managers to archive and requires superadmin to restore menu records',
     app(BranchContext::class)->set((int) $manager['branch']->id);
 
     expect(MenuItem::query()->count())->toBe(0)
-        ->and(MenuCategory::query()->count())->toBe(0)
+        ->and(MenuCategory::query()->count())->toBe(1)
         ->and(MenuCategory::withTrashed()->findOrFail((int) $records['category']->id)->trashed())->toBeTrue()
         ->and(MenuItem::withTrashed()->findOrFail((int) $records['item']->id)->archived_with_category_id)->toBe((int) $records['category']->id);
 
@@ -204,7 +211,7 @@ it('allows managers to archive and requires superadmin to restore menu records',
         ->post(route('admin.menu.categories.restore', ['category' => (int) $records['category']->id]))
         ->assertRedirect(route('admin.menu.index', ['archive_mode' => 'archived']));
 
-    expect(MenuCategory::query()->count())->toBe(1)
+    expect(MenuCategory::query()->count())->toBe(2)
         ->and(MenuItem::query()->count())->toBe(1);
 });
 
@@ -491,7 +498,8 @@ function menuBladeRecords(array $user, string $name): array
     app(TenantResolver::class)->set((int) $user['tenant']->id);
     app(BranchContext::class)->set((int) $user['branch']->id);
 
-    $category = app(CreateMenuCategory::class)(menuBladeText($name));
+    $root = app(CreateMenuCategory::class)(menuBladeText('Menu'), sortOrder: 100);
+    $category = app(CreateMenuCategory::class)(menuBladeText($name), parentId: (int) $root->id);
     $item = app(CreateMenuItem::class)(
         (int) $category->id,
         menuBladeText("{$name} Item"),
@@ -511,13 +519,13 @@ function menuBladeRecords(array $user, string $name): array
 /**
  * @return array<string, mixed>
  */
-function menuBladeCategoryPayload(string $name, bool $active = true): array
+function menuBladeCategoryPayload(string $name, bool $active = true, int $sortOrder = 0): array
 {
     return [
         'name_hy' => $name,
         'name_ru' => $name,
         'name_en' => $name,
-        'sort_order' => 0,
+        'sort_order' => $sortOrder,
         'active' => $active ? '1' : '0',
     ];
 }

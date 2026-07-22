@@ -44,7 +44,7 @@ final class UpdateMenuItem
         $item = MenuItem::query()
             ->where('branch_id', $branchId)
             ->findOrFail($itemId);
-        $category = MenuCategory::query()->findOrFail($categoryId);
+        $category = $this->findValidSubcategory($categoryId);
 
         $item->update([
             'category_id' => (int) $category->id,
@@ -65,5 +65,19 @@ final class UpdateMenuItem
         ]);
 
         return $item;
+    }
+
+    private function findValidSubcategory(int $categoryId): MenuCategory
+    {
+        // Keep TenantScoped enabled here: a category from another tenant resolves to null.
+        $category = MenuCategory::query()
+            ->whereKey($categoryId)
+            ->firstOrFail();
+
+        if ($category->parent_id === null) {
+            throw MenuDomainException::itemCategoryMustBeSubcategory();
+        }
+
+        return $category;
     }
 }

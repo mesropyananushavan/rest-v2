@@ -56,7 +56,8 @@ it('paginates selected-category items and applies inactive and archive filters',
     app(TenantResolver::class)->set((int) $records['tenant']->id);
     app(BranchContext::class)->set((int) $records['branch']->id);
 
-    $category = app(CreateMenuCategory::class)(menuQueryText('Breakfast'));
+    $root = app(CreateMenuCategory::class)(menuQueryText('Menu'));
+    $category = app(CreateMenuCategory::class)(menuQueryText('Breakfast'), parentId: (int) $root->id);
 
     for ($index = 1; $index <= 32; $index++) {
         $item = app(CreateMenuItem::class)(
@@ -95,7 +96,8 @@ it('shows only archived category containers in archived category panel mode', fu
     app(TenantResolver::class)->set((int) $records['tenant']->id);
     app(BranchContext::class)->set((int) $records['branch']->id);
 
-    $breakfast = app(CreateMenuCategory::class)(menuQueryText('Breakfast'), sortOrder: 10);
+    $root = app(CreateMenuCategory::class)(menuQueryText('Menu'), sortOrder: 1);
+    $breakfast = app(CreateMenuCategory::class)(menuQueryText('Breakfast'), sortOrder: 10, parentId: (int) $root->id);
     app(CreateMenuCategory::class)(menuQueryText('Dinner'), sortOrder: 20);
 
     $archivedItem = app(CreateMenuItem::class)(
@@ -118,7 +120,8 @@ it('searches menu items across all localized names within the current branch onl
     app(TenantResolver::class)->set((int) $records['tenant']->id);
     app(BranchContext::class)->set((int) $records['branch']->id);
 
-    $category = app(CreateMenuCategory::class)(menuQueryText('Breakfast'));
+    $root = app(CreateMenuCategory::class)(menuQueryText('Menu'));
+    $category = app(CreateMenuCategory::class)(menuQueryText('Breakfast'), parentId: (int) $root->id);
     app(CreateMenuItem::class)((int) $category->id, menuQueryText('Lori Omelette', 'Լոռի ձվածեղ', 'Лорийский омлет'), null, new Money(180000, 'AMD'));
     app(CreateMenuItem::class)((int) $category->id, menuQueryText('Hidden Soup'), null, new Money(90000, 'AMD'), active: false);
     $archivedItem = app(CreateMenuItem::class)((int) $category->id, menuQueryText('Archived Cutlet'), null, new Money(120000, 'AMD'));
@@ -161,7 +164,8 @@ it('requires branch context for paginated item query actions', function (): void
     app(TenantResolver::class)->set((int) $records['tenant']->id);
     app(BranchContext::class)->set((int) $records['branch']->id);
 
-    $category = app(CreateMenuCategory::class)(menuQueryText('Breakfast'));
+    $root = app(CreateMenuCategory::class)(menuQueryText('Menu'));
+    $category = app(CreateMenuCategory::class)(menuQueryText('Breakfast'), parentId: (int) $root->id);
 
     app(BranchContext::class)->clear();
 

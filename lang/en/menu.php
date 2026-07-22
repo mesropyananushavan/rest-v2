@@ -34,6 +34,7 @@ return [
         'name_en' => 'Name, English',
         'name_hy' => 'Name, Armenian',
         'name_ru' => 'Name, Russian',
+        'parent_category' => 'Parent category',
         'price' => 'Price',
         'price_major' => 'Price',
         'price_minor' => 'Price in minor units',

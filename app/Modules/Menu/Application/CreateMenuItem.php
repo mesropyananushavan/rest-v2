@@ -39,7 +39,7 @@ final class CreateMenuItem
             throw $exception;
         }
 
-        $category = MenuCategory::query()->findOrFail($categoryId);
+        $category = $this->findValidSubcategory($categoryId);
 
         $item = MenuItem::query()->create([
             'branch_id' => $branchId,
@@ -61,5 +61,19 @@ final class CreateMenuItem
         ]);
 
         return $item;
+    }
+
+    private function findValidSubcategory(int $categoryId): MenuCategory
+    {
+        // Keep TenantScoped enabled here: a category from another tenant resolves to null.
+        $category = MenuCategory::query()
+            ->whereKey($categoryId)
+            ->firstOrFail();
+
+        if ($category->parent_id === null) {
+            throw MenuDomainException::itemCategoryMustBeSubcategory();
+        }
+
+        return $category;
     }
 }

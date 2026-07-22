@@ -25,7 +25,7 @@ final class MenuCategoryController
 
     public function store(MenuCategoryRequest $request, CreateMenuCategory $create): RedirectResponse
     {
-        $create($request->localizedName(), $request->sortOrder(), $request->active());
+        $create($request->localizedName(), $request->sortOrder(), $request->active(), $request->parentId());
 
         return redirect()
             ->route('admin.menu.index')
@@ -41,7 +41,7 @@ final class MenuCategoryController
 
     public function update(int $category, MenuCategoryRequest $request, UpdateMenuCategory $update): RedirectResponse
     {
-        $update($category, $request->localizedName(), $request->sortOrder(), $request->active());
+        $update($category, $request->localizedName(), $request->sortOrder(), $request->active(), $request->parentId());
 
         return redirect()
             ->route('admin.menu.index')

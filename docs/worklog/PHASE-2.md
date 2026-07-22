@@ -682,6 +682,14 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   PostgreSQL with `SQLSTATE[HY093]` in `FiltersLocalizedNames` when a non-empty
   LIKE search is bound, and RLS expectations fail because the local/test
   `smartrest` database role is a superuser with `BYPASSRLS`.
+- Step B intentionally allows an inactive root category to be used as a
+  subcategory parent. Parent validation is tenant-scoped and non-trashed, but
+  not `active`, so disabling a root does not block maintaining the menu
+  structure under it.
+- Step B tests temporarily give root categories a higher `sort_order` than
+  subcategories where the current master-detail default selection would
+  otherwise pick an empty root. Revisit and remove this test accommodation in
+  Step D when the UI becomes tree-aware.
 
 ## Next steps
 Stage 1.11 Part C subcategory implementation order after owner-approved
@@ -692,7 +700,11 @@ Stage 1.11 Part C subcategory implementation order after owner-approved
   2026-07-22; focused PostgreSQL `MenuSchemaTest` passed (`8 passed / 54
   assertions`).
 - [ ] Step B: enforce depth=2 and item-only-under-subcategory in Application
-  actions/requests/tests. No new seed-load command.
+  actions/requests/tests. Scope: explicit tenant-scoped parent/category lookups,
+  parent_id request validation, no moving non-empty category nodes, and focused
+  PostgreSQL tests. Result: review-ready on 2026-07-22; PostgreSQL
+  `tests/Feature/Menu` passed (`43 passed / 405 assertions`). No cascade
+  changes, no DemoSeeder update yet, and no new seed-load command.
 - [ ] Step C: implement root/subcategory archive/restore/force-delete cascade
   semantics with cascade markers. Batch archive updates must only touch
   currently non-trashed rows with `archived_with_category_id is null`, so
@@ -705,8 +717,8 @@ Stage 1.11 Part C subcategory implementation order after owner-approved
   paths are final. Support production-like and giant-menu modes with raw batch
   insert/COPY and optional drop/rebuild trgm index flow.
 
-Next action: await owner direction on documenting/fixing the RLS runtime-role
-security debt, then proceed to Step B only after explicit approval. Do not edit
+Next action: owner review of Step B diff. After approval, commit Step B only,
+then proceed to Step C cascade/archive semantics. Do not edit
 `docs/BLUEPRINT.md`, do not create PRs/merges/pushes, and do not commit without
 explicit owner approval.
 

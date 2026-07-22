@@ -50,19 +50,26 @@ it('creates updates lists archives and restores menu categories and items throug
     app(TenantResolver::class)->set((int) $tenant['tenant']->id);
     app(BranchContext::class)->set((int) $tenant['branch']->id);
 
+    $root = app(CreateMenuCategory::class)(
+        menuActionsText('Menu'),
+        sortOrder: 1,
+        active: true,
+    );
     $category = app(CreateMenuCategory::class)(
         menuActionsText('Breakfast'),
         sortOrder: 5,
         active: true,
+        parentId: (int) $root->id,
     );
 
-    expect(app(ListMenuCategories::class)()->pluck('id')->all())->toBe([(int) $category->id]);
+    expect(app(ListMenuCategories::class)()->pluck('id')->all())->toBe([(int) $root->id, (int) $category->id]);
 
     $updatedCategory = app(UpdateMenuCategory::class)(
         (int) $category->id,
         menuActionsText('Morning menu'),
         sortOrder: 7,
         active: false,
+        parentId: (int) $root->id,
     );
 
     expect($updatedCategory->translatedName()->forLocale('en'))->toBe('Morning menu')
@@ -125,7 +132,7 @@ it('creates updates lists archives and restores menu categories and items throug
     expect($category->trashed())->toBeTrue()
         ->and($cascadeArchivedItem->trashed())->toBeTrue()
         ->and($cascadeArchivedItem->archived_with_category_id)->toBe((int) $category->id)
-        ->and(app(ListMenuCategories::class)()->pluck('id')->all())->toBe([])
+        ->and(app(ListMenuCategories::class)()->pluck('id')->all())->toBe([(int) $root->id])
         ->and(app(ListMenuItems::class)()->pluck('id')->all())->toBe([]);
 
     expect(fn () => app(RestoreMenuItem::class)((int) $cascadeArchivedItem->id))
@@ -149,6 +156,123 @@ it('creates updates lists archives and restores menu categories and items throug
         (int) $manuallyArchivedItem->id,
         (int) $cascadeArchivedItem->id,
     ]);
+});
+
+it('enforces category depth and blocks cross-tenant category parents', function (): void {
+    $tenantA = menuActionsTenant('tenant-a', 'Tenant A');
+    $tenantB = menuActionsTenant('tenant-b', 'Tenant B');
+
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+    $foreignRoot = app(CreateMenuCategory::class)(menuActionsText('Foreign Root'));
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+    $root = app(CreateMenuCategory::class)(menuActionsText('Root'));
+    $subcategory = app(CreateMenuCategory::class)(menuActionsText('Subcategory'), parentId: (int) $root->id);
+
+    expect(fn () => app(CreateMenuCategory::class)(menuActionsText('Invalid child'), parentId: (int) $subcategory->id))
+        ->toThrow(MenuDomainException::class, 'Menu subcategories must belong to a root category in the current tenant.')
+        ->and(fn () => app(CreateMenuCategory::class)(menuActionsText('Foreign child'), parentId: (int) $foreignRoot->id))
+        ->toThrow(MenuDomainException::class, 'Menu subcategories must belong to a root category in the current tenant.')
+        ->and(MenuCategory::query()->pluck('translated_name')->pluck('en')->all())->toBe(['Root', 'Subcategory']);
+});
+
+it('rejects self-parent category updates before database check constraints run', function (): void {
+    $tenant = menuActionsTenant('tenant-a', 'Tenant A');
+
+    app(TenantResolver::class)->set((int) $tenant['tenant']->id);
+
+    $category = app(CreateMenuCategory::class)(menuActionsText('Root'));
+
+    expect(fn () => app(UpdateMenuCategory::class)(
+        (int) $category->id,
+        menuActionsText('Self Parent'),
+        sortOrder: 0,
+        active: true,
+        parentId: (int) $category->id,
+    ))->toThrow(MenuDomainException::class, 'Menu subcategories must belong to a root category in the current tenant.');
+
+    expect(MenuCategory::query()->findOrFail((int) $category->id)->parent_id)->toBeNull();
+});
+
+it('requires menu items to belong to tenant-scoped subcategories', function (): void {
+    $tenantA = menuActionsTenant('tenant-a', 'Tenant A');
+    $tenantB = menuActionsTenant('tenant-b', 'Tenant B');
+
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+    app(BranchContext::class)->set((int) $tenantB['branch']->id);
+    $foreignRoot = app(CreateMenuCategory::class)(menuActionsText('Foreign Root'));
+    $foreignSubcategory = app(CreateMenuCategory::class)(menuActionsText('Foreign Subcategory'), parentId: (int) $foreignRoot->id);
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+    app(BranchContext::class)->set((int) $tenantA['branch']->id);
+    $root = app(CreateMenuCategory::class)(menuActionsText('Root'));
+    $subcategory = app(CreateMenuCategory::class)(menuActionsText('Subcategory'), parentId: (int) $root->id);
+
+    expect(fn () => app(CreateMenuItem::class)(
+        (int) $root->id,
+        menuActionsText('Root Item'),
+        null,
+        new Money(100000, 'AMD'),
+        ))->toThrow(MenuDomainException::class, 'Menu items must belong to a subcategory.')
+        ->and(fn () => app(CreateMenuItem::class)(
+            (int) $foreignSubcategory->id,
+            menuActionsText('Foreign Item'),
+            null,
+            new Money(100000, 'AMD'),
+        ))->toThrow(ModelNotFoundException::class)
+        ->and(MenuItem::query()->count())->toBe(0);
+
+    $item = app(CreateMenuItem::class)(
+        (int) $subcategory->id,
+        menuActionsText('Valid Item'),
+        null,
+        new Money(100000, 'AMD'),
+    );
+
+    expect((int) $item->category_id)->toBe((int) $subcategory->id);
+});
+
+it('blocks parent changes for categories with subcategories or items', function (): void {
+    $tenant = menuActionsTenant('tenant-a', 'Tenant A');
+
+    app(TenantResolver::class)->set((int) $tenant['tenant']->id);
+    app(BranchContext::class)->set((int) $tenant['branch']->id);
+
+    $root = app(CreateMenuCategory::class)(menuActionsText('Root'));
+    $otherRoot = app(CreateMenuCategory::class)(menuActionsText('Other Root'));
+    $subcategory = app(CreateMenuCategory::class)(menuActionsText('Subcategory'), parentId: (int) $root->id);
+    $filledSubcategory = app(CreateMenuCategory::class)(menuActionsText('Filled Subcategory'), parentId: (int) $root->id);
+    app(CreateMenuItem::class)(
+        (int) $filledSubcategory->id,
+        menuActionsText('Filled Item'),
+        null,
+        new Money(100000, 'AMD'),
+    );
+
+    expect(fn () => app(UpdateMenuCategory::class)(
+        (int) $root->id,
+        menuActionsText('Moved Root'),
+        sortOrder: 0,
+        active: true,
+        parentId: (int) $otherRoot->id,
+    ))->toThrow(MenuDomainException::class, 'Menu categories with subcategories or items cannot be moved.')
+        ->and(fn () => app(UpdateMenuCategory::class)(
+            (int) $filledSubcategory->id,
+            menuActionsText('Moved Subcategory'),
+            sortOrder: 0,
+            active: true,
+            parentId: (int) $otherRoot->id,
+        ))->toThrow(MenuDomainException::class, 'Menu categories with subcategories or items cannot be moved.');
+
+    $movedEmptySubcategory = app(UpdateMenuCategory::class)(
+        (int) $subcategory->id,
+        menuActionsText('Moved Empty Subcategory'),
+        sortOrder: 0,
+        active: true,
+        parentId: (int) $otherRoot->id,
+    );
+
+    expect((int) $movedEmptySubcategory->parent_id)->toBe((int) $otherRoot->id);
 });
 
 it('requires a resolved branch context for branch-owned item actions', function (): void {
@@ -183,7 +307,8 @@ it('does not update or delete menu items outside the current branch context', fu
         'status' => 'active',
     ]);
 
-    $category = app(CreateMenuCategory::class)(menuActionsText('Breakfast'));
+    $root = app(CreateMenuCategory::class)(menuActionsText('Menu'));
+    $category = app(CreateMenuCategory::class)(menuActionsText('Breakfast'), parentId: (int) $root->id);
     $item = app(CreateMenuItem::class)(
         (int) $category->id,
         menuActionsText('Omelette'),
@@ -214,7 +339,8 @@ it('replaces and removes internal and public menu item images through tenant-sco
     app(TenantResolver::class)->set((int) $tenant['tenant']->id);
     app(BranchContext::class)->set((int) $tenant['branch']->id);
 
-    $category = app(CreateMenuCategory::class)(menuActionsText('Breakfast'));
+    $root = app(CreateMenuCategory::class)(menuActionsText('Menu'));
+    $category = app(CreateMenuCategory::class)(menuActionsText('Breakfast'), parentId: (int) $root->id);
     $item = app(CreateMenuItem::class)(
         (int) $category->id,
         menuActionsText('Omelette'),
@@ -282,7 +408,8 @@ it('rejects unsupported menu item image type and size before storing files', fun
     app(TenantResolver::class)->set((int) $tenant['tenant']->id);
     app(BranchContext::class)->set((int) $tenant['branch']->id);
 
-    $category = app(CreateMenuCategory::class)(menuActionsText('Breakfast'));
+    $root = app(CreateMenuCategory::class)(menuActionsText('Menu'));
+    $category = app(CreateMenuCategory::class)(menuActionsText('Breakfast'), parentId: (int) $root->id);
     $item = app(CreateMenuItem::class)(
         (int) $category->id,
         menuActionsText('Omelette'),
@@ -313,7 +440,8 @@ it('does not allow one tenant branch context to replace or remove another tenant
     app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
     app(BranchContext::class)->set((int) $tenantB['branch']->id);
 
-    $categoryB = app(CreateMenuCategory::class)(menuActionsText('Tenant B Breakfast'));
+    $rootB = app(CreateMenuCategory::class)(menuActionsText('Tenant B Menu'));
+    $categoryB = app(CreateMenuCategory::class)(menuActionsText('Tenant B Breakfast'), parentId: (int) $rootB->id);
     $itemB = app(CreateMenuItem::class)(
         (int) $categoryB->id,
         menuActionsText('Tenant B Omelette'),
@@ -356,7 +484,8 @@ it('deletes menu item image files during item and category force delete but not 
     app(TenantResolver::class)->set((int) $tenant['tenant']->id);
     app(BranchContext::class)->set((int) $tenant['branch']->id);
 
-    $category = app(CreateMenuCategory::class)(menuActionsText('Breakfast'));
+    $root = app(CreateMenuCategory::class)(menuActionsText('Menu'));
+    $category = app(CreateMenuCategory::class)(menuActionsText('Breakfast'), parentId: (int) $root->id);
     $item = app(CreateMenuItem::class)(
         (int) $category->id,
         menuActionsText('Omelette'),

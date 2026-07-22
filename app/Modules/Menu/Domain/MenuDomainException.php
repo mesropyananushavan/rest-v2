@@ -25,6 +25,21 @@ final class MenuDomainException extends RuntimeException
         return new self('menu.category_archived', 'Menu items cannot be restored while their category is archived.');
     }
 
+    public static function invalidCategoryParent(): self
+    {
+        return new self('menu.invalid_category_parent', 'Menu subcategories must belong to a root category in the current tenant.');
+    }
+
+    public static function categoryParentChangeBlocked(): self
+    {
+        return new self('menu.category_parent_change_blocked', 'Menu categories with subcategories or items cannot be moved.');
+    }
+
+    public static function itemCategoryMustBeSubcategory(): self
+    {
+        return new self('menu.item_category_must_be_subcategory', 'Menu items must belong to a subcategory.');
+    }
+
     public function errorCode(): string
     {
         return $this->errorCode;
