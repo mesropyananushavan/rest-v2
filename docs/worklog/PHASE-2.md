@@ -1,6 +1,6 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.11 Part C Block 4.4 complete; Block 4.5 load-timing measurements next
+Status: Stage 1.11 Part C Block 4.5 load-timing measurements recorded; owner handoff next
 Branch: phase-2-stage-1.11c-menu-ux
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
@@ -756,6 +756,99 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
 - Important: all Stage 1.11 load/performance measurements before the
   2026-07-23 clean guarded run were taken on a dirty DB and are invalid.
 
+## Stage 1.11.11 load measurements: 2026-07-23
+- Dataset check before timings: local PostgreSQL DB still contained the load
+  dataset, so it was not reloaded. `tenants`: 5 rows with `seed_source='load'`
+  plus 2 demo rows with `seed_source is null`; `menu_items=250007`,
+  `menu_categories=607`.
+- Quality gate before timings: `make pint` passed (`153 files`), `make stan`
+  passed (`[OK] No errors`), and `make test` passed (`94 passed / 2 skipped /
+  716 assertions`).
+- Measurement method: authenticated as
+  `load-manager+20260723071232-1-restaurant-1@smartrest.test` against
+  `http://localhost:8080`. GET scenarios used `curl -w '%{http_code}
+  %{time_total}'`. Livewire scenarios fetched a fresh component snapshot, then
+  measured only the real `POST /livewire-b02a6282/update` request with
+  `Content-Type: application/json` and `X-Livewire: true`. Each scenario used
+  one warm-up request excluded from the median, followed by 3 measured runs;
+  the recorded value is the median of those 3 runs.
+- Menu index first load: `GET /admin/menu`; warm-up `200 0.136249`; measured
+  `200 0.129899`, `200 0.152651`, `200 0.130298`; median `0.130298s`.
+- Category panel pagination: Livewire page `GET /admin/menu`, payload
+  `updates={}`, `call=nextCategoryPage[]`; warm-up `200 0.109275`; measured
+  `200 0.107672`, `200 0.109441`, `200 0.109615`; median `0.109441s`.
+- Category panel search: Livewire page `GET /admin/menu`, payload
+  `updates={"categorySearch":"Trout"}`, no call; warm-up `200 0.102965`;
+  measured `200 0.106006`, `200 0.119503`, `200 0.102077`; median
+  `0.106006s`.
+- Category switching: Livewire page `GET /admin/menu`, payload `updates={}`,
+  `call=selectCategory[109]`; warm-up `200 0.114601`; measured
+  `200 0.112175`, `200 0.124423`, `200 0.120919`; median `0.120919s`.
+- Global item search, frequent prefix: Livewire page `GET /admin/menu`,
+  payload `updates={"search":"Fresh"}`, no call. SQL precheck for tenant 3
+  returned 3125 matching `menu_items`. Warm-up `200 0.185770`; measured
+  `200 0.191471`, `200 0.181143`, `200 0.187575`; median `0.187575s`.
+- Global item search, rare string: Livewire page `GET /admin/menu`, payload
+  `updates={"search":"Dish 1-1-1-499"}`, no call. SQL precheck for tenant 3
+  returned 1 matching `menu_item` (`id=506`). Warm-up `200 0.138756`;
+  measured `200 0.133024`, `200 0.130020`, `200 0.142413`; median
+  `0.133024s`.
+- Global item search, no matches: Livewire page `GET /admin/menu`, payload
+  `updates={"search":"zzzz-no-match"}`, no call. SQL precheck returned 0
+  matches. Warm-up `200 0.095980`; measured `200 0.097918`,
+  `200 0.100064`, `200 0.095406`; median `0.097918s`.
+- Item pagination inside subcategory: Livewire page
+  `GET /admin/menu?category=108`, payload `updates={}`,
+  `call=nextItemPage[]`; warm-up `200 0.105977`; measured `200 0.111848`,
+  `200 0.117280`, `200 0.131414`; median `0.117280s`.
+- Create-item write latency: Livewire page `GET /admin/menu/items/create`,
+  payload sets `category_id=108`, `name_hy`, `name_ru`, `name_en`,
+  empty descriptions, `price_major=1234`, `currency=AMD`,
+  `sort_order=999999`, `active=true`, then `call=save[]`; warm-up
+  `200 0.064592`; measured `200 0.072050`, `200 0.064232`,
+  `200 0.065597`; median `0.065597s`.
+- Activity-toggle write latency: Livewire page
+  `GET /admin/menu?category=108&show_inactive=1`, payload `updates={}`,
+  `call=toggleItemActivity[8]`; warm-up `200 0.124836`; measured
+  `200 0.116878`, `200 0.119222`, `200 0.120593`; median `0.119222s`.
+- Timing conclusion: no obvious >250k-row regression was observed in these
+  local curl measurements. The slowest median was the frequent global search
+  prefix `Fresh` at `0.187575s`.
+- Final count note after write-latency probes: `menu_items=250012` because one
+  pre-measurement Livewire save smoke plus the create-item warm-up and 3
+  measured create-item writes inserted 5 measurement rows. `menu_categories`
+  remained `607`.
+- `menu_items` size: heap `140 MB`, indexes `121 MB`, total `261 MB`.
+  `menu_items` index sizes: `menu_items_translated_name_trgm_idx=40 MB`;
+  `menu_items_tenant_branch_category_deleted_active_sort_id_idx=20 MB`;
+  `menu_items_tenant_branch_deleted_active_sort_id_idx=20 MB`;
+  `menu_items_tenant_branch_category_deleted_sort_id_idx=16 MB`;
+  `menu_items_tenant_category_deleted_sort_idx=12 MB`;
+  `menu_items_pkey=5496 kB`; `menu_items_category_id_idx=2016 kB`;
+  `menu_items_tenant_branch_deleted_active_idx=1680 kB`;
+  `menu_items_tenant_id_index=1632 kB`;
+  `menu_items_tenant_archive_marker_deleted_idx=1632 kB`;
+  `menu_items_branch_id_idx=1624 kB`.
+- `menu_categories` size: heap `160 kB`, indexes `440 kB`, total `632 kB`.
+  `menu_categories` index sizes:
+  `menu_categories_translated_name_trgm_idx=192 kB`;
+  `menu_categories_tenant_parent_deleted_active_sort_id_idx=72 kB`;
+  `menu_categories_tenant_deleted_sort_id_idx=64 kB`;
+  `menu_categories_pkey=32 kB`;
+  `menu_categories_parent_id_idx=16 kB`;
+  `menu_categories_archived_with_category_id_idx=16 kB`;
+  `menu_categories_tenant_id_index=16 kB`;
+  `menu_categories_tenant_archive_marker_deleted_idx=16 kB`;
+  `menu_categories_tenant_deleted_active_sort_idx=16 kB`.
+
+## Open questions
+- Livewire test harness does not convert the inline action's
+  `ModelNotFoundException` into `assertStatus(404)`: tenant isolation for
+  Livewire methods is covered at exception/action level, but not yet proven at
+  HTTP endpoint level. Add a real HTTP Livewire request test or another
+  endpoint-level check before relying on `assertStatus(404)` for Livewire
+  methods.
+
 ## Next steps
 Stage 1.11 Part C subcategory implementation order after owner-approved
 `docs/DECISIONS.md` entry:
@@ -854,8 +947,5 @@ Stage 1.11 Part C subcategory implementation order after owner-approved
   `load-manager+20260723071232-1-restaurant-1@smartrest.test`: `POST /login`
   returned `302` to `/admin`, then `GET /admin` returned `200`.
 
-Next action: run Block 4.5 load-timing measurements on the current filled Menu
-table: HTTP timings for Menu index, category pagination/search, category
-switching, global item search, item pagination, create-item write latency, and
-activity-toggle write latency. Do not create PRs/merges/pushes or switch
-branches.
+Next action: owner review/handoff for Stage 1.11 Part C. Do not create
+PRs/merges/pushes or switch branches.
