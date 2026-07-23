@@ -123,6 +123,15 @@ return [
     'placeholders' => [
         'select_category' => 'Select a category',
     ],
+    'searchable_select' => [
+        'clear' => 'Clear selection',
+        'load_more' => 'Load more',
+        'loading' => 'Loading...',
+        'no_results' => 'No matching options.',
+        'open' => 'Open options',
+        'parent_placeholder' => 'Search root categories',
+        'placeholder' => 'Search and select',
+    ],
     'pagination' => [
         'next' => 'Next',
         'page_of' => 'Page :page of :pages',

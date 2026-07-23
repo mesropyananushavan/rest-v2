@@ -3,14 +3,15 @@
 declare(strict_types=1);
 
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
-use Illuminate\Support\Collection;
 
 /** @var MenuCategory|null $category */
-/** @var Collection<int, string> $parentOptions */
+/** @var string $parentOptionsEndpoint */
+/** @var list<array{id: int, label: string}> $parentInitialOptions */
+/** @var int $selectedParentValue */
+/** @var array{id: int, label: string}|null $selectedParentOption */
 
 $isEdit = $category instanceof MenuCategory;
 $title = $isEdit ? __('menu.categories.edit_title') : __('menu.categories.create_title');
-$selectedParentId = $category?->parent_id === null ? 0 : (int) $category->parent_id;
 ?>
 
 @extends('layouts.admin')
@@ -39,11 +40,15 @@ $selectedParentId = $category?->parent_id === null ? 0 : (int) $category->parent
 
                 @include('modules.menu.partials.localized-name-fields', ['model' => $category])
 
-                <x-form.select
+                <x-form.searchable-select
                     name="parent_id"
                     :label="__('menu.fields.parent_category')"
-                    :options="[0 => __('menu.categories.root_parent_option')] + $parentOptions->all()"
-                    :selected="$selectedParentId"
+                    :endpoint="$parentOptionsEndpoint"
+                    :value="$selectedParentValue"
+                    :selected="$selectedParentOption"
+                    :initial-options="$parentInitialOptions"
+                    :static-option="['id' => 0, 'label' => __('menu.categories.root_parent_option')]"
+                    :placeholder="__('menu.searchable_select.parent_placeholder')"
                 />
 
                 <div class="grid gap-3 md:grid-cols-2">

@@ -7,16 +7,15 @@ namespace App\Livewire\Admin;
 use App\Modules\Menu\Application\CreateMenuItem;
 use App\Modules\Menu\Application\RemoveMenuItemImage;
 use App\Modules\Menu\Application\ReplaceMenuItemImage;
+use App\Modules\Menu\Application\SearchMenuCategoryOptions;
 use App\Modules\Menu\Application\UpdateMenuItem;
 use App\Modules\Menu\Domain\MenuItemImageSlot;
-use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use App\Modules\Menu\Infrastructure\Storage\MenuItemImageUrlResolver;
 use App\Support\I18n\LocalizedText;
 use App\Support\Money\Money;
 use App\Support\Money\MoneyFormatter;
 use Illuminate\Contracts\View\View;
-use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
@@ -25,9 +24,6 @@ use Throwable;
 final class MenuItemForm extends Component
 {
     use WithFileUploads;
-
-    /** @var array<int, string> */
-    public array $categoryOptions = [];
 
     public ?int $itemId = null;
 
@@ -65,17 +61,8 @@ final class MenuItemForm extends Component
     /** @var array<string, mixed>|null */
     public ?array $publicImage = null;
 
-    /**
-     * @param  EloquentCollection<int, MenuCategory>  $categories
-     */
-    public function mount(EloquentCollection $categories, string $defaultCurrency, ?MenuItem $item = null): void
+    public function mount(string $defaultCurrency, ?MenuItem $item = null): void
     {
-        $this->categoryOptions = $categories
-            ->mapWithKeys(fn (MenuCategory $category): array => [
-                (int) $category->id => $this->categoryOptionLabel($category),
-            ])
-            ->all();
-
         $this->currency = $defaultCurrency;
 
         if (! $item instanceof MenuItem) {
@@ -101,7 +88,16 @@ final class MenuItemForm extends Component
 
     public function render(): View
     {
-        return view('livewire.admin.menu.item-form');
+        $categoryOptions = app(SearchMenuCategoryOptions::class);
+
+        return view('livewire.admin.menu.item-form', [
+            'categoryInitialOptions' => $categoryOptions(SearchMenuCategoryOptions::MODE_SUBCATEGORIES)['options'],
+            'categoryOptionsEndpoint' => route('admin.menu.category-options.item-categories'),
+            'selectedCategoryOption' => $categoryOptions->selectedOption(
+                SearchMenuCategoryOptions::MODE_SUBCATEGORIES,
+                $this->category_id,
+            ),
+        ]);
     }
 
     public function save(): void
@@ -269,19 +265,6 @@ final class MenuItemForm extends Component
     private function categoryId(): int
     {
         return (int) $this->category_id;
-    }
-
-    private function categoryOptionLabel(MenuCategory $category): string
-    {
-        $locale = app()->getLocale();
-        $name = $category->translatedName()->forLocale($locale);
-        $parent = $category->parent;
-
-        if (! $parent instanceof MenuCategory) {
-            return $name;
-        }
-
-        return $parent->translatedName()->forLocale($locale).' / '.$name;
     }
 
     private function existingItemId(): int

@@ -8,20 +8,23 @@ use App\Modules\Menu\Application\ArchiveMenuCategory;
 use App\Modules\Menu\Application\CreateMenuCategory;
 use App\Modules\Menu\Application\ForceDeleteMenuCategory;
 use App\Modules\Menu\Application\RestoreMenuCategory;
+use App\Modules\Menu\Application\SearchMenuCategoryOptions;
 use App\Modules\Menu\Application\UpdateMenuCategory;
 use App\Modules\Menu\Http\Requests\MenuCategoryRequest;
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 final class MenuCategoryController
 {
-    public function create(): View
+    public function create(SearchMenuCategoryOptions $categoryOptions): View
     {
         return view('modules.menu.category-form', [
             'category' => null,
-            'parentOptions' => $this->parentOptions(),
+            'parentOptionsEndpoint' => route('admin.menu.category-options.parents'),
+            'parentInitialOptions' => $this->initialParentOptions($categoryOptions),
+            'selectedParentValue' => $this->selectedParentValue(),
+            'selectedParentOption' => $this->selectedParentOption($categoryOptions),
         ]);
     }
 
@@ -34,13 +37,17 @@ final class MenuCategoryController
             ->with('status', __('menu.flash.category_created'));
     }
 
-    public function edit(int $category): View
+    public function edit(int $category, SearchMenuCategoryOptions $categoryOptions): View
     {
         $categoryModel = MenuCategory::query()->findOrFail($category);
+        $excludedCategoryId = (int) $categoryModel->id;
 
         return view('modules.menu.category-form', [
             'category' => $categoryModel,
-            'parentOptions' => $this->parentOptions($categoryModel),
+            'parentOptionsEndpoint' => route('admin.menu.category-options.parents', ['exclude_id' => $excludedCategoryId]),
+            'parentInitialOptions' => $this->initialParentOptions($categoryOptions, $excludedCategoryId),
+            'selectedParentValue' => $this->selectedParentValue($categoryModel),
+            'selectedParentOption' => $this->selectedParentOption($categoryOptions, $categoryModel),
         ]);
     }
 
@@ -83,24 +90,38 @@ final class MenuCategoryController
     }
 
     /**
-     * @return Collection<int, string>
+     * @return list<array{id: int, label: string}>
      */
-    private function parentOptions(?MenuCategory $category = null): Collection
+    private function initialParentOptions(SearchMenuCategoryOptions $categoryOptions, ?int $excludedCategoryId = null): array
     {
-        $locale = app()->getLocale();
+        return $categoryOptions(SearchMenuCategoryOptions::MODE_ROOTS, excludeId: $excludedCategoryId)['options'];
+    }
+
+    /**
+     * @return array{id: int, label: string}|null
+     */
+    private function selectedParentOption(SearchMenuCategoryOptions $categoryOptions, ?MenuCategory $category = null): ?array
+    {
+        $parentId = $this->selectedParentValue($category);
+
+        if ($parentId <= 0) {
+            return [
+                'id' => 0,
+                'label' => __('menu.categories.root_parent_option'),
+            ];
+        }
+
         $excludedCategoryId = $category instanceof MenuCategory ? (int) $category->id : null;
 
-        return MenuCategory::query()
-            ->whereNull('parent_id')
-            ->when(
-                $excludedCategoryId !== null,
-                fn ($query) => $query->whereKeyNot($excludedCategoryId),
-            )
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->get()
-            ->mapWithKeys(fn (MenuCategory $parent): array => [
-                (int) $parent->id => $parent->translatedName()->forLocale($locale),
-            ]);
+        return $categoryOptions->selectedOption(SearchMenuCategoryOptions::MODE_ROOTS, $parentId, $excludedCategoryId);
+    }
+
+    private function selectedParentValue(?MenuCategory $category = null): int
+    {
+        $oldParentId = request()->old('parent_id');
+
+        return is_numeric($oldParentId)
+            ? (int) $oldParentId
+            : ($category?->parent_id === null ? 0 : (int) $category->parent_id);
     }
 }

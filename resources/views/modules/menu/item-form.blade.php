@@ -31,7 +31,6 @@ $title = $isEdit ? __('menu.items.edit_title') : __('menu.items.create_title');
     <div class="mx-auto max-w-5xl">
         <x-card>
             <livewire:admin.menu-item-form
-                :categories="$categories"
                 :default-currency="$defaultCurrency"
                 :item="$item"
             />

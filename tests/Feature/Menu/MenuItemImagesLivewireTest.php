@@ -20,7 +20,6 @@ use App\Modules\Tenancy\Infrastructure\Models\Branch;
 use App\Modules\Tenancy\Infrastructure\Models\Tenant;
 use App\Support\I18n\LocalizedText;
 use App\Support\Money\Money;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
@@ -40,7 +39,6 @@ it('creates a menu item with internal and public images through the Livewire for
     $records = menuImageLivewireRecords();
 
     Livewire::test(MenuItemForm::class, [
-        'categories' => $records['categories'],
         'defaultCurrency' => 'AMD',
         'item' => null,
     ])
@@ -77,7 +75,6 @@ it('validates Livewire image type and size before saving the form', function ():
     $records = menuImageLivewireRecords();
 
     Livewire::test(MenuItemForm::class, [
-        'categories' => $records['categories'],
         'defaultCurrency' => 'AMD',
         'item' => null,
     ])
@@ -93,7 +90,6 @@ it('validates Livewire image type and size before saving the form', function ():
         ->assertHasErrors(['publicUpload']);
 
     Livewire::test(MenuItemForm::class, [
-        'categories' => $records['categories'],
         'defaultCurrency' => 'AMD',
         'item' => null,
     ])
@@ -109,6 +105,28 @@ it('validates Livewire image type and size before saving the form', function ():
         ->assertHasErrors(['internalUpload']);
 
     expect(MenuItem::query()->count())->toBe(0);
+});
+
+it('keeps the selected category visible after a Livewire validation error', function (): void {
+    $records = menuImageLivewireRecords();
+
+    $component = Livewire::test(MenuItemForm::class, [
+        'defaultCurrency' => 'AMD',
+        'item' => null,
+    ]);
+
+    $component
+        ->set('category_id', (int) $records['category']->id)
+        ->set('price_major', '2200')
+        ->set('currency', 'AMD')
+        ->call('save')
+        ->assertHasErrors(['name_hy'])
+        ->assertSet('category_id', (int) $records['category']->id);
+
+    expect($component->viewData('selectedCategoryOption'))->toBe([
+        'id' => (int) $records['category']->id,
+        'label' => 'Menu / Breakfast',
+    ]);
 });
 
 it('removes an existing item image through the Livewire form', function (): void {
@@ -129,7 +147,6 @@ it('removes an existing item image through the Livewire form', function (): void
     $internalImage = menuImageLivewireMetadata($item, 'internal_image');
 
     Livewire::test(MenuItemForm::class, [
-        'categories' => $records['categories'],
         'defaultCurrency' => 'AMD',
         'item' => $item,
     ])
@@ -183,7 +200,7 @@ it('renders local public storage image URLs relative to the current host', funct
 });
 
 /**
- * @return array{tenant: Tenant, branch: Branch, category: MenuCategory, categories: Collection<int, MenuCategory>}
+ * @return array{tenant: Tenant, branch: Branch, category: MenuCategory}
  */
 function menuImageLivewireRecords(): array
 {
@@ -212,7 +229,6 @@ function menuImageLivewireRecords(): array
         'tenant' => $tenant,
         'branch' => $branch,
         'category' => $category,
-        'categories' => $category->newCollection([$category]),
     ];
 }
 

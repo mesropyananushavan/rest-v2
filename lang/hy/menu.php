@@ -123,6 +123,15 @@ return [
     'placeholders' => [
         'select_category' => 'Ընտրեք կատեգորիա',
     ],
+    'searchable_select' => [
+        'clear' => 'Մաքրել ընտրությունը',
+        'load_more' => 'Բեռնել ավելին',
+        'loading' => 'Բեռնվում է...',
+        'no_results' => 'Համապատասխան տարբերակներ չկան։',
+        'open' => 'Բացել տարբերակները',
+        'parent_placeholder' => 'Որոնել արմատային կատեգորիաներ',
+        'placeholder' => 'Որոնեք և ընտրեք',
+    ],
     'pagination' => [
         'next' => 'Հաջորդը',
         'page_of' => 'Էջ :page / :pages',

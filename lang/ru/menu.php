@@ -123,6 +123,15 @@ return [
     'placeholders' => [
         'select_category' => 'Выберите категорию',
     ],
+    'searchable_select' => [
+        'clear' => 'Очистить выбор',
+        'load_more' => 'Загрузить ещё',
+        'loading' => 'Загрузка...',
+        'no_results' => 'Подходящих вариантов нет.',
+        'open' => 'Открыть варианты',
+        'parent_placeholder' => 'Искать корневые категории',
+        'placeholder' => 'Найдите и выберите',
+    ],
     'pagination' => [
         'next' => 'Далее',
         'page_of' => 'Страница :page из :pages',

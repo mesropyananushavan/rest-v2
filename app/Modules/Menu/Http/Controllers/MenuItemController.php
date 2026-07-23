@@ -7,7 +7,6 @@ namespace App\Modules\Menu\Http\Controllers;
 use App\Modules\Menu\Application\ArchiveMenuItem;
 use App\Modules\Menu\Application\CreateMenuItem;
 use App\Modules\Menu\Application\ForceDeleteMenuItem;
-use App\Modules\Menu\Application\ListMenuCategories;
 use App\Modules\Menu\Application\RestoreMenuItem;
 use App\Modules\Menu\Application\UpdateMenuItem;
 use App\Modules\Menu\Http\Requests\MenuItemRequest;
@@ -20,10 +19,9 @@ use Illuminate\View\View;
 
 final class MenuItemController
 {
-    public function create(ListMenuCategories $categories, TenantResolver $tenants, TenantSettingsReader $settings): View
+    public function create(TenantResolver $tenants, TenantSettingsReader $settings): View
     {
         return view('modules.menu.item-form', [
-            'categories' => $categories(),
             'defaultCurrency' => $this->defaultCurrency($tenants, $settings),
             'item' => null,
         ]);
@@ -45,10 +43,9 @@ final class MenuItemController
             ->with('status', __('menu.flash.item_created'));
     }
 
-    public function edit(int $item, ListMenuCategories $categories, BranchContext $branches, TenantResolver $tenants, TenantSettingsReader $settings): View
+    public function edit(int $item, BranchContext $branches, TenantResolver $tenants, TenantSettingsReader $settings): View
     {
         return view('modules.menu.item-form', [
-            'categories' => $categories(),
             'defaultCurrency' => $this->defaultCurrency($tenants, $settings),
             'item' => $this->findItem($item, $branches),
         ]);

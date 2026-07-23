@@ -1,21 +1,15 @@
 <form wire:submit="save" novalidate>
-    <div class="mb-4">
-        <label for="category_id" class="mb-1.5 block text-sm font-semibold text-slate-700">{{ __('menu.fields.category') }}</label>
-        <select
-            id="category_id"
-            wire:model="category_id"
-            class="block w-full rounded-sr-control border bg-white px-3 py-2 text-sm text-smartrest-text shadow-sm outline-none transition focus:border-smartrest-success focus:ring-4 focus:ring-smartrest-success/10 @error('category_id') border-smartrest-danger focus:border-smartrest-danger focus:ring-smartrest-danger/10 @else border-slate-200 @enderror"
-            required
-        >
-            <option value="">{{ __('menu.placeholders.select_category') }}</option>
-            @foreach ($categoryOptions as $optionValue => $optionLabel)
-                <option value="{{ $optionValue }}">{{ $optionLabel }}</option>
-            @endforeach
-        </select>
-        @error('category_id')
-            <div class="mt-1.5 text-sm text-red-700">{{ $message }}</div>
-        @enderror
-    </div>
+    <x-form.searchable-select
+        name="category_id"
+        wire-model="category_id"
+        :label="__('menu.fields.category')"
+        :endpoint="$categoryOptionsEndpoint"
+        :value="$category_id"
+        :selected="$selectedCategoryOption"
+        :initial-options="$categoryInitialOptions"
+        :placeholder="__('menu.placeholders.select_category')"
+        required
+    />
 
     <div class="mb-4 grid gap-3 lg:grid-cols-3">
         @foreach (['hy', 'ru', 'en'] as $locale)
