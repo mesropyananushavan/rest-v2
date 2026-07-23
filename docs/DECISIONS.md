@@ -47,26 +47,6 @@ authentication/session state.
 Rejected: allowing `X-Tenant-ID` in production or giving it precedence over
 authenticated users — both would make tenant spoofing possible.
 
-## 2026-07-23 — Branch header policy requires assignment authorization
-Decision: branch resolution ignores `X-Branch-ID` in production. Outside
-production, branch candidates are considered in header, session, then first
-assigned-branch order, but an authenticated user may resolve only branch ids
-returned by the Identity `UserDirectory` assignment contract. Explicit
-unauthorized header candidates return 404; stale unauthorized session
-candidates are forgotten with a warning and fall back to the first assigned
-branch if one exists.
-Reason: branch context filters branch-owned operational data, so a request
-header must not let an authenticated user switch into an unassigned branch
-inside the same tenant. Local and test workflows still need unauthenticated
-header-based context before login, while production must trust only
-authentication/session state and branch assignments.
-Rejected: allowing `X-Branch-ID` in production or trusting same-tenant branch
-ids without assignment checks — both would leak branch-scoped data; returning
-403 for unassigned header branches — inconsistent with existing tenant/branch
-isolation and the branch-switch controller's 404 behavior; aborting on stale
-session branch ids — too disruptive for users whose assignments changed after
-their session was created.
-
 ## 2026-07-20 — Tailwind CSS as admin UI foundation
 Decision: admin UI styling moves from Bootstrap to Tailwind CSS through the
 official Vite plugin, with SmartRest design tokens maintained in the Tailwind
@@ -269,3 +249,40 @@ Operational note: `smartrest_app` was mentioned earlier in the Phase 1 worklog,
 but current migrations and configuration do not create or use it. Current
 `docker-compose.yml`, `.env.example`, and `config/database.php` point
 application runtime traffic at `smartrest`.
+
+## 2026-07-23 — Branch header policy requires assignment authorization
+Decision: branch resolution ignores `X-Branch-ID` in production. Outside
+production, branch candidates are considered in header, session, then first
+assigned-branch order, but an authenticated user may resolve only branch ids
+returned by the Identity `UserDirectory` assignment contract. Explicit
+unauthorized header candidates return 404; stale unauthorized session
+candidates are forgotten with a warning and fall back to the first assigned
+branch if one exists.
+Reason: branch context filters branch-owned operational data, so a request
+header must not let an authenticated user switch into an unassigned branch
+inside the same tenant. Local and test workflows still need unauthenticated
+header-based context before login, while production must trust only
+authentication/session state and branch assignments.
+Rejected: allowing `X-Branch-ID` in production or trusting same-tenant branch
+ids without assignment checks — both would leak branch-scoped data; returning
+403 for unassigned header branches — inconsistent with existing tenant/branch
+isolation and the branch-switch controller's 404 behavior; aborting on stale
+session branch ids — too disruptive for users whose assignments changed after
+their session was created.
+
+## 2026-07-23 — PostgreSQL extensions are privileged provisioning
+Decision: PostgreSQL extensions such as `pg_trgm` are provisioned by a
+privileged database role before unprivileged runtime/test traffic runs
+migrations. Migrations that depend on an extension must tolerate that
+pre-provisioned state by checking `pg_extension` before attempting
+`CREATE EXTENSION`, while still creating the extension when a privileged local
+migration role runs against a fresh database.
+Reason: the PostgreSQL tenant-isolation CI job exists to exercise RLS with a
+non-superuser, non-`BYPASSRLS` app role. Database-level extension creation is a
+privileged operation and must not be smuggled into that runtime role just to
+make migrations pass.
+Rejected: granting `CREATE ON DATABASE` to `smartrest_app` — it weakens the
+runtime role and hides privilege drift; switching the pgsql CI job back to the
+privileged `smartrest` role — it bypasses the RLS condition the job is meant
+to prove; removing the trigram indexes from the migration — it changes the
+Menu search schema rather than fixing provisioning.

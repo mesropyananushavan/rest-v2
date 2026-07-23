@@ -1,9 +1,10 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.12 branch authorization hardening complete locally; owner PR handoff ready
+Status: Stage 1.12 merged with Stage 1.13 main and verified locally; PR CI pending
 Branch: phase-2-stage-1.12-branch-authorization
 
-PR state: owner creates and merges PRs; Codex does not create PRs.
+PR state: owner has authorized Codex-created and Codex-merged PRs as of
+Stage 1.15; policy documentation update is pending in a separate branch.
 
 ## Plan
 - [x] Stage 1.1: session setup and branch baseline. Create this Phase 2
@@ -544,6 +545,71 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   Result: final gates green: Pint pass (`157 files`), PHPStan pass
   (`[OK] No errors`), and Pest pass (`124 passed / 2 skipped /
   854 assertions`), which is two tests above the Stage 1.12 baseline.
+- [x] Stage 1.12.8: merge Stage 1.13 main into Stage 1.12 and verify
+  PostgreSQL branch-context coverage. After Stage 1.13 was merged to
+  `origin/main` at `714cb9a`, fast-forward local `main`, merge `origin/main`
+  into `phase-2-stage-1.12-branch-authorization` with a normal merge commit,
+  resolve documentation conflicts only, run `make pint`, `make stan`,
+  `make test`, and `make tenant-isolation-pgsql`, then push and open/merge the
+  Stage 1.12 PR after green CI. Result: merge conflict occurred only in
+  `docs/worklog/PHASE-2.md`; `docs/DECISIONS.md` auto-merged and was reordered
+  chronologically. Worklog resolution kept Stage 1.12, Stage 1.12 follow-ups,
+  and Stage 1.13 entries, with one `Next steps` section. Local gates green:
+  Pint pass (`157 files`), PHPStan pass (`[OK] No errors`), SQLite Pest pass
+  (`124 passed / 2 skipped / 854 assertions`), and PostgreSQL Tenancy pass
+  (`18 passed / 64 assertions`). The Stage 1.12 branch-context tests passed
+  under the unprivileged PostgreSQL role.
+- [x] Stage 1.13.1: branch baseline and failure inspection. Preserve local
+  Stage 1.12 branch `phase-2-stage-1.12-branch-authorization` at `e5bace8`
+  unchanged, switch to clean `main`, fetch `origin`, confirm local `main` is
+  not behind `origin/main`, create exactly one branch
+  `phase-2-stage-1.13-pgsql-ci-repair` from `main`, then inspect CI,
+  migration, Makefile, compose/test config, and pgsql-conditional tests.
+  Result: Stage 1.12 was clean at `e5bace8` and left untouched; local `main`
+  at `33a1cec` was clean and in sync with `origin/main` (`0 0` ahead/behind);
+  the Stage 1.13 branch was created from `main`; inspection confirmed the CI
+  pgsql job runs as unprivileged `smartrest_app` but the trgm migration tries
+  to create `pg_trgm`, while local `make test` forces SQLite and skips that
+  migration branch plus the two PostgreSQL-only RLS tests.
+- [x] Stage 1.13.2: extension provisioning and migration tolerance. Update the
+  CI PostgreSQL preparation step to create `pg_trgm` with the privileged
+  `smartrest` role before tests run, keep `smartrest_app` unprivileged, and
+  make the existing trgm migration skip `CREATE EXTENSION` when `pg_trgm` is
+  already present while preserving the same indexes and `down()` behavior.
+  Record the privileged-extension provisioning decision in `docs/DECISIONS.md`.
+  Result: CI now creates `pg_trgm` as privileged `smartrest`, explicitly keeps
+  `smartrest_app` non-superuser/non-`BYPASSRLS`, and still runs pgsql Pest as
+  `smartrest_app`; the trgm migration checks `pg_extension` before
+  `CREATE EXTENSION` and leaves the two GIN index statements and `down()`
+  unchanged; `docs/DECISIONS.md` records the privileged-extension policy.
+- [x] Stage 1.13.3: local pgsql tenancy Make target. Add a self-contained
+  Makefile target that starts local PostgreSQL if needed, creates a separate
+  local test database and unprivileged `NOBYPASSRLS` test role idempotently,
+  pre-provisions `pg_trgm` as the privileged local role, and runs the whole
+  `tests/Feature/Tenancy` directory through Pest as that unprivileged role
+  without touching the development `smartrest` database. Result: added
+  `make tenant-isolation-pgsql`, using `smartrest_test_local` and
+  `smartrest_app_test`; first run exposed and fixed a Makefile dollar-quoting
+  bug in role creation, then the target created the role/database/extension
+  idempotently and ran the Tenancy directory on PostgreSQL.
+- [x] Stage 1.13.4: establish real PostgreSQL Tenancy result and CI width.
+  Run the new local pgsql tenancy target, record exact pass/fail/skip counts
+  and any remaining failures, correct the stale "3 known RLS/BYPASSRLS
+  failures" worklog claim, and widen the CI pgsql job to
+  `tests/Feature/Tenancy` only if the whole directory passes locally. Result:
+  local unprivileged PostgreSQL Tenancy run passed completely (`11 passed /
+  0 failed / 0 skipped / 42 assertions`), so the stale "3 known
+  RLS/BYPASSRLS failures" claim is superseded and the CI pgsql job was widened
+  from `tests/Feature/Tenancy/TenantIsolationTest.php` to the whole
+  `tests/Feature/Tenancy` directory.
+- [x] Stage 1.13.5: verification and handoff. Run `make pint`, `make stan`,
+  `make test`, and the new pgsql tenancy target; update the worklog with
+  checked-off result lines, gotchas, and a zero-context next action. Do not
+  push; CI proof remains owner-owned. Result: final gates green: Pint pass
+  (`156 files`), PHPStan pass (`[OK] No errors`), SQLite Pest pass
+  (`117 passed / 2 skipped / 832 assertions`), and PostgreSQL Tenancy pass
+  (`11 passed / 42 assertions`). CI itself was not verified because pushing is
+  owner-owned.
 
 ## Done log
 - 2026-07-20: Phase 2 Stage 1 opened from fresh `origin/main` on branch
@@ -705,6 +771,31 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   removed failed the new header test as expected. Final gates green: Pint pass
   (`157 files`), PHPStan pass (`[OK] No errors`), and Pest pass
   (`124 passed / 2 skipped / 854 assertions`).
+- 2026-07-23: Stage 1.13 PostgreSQL CI repair complete locally. Branch
+  `phase-2-stage-1.13-pgsql-ci-repair` was created from clean `main` at
+  `33a1cec` after preserving local Stage 1.12 branch
+  `phase-2-stage-1.12-branch-authorization` at `e5bace8` unchanged. CI now
+  pre-provisions `pg_trgm` as privileged `smartrest`, keeps `smartrest_app`
+  non-superuser/non-`BYPASSRLS`, and runs pgsql Pest as `smartrest_app`; the
+  trgm migration tolerates pre-provisioned extensions by checking
+  `pg_extension`; `make tenant-isolation-pgsql` runs the whole Tenancy feature
+  directory against local PostgreSQL using separate `smartrest_test_local` DB
+  and unprivileged `smartrest_app_test` role. Real local pgsql Tenancy result:
+  `11 passed / 0 failed / 0 skipped / 42 assertions`, so the stale "3 known
+  RLS/BYPASSRLS failures" claim is corrected to zero current failures under
+  the unprivileged pgsql path. Final local gates green: Pint pass, PHPStan
+  pass, SQLite Pest 117 passed / 2 skipped / 832 assertions, pgsql Tenancy
+  Pest 11 passed / 42 assertions. Nothing was pushed; PR remains owner-owned.
+- 2026-07-23: Stage 1.12 post-Stage 1.13 merge verification complete locally.
+  Stage 1.13 was already merged to `origin/main` at `714cb9a`; merging that
+  main into Stage 1.12 produced only the expected worklog documentation
+  conflict. Resolution kept both Stage 1.12 and Stage 1.13 histories, ordered
+  Stage 1.12 and follow-ups before Stage 1.13, kept `docs/DECISIONS.md` in
+  chronological order, and left one `Next steps` section. Local gates green:
+  Pint pass (`157 files`), PHPStan pass (`[OK] No errors`), SQLite Pest pass
+  (`124 passed / 2 skipped / 854 assertions`), and PostgreSQL Tenancy pass
+  (`18 passed / 64 assertions`) under `smartrest_app_test` with
+  `NOBYPASSRLS`.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -787,6 +878,32 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   PostgreSQL with `SQLSTATE[HY093]` in `FiltersLocalizedNames` when a non-empty
   LIKE search is bound, and RLS expectations fail because the local/test
   `smartrest` database role is a superuser with `BYPASSRLS`.
+- 2026-07-23 Stage 1.13 correction: the "3 known RLS/BYPASSRLS failures"
+  statement is superseded for Tenancy coverage. Running
+  `tests/Feature/Tenancy` through `make tenant-isolation-pgsql` against
+  local PostgreSQL as unprivileged `smartrest_app_test` produced
+  `11 passed / 0 failed / 0 skipped / 42 assertions`. The remaining historical
+  issue is not a Tenancy test failure; it was that local and CI paths did not
+  consistently run PostgreSQL with an unprivileged role after `pg_trgm` was
+  added.
+- Stage 1.13 failure cause: `make test` and `phpunit.xml` force SQLite, so the
+  `CREATE EXTENSION pg_trgm` migration branch and the two RLS assertions in
+  `TenantIsolationTest` were not exercised locally. The GitHub Actions pgsql
+  job did exercise them, but ran migrations as `smartrest_app`, which did not
+  have database-level extension creation privileges.
+- `tests/Feature/Menu/MenuSchemaTest.php` has two PostgreSQL-only checks that
+  return early on non-pgsql drivers: category tree FK/check constraints and
+  trigram expression index definitions. SQLite `make test` keeps those tests
+  green but does not prove PostgreSQL constraint/index behavior.
+- `app/Console/Commands/MenuSeedLoadCommand.php` also issues
+  `CREATE EXTENSION IF NOT EXISTS pg_trgm` during optional trgm index rebuild.
+  It is outside Stage 1.13 scope because this task is limited to CI/local
+  Tenancy reproducibility and the existing migration path; revisit the load
+  command if it is later run under an unprivileged role.
+- The first local run of the new `make tenant-isolation-pgsql` target failed
+  before tests because Makefile escaping turned a `DO $$` role-creation block
+  into a shell PID. The target now uses idempotent `SELECT ... | grep ||
+  CREATE ROLE` provisioning instead.
 - Step B intentionally allows an inactive root category to be used as a
   subcategory parent. Parent validation is tenant-scoped and non-trashed, but
   not `active`, so disabling a root does not block maintaining the menu
@@ -1063,18 +1180,21 @@ Stage 1.11 Part C subcategory implementation order after owner-approved
   selectable nodes subcategories only, removed direct Livewire Eloquent
   selection queries, removed all root `sort_order=100` accommodations, and
   verified PostgreSQL `tests/Feature/Menu` passed (`50 passed / 488
-  assertions`), `make fresh` passed, and `TenantIsolationTest` still has
-  exactly the 3 known RLS/BYPASSRLS failures.
+  assertions`), `make fresh` passed, and at the time `TenantIsolationTest`
+  was still believed to have 3 known RLS/BYPASSRLS failures. Superseded by
+  Stage 1.13: unprivileged pgsql Tenancy now passes `11 passed / 0 failed /
+  0 skipped / 42 assertions`.
 - [x] Step C.1: convert demo seed data and raw test fixtures to the root ->
   subcategory -> item structure before full `make fresh`. Scope:
   `MenuDemoSeeder`, `MenuDemoSeederTest`, and raw fixtures in dashboard,
   schema, and tenant-isolation tests. Do not change RLS expectations in
-  `TenantIsolationTest`; the `BYPASSRLS` role failure remains accepted
+  `TenantIsolationTest`; the then-known `BYPASSRLS` role failure was accepted
   security debt. Result: review-ready on 2026-07-22; `make fresh` passed,
   focused PostgreSQL DemoSeeder/Login/dashboard/schema tests passed
-  (`20 passed / 172 assertions`), and PostgreSQL `TenantIsolationTest` still
-  has exactly the 3 known RLS/BYPASSRLS failures with no new structure
-  failures. Committed as `69a37fc`.
+  (`20 passed / 172 assertions`), and PostgreSQL `TenantIsolationTest` was
+  still believed to have exactly the 3 known RLS/BYPASSRLS failures with no
+  new structure failures. Superseded by Stage 1.13: unprivileged pgsql
+  Tenancy now passes fully. Committed as `69a37fc`.
 - [x] Step E: implement `menu:seed-load` last, after parent_id schema and UI
   paths are final. Support production-like and giant-menu modes with raw batch
   insert/COPY and optional drop/rebuild trgm index flow. Scope: standalone
@@ -1124,8 +1244,6 @@ Stage 1.11 Part C subcategory implementation order after owner-approved
   `load-manager+20260723071232-1-restaurant-1@smartrest.test`: `POST /login`
   returned `302` to `/admin`, then `GET /admin` returned `200`.
 
-Next action: owner reviews pushed Stage 1.12 branch
-`phase-2-stage-1.12-branch-authorization`, opens/merges the PR if desired, and
-then resumes owner-sequenced Stage 1.13 -> Stage 1.12 merge flow before any
-Stage 1.14 API work. Do not expand Stage 1.11 Part C further; new Menu UX work
-belongs to Part D.
+Next action: push the verified Stage 1.12 merge commit, open/merge the
+Stage 1.12 PR after green CI on the exact pushed head SHA, then codify
+Stage 1.15 merge-autonomy policy on a separate branch.
