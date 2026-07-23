@@ -10,7 +10,7 @@ return [
     'nav' => [
         'dashboard' => 'Dashboard',
         'menu' => 'Menu',
-        'tables' => 'Halls',
+        'tables' => 'Halls & Tables',
     ],
     'actions' => [
         'cancel' => 'Cancel',

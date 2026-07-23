@@ -259,6 +259,41 @@ unauthorized header candidates return 404; stale unauthorized session
 candidates are forgotten with a warning and fall back to the first assigned
 branch if one exists.
 
+## 2026-07-23 — Halls and Tables schema staged before Blueprint section 4 amendment
+Decision: the existing Tables module owns both `halls` and `tables`. Halls are
+branch-owned operating areas with `tenant_id`, `branch_id`, localized
+`translated_name`, `color`, `sort_order`, `active`, soft delete, tenant/branch
+indexes, and PostgreSQL RLS. Tables are branch-owned service locations nested
+under a hall with direct `tenant_id`, `branch_id`, `hall_id`, localized
+`translated_name`, simple constrained `type` (`standard`, `vip`), constrained
+`shape` (`circle`, `square`, `rectangle`), nullable `hdm_department`,
+`is_delivery`, `sort_order`, `active`, soft delete, PostgreSQL RLS, and an
+explicit `archived_with_hall_id` cascade marker. Archiving a hall archives only
+its currently non-archived tables and marks them with `archived_with_hall_id`;
+restoring a hall restores only tables carrying that marker; independently
+archived tables remain archived; force-deleting an archived hall permanently
+deletes its archived tables. Hall cascade audit rows record affected table
+counts on the hall audit row and do not emit per-table audit rows.
+Reason: Blueprint v1.0 names Halls & Tables in the module map, ER diagram, and
+endpoint groups, but section 4 currently has no `halls` or `tables` row. The
+legacy settings screens show hall-contained table management with labels such
+as `1`, `VIP`, `T1`, a table name input, shape selector, HDM department,
+delivery flag, table type concepts, commission fields, and floor-plan geometry.
+The current stage needs stable table identity and hall membership for later
+table-board/orders work, while preserving tenant/branch isolation and archive
+cascade semantics. Localized table names follow the existing JSON value-object
+convention because table labels are human-facing and examples are not purely
+numeric.
+Rejected: creating a separate module, because the Blueprint module map already
+places halls and tables together; deriving `tenant_id`/`branch_id` only through
+the hall, because branch filtering must remain explicit like Menu items;
+inferring hall cascade membership from timestamps, because Menu already proved
+an explicit marker is safer; adding `table_types`, floor-plan coordinates,
+commission/pricing metadata, subtables, orders, or table-board state now,
+because those are later Blueprint stages. Blueprint amendment pending owner
+approval: section 4 should add Halls and Tables rows matching the schema above;
+`docs/BLUEPRINT.md` was intentionally not edited in this stage.
+
 ## 2026-07-23 — ADR-009 audit writes are cross-cutting append-only records
 Decision: audit writes live in `app/Support/Audit`, not a new module. Blueprint
 section 4 lists `audit_logs` under Reporting/Admin because that future module

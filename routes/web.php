@@ -12,6 +12,7 @@ use App\Modules\Menu\Http\Controllers\MenuCategoryOptionController;
 use App\Modules\Menu\Http\Controllers\MenuIndexController;
 use App\Modules\Menu\Http\Controllers\MenuItemController;
 use App\Modules\Tables\Http\Controllers\HallController;
+use App\Modules\Tables\Http\Controllers\TableController;
 use App\Modules\Tenancy\Http\Controllers\BranchShowController;
 use Illuminate\Support\Facades\Route;
 
@@ -126,5 +127,32 @@ Route::middleware(['tenant', 'branch', 'auth'])->prefix('/admin/tables/halls')->
         ->name('restore');
     Route::delete('/{hall}/force-delete', [HallController::class, 'forceDelete'])
         ->middleware(['can:tables.halls.manage', 'superadmin'])
+        ->name('force-delete');
+});
+
+Route::middleware(['tenant', 'branch', 'auth'])->prefix('/admin/tables/halls/{hall}/tables')->name('admin.tables.tables.')->group(function (): void {
+    Route::get('/', [TableController::class, 'index'])
+        ->middleware('can:tables.tables.manage')
+        ->name('index');
+    Route::get('/create', [TableController::class, 'create'])
+        ->middleware('can:tables.tables.manage')
+        ->name('create');
+    Route::post('/', [TableController::class, 'store'])
+        ->middleware('can:tables.tables.manage')
+        ->name('store');
+    Route::get('/{table}/edit', [TableController::class, 'edit'])
+        ->middleware('can:tables.tables.manage')
+        ->name('edit');
+    Route::put('/{table}', [TableController::class, 'update'])
+        ->middleware('can:tables.tables.manage')
+        ->name('update');
+    Route::delete('/{table}', [TableController::class, 'destroy'])
+        ->middleware('can:tables.tables.manage')
+        ->name('destroy');
+    Route::post('/{table}/restore', [TableController::class, 'restore'])
+        ->middleware(['can:tables.tables.manage', 'superadmin'])
+        ->name('restore');
+    Route::delete('/{table}/force-delete', [TableController::class, 'forceDelete'])
+        ->middleware(['can:tables.tables.manage', 'superadmin'])
         ->name('force-delete');
 });

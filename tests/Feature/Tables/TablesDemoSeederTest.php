@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Tables\Infrastructure\Models\Hall;
+use App\Modules\Tables\Infrastructure\Models\Table;
 use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Modules\Tenancy\Contracts\TenantResolver;
 use Database\Seeders\DemoSeeder;
@@ -16,7 +17,7 @@ afterEach(function (): void {
     app(TenantResolver::class)->clear();
 });
 
-it('seeds deterministic halls visible to demo managers by tenant and branch', function (): void {
+it('seeds deterministic halls and tables visible to demo managers by tenant branch and hall', function (): void {
     Storage::fake('public');
 
     $this->seed(DemoSeeder::class);
@@ -33,6 +34,16 @@ it('seeds deterministic halls visible to demo managers by tenant and branch', fu
         ->assertDontSee('Forest Hall', false)
         ->assertDontSee('Main Room', false);
 
+    $aratHall = Hall::query()
+        ->whereJsonContains('translated_name->en', 'Main Hall')
+        ->firstOrFail();
+
+    $this->get(route('admin.tables.tables.index', ['hall' => (int) $aratHall->id]))
+        ->assertOk()
+        ->assertSee('VIP', false)
+        ->assertSee('Քառակուսի', false)
+        ->assertDontSee('P1', false);
+
     $this->withSession(['_token' => tablesDemoCsrfToken()])
         ->post(route('logout'), ['_token' => tablesDemoCsrfToken()])
         ->assertRedirect('/');
@@ -47,7 +58,17 @@ it('seeds deterministic halls visible to demo managers by tenant and branch', fu
         ->assertSee('Patio', false)
         ->assertDontSee('Գլխավոր սրահ', false);
 
-    expect(Hall::query()->count())->toBe(2);
+    $northstarHall = Hall::query()
+        ->whereJsonContains('translated_name->en', 'Main Room')
+        ->firstOrFail();
+
+    $this->get(route('admin.tables.tables.index', ['hall' => (int) $northstarHall->id]))
+        ->assertOk()
+        ->assertSee('VIP', false)
+        ->assertDontSee('Գլխավոր սրահ', false);
+
+    expect(Hall::query()->count())->toBe(2)
+        ->and(Table::query()->count())->toBe(5);
 });
 
 function tablesDemoCsrfToken(): string

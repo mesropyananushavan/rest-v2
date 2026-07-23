@@ -8,21 +8,41 @@ use App\Modules\Tenancy\Contracts\BelongsToTenant;
 use App\Support\I18n\LocalizedText;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['tenant_id', 'branch_id', 'translated_name', 'color', 'sort_order', 'active'])]
-final class Hall extends Model
+#[Fillable([
+    'tenant_id',
+    'branch_id',
+    'hall_id',
+    'archived_with_hall_id',
+    'translated_name',
+    'type',
+    'shape',
+    'hdm_department',
+    'is_delivery',
+    'sort_order',
+    'active',
+])]
+final class Table extends Model
 {
     use BelongsToTenant;
     use SoftDeletes;
 
     /**
-     * @return HasMany<Table, $this>
+     * @return BelongsTo<Hall, $this>
      */
-    public function tables(): HasMany
+    public function hall(): BelongsTo
     {
-        return $this->hasMany(Table::class, 'hall_id');
+        return $this->belongsTo(Hall::class, 'hall_id')->withTrashed();
+    }
+
+    /**
+     * @return BelongsTo<Hall, $this>
+     */
+    public function archivedWithHall(): BelongsTo
+    {
+        return $this->belongsTo(Hall::class, 'archived_with_hall_id')->withTrashed();
     }
 
     public function translatedName(): LocalizedText
@@ -37,7 +57,11 @@ final class Hall extends Model
     {
         return [
             'branch_id' => 'integer',
+            'hall_id' => 'integer',
+            'archived_with_hall_id' => 'integer',
             'translated_name' => 'array',
+            'hdm_department' => 'integer',
+            'is_delivery' => 'boolean',
             'sort_order' => 'integer',
             'active' => 'boolean',
             'deleted_at' => 'datetime',

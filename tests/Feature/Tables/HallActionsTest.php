@@ -70,7 +70,12 @@ it('creates updates archives restores and permanently deletes halls with audit r
     $deleteAudit = AuditLog::query()->where('action', 'tables.hall.permanently_deleted')->firstOrFail();
 
     expect($deleteAudit->before_json['translated_name']['en'])->toBe('Main Room')
-        ->and($deleteAudit->after_json)->toBe(['deleted' => true]);
+        ->and($deleteAudit->after_json)->toBe([
+            'deleted' => true,
+            'cascade' => [
+                'deleted_table_count' => 0,
+            ],
+        ]);
 });
 
 it('rolls hall audit rows back with the failed enclosing transaction', function (): void {
