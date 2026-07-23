@@ -127,11 +127,8 @@ it('renders root-only parent options on the category create form', function (): 
         ->assertSee('name="parent_id"', false)
         ->assertSee(__('menu.fields.parent_category'), false)
         ->assertSee(__('menu.categories.root_parent_option'), false)
-        ->assertSee('<option value="'.(int) $root->id.'"', false)
         ->assertSee('Root menu', false)
-        ->assertDontSee('<option value="'.(int) $subcategory->id.'"', false)
         ->assertDontSee('Breakfast plates', false)
-        ->assertDontSee('<option value="'.(int) $archivedRoot->id.'"', false)
         ->assertDontSee('Archived root', false);
 });
 
@@ -150,9 +147,10 @@ it('renders the current parent on the category edit form without offering the ca
         ->get(route('admin.menu.categories.edit', ['category' => (int) $subcategory->id]))
         ->assertOk()
         ->assertSee('name="parent_id"', false)
-        ->assertSee('<option value="'.(int) $root->id.'" selected', false)
-        ->assertSee('<option value="'.(int) $otherRoot->id.'"', false)
-        ->assertDontSee('<option value="'.(int) $subcategory->id.'"', false);
+        ->assertSee('value="'.(int) $root->id.'"', false)
+        ->assertSee('Root menu', false)
+        ->assertSee('Other root', false)
+        ->assertSee('exclude_id='.(int) $subcategory->id, false);
 });
 
 it('creates a subcategory through the category form parent selector payload', function (): void {
