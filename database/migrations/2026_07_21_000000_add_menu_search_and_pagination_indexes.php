@@ -25,7 +25,10 @@ return new class extends Migration
             return;
         }
 
-        DB::statement('CREATE EXTENSION IF NOT EXISTS pg_trgm');
+        if (! $this->postgresExtensionExists('pg_trgm')) {
+            DB::statement('CREATE EXTENSION IF NOT EXISTS pg_trgm');
+        }
+
         DB::statement("CREATE INDEX menu_categories_translated_name_trgm_idx ON menu_categories USING gin ((lower(coalesce(translated_name->>'hy', '') || ' ' || coalesce(translated_name->>'ru', '') || ' ' || coalesce(translated_name->>'en', ''))) gin_trgm_ops)");
         DB::statement("CREATE INDEX menu_items_translated_name_trgm_idx ON menu_items USING gin ((lower(coalesce(translated_name->>'hy', '') || ' ' || coalesce(translated_name->>'ru', '') || ' ' || coalesce(translated_name->>'en', ''))) gin_trgm_ops)");
     }
@@ -46,5 +49,15 @@ return new class extends Migration
         Schema::table('menu_categories', function (Blueprint $table): void {
             $table->dropIndex('menu_categories_tenant_deleted_sort_id_idx');
         });
+    }
+
+    private function postgresExtensionExists(string $extension): bool
+    {
+        $result = DB::selectOne(
+            'select count(*)::int as extension_count from pg_extension where extname = ?',
+            [$extension],
+        );
+
+        return (int) ($result?->extension_count ?? 0) > 0;
     }
 };

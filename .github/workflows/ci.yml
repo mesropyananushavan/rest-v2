@@ -102,6 +102,8 @@ jobs:
         run: |
           psql -h 127.0.0.1 -U smartrest -d smartrest_test <<'SQL'
           CREATE ROLE smartrest_app LOGIN PASSWORD 'smartrest_app';
+          ALTER ROLE smartrest_app NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
+          CREATE EXTENSION IF NOT EXISTS pg_trgm;
           GRANT CONNECT ON DATABASE smartrest_test TO smartrest_app;
           GRANT USAGE, CREATE ON SCHEMA public TO smartrest_app;
           ALTER SCHEMA public OWNER TO smartrest_app;
@@ -111,4 +113,4 @@ jobs:
         run: composer install --no-interaction --prefer-dist --no-progress
 
       - name: Tenant Isolation Pest On PostgreSQL
-        run: vendor/bin/pest tests/Feature/Tenancy/TenantIsolationTest.php
+        run: vendor/bin/pest tests/Feature/Tenancy
