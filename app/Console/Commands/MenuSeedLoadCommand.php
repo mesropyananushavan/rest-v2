@@ -4,10 +4,19 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Modules\Identity\Infrastructure\Models\Permission;
+use App\Modules\Identity\Infrastructure\Models\Role;
+use App\Modules\Identity\Infrastructure\Models\User;
+use App\Modules\Identity\Infrastructure\Models\UserBranchAssignment;
+use App\Modules\Tenancy\Contracts\BranchContext;
+use App\Modules\Tenancy\Contracts\TenantResolver;
+use DateTimeInterface;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use JsonException;
+use PgSql\Connection as PgSqlConnection;
+use RuntimeException;
 use Throwable;
 
 final class MenuSeedLoadCommand extends Command
@@ -19,6 +28,95 @@ final class MenuSeedLoadCommand extends Command
     private const MIN_BATCH_SIZE = 5000;
 
     private const MAX_BATCH_SIZE = 20000;
+
+    private const POSTGRES_BIND_PARAMETER_LIMIT = 60000;
+
+    private const SEED_SOURCE_LOAD = 'load';
+
+    private const LOAD_USER_PASSWORD = 'password';
+
+    private const LOCAL_DATABASE_HOST = 'postgres';
+
+    private const LOCK_TIMEOUT = '10s';
+
+    /**
+     * @var array<string, string>
+     */
+    private const LOAD_PERMISSIONS = [
+        'identity.manage' => 'Manage users and roles',
+        'menu.categories.manage' => 'Manage menu categories',
+        'menu.items.manage' => 'Manage menu items',
+        'orders.take' => 'Take orders',
+        'payments.capture' => 'Capture payments',
+    ];
+
+    /**
+     * @var list<string>
+     */
+    private const LOAD_MANAGER_PERMISSIONS = [
+        'identity.manage',
+        'menu.categories.manage',
+        'menu.items.manage',
+        'orders.take',
+        'payments.capture',
+    ];
+
+    /**
+     * @var array<string, list<string>>
+     */
+    private const COPY_COLUMNS = [
+        'tenants' => [
+            'name',
+            'slug',
+            'default_locale',
+            'currency',
+            'status',
+            'seed_source',
+            'created_at',
+            'updated_at',
+        ],
+        'branches' => [
+            'tenant_id',
+            'name',
+            'address',
+            'phone',
+            'locale',
+            'timezone',
+            'status',
+            'created_at',
+            'updated_at',
+        ],
+        'menu_categories' => [
+            'tenant_id',
+            'parent_id',
+            'archived_with_category_id',
+            'translated_name',
+            'sort_order',
+            'active',
+            'deleted_at',
+            'created_at',
+            'updated_at',
+        ],
+        'menu_items' => [
+            'tenant_id',
+            'branch_id',
+            'category_id',
+            'translated_name',
+            'translated_description',
+            'internal_image',
+            'public_image',
+            'price_minor',
+            'currency',
+            'sort_order',
+            'active',
+            'archived_with_category_id',
+            'deleted_at',
+            'created_at',
+            'updated_at',
+        ],
+    ];
+
+    private ?PgSqlConnection $postgresCopyConnection = null;
 
     /**
      * @var list<string>
@@ -100,6 +198,7 @@ final class MenuSeedLoadCommand extends Command
         {--items=500 : Items per subcategory}
         {--batch=10000 : Raw insert batch size, 5000-20000}
         {--drop-rebuild-trgm : Drop and recreate menu PostgreSQL GIN trigram indexes around the load}
+        {--fresh : In production-like mode, recreate the local schema with baseline seed before loading; in other modes, delete previous load-generated tenants}
         {--force : Allow running outside local/testing environments}';
 
     protected $description = 'Seed large menu datasets for local PostgreSQL load and UI performance testing.';
@@ -114,25 +213,44 @@ final class MenuSeedLoadCommand extends Command
 
         DB::disableQueryLog();
         @set_time_limit(0);
+        $this->configurePostgresSessionTimeouts();
 
         $config = $this->config();
         $this->printPlan($config);
 
         $trgmDropped = false;
+        $cleanupSeconds = null;
+        $loadSeconds = null;
+        $rebuildSeconds = null;
+
         try {
+            if ($config['fresh']) {
+                $startedAt = microtime(true);
+                $this->deletePreviousLoadTenants($config);
+                $cleanupSeconds = microtime(true) - $startedAt;
+            }
+
             if ($config['dropRebuildTrgm']) {
                 $this->dropTrgmIndexes();
                 $trgmDropped = true;
             }
 
+            $startedAt = microtime(true);
             match ($config['mode']) {
                 self::MODE_PRODUCTION_LIKE => $this->seedProductionLike($config),
                 self::MODE_GIANT_MENU => $this->seedGiantMenu($config),
             };
+            $loadSeconds = microtime(true) - $startedAt;
+
+            $this->verifyLoadedCounts($config);
 
             if ($trgmDropped) {
+                $startedAt = microtime(true);
                 $this->rebuildTrgmIndexes();
+                $rebuildSeconds = microtime(true) - $startedAt;
             }
+
+            $this->printPhaseTimings($cleanupSeconds, $loadSeconds, $rebuildSeconds);
         } catch (Throwable $exception) {
             if ($trgmDropped) {
                 $this->warn('Load failed after dropping trgm indexes; rebuilding them before exiting.');
@@ -140,6 +258,8 @@ final class MenuSeedLoadCommand extends Command
             }
 
             throw $exception;
+        } finally {
+            $this->closePostgresCopyConnection();
         }
 
         $this->info('menu:seed-load complete.');
@@ -156,6 +276,7 @@ final class MenuSeedLoadCommand extends Command
      *     items: int,
      *     batch: int,
      *     dropRebuildTrgm: bool,
+     *     fresh: bool,
      *     runId: string
      * }
      */
@@ -182,6 +303,7 @@ final class MenuSeedLoadCommand extends Command
             'items' => $this->positiveIntOption('items'),
             'batch' => $batch,
             'dropRebuildTrgm' => (bool) $this->option('drop-rebuild-trgm'),
+            'fresh' => (bool) $this->option('fresh'),
             'runId' => now()->format('YmdHis').'-'.getmypid(),
         ];
     }
@@ -197,6 +319,182 @@ final class MenuSeedLoadCommand extends Command
         return $value;
     }
 
+    private function configurePostgresSessionTimeouts(): void
+    {
+        if (Schema::getConnection()->getDriverName() !== 'pgsql') {
+            return;
+        }
+
+        DB::statement("SET lock_timeout = '".self::LOCK_TIMEOUT."'");
+    }
+
+    /**
+     * @param  array{mode: 'production-like'|'giant-menu'}  $config
+     */
+    private function deletePreviousLoadTenants(array $config): void
+    {
+        if ($config['mode'] === self::MODE_PRODUCTION_LIKE) {
+            $this->assertCanRecreateLocalSchema();
+
+            if ($this->input->isInteractive() && ! $this->confirm('This will delete the entire local database, including demo tenants. Continue?', false)) {
+                $this->fail('Fresh load cleanup cancelled before recreating the local schema.');
+            }
+
+            $this->info('Fresh load cleanup: recreating local schema with baseline seed.');
+
+            $exitCode = $this->call('migrate:fresh', [
+                '--seed' => true,
+                '--force' => true,
+            ]);
+
+            if ($exitCode !== self::SUCCESS) {
+                $this->fail('Fresh load cleanup failed while recreating the local schema.');
+            }
+
+            return;
+        }
+
+        $this->deletePreviousLoadTenantsByRows();
+    }
+
+    private function deletePreviousLoadTenantsByRows(): void
+    {
+        $loadTenantIds = DB::table('tenants')
+            ->where('seed_source', self::SEED_SOURCE_LOAD)
+            ->pluck('id')
+            ->map(fn (mixed $tenantId): int => $this->integerDatabaseValue($tenantId, 'load tenant id'))
+            ->all();
+
+        if ($loadTenantIds === []) {
+            $this->info('Fresh load cleanup: no previous load tenants found.');
+            $this->assertNoLoadRowsRemain();
+
+            return;
+        }
+
+        $deleted = 0;
+
+        foreach (array_chunk($loadTenantIds, self::MAX_BATCH_SIZE) as $chunk) {
+            $deleted += DB::transaction(static function () use ($chunk): int {
+                // Self-referencing category FKs use restrict-on-delete, so remove
+                // the generated tree bottom-up before deleting tenants.
+                DB::table('menu_items')
+                    ->whereIn('tenant_id', $chunk)
+                    ->delete();
+                DB::table('menu_categories')
+                    ->whereIn('tenant_id', $chunk)
+                    ->whereNotNull('parent_id')
+                    ->delete();
+                DB::table('menu_categories')
+                    ->whereIn('tenant_id', $chunk)
+                    ->delete();
+
+                return DB::table('tenants')
+                    ->whereIn('id', $chunk)
+                    ->delete();
+            });
+        }
+
+        $this->assertNoLoadRowsRemain();
+        $this->info('Fresh load cleanup deleted tenants: '.number_format($deleted));
+    }
+
+    private function assertCanRecreateLocalSchema(): void
+    {
+        if (! app()->environment(['local', 'testing'])) {
+            $this->fail('Refusing destructive --fresh schema recreation: application environment must be local or testing.');
+        }
+
+        $connectionName = config('database.default');
+
+        if (! is_string($connectionName) || $connectionName === '') {
+            $this->fail('Refusing destructive --fresh schema recreation: database.default must be a non-empty string.');
+        }
+
+        $connection = config("database.connections.{$connectionName}");
+
+        if (! is_array($connection)) {
+            $this->fail("Refusing destructive --fresh schema recreation: database connection [{$connectionName}] is not configured.");
+        }
+
+        $driver = $connection['driver'] ?? null;
+        $host = $connection['host'] ?? null;
+        $database = $connection['database'] ?? null;
+
+        if (! is_string($driver) || $driver === '') {
+            $this->fail("Refusing destructive --fresh schema recreation: connection [{$connectionName}] driver must be a non-empty string.");
+        }
+
+        if (! is_string($host) || $host === '') {
+            $this->fail("Refusing destructive --fresh schema recreation: connection [{$connectionName}] host must be a non-empty string.");
+        }
+
+        if (! is_string($database) || $database === '') {
+            $this->fail("Refusing destructive --fresh schema recreation: connection [{$connectionName}] database must be a non-empty string.");
+        }
+
+        if ($driver !== 'pgsql') {
+            $this->fail("Refusing destructive --fresh schema recreation: expected local pgsql connection, got driver [{$driver}].");
+        }
+
+        if (! $this->isExpectedLocalDatabaseHost($host) || ! $this->isExpectedLocalDatabaseName($database)) {
+            $this->fail(
+                'Refusing destructive --fresh schema recreation: expected a local SmartRest database connection; '
+                .'expected host ['.self::LOCAL_DATABASE_HOST."] and a local database name; got connection [{$connectionName}], host [{$host}], database [{$database}].",
+            );
+        }
+    }
+
+    private function isExpectedLocalDatabaseHost(string $host): bool
+    {
+        return $host === self::LOCAL_DATABASE_HOST;
+    }
+
+    private function isExpectedLocalDatabaseName(string $database): bool
+    {
+        return in_array($database, ['smartrest', 'smartrest_test', 'testing'], true);
+    }
+
+    private function assertNoLoadRowsRemain(): void
+    {
+        $remainingLoadTenants = DB::table('tenants')
+            ->where('seed_source', self::SEED_SOURCE_LOAD)
+            ->count();
+        $remainingLoadCategories = DB::table('menu_categories')
+            ->join('tenants', 'tenants.id', '=', 'menu_categories.tenant_id')
+            ->where('tenants.seed_source', self::SEED_SOURCE_LOAD)
+            ->count();
+        $remainingLoadItems = DB::table('menu_items')
+            ->join('tenants', 'tenants.id', '=', 'menu_items.tenant_id')
+            ->where('tenants.seed_source', self::SEED_SOURCE_LOAD)
+            ->count();
+        $orphanedCategories = DB::table('menu_categories')
+            ->leftJoin('tenants', 'tenants.id', '=', 'menu_categories.tenant_id')
+            ->whereNull('tenants.id')
+            ->count();
+        $orphanedItems = DB::table('menu_items')
+            ->leftJoin('tenants', 'tenants.id', '=', 'menu_items.tenant_id')
+            ->whereNull('tenants.id')
+            ->count();
+
+        if (
+            $remainingLoadTenants !== 0
+            || $remainingLoadCategories !== 0
+            || $remainingLoadItems !== 0
+            || $orphanedCategories !== 0
+            || $orphanedItems !== 0
+        ) {
+            $this->fail(sprintf(
+                'Fresh load cleanup left load rows behind: tenants=%d, menu_categories=%d, menu_items=%d, orphaned_menu_categories=%d, orphaned_menu_items=%d.',
+                $remainingLoadTenants,
+                $remainingLoadCategories,
+                $remainingLoadItems,
+                $orphanedCategories,
+                $orphanedItems,
+            ));
+        }
+    }
+
     /**
      * @param  array{
      *     mode: 'production-like'|'giant-menu',
@@ -206,6 +504,7 @@ final class MenuSeedLoadCommand extends Command
      *     items: int,
      *     batch: int,
      *     dropRebuildTrgm: bool,
+     *     fresh: bool,
      *     runId: string
      * }  $config
      */
@@ -220,12 +519,15 @@ final class MenuSeedLoadCommand extends Command
         $this->line("run_id: {$config['runId']}");
         $this->line("restaurants/tenants: {$config['restaurants']}");
         $this->line("branches: {$config['restaurants']}");
+        $this->line("load manager users: {$config['restaurants']}");
         $this->line("root_categories = restaurants * categories = {$config['restaurants']} * {$config['categories']} = ".number_format($rootCategories));
         $this->line('subcategories = root_categories * subcategories = '.number_format($rootCategories)." * {$config['subcategories']} = ".number_format($subcategories));
         $this->line('items = subcategories * items = '.number_format($subcategories)." * {$config['items']} = ".number_format($items));
         $this->line('total menu rows = '.number_format($rootCategories + $subcategories + $items));
         $this->line('batch size: '.number_format($config['batch']));
         $this->line('drop/rebuild trgm: '.($config['dropRebuildTrgm'] ? 'yes' : 'no'));
+        $this->line('fresh load cleanup: '.($config['fresh'] ? ($config['mode'] === self::MODE_PRODUCTION_LIKE ? 'schema recreate' : 'delete load tenants') : 'no'));
+        $this->line("sample login: {$this->loadManagerEmail($config['runId'], 1)} / ".self::LOAD_USER_PASSWORD);
     }
 
     /**
@@ -242,6 +544,8 @@ final class MenuSeedLoadCommand extends Command
     {
         $tenantIdsByRestaurant = $this->insertTenants($config['restaurants'], $config['runId']);
         $branchIdsByRestaurant = $this->insertBranches($tenantIdsByRestaurant);
+        $this->insertLoadUsers($tenantIdsByRestaurant, $branchIdsByRestaurant, $config['runId']);
+
         $rootIds = $this->insertRootCategories($tenantIdsByRestaurant, $config['categories'], $config['batch']);
         $subcategoryIds = $this->insertSubcategories($rootIds, $config['subcategories'], $config['batch']);
 
@@ -261,10 +565,94 @@ final class MenuSeedLoadCommand extends Command
     {
         $tenantIdsByRestaurant = $this->insertTenants(1, $config['runId']);
         $branchIdsByRestaurant = $this->insertBranches($tenantIdsByRestaurant);
+        $this->insertLoadUsers($tenantIdsByRestaurant, $branchIdsByRestaurant, $config['runId']);
+
         $rootIds = $this->insertRootCategories($tenantIdsByRestaurant, $config['categories'], $config['batch']);
         $subcategoryIds = $this->insertSubcategories($rootIds, $config['subcategories'], $config['batch']);
 
         $this->insertItems($subcategoryIds, $branchIdsByRestaurant, $config['items'], $config['batch']);
+    }
+
+    /**
+     * @param  array{
+     *     restaurants: int,
+     *     categories: int,
+     *     subcategories: int,
+     *     items: int,
+     *     runId: string,
+     * }  $config
+     */
+    private function verifyLoadedCounts(array $config): void
+    {
+        $expectedRoots = $config['restaurants'] * $config['categories'];
+        $expectedSubcategories = $expectedRoots * $config['subcategories'];
+        $expectedCategories = $expectedRoots + $expectedSubcategories;
+        $expectedItems = $expectedSubcategories * $config['items'];
+
+        $loadTenantIds = DB::table('tenants')
+            ->where('seed_source', self::SEED_SOURCE_LOAD)
+            ->where('slug', 'like', "load-{$config['runId']}-%")
+            ->pluck('id')
+            ->map(fn (mixed $tenantId): int => $this->integerDatabaseValue($tenantId, 'loaded tenant id'))
+            ->all();
+
+        $actualTenants = count($loadTenantIds);
+        $actualRoots = $loadTenantIds === []
+            ? 0
+            : DB::table('menu_categories')->whereIn('tenant_id', $loadTenantIds)->whereNull('parent_id')->count();
+        $actualSubcategories = $loadTenantIds === []
+            ? 0
+            : DB::table('menu_categories')->whereIn('tenant_id', $loadTenantIds)->whereNotNull('parent_id')->count();
+        $actualCategories = $actualRoots + $actualSubcategories;
+        $actualItems = $loadTenantIds === []
+            ? 0
+            : DB::table('menu_items')->whereIn('tenant_id', $loadTenantIds)->count();
+
+        if (
+            $actualTenants !== $config['restaurants']
+            || $actualRoots !== $expectedRoots
+            || $actualSubcategories !== $expectedSubcategories
+            || $actualCategories !== $expectedCategories
+            || $actualItems !== $expectedItems
+        ) {
+            $this->fail(sprintf(
+                'menu:seed-load count verification failed: tenants expected=%d actual=%d, roots expected=%d actual=%d, subcategories expected=%d actual=%d, menu_categories expected=%d actual=%d, menu_items expected=%d actual=%d.',
+                $config['restaurants'],
+                $actualTenants,
+                $expectedRoots,
+                $actualRoots,
+                $expectedSubcategories,
+                $actualSubcategories,
+                $expectedCategories,
+                $actualCategories,
+                $expectedItems,
+                $actualItems,
+            ));
+        }
+
+        $this->info(sprintf(
+            'Verified load counts: tenants=%d, roots=%d, subcategories=%d, menu_categories=%d, menu_items=%d.',
+            $actualTenants,
+            $actualRoots,
+            $actualSubcategories,
+            $actualCategories,
+            $actualItems,
+        ));
+    }
+
+    private function printPhaseTimings(?float $cleanupSeconds, ?float $loadSeconds, ?float $rebuildSeconds): void
+    {
+        $this->line('menu:seed-load phase timings');
+        $this->line('cleanup_seconds='.$this->formattedPhaseSeconds($cleanupSeconds));
+        $this->line('copy_load_seconds='.$this->formattedPhaseSeconds($loadSeconds));
+        $this->line('trgm_rebuild_seconds='.$this->formattedPhaseSeconds($rebuildSeconds));
+    }
+
+    private function formattedPhaseSeconds(?float $seconds): string
+    {
+        return $seconds === null
+            ? 'skipped'
+            : number_format($seconds, 3, '.', '');
     }
 
     /**
@@ -282,6 +670,7 @@ final class MenuSeedLoadCommand extends Command
                 'default_locale' => 'hy',
                 'currency' => $restaurant % 7 === 0 ? 'USD' : 'AMD',
                 'status' => 'active',
+                'seed_source' => self::SEED_SOURCE_LOAD,
                 'created_at' => $timestamp,
                 'updated_at' => $timestamp,
             ];
@@ -355,6 +744,133 @@ final class MenuSeedLoadCommand extends Command
         $this->info('Inserted branches: '.number_format(count($branchIdsByRestaurant)));
 
         return $branchIdsByRestaurant;
+    }
+
+    /**
+     * @param  array<int, int>  $tenantIdsByRestaurant
+     * @param  array<int, int>  $branchIdsByRestaurant
+     */
+    private function insertLoadUsers(array $tenantIdsByRestaurant, array $branchIdsByRestaurant, string $runId): void
+    {
+        $userIdsByRestaurant = [];
+
+        try {
+            foreach ($tenantIdsByRestaurant as $restaurant => $tenantId) {
+                app(TenantResolver::class)->set($tenantId);
+
+                $permissions = $this->createLoadPermissions();
+                $role = $this->createLoadManagerRole($permissions);
+                $user = $this->createLoadManagerUser($role, $runId, $restaurant);
+
+                UserBranchAssignment::query()->create([
+                    'user_id' => (int) $user->id,
+                    'branch_id' => $branchIdsByRestaurant[$restaurant],
+                ]);
+
+                $userIdsByRestaurant[$restaurant] = (int) $user->id;
+            }
+        } finally {
+            app(BranchContext::class)->clear();
+            app(TenantResolver::class)->clear();
+        }
+
+        $this->verifyLoadUsers($tenantIdsByRestaurant, $branchIdsByRestaurant, $userIdsByRestaurant);
+
+        $this->info('Inserted load manager users: '.number_format(count($userIdsByRestaurant)));
+    }
+
+    /**
+     * @return array<string, Permission>
+     */
+    private function createLoadPermissions(): array
+    {
+        $permissions = [];
+
+        foreach (self::LOAD_PERMISSIONS as $code => $name) {
+            $permission = Permission::query()->create([
+                'code' => $code,
+                'name' => $name,
+            ]);
+
+            $permissions[$code] = $permission;
+        }
+
+        return $permissions;
+    }
+
+    /**
+     * @param  array<string, Permission>  $permissions
+     */
+    private function createLoadManagerRole(array $permissions): Role
+    {
+        $role = Role::query()->create([
+            'code' => 'manager',
+            'name' => 'Manager',
+        ]);
+
+        $role->permissions()->syncWithPivotValues(
+            collect(self::LOAD_MANAGER_PERMISSIONS)
+                ->map(fn (string $code): int => (int) $permissions[$code]->id)
+                ->all(),
+            ['tenant_id' => (int) $role->tenant_id],
+        );
+
+        return $role;
+    }
+
+    private function createLoadManagerUser(Role $role, string $runId, int $restaurant): User
+    {
+        return User::query()->create([
+            'role_id' => (int) $role->id,
+            'name' => "Load Manager {$runId} #{$restaurant}",
+            'email' => $this->loadManagerEmail($runId, $restaurant),
+            'username' => $this->loadManagerUsername($runId, $restaurant),
+            'default_locale' => 'hy',
+            'active' => true,
+            'email_verified_at' => now(),
+            'password' => self::LOAD_USER_PASSWORD,
+            'is_superadmin' => false,
+        ]);
+    }
+
+    /**
+     * @param  array<int, int>  $tenantIdsByRestaurant
+     * @param  array<int, int>  $branchIdsByRestaurant
+     * @param  array<int, int>  $userIdsByRestaurant
+     */
+    private function verifyLoadUsers(array $tenantIdsByRestaurant, array $branchIdsByRestaurant, array $userIdsByRestaurant): void
+    {
+        $activeUsers = DB::table('users')
+            ->whereIn('id', array_values($userIdsByRestaurant))
+            ->whereIn('tenant_id', array_values($tenantIdsByRestaurant))
+            ->where('active', true)
+            ->count();
+
+        if ($activeUsers !== count($tenantIdsByRestaurant)) {
+            $this->fail('Load user verification failed: active user count mismatch.');
+        }
+
+        $branchAssignments = DB::table('user_branch_assignments')
+            ->whereIn('tenant_id', array_values($tenantIdsByRestaurant))
+            ->whereIn('user_id', array_values($userIdsByRestaurant))
+            ->whereIn('branch_id', array_values($branchIdsByRestaurant))
+            ->count();
+
+        if ($branchAssignments !== count($tenantIdsByRestaurant)) {
+            $this->fail('Load user verification failed: branch assignment count mismatch.');
+        }
+
+        $managerPermissions = DB::table('role_permissions')
+            ->join('roles', 'roles.id', '=', 'role_permissions.role_id')
+            ->join('permissions', 'permissions.id', '=', 'role_permissions.permission_id')
+            ->whereIn('role_permissions.tenant_id', array_values($tenantIdsByRestaurant))
+            ->where('roles.code', 'manager')
+            ->whereIn('permissions.code', self::LOAD_MANAGER_PERMISSIONS)
+            ->count();
+
+        if ($managerPermissions !== count($tenantIdsByRestaurant) * count(self::LOAD_MANAGER_PERMISSIONS)) {
+            $this->fail('Load user verification failed: manager permission count mismatch.');
+        }
     }
 
     /**
@@ -566,14 +1082,279 @@ final class MenuSeedLoadCommand extends Command
             $this->fail('Batch size must be positive.');
         }
 
+        if ($rows === []) {
+            return;
+        }
+
         /** @var int<1, max> $positiveBatch */
         $positiveBatch = $batch;
 
-        foreach (array_chunk($rows, $positiveBatch) as $chunk) {
+        if (Schema::getConnection()->getDriverName() === 'pgsql') {
+            $this->copyRowsInBatches($table, $rows, $positiveBatch);
+
+            return;
+        }
+
+        $safeInsertBatch = $this->safeInsertBatchSize($rows, $positiveBatch);
+
+        foreach (array_chunk($rows, $safeInsertBatch) as $chunk) {
             DB::transaction(static function () use ($table, $chunk): void {
                 DB::table($table)->insert($chunk);
             });
         }
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $rows
+     * @param  int<1, max>  $batch
+     */
+    private function copyRowsInBatches(string $table, array $rows, int $batch): void
+    {
+        $columns = self::COPY_COLUMNS[$table] ?? null;
+
+        if ($columns === null) {
+            throw new RuntimeException("Unsupported COPY table [{$table}].");
+        }
+
+        $connection = $this->postgresCopyConnection();
+
+        foreach (array_chunk($rows, $batch) as $chunk) {
+            $this->copyRowsChunk($connection, $table, $columns, $chunk);
+        }
+    }
+
+    /**
+     * @param  list<string>  $columns
+     * @param  list<array<string, mixed>>  $rows
+     */
+    private function copyRowsChunk(PgSqlConnection $connection, string $table, array $columns, array $rows): void
+    {
+        $copySql = sprintf(
+            'COPY %s (%s) FROM STDIN WITH (FORMAT csv, NULL %s)',
+            $this->postgresIdentifier($table),
+            implode(', ', array_map(fn (string $column): string => $this->postgresIdentifier($column), $columns)),
+            "'\\N'",
+        );
+
+        $this->postgresQuery($connection, 'BEGIN');
+
+        try {
+            $this->postgresQuery($connection, $copySql);
+
+            foreach ($rows as $row) {
+                $this->postgresPutLine($connection, $this->csvLine($row, $columns));
+            }
+
+            $this->postgresEndCopy($connection);
+            $this->postgresQuery($connection, 'COMMIT');
+        } catch (Throwable $exception) {
+            $this->closePostgresCopyConnection();
+
+            throw $exception;
+        }
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $rows
+     * @param  int<1, max>  $requestedBatch
+     * @return int<1, max>
+     */
+    private function safeInsertBatchSize(array $rows, int $requestedBatch): int
+    {
+        $columnCount = count($rows[0]);
+
+        if ($columnCount < 1) {
+            throw new RuntimeException('Cannot insert rows without columns.');
+        }
+
+        $safeBatch = max(1, intdiv(self::POSTGRES_BIND_PARAMETER_LIMIT, $columnCount));
+
+        /** @var int<1, max> $boundedBatch */
+        $boundedBatch = min($requestedBatch, $safeBatch);
+
+        return $boundedBatch;
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     * @param  list<string>  $columns
+     */
+    private function csvLine(array $row, array $columns): string
+    {
+        $stream = fopen('php://temp', 'r+');
+
+        if ($stream === false) {
+            throw new RuntimeException('Unable to open temporary CSV stream.');
+        }
+
+        $values = [];
+
+        foreach ($columns as $column) {
+            $values[] = $this->csvValue($row[$column] ?? null);
+        }
+
+        if (fputcsv($stream, $values, ',', '"', '') === false) {
+            fclose($stream);
+
+            throw new RuntimeException('Unable to write CSV row.');
+        }
+
+        rewind($stream);
+        $line = stream_get_contents($stream);
+        fclose($stream);
+
+        if ($line === false) {
+            throw new RuntimeException('Unable to read CSV row.');
+        }
+
+        return $line;
+    }
+
+    private function csvValue(mixed $value): string
+    {
+        if ($value === null) {
+            return '\N';
+        }
+
+        if ($value instanceof DateTimeInterface) {
+            return $value->format('Y-m-d H:i:s');
+        }
+
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+
+        if (is_int($value) || is_float($value) || is_string($value)) {
+            return (string) $value;
+        }
+
+        throw new RuntimeException('Unsupported COPY value type.');
+    }
+
+    private function postgresCopyConnection(): PgSqlConnection
+    {
+        if ($this->postgresCopyConnection !== null) {
+            return $this->postgresCopyConnection;
+        }
+
+        $this->requirePostgresCopyFunctions();
+
+        $connection = pg_connect($this->postgresConnectionString(), $this->postgresForceNewConnectionFlag());
+
+        if ($connection === false) {
+            throw new RuntimeException('Unable to open PostgreSQL COPY connection.');
+        }
+
+        $copyConnection = $connection;
+        $this->postgresCopyConnection = $copyConnection;
+        $this->postgresQuery($copyConnection, "SET lock_timeout = '".self::LOCK_TIMEOUT."'");
+
+        return $copyConnection;
+    }
+
+    private function requirePostgresCopyFunctions(): void
+    {
+        foreach (['pg_connect', 'pg_query', 'pg_put_line', 'pg_end_copy', 'pg_last_error', 'pg_close'] as $function) {
+            if (! function_exists($function)) {
+                throw new RuntimeException(
+                    'PostgreSQL COPY requires the PHP pgsql extension. Rebuild the php-fpm image so docker/php/Dockerfile installs ext-pgsql.',
+                );
+            }
+        }
+    }
+
+    private function postgresForceNewConnectionFlag(): int
+    {
+        return defined('PGSQL_CONNECT_FORCE_NEW') ? (int) constant('PGSQL_CONNECT_FORCE_NEW') : 0;
+    }
+
+    private function postgresConnectionString(): string
+    {
+        $config = config('database.connections.pgsql');
+
+        if (! is_array($config)) {
+            throw new RuntimeException('PostgreSQL database configuration is missing.');
+        }
+
+        $parts = [];
+
+        foreach ([
+            'host' => $config['host'] ?? null,
+            'port' => $config['port'] ?? null,
+            'dbname' => $config['database'] ?? null,
+            'user' => $config['username'] ?? null,
+            'password' => $config['password'] ?? null,
+        ] as $key => $value) {
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            if (! is_scalar($value)) {
+                throw new RuntimeException("Invalid PostgreSQL connection value [{$key}].");
+            }
+
+            $parts[] = $key."='".$this->postgresConnectionValue((string) $value)."'";
+        }
+
+        return implode(' ', $parts);
+    }
+
+    private function postgresConnectionValue(string $value): string
+    {
+        return str_replace(['\\', "'"], ['\\\\', "\\'"], $value);
+    }
+
+    private function postgresIdentifier(string $identifier): string
+    {
+        if (preg_match('/^[a-z_][a-z0-9_]*$/', $identifier) !== 1) {
+            throw new RuntimeException("Invalid PostgreSQL identifier [{$identifier}].");
+        }
+
+        return '"'.$identifier.'"';
+    }
+
+    private function postgresQuery(PgSqlConnection $connection, string $sql): void
+    {
+        $result = pg_query($connection, $sql);
+
+        if ($result === false) {
+            throw new RuntimeException($this->postgresLastError($connection));
+        }
+    }
+
+    private function postgresPutLine(PgSqlConnection $connection, string $line): void
+    {
+        if (pg_put_line($connection, $line) === false) {
+            throw new RuntimeException($this->postgresLastError($connection));
+        }
+    }
+
+    private function postgresEndCopy(PgSqlConnection $connection): void
+    {
+        if (pg_end_copy($connection) === false) {
+            throw new RuntimeException($this->postgresLastError($connection));
+        }
+    }
+
+    private function postgresLastError(PgSqlConnection $connection): string
+    {
+        $message = pg_last_error($connection);
+
+        return $message !== ''
+            ? $message
+            : 'Unknown PostgreSQL COPY error.';
+    }
+
+    private function closePostgresCopyConnection(): void
+    {
+        if ($this->postgresCopyConnection === null || ! function_exists('pg_close')) {
+            $this->postgresCopyConnection = null;
+
+            return;
+        }
+
+        pg_close($this->postgresCopyConnection);
+        $this->postgresCopyConnection = null;
     }
 
     private function reportItemProgress(int $inserted): void
@@ -604,6 +1385,16 @@ final class MenuSeedLoadCommand extends Command
     private function subcategoryKey(int $restaurant, int $category, int $subcategory): string
     {
         return "{$restaurant}:{$category}:{$subcategory}";
+    }
+
+    private function loadManagerEmail(string $runId, int $restaurant): string
+    {
+        return "load-manager+{$runId}-restaurant-{$restaurant}@smartrest.test";
+    }
+
+    private function loadManagerUsername(string $runId, int $restaurant): string
+    {
+        return "load-manager-{$runId}-restaurant-{$restaurant}";
     }
 
     /**

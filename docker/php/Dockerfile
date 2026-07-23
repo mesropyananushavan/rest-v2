@@ -3,7 +3,7 @@ FROM php:8.3-fpm
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git unzip libzip-dev libicu-dev libonig-dev libpq-dev libjpeg62-turbo-dev libpng-dev libwebp-dev \
     && docker-php-ext-configure gd --with-jpeg --with-webp \
-    && docker-php-ext-install gd intl mbstring pcntl pdo_pgsql zip \
+    && docker-php-ext-install gd intl mbstring pcntl pdo_pgsql pgsql zip \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && rm -rf /var/lib/apt/lists/*
