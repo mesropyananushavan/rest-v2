@@ -47,6 +47,26 @@ authentication/session state.
 Rejected: allowing `X-Tenant-ID` in production or giving it precedence over
 authenticated users — both would make tenant spoofing possible.
 
+## 2026-07-23 — Branch header policy requires assignment authorization
+Decision: branch resolution ignores `X-Branch-ID` in production. Outside
+production, branch candidates are considered in header, session, then first
+assigned-branch order, but an authenticated user may resolve only branch ids
+returned by the Identity `UserDirectory` assignment contract. Explicit
+unauthorized header candidates return 404; stale unauthorized session
+candidates are forgotten with a warning and fall back to the first assigned
+branch if one exists.
+Reason: branch context filters branch-owned operational data, so a request
+header must not let an authenticated user switch into an unassigned branch
+inside the same tenant. Local and test workflows still need unauthenticated
+header-based context before login, while production must trust only
+authentication/session state and branch assignments.
+Rejected: allowing `X-Branch-ID` in production or trusting same-tenant branch
+ids without assignment checks — both would leak branch-scoped data; returning
+403 for unassigned header branches — inconsistent with existing tenant/branch
+isolation and the branch-switch controller's 404 behavior; aborting on stale
+session branch ids — too disruptive for users whose assignments changed after
+their session was created.
+
 ## 2026-07-20 — Tailwind CSS as admin UI foundation
 Decision: admin UI styling moves from Bootstrap to Tailwind CSS through the
 official Vite plugin, with SmartRest design tokens maintained in the Tailwind
