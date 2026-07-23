@@ -20,10 +20,13 @@ final class RestoreMenuCategory
         $restoredSubcategoryCount = 0;
         $restoredItemCount = 0;
         $categoryLevel = 'root';
+        $before = null;
+        $after = null;
 
-        DB::transaction(function () use ($categoryId, $startedAt, &$restoredSubcategoryCount, &$restoredItemCount, &$categoryLevel): void {
+        DB::transaction(function () use ($categoryId, $startedAt, &$after, &$before, &$restoredSubcategoryCount, &$restoredItemCount, &$categoryLevel): void {
             $category = MenuCategory::withTrashed()->findOrFail($categoryId);
             $restoredAt = now();
+            $before = $this->menuCategoryAuditPayload($category);
 
             if ($category->parent_id !== null) {
                 $categoryLevel = 'subcategory';
@@ -53,6 +56,17 @@ final class RestoreMenuCategory
                         'archived_with_category_id' => null,
                         'updated_at' => $restoredAt,
                     ]);
+
+                $after = $this->menuCategoryAuditPayload($category->refresh()) + [
+                    'cascade' => [
+                        'category_level' => $categoryLevel,
+                        'marker_category_id' => $categoryId,
+                        'restored_item_count' => $restoredItemCount,
+                        'restored_subcategory_count' => 0,
+                    ],
+                ];
+
+                $this->auditMenuMutation('menu.category.restored', 'menu_category', $categoryId, $before, $after);
 
                 return;
             }
@@ -89,6 +103,17 @@ final class RestoreMenuCategory
                     'archived_with_category_id' => null,
                     'updated_at' => $restoredAt,
                 ]);
+
+            $after = $this->menuCategoryAuditPayload($category->refresh()) + [
+                'cascade' => [
+                    'category_level' => $categoryLevel,
+                    'marker_category_id' => $categoryId,
+                    'restored_item_count' => $restoredItemCount,
+                    'restored_subcategory_count' => $restoredSubcategoryCount,
+                ],
+            ];
+
+            $this->auditMenuMutation('menu.category.restored', 'menu_category', $categoryId, $before, $after);
         });
 
         $this->logSuccess('menu.categories.restore', $startedAt, [

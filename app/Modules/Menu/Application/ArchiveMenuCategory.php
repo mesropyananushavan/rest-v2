@@ -19,10 +19,13 @@ final class ArchiveMenuCategory
         $archivedSubcategoryCount = 0;
         $archivedItemCount = 0;
         $categoryLevel = 'root';
+        $before = null;
+        $after = null;
 
-        DB::transaction(function () use ($categoryId, &$archivedSubcategoryCount, &$archivedItemCount, &$categoryLevel): void {
+        DB::transaction(function () use ($categoryId, &$after, &$archivedSubcategoryCount, &$archivedItemCount, &$before, &$categoryLevel): void {
             $category = MenuCategory::query()->findOrFail($categoryId);
             $archivedAt = now();
+            $before = $this->menuCategoryAuditPayload($category);
 
             if ($category->parent_id !== null) {
                 $categoryLevel = 'subcategory';
@@ -41,6 +44,17 @@ final class ArchiveMenuCategory
                     'deleted_at' => $archivedAt,
                     'updated_at' => $archivedAt,
                 ])->save();
+
+                $after = $this->menuCategoryAuditPayload($category->refresh()) + [
+                    'cascade' => [
+                        'archived_item_count' => $archivedItemCount,
+                        'archived_subcategory_count' => 0,
+                        'category_level' => $categoryLevel,
+                        'marker_category_id' => $categoryId,
+                    ],
+                ];
+
+                $this->auditMenuMutation('menu.category.archived', 'menu_category', $categoryId, $before, $after);
 
                 return;
             }
@@ -78,6 +92,17 @@ final class ArchiveMenuCategory
                 'deleted_at' => $archivedAt,
                 'updated_at' => $archivedAt,
             ])->save();
+
+            $after = $this->menuCategoryAuditPayload($category->refresh()) + [
+                'cascade' => [
+                    'archived_item_count' => $archivedItemCount,
+                    'archived_subcategory_count' => $archivedSubcategoryCount,
+                    'category_level' => $categoryLevel,
+                    'marker_category_id' => $categoryId,
+                ],
+            ];
+
+            $this->auditMenuMutation('menu.category.archived', 'menu_category', $categoryId, $before, $after);
         });
 
         $this->logSuccess('menu.categories.archive', $startedAt, [

@@ -7,6 +7,7 @@ namespace App\Modules\Menu\Application;
 use App\Modules\Menu\Domain\MenuDomainException;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use App\Modules\Tenancy\Contracts\BranchContext;
+use Illuminate\Support\Facades\DB;
 
 final class ToggleMenuItemActivity
 {
@@ -33,10 +34,21 @@ final class ToggleMenuItemActivity
         $item = MenuItem::query()
             ->where('branch_id', $branchId)
             ->findOrFail($itemId);
+        $before = $this->menuItemAuditPayload($item);
 
-        $item->update([
-            'active' => ! (bool) $item->active,
-        ]);
+        DB::transaction(function () use ($before, $item): void {
+            $item->update([
+                'active' => ! (bool) $item->active,
+            ]);
+
+            $this->auditMenuMutation(
+                'menu.item.activity_toggled',
+                'menu_item',
+                (int) $item->id,
+                $before,
+                $this->menuItemAuditPayload($item->refresh()),
+            );
+        });
 
         $this->logSuccess('menu.items.toggle_activity', $startedAt, [
             'active' => (bool) $item->active,

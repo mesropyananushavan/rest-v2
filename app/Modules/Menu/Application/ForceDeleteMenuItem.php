@@ -8,6 +8,7 @@ use App\Modules\Menu\Domain\MenuDomainException;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use App\Modules\Menu\Infrastructure\Storage\MenuItemImageStorage;
 use App\Modules\Tenancy\Contracts\BranchContext;
+use Illuminate\Support\Facades\DB;
 
 final class ForceDeleteMenuItem
 {
@@ -35,11 +36,18 @@ final class ForceDeleteMenuItem
         $item = MenuItem::onlyTrashed()
             ->where('branch_id', $branchId)
             ->findOrFail($itemId);
+        $before = $this->menuItemAuditPayload($item);
 
         $internalImage = $this->imageMetadata($item, 'internal_image');
         $publicImage = $this->imageMetadata($item, 'public_image');
 
-        $item->forceDelete();
+        DB::transaction(function () use ($before, $item, $itemId): void {
+            $item->forceDelete();
+
+            $this->auditMenuMutation('menu.item.permanently_deleted', 'menu_item', $itemId, $before, [
+                'deleted' => true,
+            ]);
+        });
 
         $this->storage->delete($internalImage);
         $this->storage->delete($publicImage);

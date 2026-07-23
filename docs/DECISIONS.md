@@ -258,6 +258,41 @@ returned by the Identity `UserDirectory` assignment contract. Explicit
 unauthorized header candidates return 404; stale unauthorized session
 candidates are forgotten with a warning and fall back to the first assigned
 branch if one exists.
+
+## 2026-07-23 — ADR-009 audit writes are cross-cutting append-only records
+Decision: audit writes live in `app/Support/Audit`, not a new module. Blueprint
+section 4 lists `audit_logs` under Reporting/Admin because that future module
+will own audit reads, filtering, reporting, and exports. Writes remain
+cross-cutting because every mutable Application action across modules must be
+able to record its own audit row without importing another module's internals.
+Reason: audit recording is infrastructure like structured logging: it must be
+available from Menu now and Halls/Tables, Orders, Payments, and Administration
+later while preserving module-boundary tests.
+Append-only enforcement: `audit_logs` has no `deleted_at`, the model does not
+use `SoftDeletes`, model update/delete events throw, and database triggers
+reject `UPDATE` and `DELETE`. Audit foreign keys use restrictive delete
+behavior rather than cascades or null-on-delete because audit rows must never
+be mutated by related-record cleanup.
+Transaction rule: an audit insert is part of the same database transaction as
+the mutation it records. If the mutation rolls back, its audit row rolls back;
+if audit recording fails, the mutation rolls back too. Database inserts are not
+external effects, so this does not conflict with ADR-008.
+Device id: omitted for now even though ADR-009 mentions it, because the
+Administration module and device registry do not exist yet. The field should
+be added with that module when device identity is defined.
+Action naming: audit actions are stable dotted lowercase past-tense strings,
+module-prefixed and singular by target. Current Menu actions are
+`menu.category.created`, `menu.category.updated`, `menu.category.archived`,
+`menu.category.restored`, `menu.category.permanently_deleted`,
+`menu.item.created`, `menu.item.updated`, `menu.item.archived`,
+`menu.item.restored`, `menu.item.permanently_deleted`,
+`menu.item.activity_toggled`, `menu.item.image_replaced`, and
+`menu.item.image_removed`.
+Redaction rule: `before_json` and `after_json` always pass through the shared
+`Redactor` before storage. Passwords, tokens, secrets, credentials, and card
+values must not be stored. Menu item images store only existing metadata such
+as path, thumbnail path, MIME type, dimensions, and byte size; binary image
+content is never stored in audit JSON.
 Reason: branch context filters branch-owned operational data, so a request
 header must not let an authenticated user switch into an unassigned branch
 inside the same tenant. Local and test workflows still need unauthenticated

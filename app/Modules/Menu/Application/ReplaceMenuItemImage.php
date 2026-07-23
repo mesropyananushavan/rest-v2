@@ -10,6 +10,7 @@ use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use App\Modules\Menu\Infrastructure\Storage\MenuItemImageStorage;
 use App\Modules\Tenancy\Contracts\BranchContext;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 final class ReplaceMenuItemImage
@@ -41,10 +42,21 @@ final class ReplaceMenuItemImage
             ->findOrFail($itemId);
         $column = $slot->column();
         $oldImage = $this->imageMetadata($item, $column);
+        $before = $this->menuItemAuditPayload($item);
         $newImage = $this->storage->store($item, $slot, $file);
 
         try {
-            $item->forceFill([$column => $newImage])->save();
+            DB::transaction(function () use ($before, $column, $item, $itemId, $newImage, $slot): void {
+                $item->forceFill([$column => $newImage])->save();
+
+                $after = $this->menuItemAuditPayload($item->refresh()) + [
+                    'image_change' => [
+                        'slot' => $slot->value,
+                    ],
+                ];
+
+                $this->auditMenuMutation('menu.item.image_replaced', 'menu_item', $itemId, $before, $after);
+            });
         } catch (Throwable $exception) {
             $this->storage->delete($newImage);
 

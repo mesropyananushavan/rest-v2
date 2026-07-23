@@ -10,6 +10,7 @@ use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Support\I18n\LocalizedText;
 use App\Support\Money\Money;
+use Illuminate\Support\Facades\DB;
 
 final class UpdateMenuItem
 {
@@ -45,16 +46,27 @@ final class UpdateMenuItem
             ->where('branch_id', $branchId)
             ->findOrFail($itemId);
         $category = $this->findValidSubcategory($categoryId);
+        $before = $this->menuItemAuditPayload($item);
 
-        $item->update([
-            'category_id' => (int) $category->id,
-            'translated_name' => $name->toArray(),
-            'translated_description' => $description?->toArray(),
-            'price_minor' => $price->minor,
-            'currency' => $price->currency,
-            'sort_order' => $sortOrder,
-            'active' => $active,
-        ]);
+        DB::transaction(function () use ($active, $category, $description, $item, $name, $price, $sortOrder, $before): void {
+            $item->update([
+                'category_id' => (int) $category->id,
+                'translated_name' => $name->toArray(),
+                'translated_description' => $description?->toArray(),
+                'price_minor' => $price->minor,
+                'currency' => $price->currency,
+                'sort_order' => $sortOrder,
+                'active' => $active,
+            ]);
+
+            $this->auditMenuMutation(
+                'menu.item.updated',
+                'menu_item',
+                (int) $item->id,
+                $before,
+                $this->menuItemAuditPayload($item->refresh()),
+            );
+        });
 
         $this->logSuccess('menu.items.update', $startedAt, [
             'branch_id' => $branchId,

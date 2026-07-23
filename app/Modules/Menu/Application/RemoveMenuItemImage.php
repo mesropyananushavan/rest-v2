@@ -9,6 +9,7 @@ use App\Modules\Menu\Domain\MenuItemImageSlot;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use App\Modules\Menu\Infrastructure\Storage\MenuItemImageStorage;
 use App\Modules\Tenancy\Contracts\BranchContext;
+use Illuminate\Support\Facades\DB;
 
 final class RemoveMenuItemImage
 {
@@ -39,11 +40,21 @@ final class RemoveMenuItemImage
             ->findOrFail($itemId);
         $column = $slot->column();
         $oldImage = $this->imageMetadata($item, $column);
+        $before = $this->menuItemAuditPayload($item);
 
-        if ($oldImage !== null) {
+        DB::transaction(function () use ($before, $column, $item, $itemId, $slot): void {
             $item->forceFill([$column => null])->save();
-            $this->storage->delete($oldImage);
-        }
+
+            $after = $this->menuItemAuditPayload($item->refresh()) + [
+                'image_change' => [
+                    'slot' => $slot->value,
+                ],
+            ];
+
+            $this->auditMenuMutation('menu.item.image_removed', 'menu_item', $itemId, $before, $after);
+        });
+
+        $this->storage->delete($oldImage);
 
         $this->logSuccess('menu.items.images.remove', $startedAt, [
             'branch_id' => $branchId,
