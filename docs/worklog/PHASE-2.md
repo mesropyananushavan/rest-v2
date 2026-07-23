@@ -1,6 +1,6 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.11 Part D searchable combobox implemented locally; awaiting owner review before commits
+Status: Stage 1.11 Part C complete locally; final commits/gate/report in progress
 Branch: phase-2-stage-1.11c-menu-ux
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
@@ -459,24 +459,12 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   not implemented in Part C. Part D owner re-scope on 2026-07-23 split the
   missing work: shared searchable combobox first, context-preserving
   save/cancel remains pending.
-- [ ] Stage 1.11 Part D: finish deferred item form UX. Implement the shared
-  JSON endpoint + shared Alpine searchable combobox for both category
-  `parent_id` and item `category_id`, then separately implement
-  context-preserving save/cancel flow that was found missing during Block 3
-  verification. Current local result on 2026-07-23: searchable combobox is
-  implemented but not committed. It adds `SearchMenuCategoryOptions`, two
-  permission-scoped JSON endpoints, one `x-form.searchable-select` Alpine
-  widget, and applies it to the plain Blade category form and Livewire item
-  form. Widget typing does not mutate hidden ids; if focus leaves without an
-  option choice, the visible text returns to the previous selected label, and
-  clearing is explicit only. The component also accepts an explicit server
-  `value`, so a missing backend label cannot overwrite an existing hidden id.
-  Gate passed: `make pint`, `make stan`, `make test` (`110 passed / 2 skipped
-  / 802 assertions`) and direct container `npm run build` produced Vite assets
-  (`public/build/assets/app-Blopmbua.js`). Current load DB proof: 5 load tenants have 600
-  categories total; one load tenant has 120 categories (20 roots, 100
-  subcategories); both forms render only 10 initial options with `has_more=true`
-  and no native `parent_id`/`category_id` select.
+- [ ] Stage 1.11 Part D: finish deferred Menu UX. The shared JSON endpoint +
+  shared Alpine searchable combobox for category `parent_id` and item
+  `category_id` was implemented in Part C follow-up commits
+  `8cca014`/`d9856a2`/`8956f77`. Remaining Part D work is listed in the
+  carry-over section below, especially context-preserving save/cancel and
+  final tablet polish.
 - [ ] Stage 1.11.10.6 (Part C): load-data command and performance fixes. Add
   an artisan command outside `DemoSeeder` to generate about 200 categories and
   20000 items per tenant with deterministic localized names, prices, active
@@ -484,16 +472,13 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   Part B. Run `EXPLAIN` on category panel, selected-category page, global
   search, inactive filter, and archive paths; fix slow paths with indexes, not
   cache.
-- [ ] Stage 1.11.11 (Part C): final verification, load smoke, push, and CI
-  handoff. Run `make fresh`, run the load-data command, capture curl/HTTP
-  timings for Menu index, category panel pagination/search, category switching,
-  global item search, item pagination, create-item write latency, and activity
-  toggle write latency on the filled table so GIN index write overhead is
-  visible. If writes noticeably regress, record it in this worklog for owner
-  discussion. Then run final `make pint && make stan && make test`, push
-  `phase-2-stage-1.11c-menu-ux`, wait for both GitHub Actions jobs green,
-  record measurements/CI/handoff in this worklog, and do not create or merge a
-  PR.
+- [x] Stage 1.11.11 (Part C): final local verification, load smoke, and owner
+  PR handoff. Run `make fresh`, run the load-data command, capture curl/HTTP
+  timings for Menu index, category panel pagination/search, category
+  switching, global item search, item pagination, create-item write latency,
+  and activity toggle write latency on the loaded PostgreSQL DB, then run
+  `make pint`, `make stan`, and `make test`. Result: local measurements and
+  gates were recorded below; push/CI/PR are explicitly owner-owned.
 
 ## Done log
 - 2026-07-20: Phase 2 Stage 1 opened from fresh `origin/main` on branch
@@ -749,6 +734,13 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   header from `GET /login` into `POST /login` returned `302` to `/admin`, and
   `GET /admin` returned `200` for
   `load-manager+20260723071232-1-restaurant-1@smartrest.test`.
+- 2026-07-23 final verification found that root categories with no
+  subcategories were invisible on `/admin/menu` because the category panel was
+  paginated by selectable subcategory rows (`parent_id is not null`) and roots
+  were rendered only as parents of rows on the current page. The local fix
+  changes category panel pagination to root-first: `category_page` now counts
+  root-category pages, not subcategory pages. This is a breaking change for
+  saved `/admin/menu?category_page=N` URLs from earlier Part C builds.
 
 ## INCIDENT: 2026-07-23 Step G `--fresh` hang on dirty local DB
 - Earlier `menu:seed-load --mode=production-like --restaurants=5
@@ -785,18 +777,45 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   `Content-Type: application/json` and `X-Livewire: true`. Each scenario used
   one warm-up request excluded from the median, followed by 3 measured runs;
   the recorded value is the median of those 3 runs.
-- Menu index first load: `GET /admin/menu`; warm-up `200 0.136249`; measured
-  `200 0.129899`, `200 0.152651`, `200 0.130298`; median `0.130298s`.
-- Category panel pagination: Livewire page `GET /admin/menu`, payload
-  `updates={}`, `call=nextCategoryPage[]`; warm-up `200 0.109275`; measured
-  `200 0.107672`, `200 0.109441`, `200 0.109615`; median `0.109441s`.
-- Category panel search: Livewire page `GET /admin/menu`, payload
-  `updates={"categorySearch":"Trout"}`, no call; warm-up `200 0.102965`;
-  measured `200 0.106006`, `200 0.119503`, `200 0.102077`; median
-  `0.106006s`.
-- Category switching: Livewire page `GET /admin/menu`, payload `updates={}`,
-  `call=selectCategory[109]`; warm-up `200 0.114601`; measured
-  `200 0.112175`, `200 0.124423`, `200 0.120919`; median `0.120919s`.
+- Superseded on 2026-07-23: the original Menu index/category-panel timings
+  below were taken before root-first category pagination and are no longer the
+  current baseline for those four scenarios. Old values: menu index
+  `0.130298s`, category pagination `0.109441s`, category search `0.106006s`,
+  category switching `0.120919s`.
+- Root-first retest on 2026-07-23: current local DB had 5 load tenants plus
+  2 demo tenants, `menu_items=250012`, `menu_categories=608` (`103` roots,
+  `505` subcategories). Method stayed curl-based: one warm-up excluded, then
+  3 measured runs, median recorded. Livewire POST used `_token` from
+  `livewireScriptConfig`, `Content-Type: application/json`, and
+  `X-Livewire: true`. The first root-first retest was invalidated because
+  `category-actions.blade.php` lazily loaded each subcategory parent and added
+  100 extra SQL queries on the load tenant page. The clean numbers below were
+  taken after assigning each loaded subcategory's `parent` relation from its
+  already-loaded root with Eloquent `setRelation()`.
+- Menu index first load after root-first pagination: `GET /admin/menu`;
+  warm-up `200 0.187630`; measured `200 0.193979`, `200 0.183121`,
+  `200 0.185654`; median `0.185654s`.
+- Category panel pagination after root-first pagination: Livewire page
+  `GET /admin/menu`, payload `updates={}`, `call=nextCategoryPage[]`; warm-up
+  `200 0.091634`; measured `200 0.107154`, `200 0.138955`,
+  `200 0.090559`; median `0.107154s`.
+- Category panel search after root-first pagination: Livewire page
+  `GET /admin/menu`, payload `updates={"categorySearch":"Trout"}`, no call;
+  warm-up `200 0.134520`; measured `200 0.123804`, `200 0.121593`,
+  `200 0.122639`; median `0.122639s`.
+- Category switching after root-first pagination: Livewire page
+  `GET /admin/menu`, payload `updates={}`, `call=selectCategory[109]`;
+  warm-up `200 0.155920`; measured `200 0.156799`, `200 0.158919`,
+  `200 0.167151`; median `0.158919s`.
+- N+1 check after root-first pagination: `PaginateMenuCategories(perPage: 25,
+  page: 1)` on tenant 3 executed 3 SQL queries total (`count`, root page,
+  eager-load subcategories with `where parent_id in (...)`). No per-root query
+  loop was observed after the `setRelation()` fix. Current load tenant page 1
+  loads 21 roots plus 100 subcategories (`121` category models). At a typical
+  25 roots * 15 subcategories profile, one page could render up to 400
+  category models. `CATEGORY_PAGE_SIZE=25` is left unchanged for Part C; if
+  manual tablet review reports sluggishness, reduce the root page size to 15
+  in Part D (`15 + 225 = 240` category models at the same profile).
 - Global item search, frequent prefix: Livewire page `GET /admin/menu`,
   payload `updates={"search":"Fresh"}`, no call. SQL precheck for tenant 3
   returned 3125 matching `menu_items`. Warm-up `200 0.185770`; measured
@@ -871,6 +890,44 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   Application actions directly, and the one HTTP subcategory create test
   manually injected `parent_id` into the payload instead of proving the HTML
   form rendered and submitted that field.
+- Stage 1.11 Part D carry-over: context-preserving save/cancel remains
+  unimplemented for Menu forms. Search/page/filter/category URL context is not
+  yet preserved across create/edit/cancel flows.
+- Stage 1.11 Part D carry-over: archive/restore/force-delete controls still
+  render inline in the category/item cards. Move them into an overflow menu
+  before polishing the final tablet UI.
+- Stage 1.11 Part D carry-over: there are no automated tests for the
+  `menu:seed-load` loader itself; only post-load manual/count verification has
+  been recorded.
+- Stage 1.11 Part D carry-over: `CATEGORY_PAGE_SIZE=25` is retained for the
+  root-first panel. At a 25-root x 15-child profile this can render up to 400
+  category models; reduce to 15 roots/page if tablet review complains.
+- Stage 1.11 Part D carry-over: moving a category with items is currently
+  blocked by the domain action. This may be too strict for real restaurant
+  maintenance; owner decision required before changing the rule.
+- Final cleanup note: `ListMenuCategories` had no live calls in `app/` after
+  the searchable-combobox and root-first changes. Only the class itself,
+  direct tests, and historical worklog mentions remained, so the dead action
+  and direct test assertions were removed during finalization.
+
+## Manual UI checks before PR
+- `/admin/menu/categories/create`: create a root category; `/admin/menu`
+  should show it as a root header with the empty-subcategory state.
+- `/admin/menu`: click the empty root's create-subcategory link; the category
+  form should open with that root preselected as `parent_id`.
+- `/admin/menu/categories/create` and `/admin/menu/items/create`: type in the
+  parent/category combobox; options should load server-side and hidden ids
+  should change only after explicit selection/clear.
+- `/admin/menu/categories/{subcategory}/edit`: save a subcategory without
+  changing parent; it should stay under the same root.
+- `/admin/menu`: toggle a menu item's activity inline; the row should update
+  and deactivated items should disappear when inactive items are hidden.
+- `/admin/menu`: search categories and items on the 250k-item load dataset;
+  matching roots/subcategories/items should appear without visible slowdown.
+- `/admin/menu`: paginate categories and items; category pages should count
+  root groups, keep stable ordering, and not drop empty roots on later pages.
+- `/admin/menu?category={foreign_id}` and direct edit/archive URLs for another
+  tenant's category/item: expected HTTP result is 404.
 
 ## Next steps
 Stage 1.11 Part C subcategory implementation order after owner-approved
@@ -970,8 +1027,6 @@ Stage 1.11 Part C subcategory implementation order after owner-approved
   `load-manager+20260723071232-1-restaurant-1@smartrest.test`: `POST /login`
   returned `302` to `/admin`, then `GET /admin` returned `200`.
 
-Next action: owner review of the uncommitted Stage 1.11 Part D searchable
-combobox diff. If approved, commit logically as action+tests,
-endpoint+tests, Alpine widget, and form application; then continue with the
-still-pending context-preserving save/cancel work. Do not create PRs/merges,
-pushes, or switch branches.
+Next action: owner creates the PR and runs/observes remote CI after Codex
+finishes final local commits, gate, and report. Do not expand Stage 1.11 Part
+C further; new Menu UX work belongs to Part D.
