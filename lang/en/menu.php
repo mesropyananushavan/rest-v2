@@ -21,6 +21,12 @@ return [
         'edit_title' => 'Edit item',
         'category_items' => 'Category items',
     ],
+    'branch_context_required' => 'Select a branch before changing menu items.',
+    'category_archived' => 'Menu items cannot be restored while their category is archived.',
+    'category_parent_change_blocked' => 'Categories with subcategories or items cannot be moved.',
+    'invalid_category_parent' => 'Subcategories must belong to a root category in the current tenant.',
+    'item_category_must_be_subcategory' => 'Menu items must belong to a subcategory.',
+    'restore_parent_category_first' => 'Restore the parent category before restoring this subcategory.',
     'fields' => [
         'actions' => 'Actions',
         'active' => 'Active',

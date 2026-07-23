@@ -191,6 +191,64 @@ it('keeps the selected parent when editing a subcategory through the category fo
     expect(MenuCategory::query()->findOrFail((int) $subcategory->id)->parent_id)->toBe((int) $root->id);
 });
 
+it('updates a subcategory with items when the parent is unchanged through the category form', function (): void {
+    $manager = menuBladeUser('tenant-a', 'manager-a', ['menu.categories.manage', 'menu.items.manage']);
+
+    app(TenantResolver::class)->set((int) $manager['tenant']->id);
+    app(BranchContext::class)->set((int) $manager['branch']->id);
+
+    $root = app(CreateMenuCategory::class)(menuBladeText('Root menu'), sortOrder: 10);
+    $subcategory = app(CreateMenuCategory::class)(menuBladeText('Breakfast plates'), parentId: (int) $root->id);
+    app(CreateMenuItem::class)((int) $subcategory->id, menuBladeText('Omelette'), null, new Money(100000, 'AMD'));
+
+    app(TenantResolver::class)->clear();
+    app(BranchContext::class)->clear();
+
+    $this->actingAs($manager['user'])
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->get(route('admin.menu.categories.edit', ['category' => (int) $subcategory->id]))
+        ->assertOk()
+        ->assertSee('name="parent_id"', false)
+        ->assertSee('value="'.(int) $root->id.'"', false);
+
+    $this->actingAs($manager['user'])
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->put(route('admin.menu.categories.update', ['category' => (int) $subcategory->id]), menuBladeCategoryPayload('Breakfast plates updated', parentId: (int) $root->id))
+        ->assertRedirect(route('admin.menu.index'));
+
+    app(TenantResolver::class)->set((int) $manager['tenant']->id);
+
+    expect(MenuCategory::query()->findOrFail((int) $subcategory->id)->parent_id)->toBe((int) $root->id);
+});
+
+it('redirects back with an error instead of 500 when moving a subcategory with items', function (): void {
+    $manager = menuBladeUser('tenant-a', 'manager-a', ['menu.categories.manage', 'menu.items.manage']);
+
+    app(TenantResolver::class)->set((int) $manager['tenant']->id);
+    app(BranchContext::class)->set((int) $manager['branch']->id);
+
+    $root = app(CreateMenuCategory::class)(menuBladeText('Root menu'), sortOrder: 10);
+    $otherRoot = app(CreateMenuCategory::class)(menuBladeText('Other root'), sortOrder: 20);
+    $subcategory = app(CreateMenuCategory::class)(menuBladeText('Breakfast plates'), parentId: (int) $root->id);
+    app(CreateMenuItem::class)((int) $subcategory->id, menuBladeText('Omelette'), null, new Money(100000, 'AMD'));
+
+    app(TenantResolver::class)->clear();
+    app(BranchContext::class)->clear();
+
+    $editRoute = route('admin.menu.categories.edit', ['category' => (int) $subcategory->id]);
+
+    $this->actingAs($manager['user'])
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->from($editRoute)
+        ->put(route('admin.menu.categories.update', ['category' => (int) $subcategory->id]), menuBladeCategoryPayload('Breakfast plates updated', parentId: (int) $otherRoot->id))
+        ->assertRedirect($editRoute)
+        ->assertSessionHasErrors(['menu' => __('menu.category_parent_change_blocked')]);
+
+    app(TenantResolver::class)->set((int) $manager['tenant']->id);
+
+    expect(MenuCategory::query()->findOrFail((int) $subcategory->id)->parent_id)->toBe((int) $root->id);
+});
+
 it('keeps an existing category parent when a legacy update payload omits parent_id', function (): void {
     $manager = menuBladeUser('tenant-a', 'manager-a', ['menu.categories.manage']);
 

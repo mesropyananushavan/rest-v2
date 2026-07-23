@@ -6,6 +6,7 @@ use App\Console\Commands\MenuSeedLoadCommand;
 use App\Http\Middleware\AttachLogContext;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureSuperAdminForDeletes;
+use App\Modules\Menu\Domain\MenuDomainException;
 use App\Modules\Tenancy\Http\Middleware\ResolveBranch;
 use App\Modules\Tenancy\Http\Middleware\ResolveTenant;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
@@ -46,4 +47,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );
+
+        $exceptions->render(function (MenuDomainException $exception, Request $request) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return null;
+            }
+
+            return back()
+                ->withErrors(['menu' => __($exception->errorCode())])
+                ->withInput();
+        });
     })->create();
