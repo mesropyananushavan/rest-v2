@@ -438,6 +438,16 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   The code has item status badges plus edit/archive/restore/force-delete UI,
   but no `ToggleMenuItemActivity` Application action, no Livewire toggle
   method, and no inline activity toggle button.
+  Block 4.2 update on 2026-07-23: inline activity toggle is implemented by
+  `ToggleMenuItemActivity` plus `MenuIndex::toggleItemActivity()`, using the
+  same `menu.items.manage` permission as item edit. The active-list UX is
+  intentionally consistent with archive: when `showInactive=false`, a
+  deactivated item disappears from the current list after the Livewire refresh;
+  users can see/reactivate it by enabling the existing inactive filter. The
+  Livewire test harness does not convert the action's `ModelNotFoundException`
+  into `assertStatus(404)`, so tenant-isolation coverage stays exception-level
+  while the HTTP endpoint convention remains 404. The wider row-overflow
+  archive-control part is still not implemented.
 - [ ] Stage 1.11.10.5 (Part C): context-preserving forms and searchable
   category combobox. Replace the item form's all-options category select with
   a Livewire + Alpine server-search combobox, prefill category from

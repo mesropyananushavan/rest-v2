@@ -50,12 +50,21 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
             <div class="text-sm font-bold text-smartrest-ink">{{ MoneyFormatter::format($item->price(), $locale) }}</div>
 
-            <div>
+            <div class="flex flex-col items-start gap-2">
                 <x-badge-status
                     :active="$item->active"
                     :active-label="__('menu.status.active')"
                     :inactive-label="__('menu.status.inactive')"
                 />
+                @if (! $item->trashed() && $canManageItems)
+                    <button
+                        type="button"
+                        wire:click="toggleItemActivity({{ (int) $item->id }})"
+                        class="text-xs font-bold text-smartrest-success underline-offset-4 transition hover:text-green-800 hover:underline"
+                    >
+                        {{ $item->active ? __('menu.actions.deactivate') : __('menu.actions.activate') }}
+                    </button>
+                @endif
             </div>
 
             <div class="flex flex-wrap justify-start gap-2 lg:justify-end">

@@ -8,6 +8,7 @@ use App\Modules\Menu\Application\PaginateMenuCategories;
 use App\Modules\Menu\Application\PaginateMenuItems;
 use App\Modules\Menu\Application\ResolveMenuCategorySelection;
 use App\Modules\Menu\Application\SearchMenuItems;
+use App\Modules\Menu\Application\ToggleMenuItemActivity;
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use App\Modules\Menu\Infrastructure\Storage\MenuItemImageUrlResolver;
 use Illuminate\Contracts\View\View;
@@ -48,6 +49,8 @@ final class MenuIndex extends Component
 
     #[Url(as: 'archive_mode', history: true, except: self::ARCHIVE_MODE_ACTIVE)]
     public string $archiveMode = self::ARCHIVE_MODE_ACTIVE;
+
+    public ?string $statusMessage = null;
 
     public function mount(): void
     {
@@ -123,6 +126,15 @@ final class MenuIndex extends Component
     {
         $this->search = '';
         $this->searchPage = 1;
+    }
+
+    public function toggleItemActivity(int $itemId, ToggleMenuItemActivity $toggleItemActivity): void
+    {
+        abort_unless(auth()->user()?->can('menu.items.manage') ?? false, 403);
+
+        $item = $toggleItemActivity($itemId);
+
+        $this->statusMessage = $item->active ? __('menu.flash.item_activated') : __('menu.flash.item_deactivated');
     }
 
     public function previousCategoryPage(): void

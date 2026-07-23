@@ -25,6 +25,12 @@ $locale = app()->getLocale();
 ?>
 
 <div>
+    @if ($statusMessage !== null)
+        <div class="mb-4 rounded-sr-brand border border-smartrest-success/20 bg-smartrest-success/10 px-4 py-3 text-sm font-medium text-green-800" role="status">
+            {{ $statusMessage }}
+        </div>
+    @endif
+
     <x-page-header
         :eyebrow="__('menu.index.eyebrow')"
         :title="__('menu.index.heading')"

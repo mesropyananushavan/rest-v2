@@ -18,6 +18,7 @@ use App\Modules\Tenancy\Infrastructure\Models\Branch;
 use App\Modules\Tenancy\Infrastructure\Models\Tenant;
 use App\Support\I18n\LocalizedText;
 use App\Support\Money\Money;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
@@ -150,14 +151,125 @@ it('normalizes archive visibility for managers and exposes archive maintenance t
         ->assertSee('Hidden Soup', false);
 });
 
+it('toggles item activity inline in both directions', function (): void {
+    $records = menuIndexLivewireRecords();
+
+    app(TenantResolver::class)->set((int) $records['tenant']->id);
+    app(BranchContext::class)->set((int) $records['branch']->id);
+
+    $component = Livewire::withQueryParams(['show_inactive' => '1'])
+        ->actingAs($records['user'])
+        ->test(MenuIndex::class)
+        ->assertSee(__('menu.actions.deactivate'), false)
+        ->call('toggleItemActivity', (int) $records['item']->id)
+        ->assertSee(__('menu.flash.item_deactivated'), false)
+        ->assertSee(__('menu.actions.activate'), false);
+
+    expect(MenuItem::query()->findOrFail((int) $records['item']->id)->active)->toBeFalse();
+
+    $component
+        ->call('toggleItemActivity', (int) $records['item']->id)
+        ->assertSee(__('menu.flash.item_activated'), false)
+        ->assertSee(__('menu.actions.deactivate'), false);
+
+    expect(MenuItem::query()->findOrFail((int) $records['item']->id)->active)->toBeTrue();
+});
+
+it('removes a deactivated item from the default active list after inline toggle', function (): void {
+    $records = menuIndexLivewireRecords();
+
+    app(TenantResolver::class)->set((int) $records['tenant']->id);
+    app(BranchContext::class)->set((int) $records['branch']->id);
+
+    Livewire::actingAs($records['user'])
+        ->test(MenuIndex::class)
+        ->assertSet('showInactive', false)
+        ->assertSee('Lori Omelette', false)
+        ->call('toggleItemActivity', (int) $records['item']->id)
+        ->assertSee(__('menu.flash.item_deactivated'), false)
+        ->assertDontSee('Lori Omelette', false);
+});
+
+it('forbids inline item activity toggle without menu item permission', function (): void {
+    $records = menuIndexLivewireRecords();
+    $waiter = menuIndexLivewireUser(
+        (int) $records['tenant']->id,
+        (int) $records['branch']->id,
+        'waiter-menu-index',
+        [],
+    );
+
+    app(TenantResolver::class)->set((int) $records['tenant']->id);
+    app(BranchContext::class)->set((int) $records['branch']->id);
+
+    Livewire::actingAs($waiter)
+        ->test(MenuIndex::class)
+        ->call('toggleItemActivity', (int) $records['item']->id)
+        ->assertStatus(403);
+
+    expect(MenuItem::query()->findOrFail((int) $records['item']->id)->active)->toBeTrue();
+});
+
+it('returns 404 when inline item activity toggle targets another tenant item', function (): void {
+    $tenantA = menuIndexLivewireRecords();
+    $tenantB = menuIndexLivewireRecordsFor('tenant-b-menu-index', 'Tenant B', 'foreign-menu-index');
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+    app(BranchContext::class)->set((int) $tenantA['branch']->id);
+
+    expect(fn () => Livewire::actingAs($tenantA['user'])
+        ->test(MenuIndex::class)
+        ->call('toggleItemActivity', (int) $tenantB['item']->id))
+        ->toThrow(ModelNotFoundException::class);
+
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+
+    expect(MenuItem::query()->findOrFail((int) $tenantB['item']->id)->active)->toBeTrue();
+});
+
+it('does not expose or allow inline item activity toggle for archived items', function (): void {
+    $records = menuIndexLivewireRecords();
+    $owner = menuIndexLivewireUser(
+        (int) $records['tenant']->id,
+        (int) $records['branch']->id,
+        'owner-menu-index-toggle',
+        ['menu.categories.manage', 'menu.items.manage'],
+        superadmin: true,
+    );
+
+    app(TenantResolver::class)->set((int) $records['tenant']->id);
+    app(BranchContext::class)->set((int) $records['branch']->id);
+    app(ArchiveMenuItem::class)((int) $records['item']->id);
+
+    Livewire::withQueryParams(['archive_mode' => 'archived'])
+        ->actingAs($owner)
+        ->test(MenuIndex::class)
+        ->assertSee('Lori Omelette', false)
+        ->assertDontSee(__('menu.actions.deactivate'), false)
+        ->assertDontSee(__('menu.actions.activate'), false);
+
+    expect(fn () => Livewire::actingAs($owner)
+        ->test(MenuIndex::class)
+        ->call('toggleItemActivity', (int) $records['item']->id))
+        ->toThrow(ModelNotFoundException::class);
+});
+
 /**
  * @return array{tenant: Tenant, branch: Branch, user: User, root: MenuCategory, category: MenuCategory, item: MenuItem}
  */
 function menuIndexLivewireRecords(): array
 {
+    return menuIndexLivewireRecordsFor('tenant-a-menu-index', 'Tenant A', 'manager-menu-index');
+}
+
+/**
+ * @return array{tenant: Tenant, branch: Branch, user: User, root: MenuCategory, category: MenuCategory, item: MenuItem}
+ */
+function menuIndexLivewireRecordsFor(string $tenantSlug, string $tenantName, string $username): array
+{
     $tenant = Tenant::query()->create([
-        'name' => 'Tenant A',
-        'slug' => 'tenant-a-menu-index',
+        'name' => $tenantName,
+        'slug' => $tenantSlug,
         'default_locale' => 'en',
         'currency' => 'AMD',
         'status' => 'active',
@@ -193,7 +305,7 @@ function menuIndexLivewireRecords(): array
     $user = menuIndexLivewireUser(
         (int) $tenant->id,
         (int) $branch->id,
-        'manager-menu-index',
+        $username,
         ['menu.categories.manage', 'menu.items.manage'],
     );
 
