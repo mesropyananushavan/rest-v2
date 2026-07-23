@@ -157,20 +157,29 @@ backfill/sync failure modes before measured need; full-text search only —
 less suitable for short substrings, partial dish names, and multilingual
 operator input.
 
-## 2026-07-21 — Menu category searchable select
-Decision: Menu item create/edit will replace the bare category `<select>` with
-a Livewire + Alpine searchable combobox backed by a server-side, debounced,
-paginated category lookup. No third-party UI library is added for this stage.
+## 2026-07-21 — Menu category searchable combobox
+Decision: Menu category selection uses one shared Alpine combobox backed by a
+shared JSON endpoint with server-side, debounced, paginated category lookup. It
+applies to both category parent selection (`parent_id` on the plain Blade
+category form) and item category selection (`category_id` inside the Livewire
+Menu item form). This replaces the earlier item-form-only wording that named a
+Livewire-specific combobox; Livewire remains an adapter around the same Alpine
+widget and JSON result contract, not a separate selection implementation. No
+third-party UI library is added for this stage.
+Scope: `menu_categories` has no `branch_id`, so category lookup is scoped by
+tenant and archive state only. There is no branch-level database filter for
+category options. Item creation/update remains branch-owned through the item
+Application actions and existing branch context.
 Reason: the expected category scale is about 200 categories per tenant, which
-does not justify adding an npm widget dependency when Livewire already handles
-server-side filtering and Alpine can handle the small local disclosure state.
-This keeps the form consistent with the existing Blade/Livewire/Tailwind stack
-and avoids introducing a library that must be maintained for one simple
-combobox.
+does not justify adding an npm widget dependency. One JSON endpoint plus one
+Alpine widget keeps behavior identical across plain Blade and Livewire forms,
+keeps filtering server-side, and avoids two diverging adapters for the same
+selection UX.
 Rejected: rendering all categories in a native select — poor tablet UX and
 violates the Part C scope; installing Tom Select or another widget now —
 unnecessary dependency surface until a measured accessibility or behavior gap
-appears that Livewire + Alpine cannot cover cleanly.
+appears that Alpine cannot cover cleanly; separate Blade and Livewire
+combobox implementations — duplicate behavior and create avoidable drift risk.
 
 ## 2026-07-22 — Menu category hierarchy uses parent_id subcategories
 Decision: Menu hierarchy is strictly three levels: root category -> subcategory
