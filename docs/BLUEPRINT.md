@@ -152,13 +152,27 @@ Menu:
 | Entity | Key fields | Relationships/indexes |
 |---|---|---|
 | `menus` | tenant_id, branch_id nullable, translated_name, color, icon, sort_order, public | tenant+branch+sort |
-| `menu_categories` | menu_id, translated_name, sort_order, active | menu+sort |
-| `menu_items` | category_id, translated_name, price_minor, currency, barcode, hdm_department, preparation_place_id, cook_interval, active | category/active/barcode |
+| `menu_categories` | tenant_id, parent_id nullable, archived_with_category_id nullable, translated_name, sort_order, active, deleted_at | tenant+parent+deleted/active/sort; standalone parent/archive FK indexes |
+| `menu_items` | tenant_id, branch_id, category_id, archived_with_category_id nullable, translated_name, price_minor, currency, barcode, hdm_department, preparation_place_id, cook_interval, active, deleted_at | branch/category/active/barcode; standalone branch/category FK indexes |
 | `modifiers`, `modifier_options` | translated_name, min/max, price_delta_minor | item/modifier indexes |
 | `item_availability_windows` | item_id, day_of_week, starts_at, ends_at | for daily menu scheduling |
 | `item_suspensions` | item_id, branch_id, reason, starts_at, expires_at, source | kitchen-level temporary out-of-stock |
 | `item_frozen_states` | item_id, reason, frozen_at, thawed_at | archived/frozen item state; retained for history, hidden from sale |
 | `item_recipes` | item_id, material_id, quantity, unit_id, waste_percent | item+material unique |
+
+Menu hierarchy is strictly root category -> subcategory -> item. Root
+categories have `menu_categories.parent_id = null`; subcategories point to a
+root category through `parent_id`. A subcategory cannot contain another
+subcategory, and `menu_items.category_id` must reference a subcategory, never a
+root category. Application actions enforce the depth rule and item placement;
+the database enforces self-FK integrity and `parent_id <> id`.
+
+Menu archive is soft delete. Archiving a root category cascades archive to its
+currently active subcategories and their currently active items, marking
+descendants with `archived_with_category_id` so restore only reopens records
+archived by that cascade. Archiving a subcategory cascades only to its own
+currently active items. Independently archived descendants remain archived
+during parent restore. Permanent force-delete is superadmin-only maintenance.
 
 Menu scaffold context: `menu-day` becomes daily availability scheduling; `menu-suspend` becomes temporary kitchen/branch out-of-stock; `menu-frozen` becomes frozen/archived sale state for items retained for historical receipts and possible reactivation. This differs from legacy scaffold tables because v2 models three separate availability concepts instead of one generic status list.
 

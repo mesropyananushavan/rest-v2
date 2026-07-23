@@ -1,6 +1,6 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.11 Part C Step G complete; Stage 1.11.11 final verification next
+Status: Stage 1.11 Part C Block 4.4 complete; Block 4.5 load-timing measurements next
 Branch: phase-2-stage-1.11c-menu-ux
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
@@ -854,8 +854,8 @@ Stage 1.11 Part C subcategory implementation order after owner-approved
   `load-manager+20260723071232-1-restaurant-1@smartrest.test`: `POST /login`
   returned `302` to `/admin`, then `GET /admin` returned `200`.
 
-Next action: run Stage 1.11.11 final verification checklist for Part C,
-including full quality gates, load smoke, write-latency checks on the filled
-Menu table, PostgreSQL Menu/search coverage, and final handoff. Do not edit
-`docs/BLUEPRINT.md`, do not create PRs/merges/pushes, and do not commit without
-explicit owner approval.
+Next action: run Block 4.5 load-timing measurements on the current filled Menu
+table: HTTP timings for Menu index, category pagination/search, category
+switching, global item search, item pagination, create-item write latency, and
+activity-toggle write latency. Do not create PRs/merges/pushes or switch
+branches.
