@@ -307,3 +307,26 @@ latency became the bottleneck for low-risk pre-production changes; full
 autonomy including force-push, history rewriting, branch deletion, and direct
 `main` pushes, because irreversible operations can destroy reviewability and
 recovery.
+
+## 2026-07-23 — Admin API starts with session auth and page pagination
+Decision: the first `/api/v1` endpoint uses the existing Laravel session guard
+plus the same tenant, branch, and permission middleware as the admin UI. Token
+authentication is deferred and is required before any write endpoint, third
+party client, guest QR client, or display client is added. `GET
+/api/v1/menu-items` uses page pagination with
+`meta.pagination.current_page`, `per_page`, `total`, `last_page`, `from`, `to`,
+and `has_more_pages`; cursor pagination remains deferred for live feeds and
+large append-only logs. The API route uses `throttle:60,1`.
+Reason: this slice is read-only, session-authenticated, and exists to close the
+Phase 1 walking-skeleton API proof for the same branch manager who already uses
+the admin UI. Reusing session auth and the hardened Stage 1.12 tenant/branch
+middleware avoids introducing a token package before the first write or
+external-client API actually needs it. Page pagination matches the current
+admin resource-list behavior, while the 60 requests/minute limit is
+conservative for a human-operated admin list.
+Rejected: installing Sanctum now, because token auth is not needed for this
+GET-only admin slice and would add package/configuration surface before write
+or external clients exist; cursor pagination for this resource list, because
+the existing Menu Application actions and admin tables are page-based; leaving
+the API unthrottled, because even read-only endpoints should have a default
+abuse guard.

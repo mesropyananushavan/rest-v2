@@ -1,7 +1,7 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.15 merge-autonomy policy codification verified locally; PR CI pending
-Branch: phase-2-stage-1.15-merge-autonomy
+Status: Stage 1.14 API foundation verified locally; PR CI pending
+Branch: phase-2-stage-1.14-api-foundation
 
 PR state: Codex may create and merge PRs after exact-head green CI; direct
 pushes to `main`, force-push, history rewriting, and branch deletion remain
@@ -621,7 +621,47 @@ forbidden.
   autonomy model. Result: Stage 1.13 and Stage 1.12 are merged to `main`;
   policy documentation is updated and local gates are green: Pint pass
   (`157 files`), PHPStan pass (`[OK] No errors`), and Pest pass (`124 passed /
-  2 skipped / 854 assertions`). PR CI is pending.
+  2 skipped / 854 assertions`). PR #13 merged to `main` at `36478fc` after
+  exact-head green CI; post-merge `main` CI was green.
+- [x] Stage 1.14.1: API routing and shared JSON contract foundation. Register
+  `routes/api.php`, add `/api/v1` routing with session-auth-compatible API
+  middleware, tenant and branch resolution, and a conservative `throttle:60,1`
+  rate limit. Implement shared success/error envelopes that include the
+  existing request correlation id and locale, and map API authentication,
+  authorization, not-found, validation, and Menu domain errors to the
+  Blueprint section 6 JSON format. Result: added `routes/api.php`, registered
+  API routing, reused session/web middleware plus `auth`, `tenant`, `branch`,
+  `can:menu.items.manage`, and `throttle:60,1`, and added shared API response
+  and exception rendering helpers. `AttachLogContext` is prioritized before
+  auth so API 401 responses keep the supplied request id.
+- [x] Stage 1.14.2: read-only Menu items API adapter. Add
+  `GET /api/v1/menu-items` as a thin Menu module controller/resource path that
+  validates only `page`, bounded `per_page`, optional `category_id`, and
+  optional `search`, authorizes `menu.items.manage`, reuses
+  `PaginateMenuItems` / `SearchMenuItems`, and serializes tenant/branch-scoped
+  active non-archived items with integer money fields only. Result: added the
+  Menu API request/controller/resource plus an Application category guard for
+  explicit category filters; no controller Eloquent queries were added.
+- [x] Stage 1.14.3: API contract coverage and documentation. Add feature tests
+  proving unauthenticated JSON 401, permission 403, success envelope,
+  tenant/branch/category isolation, archive exclusion, pagination/clamping,
+  validation errors, MenuDomainException JSON rendering, money shape, request
+  id propagation, and unchanged Blade behavior. Record the session-auth/token
+  deferral, page pagination fields, and rate limit in `docs/DECISIONS.md`.
+  Result: added `tests/Feature/Menu/MenuItemsApiTest.php` with 9 API-focused
+  tests and recorded the session-auth/token deferral, page pagination fields,
+  and `throttle:60,1` rate limit in `docs/DECISIONS.md`.
+- [x] Stage 1.14.4: verification, smoke, PR, and merge. Run `make pint`,
+  `make stan`, `make test`, `make tenant-isolation-pgsql`, and `make fresh`,
+  then curl-smoke authenticated and unauthenticated `/api/v1/menu-items`.
+  Commit with documentation, push, open a PR, and merge only after exact-head
+  CI is fully green. Result: local gates green: Pint pass (`168 files`),
+  PHPStan pass (`[OK] No errors`), SQLite Pest pass (`133 passed / 2 skipped /
+  944 assertions`), PostgreSQL Tenancy pass (`18 passed / 64 assertions`),
+  and `make fresh` pass. Curl smoke after fresh: demo manager login returned
+  `302` to `/admin`; authenticated `GET /api/v1/menu-items` returned `200`
+  with top-level keys `data,meta,errors`; unauthenticated request returned
+  `401` with code `auth.unauthenticated`. PR CI and merge are pending.
 
 ## Done log
 - 2026-07-20: Phase 2 Stage 1 opened from fresh `origin/main` on branch
@@ -817,7 +857,21 @@ forbidden.
   CI. The policy documentation branch updated `AGENTS.md`,
   `docs/DECISIONS.md`, and this worklog; local gates are green: Pint pass
   (`157 files`), PHPStan pass (`[OK] No errors`), and Pest pass (`124 passed /
-  2 skipped / 854 assertions`). PR CI and merge are pending.
+  2 skipped / 854 assertions`). PR #13 merged to `main` at `36478fc` after
+  exact-head green CI, and post-merge `main` CI was green.
+- 2026-07-23: Stage 1.14 API foundation complete locally. Added `/api/v1`
+  routing and read-only `GET /api/v1/menu-items` for session-authenticated
+  admin users, using the same tenant/branch middleware and
+  `menu.items.manage` permission as the admin UI. The endpoint reuses
+  `ResolveMenuCategorySelection`, `PaginateMenuItems`, and `SearchMenuItems`,
+  returns the Blueprint JSON envelope, page pagination metadata, integer
+  `price_minor` plus `currency`, localized names for the request locale, and
+  no image storage paths. This closes the Blueprint Phase 1 DoD API item once
+  the PR is merged. Local gates green: Pint pass (`168 files`), PHPStan pass
+  (`[OK] No errors`), SQLite Pest pass (`133 passed / 2 skipped /
+  944 assertions`), PostgreSQL Tenancy pass (`18 passed / 64 assertions`),
+  `make fresh` pass, and curl smoke pass for authenticated `200` and
+  unauthenticated JSON `401`.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -1144,6 +1198,15 @@ forbidden.
 - Stage 1.12 follow-up backlog only: GitHub Actions still emits the Node.js 20
   deprecation warning for `actions/checkout@v4`; this was intentionally
   recorded only and not fixed in the Stage 1.12 follow-up.
+- Stage 1.14 API gotcha: the API route uses the session guard, so the route
+  must include session-compatible middleware. `AttachLogContext` must also run
+  before auth failures; otherwise unauthenticated API 401 responses generate a
+  fallback request id instead of preserving the supplied `X-Request-Id`.
+- Stage 1.14 API gotcha: `menu_categories` is tenant-scoped but not
+  branch-owned, while `menu_items` is branch-owned. The explicit
+  `category_id` API guard therefore treats a category that only has visible
+  items in another branch as 404 so the filter cannot be used to infer another
+  branch's menu structure.
 
 ## Manual UI checks before PR
 - `/admin/menu/categories/create`: create a root category; `/admin/menu`
@@ -1166,11 +1229,17 @@ forbidden.
   tenant's category/item: expected HTTP result is 404.
 
 ## Next steps
-Complete the Stage 1.15 policy documentation branch:
-- [x] Run `make pint`, `make stan`, and `make test` on
-  `phase-2-stage-1.15-merge-autonomy`.
-- [ ] Push the branch, open a PR, merge it only after exact-head green CI, then
-  confirm final `main` CI and start Stage 1.14 API work.
+Complete Stage 1.14 API foundation:
+- [x] Inspect the real routing, middleware, Menu actions, models, support
+  helpers, auth/session config, architecture tests, and translations before
+  implementation.
+- [x] Implement the `/api/v1/menu-items` read-only endpoint and API envelope.
+- [x] Run required gates and curl smoke.
+- [ ] Commit and push `phase-2-stage-1.14-api-foundation`, open a PR, then
+  merge only after exact-head green CI.
+- [ ] After merge, confirm final `main` CI is green and begin Phase 2
+  Halls/Tables planning from updated `main`.
+  green CI.
 
 Historical Stage 1.11 Part C subcategory implementation order:
 - [x] Step A: add schema/model foundation for `menu_categories.parent_id` and
