@@ -365,3 +365,35 @@ or external clients exist; cursor pagination for this resource list, because
 the existing Menu Application actions and admin tables are page-based; leaving
 the API unthrottled, because even read-only endpoints should have a default
 abuse guard.
+
+## 2026-07-23 — Halls schema for Stage 1.17
+Decision: the Halls vertical slice creates a new `Tables` module directory and
+a branch-owned `halls` table with `tenant_id`, `branch_id`,
+`translated_name`, `color`, `sort_order`, `active`, soft delete timestamps,
+and normal timestamps. The table has tenant and branch indexes plus composite
+tenant/branch/archive/sort lookup indexes, uses the tenant Eloquent global
+scope, filters every Application query by the resolved branch, and has the
+standard PostgreSQL `halls_tenant_isolation` RLS policy. Mutations are audited
+with `tables.hall.created`, `tables.hall.updated`,
+`tables.hall.archived`, `tables.hall.restored`, and
+`tables.hall.permanently_deleted`.
+Reason: Blueprint section 4 omits a concrete Halls/Tables data model but does
+state that Halls belong to Branches and that tenant-owned tables use global
+columns and soft delete where restoration is valid. Legacy
+`template/rooms-hall.html` shows halls with localized names, colors, sort
+order, edit/archive controls, and a future preparation-place selector;
+`rooms-tables.html` and `rooms-hall-planning.html` use hall names and colors
+for operational board filters and visual grouping. These sources justify
+`translated_name`, `color`, `sort_order`, `active`, and `deleted_at` now.
+Deferred fields: floor containers, floor-plan geometry, preparation-place
+foreign keys, table counts, table shapes, commission metadata, and table
+relationships are not included because Stage 1.17 is Halls only and no
+`tables`, floors, preparation-place, or Orders schema exists yet. The owner
+must approve a separate Blueprint section 4 amendment matching this schema;
+`docs/BLUEPRINT.md` is intentionally not edited in this task.
+Rejected: creating a tenant-wide hall table, because the ER diagram says
+Branches have Halls; adding a `tables` table or floor-plan geometry now,
+because that violates the Halls-only scope; storing preparation place as free
+text, because it would likely conflict with the future kitchen/printing
+domain; creating a new Reporting/Admin audit module, because audit writes are
+already cross-cutting and Reads remain future Reports & Analytics work.

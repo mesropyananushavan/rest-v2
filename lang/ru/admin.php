@@ -10,6 +10,7 @@ return [
     'nav' => [
         'dashboard' => 'Панель',
         'menu' => 'Меню',
+        'tables' => 'Залы',
     ],
     'actions' => [
         'cancel' => 'Отмена',
