@@ -1,9 +1,10 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.13 PostgreSQL CI repair complete locally; owner PR handoff ready
-Branch: phase-2-stage-1.13-pgsql-ci-repair
+Status: Stage 1.12 merged with Stage 1.13 main and verified locally; PR CI pending
+Branch: phase-2-stage-1.12-branch-authorization
 
-PR state: owner creates and merges PRs; Codex does not create PRs.
+PR state: owner has authorized Codex-created and Codex-merged PRs as of
+Stage 1.15; policy documentation update is pending in a separate branch.
 
 ## Plan
 - [x] Stage 1.1: session setup and branch baseline. Create this Phase 2
@@ -479,6 +480,85 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   and activity toggle write latency on the loaded PostgreSQL DB, then run
   `make pint`, `make stan`, and `make test`. Result: local measurements and
   gates were recorded below; push/CI/PR are explicitly owner-owned.
+- [x] Stage 1.12.1: branch baseline. Verify clean local `main`, fetch
+  `origin`, confirm local `main` is not behind `origin/main`, confirm the
+  target branch name is unused, then create exactly one branch
+  `phase-2-stage-1.12-branch-authorization` from `main`. Result: working tree
+  was clean on `main` at `33a1cec`, `git fetch origin` succeeded, local
+  `main` and `origin/main` were in sync (`0 0` ahead/behind), the target branch
+  name was unused, and the single authorized branch was created.
+- [x] Stage 1.12.2: branch context middleware hardening. Update
+  `ResolveBranch` so production ignores `X-Branch-ID`, non-production keeps
+  header -> session -> first assigned branch candidate order, authenticated
+  users may resolve only assigned branch ids through `UserDirectory`, stale
+  session ids are forgotten with one WARNING log, unauthorized explicit header
+  ids abort 404, tenant ownership remains 404, unauthenticated non-production
+  header workflow still works, and assigned branch ids are resolved at most
+  once per request. Add the branch policy decision to `docs/DECISIONS.md`.
+  Result: `ResolveBranch` now ignores production branch headers, authorizes
+  authenticated branch candidates against `UserDirectory::assignedBranchIds()`,
+  forgets stale session branch ids with stable WARNING logs, preserves
+  tenant-scoped `Branch` lookup before setting context/session, and the branch
+  header/assignment policy is recorded in `docs/DECISIONS.md`.
+- [x] Stage 1.12.3: focused branch resolution tests. Add focused Tenancy
+  feature coverage for production header ignoring, authenticated authorized
+  and unauthorized headers, foreign-tenant headers, stale session discard and
+  fallback, session cleanup, and warning log context without changing existing
+  `TenantIsolationTest` or `AdminSwitchingTest` behavior. Result: added
+  `tests/Feature/Tenancy/BranchContextResolutionTest.php`; existing
+  `TenantIsolationTest.php` and `AdminSwitchingTest.php` stayed unchanged.
+- [x] Stage 1.12.4: verification and handoff. Run `make pint`, `make stan`,
+  `make test`, then the required focused Docker Pest command for
+  `tests/Feature/Tenancy` plus `tests/Feature/AdminSwitchingTest.php`; update
+  this worklog with checked-off result lines, gotchas, and final next steps.
+  Result: final gates green: Pint pass (`157 files`, one style issue fixed),
+  PHPStan pass (`[OK] No errors`), Pest pass (`122 passed / 2 skipped /
+  848 assertions`), and focused Tenancy/AdminSwitching Pest pass (`17 passed /
+  2 skipped / 69 assertions`).
+- [x] Stage 1.12.5 follow-up: privileged clean-database trgm migration probe.
+  Using only the local Docker PostgreSQL service, create temporary database
+  `smartrest_ext_probe`, confirm `pg_trgm` is absent, run migrations against
+  that database as the privileged local role while using the Stage 1.13 trgm
+  migration contents, verify `pg_trgm` plus both trigram indexes exist, and
+  drop the probe database unconditionally. Do not modify Stage 1.13 files or
+  any persistent database. Result: `smartrest_ext_probe` was created with
+  `pg_trgm` absent (`0 rows`), the application migrations completed
+  successfully in an ephemeral app copy using the Stage 1.13 migration file,
+  `pg_trgm` plus `menu_categories_translated_name_trgm_idx` and
+  `menu_items_translated_name_trgm_idx` existed afterwards, and the probe
+  database was dropped and confirmed gone (`0 rows`).
+- [x] Stage 1.12.6 follow-up: production branch-context regression coverage.
+  Add exactly two tests to `BranchContextResolutionTest`: authenticated
+  production requests ignore a valid header in favor of an existing assigned
+  session branch, and authenticated production requests validate a stale
+  unassigned session branch, forget it, and fall back to the first assigned
+  branch. Existing tests stay unchanged. Result: added only those two tests;
+  a disposable container-copy experiment with the production header guard
+  removed failed the new header test because the header branch overwrote the
+  session branch (`branch_id`/`session_branch_id` became `2` instead of `1`).
+- [x] Stage 1.12.7 follow-up: final verification, commit, and push. Run
+  `make pint`, `make stan`, and `make test`; record the Part A result, the
+  reason for the two new tests, and backlog gotchas for
+  `MenuSeedLoadCommand`'s `CREATE EXTENSION IF NOT EXISTS pg_trgm` assumption
+  plus the `actions/checkout@v4` Node.js 20 deprecation warning; commit on
+  `phase-2-stage-1.12-branch-authorization` and push the branch without force.
+  Result: final gates green: Pint pass (`157 files`), PHPStan pass
+  (`[OK] No errors`), and Pest pass (`124 passed / 2 skipped /
+  854 assertions`), which is two tests above the Stage 1.12 baseline.
+- [x] Stage 1.12.8: merge Stage 1.13 main into Stage 1.12 and verify
+  PostgreSQL branch-context coverage. After Stage 1.13 was merged to
+  `origin/main` at `714cb9a`, fast-forward local `main`, merge `origin/main`
+  into `phase-2-stage-1.12-branch-authorization` with a normal merge commit,
+  resolve documentation conflicts only, run `make pint`, `make stan`,
+  `make test`, and `make tenant-isolation-pgsql`, then push and open/merge the
+  Stage 1.12 PR after green CI. Result: merge conflict occurred only in
+  `docs/worklog/PHASE-2.md`; `docs/DECISIONS.md` auto-merged and was reordered
+  chronologically. Worklog resolution kept Stage 1.12, Stage 1.12 follow-ups,
+  and Stage 1.13 entries, with one `Next steps` section. Local gates green:
+  Pint pass (`157 files`), PHPStan pass (`[OK] No errors`), SQLite Pest pass
+  (`124 passed / 2 skipped / 854 assertions`), and PostgreSQL Tenancy pass
+  (`18 passed / 64 assertions`). The Stage 1.12 branch-context tests passed
+  under the unprivileged PostgreSQL role.
 - [x] Stage 1.13.1: branch baseline and failure inspection. Preserve local
   Stage 1.12 branch `phase-2-stage-1.12-branch-authorization` at `e5bace8`
   unchanged, switch to clean `main`, fetch `origin`, confirm local `main` is
@@ -671,6 +751,26 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   `phase-2-stage-1.11-menu-ux` pushed at code head `0d11d6d`; GitHub Actions
   run 29749417502 passed both `quality` and `tenant-isolation-pgsql`. PR is
   not created by Codex.
+- 2026-07-23: Stage 1.12 branch authorization hardening complete locally.
+  Branch `phase-2-stage-1.12-branch-authorization` was created from clean
+  `main` at `33a1cec` after `origin/main` sync was verified. `ResolveBranch`
+  now ignores production branch headers, requires authenticated branch
+  candidates to be assigned through the Identity `UserDirectory` contract,
+  discards stale unassigned session branch ids with WARNING logs, and preserves
+  tenant-scoped branch ownership checks. Local gates green: Pint pass, PHPStan
+  pass, Pest 122 passed / 2 skipped / 848 assertions, focused
+  Tenancy/AdminSwitching Pest 17 passed / 2 skipped / 69 assertions. Nothing
+  was pushed; PR remains owner-owned.
+- 2026-07-23: Stage 1.12 follow-up complete locally. The clean privileged
+  `pg_trgm` migration path was proven on throwaway database
+  `smartrest_ext_probe` using the Stage 1.13 migration file in an ephemeral
+  app copy, then the database was dropped and confirmed gone. Added
+  authenticated production branch-context tests for header-ignore/session
+  precedence and stale-session assignment fallback; no production code change
+  was needed. A disposable container-copy experiment with the production guard
+  removed failed the new header test as expected. Final gates green: Pint pass
+  (`157 files`), PHPStan pass (`[OK] No errors`), and Pest pass
+  (`124 passed / 2 skipped / 854 assertions`).
 - 2026-07-23: Stage 1.13 PostgreSQL CI repair complete locally. Branch
   `phase-2-stage-1.13-pgsql-ci-repair` was created from clean `main` at
   `33a1cec` after preserving local Stage 1.12 branch
@@ -686,6 +786,16 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   the unprivileged pgsql path. Final local gates green: Pint pass, PHPStan
   pass, SQLite Pest 117 passed / 2 skipped / 832 assertions, pgsql Tenancy
   Pest 11 passed / 42 assertions. Nothing was pushed; PR remains owner-owned.
+- 2026-07-23: Stage 1.12 post-Stage 1.13 merge verification complete locally.
+  Stage 1.13 was already merged to `origin/main` at `714cb9a`; merging that
+  main into Stage 1.12 produced only the expected worklog documentation
+  conflict. Resolution kept both Stage 1.12 and Stage 1.13 histories, ordered
+  Stage 1.12 and follow-ups before Stage 1.13, kept `docs/DECISIONS.md` in
+  chronological order, and left one `Next steps` section. Local gates green:
+  Pint pass (`157 files`), PHPStan pass (`[OK] No errors`), SQLite Pest pass
+  (`124 passed / 2 skipped / 854 assertions`), and PostgreSQL Tenancy pass
+  (`18 passed / 64 assertions`) under `smartrest_app_test` with
+  `NOBYPASSRLS`.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -1001,6 +1111,17 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   the searchable-combobox and root-first changes. Only the class itself,
   direct tests, and historical worklog mentions remained, so the dead action
   and direct test assertions were removed during finalization.
+- Stage 1.12 PHPStan required an explicit `@param-out` annotation for the
+  by-reference per-request assigned-branch cache in `ResolveBranch`; without
+  it PHPStan flagged the nullable by-ref type as unused.
+- Stage 1.12 follow-up backlog only:
+  `app/Console/Commands/MenuSeedLoadCommand.php` still issues
+  `CREATE EXTENSION IF NOT EXISTS pg_trgm` during optional trgm index rebuild
+  and will fail if that command is later run under an unprivileged role. This
+  was intentionally not changed in the Stage 1.12 follow-up.
+- Stage 1.12 follow-up backlog only: GitHub Actions still emits the Node.js 20
+  deprecation warning for `actions/checkout@v4`; this was intentionally
+  recorded only and not fixed in the Stage 1.12 follow-up.
 
 ## Manual UI checks before PR
 - `/admin/menu/categories/create`: create a root category; `/admin/menu`
@@ -1010,6 +1131,7 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
 - `/admin/menu/categories/create` and `/admin/menu/items/create`: type in the
   parent/category combobox; options should load server-side and hidden ids
   should change only after explicit selection/clear.
+
 - `/admin/menu/categories/{subcategory}/edit`: save a subcategory without
   changing parent; it should stay under the same root.
 - `/admin/menu`: toggle a menu item's activity inline; the row should update
@@ -1122,8 +1244,6 @@ Stage 1.11 Part C subcategory implementation order after owner-approved
   `load-manager+20260723071232-1-restaurant-1@smartrest.test`: `POST /login`
   returned `302` to `/admin`, then `GET /admin` returned `200`.
 
-Next action: owner reviews local branch
-`phase-2-stage-1.13-pgsql-ci-repair`, pushes/opens the PR if desired, and
-observes remote CI. CI itself is not verified locally because pushing is
-owner-owned. After this CI repair is merged, resume new Menu UX work in Part D;
-do not expand Stage 1.11 Part C further.
+Next action: push the verified Stage 1.12 merge commit, open/merge the
+Stage 1.12 PR after green CI on the exact pushed head SHA, then codify
+Stage 1.15 merge-autonomy policy on a separate branch.
