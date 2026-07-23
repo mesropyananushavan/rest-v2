@@ -213,7 +213,7 @@ it('requires menu items to belong to tenant-scoped subcategories', function (): 
         menuActionsText('Root Item'),
         null,
         new Money(100000, 'AMD'),
-        ))->toThrow(MenuDomainException::class, 'Menu items must belong to a subcategory.')
+    ))->toThrow(MenuDomainException::class, 'Menu items must belong to a subcategory.')
         ->and(fn () => app(CreateMenuItem::class)(
             (int) $foreignSubcategory->id,
             menuActionsText('Foreign Item'),

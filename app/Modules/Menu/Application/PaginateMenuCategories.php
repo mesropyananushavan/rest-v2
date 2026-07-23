@@ -63,5 +63,4 @@ final class PaginateMenuCategories
     {
         return min(self::MAX_PER_PAGE, max(1, $perPage));
     }
-
 }
