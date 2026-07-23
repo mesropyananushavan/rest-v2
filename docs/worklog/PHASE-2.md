@@ -514,6 +514,36 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   PHPStan pass (`[OK] No errors`), Pest pass (`122 passed / 2 skipped /
   848 assertions`), and focused Tenancy/AdminSwitching Pest pass (`17 passed /
   2 skipped / 69 assertions`).
+- [x] Stage 1.12.5 follow-up: privileged clean-database trgm migration probe.
+  Using only the local Docker PostgreSQL service, create temporary database
+  `smartrest_ext_probe`, confirm `pg_trgm` is absent, run migrations against
+  that database as the privileged local role while using the Stage 1.13 trgm
+  migration contents, verify `pg_trgm` plus both trigram indexes exist, and
+  drop the probe database unconditionally. Do not modify Stage 1.13 files or
+  any persistent database. Result: `smartrest_ext_probe` was created with
+  `pg_trgm` absent (`0 rows`), the application migrations completed
+  successfully in an ephemeral app copy using the Stage 1.13 migration file,
+  `pg_trgm` plus `menu_categories_translated_name_trgm_idx` and
+  `menu_items_translated_name_trgm_idx` existed afterwards, and the probe
+  database was dropped and confirmed gone (`0 rows`).
+- [x] Stage 1.12.6 follow-up: production branch-context regression coverage.
+  Add exactly two tests to `BranchContextResolutionTest`: authenticated
+  production requests ignore a valid header in favor of an existing assigned
+  session branch, and authenticated production requests validate a stale
+  unassigned session branch, forget it, and fall back to the first assigned
+  branch. Existing tests stay unchanged. Result: added only those two tests;
+  a disposable container-copy experiment with the production header guard
+  removed failed the new header test because the header branch overwrote the
+  session branch (`branch_id`/`session_branch_id` became `2` instead of `1`).
+- [x] Stage 1.12.7 follow-up: final verification, commit, and push. Run
+  `make pint`, `make stan`, and `make test`; record the Part A result, the
+  reason for the two new tests, and backlog gotchas for
+  `MenuSeedLoadCommand`'s `CREATE EXTENSION IF NOT EXISTS pg_trgm` assumption
+  plus the `actions/checkout@v4` Node.js 20 deprecation warning; commit on
+  `phase-2-stage-1.12-branch-authorization` and push the branch without force.
+  Result: final gates green: Pint pass (`157 files`), PHPStan pass
+  (`[OK] No errors`), and Pest pass (`124 passed / 2 skipped /
+  854 assertions`), which is two tests above the Stage 1.12 baseline.
 
 ## Done log
 - 2026-07-20: Phase 2 Stage 1 opened from fresh `origin/main` on branch
@@ -665,6 +695,16 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   pass, Pest 122 passed / 2 skipped / 848 assertions, focused
   Tenancy/AdminSwitching Pest 17 passed / 2 skipped / 69 assertions. Nothing
   was pushed; PR remains owner-owned.
+- 2026-07-23: Stage 1.12 follow-up complete locally. The clean privileged
+  `pg_trgm` migration path was proven on throwaway database
+  `smartrest_ext_probe` using the Stage 1.13 migration file in an ephemeral
+  app copy, then the database was dropped and confirmed gone. Added
+  authenticated production branch-context tests for header-ignore/session
+  precedence and stale-session assignment fallback; no production code change
+  was needed. A disposable container-copy experiment with the production guard
+  removed failed the new header test as expected. Final gates green: Pint pass
+  (`157 files`), PHPStan pass (`[OK] No errors`), and Pest pass
+  (`124 passed / 2 skipped / 854 assertions`).
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -957,6 +997,14 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
 - Stage 1.12 PHPStan required an explicit `@param-out` annotation for the
   by-reference per-request assigned-branch cache in `ResolveBranch`; without
   it PHPStan flagged the nullable by-ref type as unused.
+- Stage 1.12 follow-up backlog only:
+  `app/Console/Commands/MenuSeedLoadCommand.php` still issues
+  `CREATE EXTENSION IF NOT EXISTS pg_trgm` during optional trgm index rebuild
+  and will fail if that command is later run under an unprivileged role. This
+  was intentionally not changed in the Stage 1.12 follow-up.
+- Stage 1.12 follow-up backlog only: GitHub Actions still emits the Node.js 20
+  deprecation warning for `actions/checkout@v4`; this was intentionally
+  recorded only and not fixed in the Stage 1.12 follow-up.
 
 ## Manual UI checks before PR
 - `/admin/menu/categories/create`: create a root category; `/admin/menu`
@@ -1076,8 +1124,8 @@ Stage 1.11 Part C subcategory implementation order after owner-approved
   `load-manager+20260723071232-1-restaurant-1@smartrest.test`: `POST /login`
   returned `302` to `/admin`, then `GET /admin` returned `200`.
 
-Next action: owner reviews the local Stage 1.12 branch
-`phase-2-stage-1.12-branch-authorization`, creates/pushes/opens the PR if
-desired, and then resumes Phase 2 Part D carry-over work after this security
-hardening is merged. Do not expand Stage 1.11 Part C further; new Menu UX work
+Next action: owner reviews pushed Stage 1.12 branch
+`phase-2-stage-1.12-branch-authorization`, opens/merges the PR if desired, and
+then resumes owner-sequenced Stage 1.13 -> Stage 1.12 merge flow before any
+Stage 1.14 API work. Do not expand Stage 1.11 Part C further; new Menu UX work
 belongs to Part D.

@@ -43,6 +43,55 @@ it('ignores the branch header in production', function (): void {
         ->assertSessionMissing('branch_id');
 });
 
+it('ignores an authenticated branch header in production and keeps the assigned session branch', function (): void {
+    $record = branchResolutionUser(
+        branchNames: ['Assigned Session Branch', 'Assigned Header Branch'],
+        assignedBranchIndexes: [0, 1],
+    );
+
+    app()->detectEnvironment(fn (): string => 'production');
+
+    Route::middleware(['web', 'auth'])->get('/_test/branch-production-authenticated-header', fn (Request $request) => response()->json([
+        'branch_id' => app(BranchContext::class)->id(),
+        'session_branch_id' => $request->session()->get('branch_id'),
+    ]));
+
+    $this->actingAs($record['user'])
+        ->withSession(['branch_id' => (int) $record['branches'][0]->id])
+        ->withHeader('X-Branch-ID', (string) $record['branches'][1]->id)
+        ->get('/_test/branch-production-authenticated-header')
+        ->assertOk()
+        ->assertJson([
+            'branch_id' => (int) $record['branches'][0]->id,
+            'session_branch_id' => (int) $record['branches'][0]->id,
+        ])
+        ->assertSessionHas('branch_id', (int) $record['branches'][0]->id);
+});
+
+it('validates an authenticated session branch in production and falls back when it is not assigned', function (): void {
+    $record = branchResolutionUser(
+        branchNames: ['Assigned Branch', 'Unassigned Session Branch'],
+        assignedBranchIndexes: [0],
+    );
+
+    app()->detectEnvironment(fn (): string => 'production');
+
+    Route::middleware(['web', 'auth'])->get('/_test/branch-production-stale-session', fn (Request $request) => response()->json([
+        'branch_id' => app(BranchContext::class)->id(),
+        'session_branch_id' => $request->session()->get('branch_id'),
+    ]));
+
+    $this->actingAs($record['user'])
+        ->withSession(['branch_id' => (int) $record['branches'][1]->id])
+        ->get('/_test/branch-production-stale-session')
+        ->assertOk()
+        ->assertJson([
+            'branch_id' => (int) $record['branches'][0]->id,
+            'session_branch_id' => (int) $record['branches'][0]->id,
+        ])
+        ->assertSessionHas('branch_id', (int) $record['branches'][0]->id);
+});
+
 it('rejects an authenticated header branch that is not assigned to the user', function (): void {
     $record = branchResolutionUser(
         branchNames: ['Assigned Branch', 'Unassigned Branch'],
