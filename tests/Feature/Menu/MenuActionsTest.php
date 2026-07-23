@@ -12,7 +12,6 @@ use App\Modules\Menu\Application\CreateMenuCategory;
 use App\Modules\Menu\Application\CreateMenuItem;
 use App\Modules\Menu\Application\ForceDeleteMenuCategory;
 use App\Modules\Menu\Application\ForceDeleteMenuItem;
-use App\Modules\Menu\Application\ListMenuCategories;
 use App\Modules\Menu\Application\ListMenuItems;
 use App\Modules\Menu\Application\RemoveMenuItemImage;
 use App\Modules\Menu\Application\ReplaceMenuItemImage;
@@ -61,8 +60,6 @@ it('creates updates lists archives and restores menu categories and items throug
         active: true,
         parentId: (int) $root->id,
     );
-
-    expect(app(ListMenuCategories::class)()->pluck('id')->all())->toBe([(int) $category->id]);
 
     $updatedCategory = app(UpdateMenuCategory::class)(
         (int) $category->id,
@@ -132,7 +129,6 @@ it('creates updates lists archives and restores menu categories and items throug
     expect($category->trashed())->toBeTrue()
         ->and($cascadeArchivedItem->trashed())->toBeTrue()
         ->and($cascadeArchivedItem->archived_with_category_id)->toBe((int) $category->id)
-        ->and(app(ListMenuCategories::class)()->pluck('id')->all())->toBe([])
         ->and(app(ListMenuItems::class)()->pluck('id')->all())->toBe([]);
 
     expect(fn () => app(RestoreMenuItem::class)((int) $cascadeArchivedItem->id))

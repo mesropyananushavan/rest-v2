@@ -120,8 +120,16 @@ final class MenuCategoryController
     {
         $oldParentId = request()->old('parent_id');
 
-        return is_numeric($oldParentId)
-            ? (int) $oldParentId
-            : ($category?->parent_id === null ? 0 : (int) $category->parent_id);
+        if (is_numeric($oldParentId)) {
+            return (int) $oldParentId;
+        }
+
+        if (! $category instanceof MenuCategory) {
+            $queryParentId = request()->query('parent_id');
+
+            return is_numeric($queryParentId) ? (int) $queryParentId : 0;
+        }
+
+        return $category->parent_id === null ? 0 : (int) $category->parent_id;
     }
 }

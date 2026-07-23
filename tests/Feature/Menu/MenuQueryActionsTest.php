@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Menu\Application\ArchiveMenuCategory;
 use App\Modules\Menu\Application\ArchiveMenuItem;
 use App\Modules\Menu\Application\CreateMenuCategory;
 use App\Modules\Menu\Application\CreateMenuItem;
@@ -10,6 +11,7 @@ use App\Modules\Menu\Application\PaginateMenuItems;
 use App\Modules\Menu\Application\ResolveMenuCategorySelection;
 use App\Modules\Menu\Application\SearchMenuItems;
 use App\Modules\Menu\Domain\MenuDomainException;
+use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Modules\Tenancy\Contracts\TenantResolver;
@@ -26,32 +28,42 @@ afterEach(function (): void {
     app(TenantResolver::class)->clear();
 });
 
-it('paginates category panel results and searches localized names', function (): void {
+it('paginates root category panel results and searches root and child localized names', function (): void {
     $records = menuQueryTenant('tenant-a', 'Tenant A');
 
     app(TenantResolver::class)->set((int) $records['tenant']->id);
     app(BranchContext::class)->set((int) $records['branch']->id);
 
-    $root = app(CreateMenuCategory::class)(menuQueryText('Menu'), sortOrder: 0);
-
     for ($index = 1; $index <= 30; $index++) {
-        app(CreateMenuCategory::class)(
-            menuQueryText("Category {$index}", "Բաժին {$index}", "Категория {$index}"),
+        $root = app(CreateMenuCategory::class)(
+            menuQueryText("Root {$index}", "Արմատ {$index}", "Корень {$index}"),
             sortOrder: $index,
-            parentId: (int) $root->id,
         );
+
+        if ($index !== 30) {
+            app(CreateMenuCategory::class)(
+                menuQueryText("Category {$index}", "Բաժին {$index}", "Категория {$index}"),
+                sortOrder: $index,
+                parentId: (int) $root->id,
+            );
+        }
     }
 
     $firstPage = app(PaginateMenuCategories::class)(perPage: 10, page: 1);
     $secondPage = app(PaginateMenuCategories::class)(perPage: 10, page: 2);
-    $armenianSearch = app(PaginateMenuCategories::class)(search: 'Բաժին 2', perPage: 25);
+    $armenianRootSearch = app(PaginateMenuCategories::class)(search: 'Արմատ 30', perPage: 25);
+    $armenianChildSearch = app(PaginateMenuCategories::class)(search: 'Բաժին 2', perPage: 25);
 
     expect($firstPage->total())->toBe(30)
         ->and($firstPage->count())->toBe(10)
-        ->and($firstPage->items()[0]->translatedName()->forLocale('en'))->toBe('Category 1')
-        ->and($secondPage->items()[0]->translatedName()->forLocale('en'))->toBe('Category 11')
-        ->and($armenianSearch->total())->toBe(11)
-        ->and(collect($armenianSearch->items())->pluck('translated_name')->flatten()->contains('Բաժին 20'))->toBeTrue();
+        ->and($firstPage->items()[0]->translatedName()->forLocale('en'))->toBe('Root 1')
+        ->and($firstPage->items()[0]->subcategories)->toHaveCount(1)
+        ->and($secondPage->items()[0]->translatedName()->forLocale('en'))->toBe('Root 11')
+        ->and($armenianRootSearch->total())->toBe(1)
+        ->and($armenianRootSearch->items()[0]->translatedName()->forLocale('en'))->toBe('Root 30')
+        ->and($armenianRootSearch->items()[0]->subcategories)->toHaveCount(0)
+        ->and($armenianChildSearch->total())->toBe(11)
+        ->and(collect($armenianChildSearch->items())->pluck('translated_name')->flatten()->contains('Արմատ 20'))->toBeTrue();
 });
 
 it('resolves selected subcategory defaults without relying on root sort order', function (): void {
@@ -65,15 +77,43 @@ it('resolves selected subcategory defaults without relying on root sort order', 
     $lunch = app(CreateMenuCategory::class)(menuQueryText('Lunch'), sortOrder: 20, parentId: (int) $root->id);
     $otherRoot = app(CreateMenuCategory::class)(menuQueryText('Other Menu'), sortOrder: 1);
     $dinner = app(CreateMenuCategory::class)(menuQueryText('Dinner'), sortOrder: 5, parentId: (int) $otherRoot->id);
+    $emptyRoot = app(CreateMenuCategory::class)(menuQueryText('Empty Menu'), sortOrder: 40);
 
     $default = app(ResolveMenuCategorySelection::class)(archiveMode: 'active');
     $rootSelection = app(ResolveMenuCategorySelection::class)((int) $root->id, 'active');
+    $emptyRootSelection = app(ResolveMenuCategorySelection::class)((int) $emptyRoot->id, 'active');
     $directSelection = app(ResolveMenuCategorySelection::class)((int) $lunch->id, 'active');
 
     expect($default?->is($breakfast))->toBeTrue()
         ->and($rootSelection?->is($breakfast))->toBeTrue()
+        ->and($emptyRootSelection)->toBeNull()
         ->and($directSelection?->is($lunch))->toBeTrue()
         ->and($dinner->parent_id)->toBe((int) $otherRoot->id);
+});
+
+it('keeps previous tenant fallback behavior for foreign selected category ids', function (): void {
+    $tenantA = menuQueryTenant('tenant-a', 'Tenant A');
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+    app(BranchContext::class)->set((int) $tenantA['branch']->id);
+
+    $rootA = app(CreateMenuCategory::class)(menuQueryText('Tenant A Menu'), sortOrder: 1);
+    $categoryA = app(CreateMenuCategory::class)(menuQueryText('Tenant A Breakfast'), parentId: (int) $rootA->id);
+
+    $tenantB = menuQueryTenant('tenant-b', 'Tenant B');
+
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+    app(BranchContext::class)->set((int) $tenantB['branch']->id);
+
+    $rootB = app(CreateMenuCategory::class)(menuQueryText('Tenant B Menu'), sortOrder: 1);
+    $categoryB = app(CreateMenuCategory::class)(menuQueryText('Tenant B Breakfast'), parentId: (int) $rootB->id);
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+    app(BranchContext::class)->set((int) $tenantA['branch']->id);
+
+    $selection = app(ResolveMenuCategorySelection::class)((int) $categoryB->id, 'active');
+
+    expect($selection?->is($categoryA))->toBeTrue();
 });
 
 it('paginates selected-category items and applies inactive and archive filters', function (): void {
@@ -137,7 +177,37 @@ it('shows only archived category containers in archived category panel mode', fu
     $archivedPanel = app(PaginateMenuCategories::class)(archiveMode: 'archived', perPage: 25);
 
     expect($archivedPanel->total())->toBe(1)
-        ->and($archivedPanel->items()[0]->translatedName()->forLocale('en'))->toBe('Breakfast');
+        ->and($archivedPanel->items()[0]->translatedName()->forLocale('en'))->toBe('Menu')
+        ->and($archivedPanel->items()[0]->subcategories)->toHaveCount(1)
+        ->and($archivedPanel->items()[0]->subcategories->first()?->translatedName()->forLocale('en'))->toBe('Breakfast');
+});
+
+it('shows archived empty roots, roots with archived children, and both in all category panel mode', function (): void {
+    $records = menuQueryTenant('tenant-a', 'Tenant A');
+
+    app(TenantResolver::class)->set((int) $records['tenant']->id);
+    app(BranchContext::class)->set((int) $records['branch']->id);
+
+    $archivedEmptyRoot = app(CreateMenuCategory::class)(menuQueryText('Archived Empty Root'), sortOrder: 1);
+    $rootWithArchivedChild = app(CreateMenuCategory::class)(menuQueryText('Root With Archived Child'), sortOrder: 2);
+    $archivedChild = app(CreateMenuCategory::class)(menuQueryText('Archived Child'), parentId: (int) $rootWithArchivedChild->id);
+    $activeRoot = app(CreateMenuCategory::class)(menuQueryText('Active Root'), sortOrder: 3);
+    app(CreateMenuCategory::class)(menuQueryText('Active Child'), parentId: (int) $activeRoot->id);
+
+    app(ArchiveMenuCategory::class)((int) $archivedEmptyRoot->id);
+    app(ArchiveMenuCategory::class)((int) $archivedChild->id);
+
+    $archivedPanel = app(PaginateMenuCategories::class)(archiveMode: 'archived', perPage: 25);
+    $allPanel = app(PaginateMenuCategories::class)(archiveMode: 'all', perPage: 25);
+
+    expect($archivedPanel->total())->toBe(2)
+        ->and(collect($archivedPanel->items())->map(fn (MenuCategory $category): string => $category->translatedName()->forLocale('en'))->all())
+        ->toBe(['Archived Empty Root', 'Root With Archived Child'])
+        ->and($archivedPanel->items()[0]->subcategories)->toHaveCount(0)
+        ->and($archivedPanel->items()[1]->subcategories)->toHaveCount(1)
+        ->and($allPanel->total())->toBe(3)
+        ->and(collect($allPanel->items())->map(fn (MenuCategory $category): string => $category->translatedName()->forLocale('en'))->all())
+        ->toBe(['Archived Empty Root', 'Root With Archived Child', 'Active Root']);
 });
 
 it('searches menu items across all localized names within the current branch only', function (): void {

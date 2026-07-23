@@ -132,6 +132,22 @@ it('renders root-only parent options on the category create form', function (): 
         ->assertDontSee('Archived root', false);
 });
 
+it('preselects the parent category from the create form query string', function (): void {
+    $manager = menuBladeUser('tenant-a', 'manager-a', ['menu.categories.manage']);
+
+    app(TenantResolver::class)->set((int) $manager['tenant']->id);
+    $root = app(CreateMenuCategory::class)(menuBladeText('Root menu'), sortOrder: 10);
+    app(TenantResolver::class)->clear();
+
+    $this->actingAs($manager['user'])
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->get(route('admin.menu.categories.create', ['parent_id' => (int) $root->id]))
+        ->assertOk()
+        ->assertSee('name="parent_id"', false)
+        ->assertSee('value="'.(int) $root->id.'"', false)
+        ->assertSee('Root menu', false);
+});
+
 it('renders the current parent on the category edit form without offering the category itself', function (): void {
     $manager = menuBladeUser('tenant-a', 'manager-a', ['menu.categories.manage']);
 

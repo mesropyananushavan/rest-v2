@@ -59,6 +59,8 @@ final class ResolveMenuCategorySelection
                 if ($selectedCategory instanceof MenuCategory) {
                     return $selectedCategory;
                 }
+
+                return null;
             }
         }
 

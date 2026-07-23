@@ -102,6 +102,73 @@ it('normalizes root category URL state to the first selectable subcategory', fun
         ->assertSee('Lori Omelette', false);
 });
 
+it('keeps an empty root category as a valid unselected URL state', function (): void {
+    $records = menuIndexLivewireRecords();
+
+    app(TenantResolver::class)->set((int) $records['tenant']->id);
+    app(BranchContext::class)->set((int) $records['branch']->id);
+
+    $emptyRoot = app(CreateMenuCategory::class)(menuIndexLivewireText('Empty Root'), sortOrder: 20);
+
+    Livewire::withQueryParams(['category' => (int) $emptyRoot->id])
+        ->actingAs($records['user'])
+        ->test(MenuIndex::class)
+        ->assertSet('category', null)
+        ->assertSee('Empty Root', false)
+        ->assertSee(__('menu.empty.no_categories_title'), false)
+        ->assertDontSee('Lori Omelette', false);
+});
+
+it('renders empty root categories without making them selectable', function (): void {
+    $records = menuIndexLivewireRecords();
+
+    app(TenantResolver::class)->set((int) $records['tenant']->id);
+    app(BranchContext::class)->set((int) $records['branch']->id);
+
+    $emptyRoot = app(CreateMenuCategory::class)(menuIndexLivewireText('Empty Root'), sortOrder: 20);
+
+    Livewire::actingAs($records['user'])
+        ->test(MenuIndex::class)
+        ->assertSee('Empty Root', false)
+        ->assertSee(__('menu.empty.no_subcategories_title'), false)
+        ->assertSee(route('admin.menu.categories.create', ['parent_id' => (int) $emptyRoot->id]), false)
+        ->assertDontSee('wire:click="selectCategory('.(int) $emptyRoot->id.')"', false);
+});
+
+it('finds empty root categories through category search', function (): void {
+    $records = menuIndexLivewireRecords();
+
+    app(TenantResolver::class)->set((int) $records['tenant']->id);
+    app(BranchContext::class)->set((int) $records['branch']->id);
+
+    app(CreateMenuCategory::class)(menuIndexLivewireText('Standalone Dessert Root'), sortOrder: 20);
+
+    Livewire::actingAs($records['user'])
+        ->test(MenuIndex::class)
+        ->set('categorySearch', 'Dessert')
+        ->assertSee('Standalone Dessert Root', false)
+        ->assertSee(__('menu.empty.no_subcategories_title'), false)
+        ->assertDontSee('wire:click="selectCategory('.(int) $records['category']->id.')"', false);
+});
+
+it('paginates the category panel by roots and keeps empty roots visible on later pages', function (): void {
+    $records = menuIndexLivewireRecords();
+
+    app(TenantResolver::class)->set((int) $records['tenant']->id);
+    app(BranchContext::class)->set((int) $records['branch']->id);
+
+    for ($index = 1; $index <= 30; $index++) {
+        app(CreateMenuCategory::class)(menuIndexLivewireText("Empty Root {$index}"), sortOrder: $index);
+    }
+
+    Livewire::actingAs($records['user'])
+        ->test(MenuIndex::class)
+        ->call('nextCategoryPage')
+        ->assertSet('categoryPage', 2)
+        ->assertSee('Empty Root 25', false)
+        ->assertSee(__('menu.empty.no_subcategories_title'), false);
+});
+
 it('normalizes archive visibility for managers and exposes archive maintenance to superadmins', function (): void {
     $records = menuIndexLivewireRecords();
     $owner = menuIndexLivewireUser(

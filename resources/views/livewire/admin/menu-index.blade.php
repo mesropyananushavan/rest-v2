@@ -94,74 +94,78 @@ $locale = app()->getLocale();
                     >
                 </div>
 
-                @php
-                    $categoryGroups = $categories->getCollection()->groupBy(fn (MenuCategory $category): int => (int) $category->parent_id);
-                @endphp
-
                 <div class="max-h-[55vh] overflow-y-auto p-2 md:max-h-[24rem] xl:max-h-[calc(100vh-18rem)]">
-                    @forelse ($categoryGroups as $subcategories)
+                    @forelse ($categories as $rootCategory)
                         @php
-                            /** @var \Illuminate\Support\Collection<int, MenuCategory> $subcategories */
-                            $rootCategory = $subcategories->first()?->parent;
+                            /** @var MenuCategory $rootCategory */
+                            $subcategories = $rootCategory->subcategories;
                         @endphp
 
-                        @if ($rootCategory instanceof MenuCategory)
-                            <section class="mb-3 rounded-3xl border border-slate-200 bg-white/80 p-2">
-                                <div class="rounded-2xl bg-slate-50 px-3 py-3">
-                                    <div class="flex items-start justify-between gap-3">
-                                        <div class="min-w-0">
-                                            <div class="truncate text-xs font-black uppercase tracking-[0.18em] text-slate-500">{{ $rootCategory->translatedName()->forLocale($locale) }}</div>
-                                            <div class="mt-1 flex flex-wrap items-center gap-1 text-xs text-smartrest-muted">
-                                                @if (! $rootCategory->active)
-                                                    <span class="rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-600">{{ __('menu.status.inactive') }}</span>
-                                                @endif
-                                                @if ($rootCategory->trashed() && $canViewArchive)
-                                                    <span class="rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-800">{{ __('menu.status.archived') }}</span>
-                                                @endif
-                                            </div>
+                        <section class="mb-3 rounded-3xl border border-slate-200 bg-white/80 p-2">
+                            <div class="rounded-2xl bg-slate-50 px-3 py-3">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <div class="truncate text-xs font-black uppercase tracking-[0.18em] text-slate-500">{{ $rootCategory->translatedName()->forLocale($locale) }}</div>
+                                        <div class="mt-1 flex flex-wrap items-center gap-1 text-xs text-smartrest-muted">
+                                            @if (! $rootCategory->active)
+                                                <span class="rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-600">{{ __('menu.status.inactive') }}</span>
+                                            @endif
+                                            @if ($rootCategory->trashed() && $canViewArchive)
+                                                <span class="rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-800">{{ __('menu.status.archived') }}</span>
+                                            @endif
                                         </div>
-                                        <span class="rounded-full bg-white px-2 py-1 text-xs font-bold text-slate-500 ring-1 ring-slate-200">#{{ (int) $rootCategory->id }}</span>
                                     </div>
-
-                                    @include('livewire.admin.menu.partials.category-actions', [
-                                        'canManageCategories' => $canManageCategories,
-                                        'canViewArchive' => $canViewArchive,
-                                        'category' => $rootCategory,
-                                    ])
+                                    <span class="rounded-full bg-white px-2 py-1 text-xs font-bold text-slate-500 ring-1 ring-slate-200">#{{ (int) $rootCategory->id }}</span>
                                 </div>
 
-                                <div class="mt-2 space-y-2">
-                                    @foreach ($subcategories as $category)
-                                        <div class="rounded-2xl border px-3 py-3 transition {{ $selectedCategoryId === (int) $category->id ? 'border-smartrest-success bg-emerald-50 shadow-sm' : 'border-transparent hover:border-slate-200 hover:bg-slate-50' }}">
-                                            <button
-                                                type="button"
-                                                wire:click="selectCategory({{ (int) $category->id }})"
-                                                class="flex w-full items-start justify-between gap-3 text-left"
-                                            >
-                                                <span class="min-w-0">
-                                                    <span class="block truncate text-sm font-black text-smartrest-ink">{{ $category->translatedName()->forLocale($locale) }}</span>
-                                                    <span class="mt-1 flex flex-wrap items-center gap-1 text-xs text-smartrest-muted">
-                                                        @if (! $category->active)
-                                                            <span class="rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-600">{{ __('menu.status.inactive') }}</span>
-                                                        @endif
-                                                        @if ($category->trashed() && $canViewArchive)
-                                                            <span class="rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-800">{{ __('menu.status.archived') }}</span>
-                                                        @endif
-                                                    </span>
+                                @include('livewire.admin.menu.partials.category-actions', [
+                                    'canManageCategories' => $canManageCategories,
+                                    'canViewArchive' => $canViewArchive,
+                                    'category' => $rootCategory,
+                                ])
+                            </div>
+
+                            <div class="mt-2 space-y-2">
+                                @forelse ($subcategories as $category)
+                                    <div class="rounded-2xl border px-3 py-3 transition {{ $selectedCategoryId === (int) $category->id ? 'border-smartrest-success bg-emerald-50 shadow-sm' : 'border-transparent hover:border-slate-200 hover:bg-slate-50' }}">
+                                        <button
+                                            type="button"
+                                            wire:click="selectCategory({{ (int) $category->id }})"
+                                            class="flex w-full items-start justify-between gap-3 text-left"
+                                        >
+                                            <span class="min-w-0">
+                                                <span class="block truncate text-sm font-black text-smartrest-ink">{{ $category->translatedName()->forLocale($locale) }}</span>
+                                                <span class="mt-1 flex flex-wrap items-center gap-1 text-xs text-smartrest-muted">
+                                                    @if (! $category->active)
+                                                        <span class="rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-600">{{ __('menu.status.inactive') }}</span>
+                                                    @endif
+                                                    @if ($category->trashed() && $canViewArchive)
+                                                        <span class="rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-800">{{ __('menu.status.archived') }}</span>
+                                                    @endif
                                                 </span>
-                                                <span class="rounded-full bg-white px-2 py-1 text-xs font-bold text-slate-500 ring-1 ring-slate-200">#{{ (int) $category->id }}</span>
-                                            </button>
+                                            </span>
+                                            <span class="rounded-full bg-white px-2 py-1 text-xs font-bold text-slate-500 ring-1 ring-slate-200">#{{ (int) $category->id }}</span>
+                                        </button>
 
-                                            @include('livewire.admin.menu.partials.category-actions', [
-                                                'canManageCategories' => $canManageCategories,
-                                                'canViewArchive' => $canViewArchive,
-                                                'category' => $category,
-                                            ])
-                                        </div>
-                                    @endforeach
-                                </div>
-                            </section>
-                        @endif
+                                        @include('livewire.admin.menu.partials.category-actions', [
+                                            'canManageCategories' => $canManageCategories,
+                                            'canViewArchive' => $canViewArchive,
+                                            'category' => $category,
+                                        ])
+                                    </div>
+                                @empty
+                                    <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-smartrest-muted">
+                                        <div class="font-black text-smartrest-ink">{{ __('menu.empty.no_subcategories_title') }}</div>
+                                        <p class="mt-1">{{ __('menu.empty.no_subcategories_body') }}</p>
+                                        @if ($canManageCategories && ! $rootCategory->trashed())
+                                            <x-button :href="route('admin.menu.categories.create', ['parent_id' => (int) $rootCategory->id])" variant="outline-primary" size="sm" class="mt-3">
+                                                {{ __('menu.actions.create_subcategory') }}
+                                            </x-button>
+                                        @endif
+                                    </div>
+                                @endforelse
+                            </div>
+                        </section>
                     @empty
                         <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-center">
                             <div class="text-sm font-black text-smartrest-ink">{{ __('menu.empty.no_categories_title') }}</div>
