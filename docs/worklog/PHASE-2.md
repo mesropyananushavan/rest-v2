@@ -1,6 +1,6 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.11 Part C Step E `menu:seed-load` review checkpoint
+Status: Stage 1.11 Part C Step G complete; Stage 1.11.11 final verification next
 Branch: phase-2-stage-1.11c-menu-ux
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
@@ -697,6 +697,42 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   returns its selectable subcategories. Do this carefully around
   `FiltersLocalizedNames` and PostgreSQL trgm expression-index compatibility;
   the current helper is table-name based and not alias-aware for self-joins.
+- 2026-07-22 load-test follow-up: two `menu:seed-load` attempts partially
+  committed parent rows but never loaded items. The 5-restaurant run left 5
+  tenants, 100 roots, and 500 subcategories, then failed on the first
+  `menu_items` insert with PostgreSQL bind-parameter limit
+  `number of parameters must be between 0 and 65535` (`10000 rows * 15
+  columns = 150000 params`). The 300-restaurant run left 300 tenants and 6000
+  roots, then failed on the first subcategory insert for the same reason
+  (`10000 rows * 9 columns = 90000 params`). `menu_items = 0`, so no valid
+  15M performance measurement exists yet; any `trgm` vs `tenant_id` planner
+  conclusion is withdrawn as unmeasured until the loader is fixed and rerun.
+- 2026-07-23 curl login verification got `419 Page Expired` only when curl
+  tried to use a cookie jar under `storage/`, which is owned by `www-data` in
+  this Docker setup and was not writable by the host shell. The login form and
+  application session flow are valid: manually carrying the `Set-Cookie`
+  header from `GET /login` into `POST /login` returned `302` to `/admin`, and
+  `GET /admin` returned `200` for
+  `load-manager+20260723071232-1-restaurant-1@smartrest.test`.
+
+## INCIDENT: 2026-07-23 Step G `--fresh` hang on dirty local DB
+- Earlier `menu:seed-load --mode=production-like --restaurants=5
+  --drop-rebuild-trgm --fresh` cleanup hung for 430 seconds before
+  interruption.
+- Cause: the dirty local DB contained 5M accumulated rows from run
+  `20260722135401-1`, which had not cleaned up after itself, and
+  `menu_categories.parent_id` / `menu_categories.archived_with_category_id`
+  had no standalone FK indexes. Composite indexes with leading `tenant_id` did
+  not cover FK checks on the referenced FK columns.
+- Consequence: the interrupted PostgreSQL backend kept a relation lock for
+  more than 14 minutes and blocked the next `migrate:fresh`; the blocked drop
+  phase took 3m26s until the stale backend was terminated.
+- Fixes: add standalone FK indexes for Menu FK columns, make production-like
+  `--fresh` recreate the guarded local schema instead of doing O(n) row
+  deletes, set PostgreSQL `lock_timeout = 10s` for loader sessions, and verify
+  loaded counts against the current run before reporting success.
+- Important: all Stage 1.11 load/performance measurements before the
+  2026-07-23 clean guarded run were taken on a dirty DB and are invalid.
 
 ## Next steps
 Stage 1.11 Part C subcategory implementation order after owner-approved
@@ -762,32 +798,42 @@ Stage 1.11 Part C subcategory implementation order after owner-approved
   passed for changed PHP files. No actual load was run. Full `make stan` still
   fails only on pre-existing Step B/C/D PHPStan issues outside the new command.
   Committed as `ae0436b`.
-- [ ] Step F: clean up pre-existing Step B/C/D PHPStan typing errors without
+- [x] Step F: clean up pre-existing Step B/C/D PHPStan typing errors without
   changing runtime behavior. Scope: typed subcategory id collection in
   archive/restore/force-delete cascade actions, builder callback annotations
   for tree archive filtering, safe nullable parent-id comparison in
   `UpdateMenuCategory`, and `MenuCategoryRequest` rule PHPDoc. Result:
-  review-ready on 2026-07-22; `make stan` passed with no errors, focused
+  committed as `835fda0`; `make stan` passed with no errors, focused
   PostgreSQL `MenuActionsTest`, `MenuQueryActionsTest`, and `MenuSchemaTest`
-  passed (`31 passed / 259 assertions`). A broader ad-hoc PostgreSQL
-  `tests/Feature/Menu` run through a temporary phpunit config still showed
-  unrelated HTTP/Livewire bootstrap symptoms (`419` CSRF responses and missing
-  `assertSeeLivewire` macro); no code changes were made for that. Follow-up
-  verification confirmed the issue is not caused by Step F: full SQLite
-  `make test` passed (`88 passed / 2 skipped / 693 assertions`), and the same
-  ad-hoc PostgreSQL full `tests/Feature/Menu` runner produced the same 8
-  HTTP/Livewire failures on pre-Step-F commit `ae0436b`.
+  passed (`31 passed / 259 assertions`), and full SQLite `make test` passed
+  (`88 passed / 2 skipped / 693 assertions`).
+- [x] Step G: fix `menu:seed-load` PostgreSQL bulk loading to use CSV `COPY`
+  instead of bind-heavy multi-row inserts. Scope: install PHP `pgsql`
+  extension in the php-fpm image, stream PostgreSQL rows through chunked
+  `COPY ... FROM STDIN WITH (FORMAT csv, NULL '\N')`, keep committed parent
+  id lookup before child stages, add load-manager users/roles/permissions and
+  branch assignments per generated tenant, add `tenants.seed_source` and make
+  `--fresh` cleanup scoped only to `seed_source = 'load'`, retain safe dynamic
+  INSERT fallback for non-PostgreSQL drivers, and rerun only safe
+  command/static checks before owner-run small load. Result: completed on
+  2026-07-23; php-fpm was rebuilt and `pgsql` was loaded, `--fresh` for
+  production-like mode now uses guarded `migrate:fresh --seed` instead of
+  row-by-row cleanup, fallback DELETE cleanup remains scoped to
+  `seed_source = 'load'`, PostgreSQL loader sessions set
+  `lock_timeout = 10s`, and final count verification is scoped to the current
+  `run_id`. The verified command
+  `menu:seed-load --mode=production-like --restaurants=5
+  --drop-rebuild-trgm --fresh --no-interaction` completed with
+  `cleanup_seconds=2.688`, `copy_load_seconds=33.066`,
+  `trgm_rebuild_seconds=11.222`, wall-clock `51.55s`, `menu_items=250000`,
+  `menu_categories=600`, `pg_total_relation_size('menu_items') = 261 MB`, and
+  `pg_total_relation_size('menu_categories') = 632 kB`. Generated load manager
+  login was verified for
+  `load-manager+20260723071232-1-restaurant-1@smartrest.test`: `POST /login`
+  returned `302` to `/admin`, then `GET /admin` returned `200`.
 
-Next action: owner review of Step F typing cleanup. Do not edit
+Next action: run Stage 1.11.11 final verification checklist for Part C,
+including full quality gates, load smoke, write-latency checks on the filled
+Menu table, PostgreSQL Menu/search coverage, and final handoff. Do not edit
 `docs/BLUEPRINT.md`, do not create PRs/merges/pushes, and do not commit without
 explicit owner approval.
-
-Immediate fix before subcategory Step B: repair PostgreSQL localized LIKE
-binding in `FiltersLocalizedNames` without changing the indexed
-`lower(coalesce(...) || ...)` expression, then run the four failing PostgreSQL
-Menu search tests. Do not touch RLS implementation until the owner decides on
-the production DB role.
-Result: review-ready on 2026-07-22; the PostgreSQL escape literal now uses
-`ESCAPE E'\\'` only for pgsql while other drivers keep the existing escape
-clause, and the four previously failing PostgreSQL Menu search tests passed
-(`4 passed / 26 assertions`). RLS code remains untouched.
