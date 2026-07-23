@@ -9,6 +9,7 @@ use App\Http\Middleware\EnsureSuperAdminForDeletes;
 use App\Modules\Menu\Domain\MenuDomainException;
 use App\Modules\Tenancy\Http\Middleware\ResolveBranch;
 use App\Modules\Tenancy\Http\Middleware\ResolveTenant;
+use App\Support\Api\ApiErrorRenderer;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -18,6 +19,7 @@ use Illuminate\Http\Request;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
@@ -40,6 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->redirectUsersTo('/admin');
 
+        $middleware->prependToPriorityList(AuthenticatesRequests::class, AttachLogContext::class);
         $middleware->prependToPriorityList(AuthenticatesRequests::class, ResolveBranch::class);
         $middleware->prependToPriorityList(ResolveBranch::class, ResolveTenant::class);
     })
@@ -50,11 +53,13 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $exceptions->render(function (MenuDomainException $exception, Request $request) {
             if ($request->expectsJson() || $request->is('api/*')) {
-                return null;
+                return ApiErrorRenderer::menuDomain($exception, $request);
             }
 
             return back()
                 ->withErrors(['menu' => __($exception->errorCode())])
                 ->withInput();
         });
+
+        ApiErrorRenderer::register($exceptions);
     })->create();
