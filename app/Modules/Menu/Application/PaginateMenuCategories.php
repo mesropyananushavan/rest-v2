@@ -57,6 +57,7 @@ final class PaginateMenuCategories
             ->orderByRaw($this->localizedNameOrderExpression($query, 'translated_name', app()->getLocale()))
             ->orderBy('id')
             ->paginate($perPage, ['*'], 'page', $page);
+        $this->attachLoadedParents($categories);
 
         $this->logSuccess('menu.categories.paginate', $startedAt, [
             'archive_mode' => $archiveMode,
@@ -73,6 +74,18 @@ final class PaginateMenuCategories
     private function boundedPerPage(int $perPage): int
     {
         return min(self::MAX_PER_PAGE, max(1, $perPage));
+    }
+
+    /**
+     * @param  LengthAwarePaginator<int, MenuCategory>  $categories
+     */
+    private function attachLoadedParents(LengthAwarePaginator $categories): void
+    {
+        foreach ($categories as $rootCategory) {
+            foreach ($rootCategory->subcategories as $subcategory) {
+                $subcategory->setRelation('parent', $rootCategory);
+            }
+        }
     }
 
     /**
