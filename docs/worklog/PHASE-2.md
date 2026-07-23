@@ -434,6 +434,10 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   archive visibility/restore/force-delete behavior with confirm-modal usage.
   Cover toggle, item pagination, inactive filter, archived filter visibility,
   restore/force-delete visibility, and permission/tenant-isolation regressions.
+  Verification note from Block 3 on 2026-07-23: this is not implemented yet.
+  The code has item status badges plus edit/archive/restore/force-delete UI,
+  but no `ToggleMenuItemActivity` Application action, no Livewire toggle
+  method, and no inline activity toggle button.
 - [ ] Stage 1.11.10.5 (Part C): context-preserving forms and searchable
   category combobox. Replace the item form's all-options category select with
   a Livewire + Alpine server-search combobox, prefill category from
@@ -441,7 +445,15 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   category page, item page, global search query, inactive/archive filters),
   and keep image upload behavior from Part B intact. Add `hy`/`ru`/`en`
   translations and Pest coverage for create/edit context and searchable
-  category selection.
+  category selection. Verification note from Block 3 on 2026-07-23: this is
+  not implemented yet. The code still renders a plain `select` for
+  `category_id`, and save/cancel redirect to bare `admin.menu.index` without
+  preserving category/page/search/filter context.
+- [ ] Stage 1.11 Part D: finish deferred item form UX. Implement the
+  Livewire + Alpine searchable category combobox and context-preserving
+  save/cancel flow that were found missing during Block 3 verification.
+  Do not include this in Stage 1.11 Part C unless the owner explicitly
+  re-scopes the current branch.
 - [ ] Stage 1.11.10.6 (Part C): load-data command and performance fixes. Add
   an artisan command outside `DemoSeeder` to generate about 200 categories and
   20000 items per tenant with deterministic localized names, prices, active
