@@ -234,6 +234,16 @@ it('stores menu search and pagination indexes', function (): void {
         ->and($itemIndexes)->toContain(['tenant_id', 'branch_id', 'deleted_at', 'active', 'sort_order', 'id']);
 });
 
+it('stores standalone indexes for menu foreign key checks', function (): void {
+    $categoryIndexNames = collect(Schema::getIndexes('menu_categories'))->pluck('name')->all();
+    $itemIndexNames = collect(Schema::getIndexes('menu_items'))->pluck('name')->all();
+
+    expect($categoryIndexNames)->toContain('menu_categories_parent_id_idx')
+        ->and($categoryIndexNames)->toContain('menu_categories_archived_with_category_id_idx')
+        ->and($itemIndexNames)->toContain('menu_items_branch_id_idx')
+        ->and($itemIndexNames)->toContain('menu_items_category_id_idx');
+});
+
 it('creates PostgreSQL trigram expression indexes for localized menu search', function (): void {
     if (Schema::getConnection()->getDriverName() !== 'pgsql') {
         expect(true)->toBeTrue();
