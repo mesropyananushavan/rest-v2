@@ -8,6 +8,7 @@ use App\Http\Controllers\AdminLocaleSwitchController;
 use App\Modules\Identity\Http\Controllers\LoginController;
 use App\Modules\Identity\Http\Controllers\LogoutController;
 use App\Modules\Menu\Http\Controllers\MenuCategoryController;
+use App\Modules\Menu\Http\Controllers\MenuCategoryOptionController;
 use App\Modules\Menu\Http\Controllers\MenuIndexController;
 use App\Modules\Menu\Http\Controllers\MenuItemController;
 use App\Modules\Tenancy\Http\Controllers\BranchShowController;
@@ -52,6 +53,9 @@ Route::middleware(['tenant', 'branch', 'auth'])->prefix('/admin/menu')->name('ad
     Route::get('/categories/create', [MenuCategoryController::class, 'create'])
         ->middleware('can:menu.categories.manage')
         ->name('categories.create');
+    Route::get('/categories/options/parents', [MenuCategoryOptionController::class, 'parents'])
+        ->middleware('can:menu.categories.manage')
+        ->name('category-options.parents');
     Route::post('/categories', [MenuCategoryController::class, 'store'])
         ->middleware('can:menu.categories.manage')
         ->name('categories.store');
@@ -74,6 +78,9 @@ Route::middleware(['tenant', 'branch', 'auth'])->prefix('/admin/menu')->name('ad
     Route::get('/items/create', [MenuItemController::class, 'create'])
         ->middleware('can:menu.items.manage')
         ->name('items.create');
+    Route::get('/items/options/categories', [MenuCategoryOptionController::class, 'itemCategories'])
+        ->middleware('can:menu.items.manage')
+        ->name('category-options.item-categories');
     Route::post('/items', [MenuItemController::class, 'store'])
         ->middleware('can:menu.items.manage')
         ->name('items.store');
