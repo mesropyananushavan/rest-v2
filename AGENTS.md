@@ -108,6 +108,24 @@
   with options — never swap in an incompatible or abandoned package
   silently (see the Horizon note in docker-compose.yml).
 
+## Workspace boundaries
+- The only allowed working area is the root of this repository. Read and
+  modify files only inside this repository.
+- Do not leave the repository root: no `cd ..`, no paths outside the project
+  such as `~/`, `/etc`, neighboring repositories, or sibling projects.
+- Do not modify anything outside the repository, including global configs,
+  `~/.gitconfig`, `~/.ssh`, systemd, host Docker `daemon.json`, or any other
+  host-level state.
+- Do not create or merge pull requests, create branches, push to remotes, or
+  merge branches. The owner creates and merges PRs.
+- Do not run `git add -A`, `git commit`, or `git push` without explicit owner
+  approval for that exact action.
+- Do not install packages globally or change the host environment.
+- Work order for every task: read-only analysis, present the plan, then wait
+  for the owner's `go` before changing files.
+- Keep edits atomic and limited to the stated file scope. If a task formally
+  requires leaving the repository, STOP and ask.
+
 ## Task decomposition
 - Before starting any task, break it into small steps (each roughly
   15-60 minutes of work, one coherent change) and WRITE the plan into the
