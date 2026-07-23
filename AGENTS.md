@@ -116,10 +116,15 @@
 - Do not modify anything outside the repository, including global configs,
   `~/.gitconfig`, `~/.ssh`, systemd, host Docker `daemon.json`, or any other
   host-level state.
-- Do not create or merge pull requests, create branches, push to remotes, or
-  merge branches. The owner creates and merges PRs.
-- Do not run `git add -A`, `git commit`, or `git push` without explicit owner
-  approval for that exact action.
+- The agent may create local feature branches from updated `main`, push
+  feature branches to `origin`, create pull requests against `main`, and merge
+  pull requests into `main` with merge commits when the task authorizes that
+  release flow.
+- Never force-push, rewrite history, delete local or remote branches, push
+  directly to `main`, or merge a pull request unless CI is fully green on the
+  exact head SHA being merged. Squash and rebase merge methods are not used.
+- Do not run `git add -A`. Use explicit pathspecs. Run `git commit` and
+  `git push` only for the current task scope and only after required checks.
 - Do not install packages globally or change the host environment.
 - Work order for every task: read-only analysis, present the plan, then wait
   for the owner's `go` before changing files.

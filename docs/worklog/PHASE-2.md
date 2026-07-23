@@ -1,10 +1,11 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.12 merged with Stage 1.13 main and verified locally; PR CI pending
-Branch: phase-2-stage-1.12-branch-authorization
+Status: Stage 1.15 merge-autonomy policy codification verified locally; PR CI pending
+Branch: phase-2-stage-1.15-merge-autonomy
 
-PR state: owner has authorized Codex-created and Codex-merged PRs as of
-Stage 1.15; policy documentation update is pending in a separate branch.
+PR state: Codex may create and merge PRs after exact-head green CI; direct
+pushes to `main`, force-push, history rewriting, and branch deletion remain
+forbidden.
 
 ## Plan
 - [x] Stage 1.1: session setup and branch baseline. Create this Phase 2
@@ -610,6 +611,17 @@ Stage 1.15; policy documentation update is pending in a separate branch.
   (`117 passed / 2 skipped / 832 assertions`), and PostgreSQL Tenancy pass
   (`11 passed / 42 assertions`). CI itself was not verified because pushing is
   owner-owned.
+- [x] Stage 1.15.1: merge backlog and codify PR autonomy policy. Verify Stage
+  1.13 CI on exact head `9259bb7`, merge PR #11 to `main`, confirm new
+  `main` `714cb9a` green; then merge `origin/main` into Stage 1.12, verify
+  locally with `make pint`, `make stan`, `make test`, and
+  `make tenant-isolation-pgsql`, push, verify CI on exact head `7744883`, and
+  merge PR #12 to `main` at `65da625`. Update `AGENTS.md` and
+  `docs/DECISIONS.md` so the Codex PR/merge policy matches the owner-approved
+  autonomy model. Result: Stage 1.13 and Stage 1.12 are merged to `main`;
+  policy documentation is updated and local gates are green: Pint pass
+  (`157 files`), PHPStan pass (`[OK] No errors`), and Pest pass (`124 passed /
+  2 skipped / 854 assertions`). PR CI is pending.
 
 ## Done log
 - 2026-07-20: Phase 2 Stage 1 opened from fresh `origin/main` on branch
@@ -796,6 +808,16 @@ Stage 1.15; policy documentation update is pending in a separate branch.
   (`124 passed / 2 skipped / 854 assertions`), and PostgreSQL Tenancy pass
   (`18 passed / 64 assertions`) under `smartrest_app_test` with
   `NOBYPASSRLS`.
+- 2026-07-23: Stage 1.15 merge backlog cleared. Stage 1.13 PR #11 merged
+  after exact-head CI passed for `9259bb7`, producing `main` `714cb9a` with
+  green post-merge CI. Stage 1.12 was merged with that `main`, verified locally
+  including PostgreSQL Tenancy (`18 passed / 64 assertions`) under the
+  unprivileged `smartrest_app_test` role, then PR #12 merged after exact-head
+  CI passed for `7744883`, producing `main` `65da625` with green post-merge
+  CI. The policy documentation branch updated `AGENTS.md`,
+  `docs/DECISIONS.md`, and this worklog; local gates are green: Pint pass
+  (`157 files`), PHPStan pass (`[OK] No errors`), and Pest pass (`124 passed /
+  2 skipped / 854 assertions`). PR CI and merge are pending.
 
 ## Gotchas / known issues
 - Host PHP is outdated; use Make targets only, never raw host PHP.
@@ -1144,8 +1166,13 @@ Stage 1.15; policy documentation update is pending in a separate branch.
   tenant's category/item: expected HTTP result is 404.
 
 ## Next steps
-Stage 1.11 Part C subcategory implementation order after owner-approved
-`docs/DECISIONS.md` entry:
+Complete the Stage 1.15 policy documentation branch:
+- [x] Run `make pint`, `make stan`, and `make test` on
+  `phase-2-stage-1.15-merge-autonomy`.
+- [ ] Push the branch, open a PR, merge it only after exact-head green CI, then
+  confirm final `main` CI and start Stage 1.14 API work.
+
+Historical Stage 1.11 Part C subcategory implementation order:
 - [x] Step A: add schema/model foundation for `menu_categories.parent_id` and
   `menu_categories.archived_with_category_id`, self-FK/check/indexes, model
   relations/casts, and PostgreSQL schema tests. Result: review-ready on
@@ -1244,6 +1271,6 @@ Stage 1.11 Part C subcategory implementation order after owner-approved
   `load-manager+20260723071232-1-restaurant-1@smartrest.test`: `POST /login`
   returned `302` to `/admin`, then `GET /admin` returned `200`.
 
-Next action: push the verified Stage 1.12 merge commit, open/merge the
-Stage 1.12 PR after green CI on the exact pushed head SHA, then codify
-Stage 1.15 merge-autonomy policy on a separate branch.
+Next action: finish Stage 1.15 policy verification, push and merge the policy
+PR after exact-head green CI, then start Stage 1.14 API work from updated
+`main`.

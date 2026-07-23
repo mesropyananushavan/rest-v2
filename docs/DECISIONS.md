@@ -286,3 +286,24 @@ runtime role and hides privilege drift; switching the pgsql CI job back to the
 privileged `smartrest` role — it bypasses the RLS condition the job is meant
 to prove; removing the trigram indexes from the migration — it changes the
 Menu search schema rather than fixing provisioning.
+
+## 2026-07-23 — Codex may manage PR merge flow before launch
+Decision: Codex may create feature branches from updated `main`, push feature
+branches to `origin`, create pull requests against `main`, and merge pull
+requests into `main` with merge commits when the task authorizes that release
+flow. Codex still must not force-push, rewrite history, delete branches, push
+directly to `main`, squash/rebase merge, bypass required checks, merge a pull
+request before CI is green on the exact head SHA, deploy, tag, or touch
+credentials/production systems.
+Reason: SmartRest v2 is pre-production, has one developer/owner, no live
+tenants, and CI gates now cover quality plus PostgreSQL tenant isolation.
+Owner-only merges were adding latency while the active risk is better
+controlled by exact-SHA CI and merge commits.
+Conditions: repository-root workspace boundaries remain enforced; all feature
+work still goes through pull requests; every merge requires fully green CI on
+the exact head SHA being merged; irreversible operations remain forbidden.
+Rejected: owner-only PR creation and merge for every stage, because merge
+latency became the bottleneck for low-risk pre-production changes; full
+autonomy including force-push, history rewriting, branch deletion, and direct
+`main` pushes, because irreversible operations can destroy reviewability and
+recovery.
