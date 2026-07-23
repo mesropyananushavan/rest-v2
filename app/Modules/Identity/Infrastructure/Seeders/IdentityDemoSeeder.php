@@ -124,6 +124,7 @@ final class IdentityDemoSeeder extends Seeder
             'menu.categories.manage' => 'Manage menu categories',
             'menu.items.manage' => 'Manage menu items',
             'tables.halls.manage' => 'Manage halls',
+            'tables.tables.manage' => 'Manage tables',
             'orders.take' => 'Take orders',
             'payments.capture' => 'Capture payments',
         ];
@@ -135,8 +136,8 @@ final class IdentityDemoSeeder extends Seeder
     private function rolePermissions(): array
     {
         return [
-            'owner' => ['tenancy.manage', 'identity.manage', 'menu.categories.manage', 'menu.items.manage', 'tables.halls.manage', 'orders.take', 'payments.capture'],
-            'manager' => ['identity.manage', 'menu.categories.manage', 'menu.items.manage', 'tables.halls.manage', 'orders.take', 'payments.capture'],
+            'owner' => ['tenancy.manage', 'identity.manage', 'menu.categories.manage', 'menu.items.manage', 'tables.halls.manage', 'tables.tables.manage', 'orders.take', 'payments.capture'],
+            'manager' => ['identity.manage', 'menu.categories.manage', 'menu.items.manage', 'tables.halls.manage', 'tables.tables.manage', 'orders.take', 'payments.capture'],
             'cashier' => ['orders.take', 'payments.capture'],
             'waiter' => ['orders.take'],
         ];

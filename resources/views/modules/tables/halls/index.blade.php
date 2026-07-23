@@ -111,6 +111,9 @@ use Illuminate\Pagination\LengthAwarePaginator;
                             <td>
                                 <div class="flex flex-wrap justify-end gap-2">
                                     @if (! $hall->trashed())
+                                        <x-button :href="route('admin.tables.tables.index', ['hall' => (int) $hall->id])" variant="secondary" size="sm">
+                                            {{ __('tables.halls.actions.tables') }}
+                                        </x-button>
                                         <x-button :href="route('admin.tables.halls.edit', ['hall' => (int) $hall->id])" variant="outline-secondary" size="sm">
                                             {{ __('tables.halls.actions.edit') }}
                                         </x-button>

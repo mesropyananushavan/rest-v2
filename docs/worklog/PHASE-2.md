@@ -1,7 +1,7 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.16 audit log implementation in progress
-Branch: phase-2-stage-1.16-audit-log
+Status: Stage 1.18 Tables vertical slice in progress
+Branch: phase-2-stage-1.18-tables
 
 PR state: Codex may create and merge PRs after exact-head green CI; direct
 pushes to `main`, force-push, history rewriting, and branch deletion remain
@@ -1303,8 +1303,7 @@ forbidden.
 - `/admin/menu?category={foreign_id}` and direct edit/archive URLs for another
   tenant's category/item: expected HTTP result is 404.
 
-## Next steps
-Complete Stage 1.17 Halls vertical slice:
+## Stage 1.17 Halls Completed Plan
 - [x] Step 1.17.1: Run Step 0 from updated `main`, verify Stage 1.16 audit
   infrastructure is present, inspect Blueprint/doc/template/Menu/audit/tenancy
   conventions, and record the hall schema rationale before implementation.
@@ -1452,7 +1451,246 @@ Historical Stage 1.11 Part C subcategory implementation order:
   `load-manager+20260723071232-1-restaurant-1@smartrest.test`: `POST /login`
   returned `302` to `/admin`, then `GET /admin` returned `200`.
 
-Next action: commit the Stage 1.16 audit-log implementation with the scoped
-documentation updates, push `phase-2-stage-1.16-audit-log`, open a PR into
-`main`, wait for exact-head green CI, then merge with a merge commit only if
-CI is green on that exact SHA.
+Historical note: Stage 1.16 Audit and Stage 1.17 Halls were merged before
+Stage 1.18 began. Current follow-up is recorded in the final `Next steps`
+section at the end of this file.
+
+## Stage 1.18 Tables Vertical Slice
+
+Step 0 state:
+- `git status --short --branch`: clean `main...origin/main` before branch
+  creation.
+- `origin/main`: `28c2c237e296766839406192f5ce6f31398a4a1c`.
+- Stage 1.17 head `a75a367` is an ancestor of `origin/main`.
+- `app/Modules/Tables/` and
+  `database/migrations/2026_07_23_010000_create_halls_table.php` exist.
+- Local `main` fast-forwarded with `git merge --ff-only origin/main`; already
+  up to date.
+- Created branch `phase-2-stage-1.18-tables` from `main`.
+
+Legacy table screen findings:
+- `template/rooms-hall-tables.html` is the table settings screen under one
+  selected hall (`hallId` hidden field). It shows a table `Անվանում` field
+  (`table_name`) with examples like `Սեղան 10`, numeric and string labels in
+  rows (`1`, `10`, `VIP`), `ՀԴՄ բաժին`, table shape
+  (`planning_table_form`: circle/square/rect), commission type/value,
+  delivery flag, edit/archive controls, DataTables-style pagination, and
+  search.
+- `template/rooms-tables.html` is the operational table board, not this stage.
+  It groups cards by hall, displays hall colors, table labels (`1`, `VIP`,
+  `T1`, `V1`), order status colors, waiter/customer/current money/discount/time
+  data, and table move/order entry behavior. Those order/board fields are
+  deferred.
+- `template/rooms-hall.html` shows halls as configurable containers and exposes
+  a `Սեղանների տիպեր` modal with localized type names (`Սեղան`, `Table`,
+  `Стол`, `VIP`). A separate table-types entity remains deferred by task D8.
+- `template/rooms-hall-planning.html` shows the future floor-plan layout with
+  table shapes and coordinates, but geometry/coordinates are explicitly
+  deferred. The only table-planning field kept now is the simple constrained
+  shape value.
+- `template/rooms-table-order.html` confirms a table label plus hall name in
+  order context and shows order-time data such as client count, order type,
+  subtables, payments, waiter changes, discounts, and moving tables/items. All
+  of that belongs to later Orders/Table Board stages.
+
+Stage 1.18 plan:
+- [x] Step 1.18.1: Add the additive `tables` schema and model. Columns:
+  `tenant_id`, `branch_id`, `hall_id`, `archived_with_hall_id`,
+  localized `translated_name`, constrained `shape`, `sort_order`, `active`,
+  soft deletes, timestamps, FK/index coverage for tenant/branch/hall/archive
+  lookup paths, and PostgreSQL `tables_tenant_isolation` RLS. Document the
+  schema decision in `docs/DECISIONS.md` and leave `docs/BLUEPRINT.md`
+  untouched.
+  Result: added `2026_07_23_020000_create_tables_table.php`, tenant-scoped
+  `Table`, hall relations, explicit tenant/branch/hall/archive indexes, shape
+  and type PostgreSQL checks, and `tables_tenant_isolation` RLS. The schema
+  decision is recorded in `docs/DECISIONS.md`; `docs/BLUEPRINT.md` is
+  intentionally unchanged pending owner approval.
+- [x] Step 1.18.2: Add table Application actions for create, update, archive,
+  restore, permanent delete, and paginated tenant/branch/hall-scoped listing.
+  Each mutation writes one `tables.table.*` audit row inside its transaction
+  and uses the existing `RecordsTableAction` structured logging pattern.
+  Result: added `CreateTable`, `UpdateTable`, `ArchiveTable`, `RestoreTable`,
+  `ForceDeleteTable`, `FindTable`, and `PaginateTables`; all mutation actions
+  branch-scope by resolved context and audit inside the mutation transaction.
+- [x] Step 1.18.3: Modify Stage 1.17 Hall cascade actions. Update
+  `ArchiveHall` to archive currently non-archived child tables with
+  `archived_with_hall_id = hall_id`; update `RestoreHall` to restore only
+  tables carrying that marker and clear it; update `ForceDeleteHall` to
+  permanently delete archived child tables before deleting the archived hall.
+  These changes are required by D5 and will record table counts on the hall
+  audit row rather than per-table cascade audit rows.
+  Result: modified `ArchiveHall`, `RestoreHall`, and `ForceDeleteHall` because
+  D5 makes hall archive semantics own child table cascade membership. The
+  cascade is set-based, transaction-wrapped, marker-driven, and records counts
+  on the hall audit row without per-table cascade audit rows.
+- [x] Step 1.18.4: Add admin UI/routes/controllers/requests for tables nested
+  under a selected hall, using existing admin layout and `x-` components,
+  confirm-modal archive/permanent-delete flows, translated flashes, and
+  superadmin-only archive visibility/restore/permanent-delete rendering and
+  server-side enforcement.
+  Result: added nested `/admin/tables/halls/{hall}/tables` routes,
+  `TableController`, `TableRequest`, table index/form Blade views, and a Halls
+  list link to manage a hall's tables. Archive controls render only as allowed,
+  and restore/permanent-delete routes require the `superadmin` middleware.
+- [x] Step 1.18.5: Add `tables.tables.manage` to the seeded permission catalog,
+  grant it to the same owner/manager roles as `tables.halls.manage`, and seed
+  deterministic demo tables for both demo tenants inside the demo halls.
+  Result: seeded `tables.tables.manage` for owner and manager roles and added
+  deterministic demo tables for Arat Riverside and Northstar Bistro halls.
+- [x] Step 1.18.6: Add and extend automated tests for schema/RLS, table
+  actions, hall cascade matrix, HTTP CRUD, permission denial, superadmin-only
+  archive behavior, tenant/branch/hall scoping and 404 isolation, audit rows,
+  translations, demo seed visibility, and architecture boundaries.
+  Result: added `TableSchemaTest`, `TableActionsTest`, `TableBladeTest`, demo
+  seeder coverage, and PostgreSQL `tables` RLS coverage in Tenancy. Full local
+  SQLite and PostgreSQL suites passed with the counts recorded below.
+- [x] Step 1.18.7: Run required Makefile verification (`make pint`,
+  `make stan`, `make test`, `make tenant-isolation-pgsql`, `make fresh`),
+  perform the required HTTP/database smoke with a unique `X-Request-Id`,
+  update this worklog with results and handoff H1-H6, commit scoped paths,
+  push, open a PR, and merge only after exact-head green CI.
+  Result: local `make pint`, `make stan`, `make test`,
+  `make tenant-isolation-pgsql`, and `make fresh` passed. HTTP smoke request id
+  `STAGE-1.18-TABLES-SMOKE-20260723-001` created table id `17`, updated it,
+  archived seeded table id `2` independently, archived hall id `1`, then
+  restored hall id `1` as superadmin. Final database evidence: table `2`
+  remained archived with `archived_with_hall_id = null`; table `17` was active
+  with `archived_with_hall_id = null`; audit rows were
+  `tables.table.created`, `tables.table.updated`, `tables.table.archived`,
+  `tables.hall.archived` with `cascade.archived_table_count = 3`, and
+  `tables.hall.restored` with `cascade.restored_table_count = 3`. Commit, push,
+  PR, exact-head CI, and merge are release steps after this local handoff.
+
+Stage 1.18 verification:
+- `make pint`: passed; Pint reported `PASS` over `208 files`.
+- `make stan`: passed; PHPStan analyzed `119/119` files and reported
+  `[OK] No errors`.
+- `make test`: passed; SQLite Pest reported `160 passed / 5 skipped / 1206
+  assertions`.
+- `make tenant-isolation-pgsql`: passed; PostgreSQL Tenancy reported
+  `21 passed / 73 assertions`.
+- `make fresh`: passed; migrations ran through
+  `2026_07_23_020000_create_tables_table`, and `Database\Seeders\DemoSeeder`
+  completed.
+
+Stage 1.18 gotchas:
+- `make stan` initially failed because `TablesDemoSeeder::tablesForHall()` was
+  declared as returning a list but `array_map()` preserved literal numeric keys.
+  The method now wraps the mapped rows in `array_values()`.
+- The first `make test` run failed only because the demo seeder test expected
+  the English shape label `Square` while the Arat manager locale renders
+  Armenian `Քառակուսի`; the assertion now matches the seeded user's locale.
+- The first HTTP smoke attempt returned `502 Bad Gateway` because nginx held an
+  old php-fpm upstream IP after `make up` recreated php-fpm. `make restart`
+  refreshed nginx, after which the smoke passed. No smoke mutations completed
+  during the failed 502 attempt.
+- A committed worklog cannot contain the future GitHub merge commit SHA created
+  by merging that same commit without a forbidden direct `main` follow-up or
+  history rewrite. This file records verified local baselines; the final report
+  must record the exact PR, exact-head CI, merge commit, new `main` SHA, and
+  post-merge CI conclusion.
+
+Stage 1.18 durable handoff:
+
+Current state:
+- Merged `main` SHA and post-merge CI conclusion: pending release flow. The
+  final report must record the exact merge commit SHA and GitHub CI conclusion
+  after the PR is merged. The branch starts from `origin/main`
+  `28c2c237e296766839406192f5ce6f31398a4a1c`.
+- Verification baselines future sessions must beat: SQLite Pest `160 passed /
+  5 skipped / 1206 assertions`; PostgreSQL Tenancy `21 passed / 73 assertions`;
+  Pint `208 files`.
+
+What exists now:
+- Tenancy: tenant and branch context resolution, branch assignments, Eloquent
+  tenant scopes, and PostgreSQL RLS coverage for current tenant-owned tables.
+- Identity: session login/logout, roles, permissions, branch assignments, and
+  deterministic demo users for both seeded tenants.
+- Menu: admin root/subcategory/item CRUD, archive/restore/force-delete
+  semantics with cascade markers, images, search, pagination, and demo data.
+- Menu API: `/api/v1/menu-items` read slice with session auth, branch scoping,
+  permission gating, throttling, and pagination metadata.
+- Audit logs: append-only `audit_logs`, transaction-bound mutation audit writes,
+  redaction, structured logging context, and PostgreSQL RLS coverage.
+- Halls: Tables module hall CRUD, branch-scoped lists, archive maintenance, and
+  hall audit strings; hall archive now cascades to child tables.
+- Tables: additive `tables` schema, tenant/branch/hall scoped model/actions,
+  nested admin UI, permissions, deterministic demo tables, and hall cascade
+  marker semantics.
+
+Prioritized remaining work:
+- Table board (Livewire) — next product stage, depends on tables.
+- Menu public contracts (`MenuCatalog`, `PriceResolver`) — `app/Modules/Menu/
+  Contracts/` currently holds only `.gitkeep`; Orders cannot consume Menu
+  without them and cannot bypass module boundaries.
+- Orders module — depends on the table board and Menu contracts.
+- Domain events and the outbox (ADR-008) — every `app/Modules/*/Events/`
+  directory is still empty; nothing emits or consumes domain events.
+- `docs/BLUEPRINT.md` section 4 amendment for `halls` and `tables` — text
+  prepared, awaiting owner approval, must not be applied unilaterally.
+- Runtime PostgreSQL role separation — the 2026-07-23 decision gates this
+  before the first real tenant is onboarded; `docker-compose.yml`,
+  `.env.example`, and `config/database.php` still point runtime traffic at the
+  privileged `smartrest` role.
+- `app/Console/Commands/MenuSeedLoadCommand.php` issues
+  `CREATE EXTENSION IF NOT EXISTS pg_trgm` and will fail under an unprivileged
+  role; it is also about 1500 lines with no automated tests.
+- `tests/Feature/Menu/MenuSchemaTest.php` early-returns on non-pgsql drivers,
+  so it silently passes without asserting anything, and it is not included in
+  the `tenant-isolation-pgsql` job.
+- Menu UX carry-over from Stage 1.11 Part D: context-preserving save/cancel,
+  and moving archive/restore/force-delete controls into a row overflow menu.
+- No admin UI or API for reading audit logs.
+- `actions/checkout@v4` emits a Node.js 20 deprecation warning in CI.
+- Every branch push triggers duplicate CI runs (`push` and `pull_request`),
+  doubling CI minutes.
+- Branch protection on `main` requiring `quality` and
+  `tenant-isolation-pgsql` is not enabled; the "never merge red" rule currently
+  rests on task instructions rather than on GitHub enforcement.
+- Roughly eleven stale local branches from completed stages remain undeleted;
+  branch deletion is forbidden to the agent, so this is an owner-only cleanup.
+
+Design implications:
+- `audit_logs` uses `restrictOnDelete` on `tenant_id`, `branch_id`, and
+  `actor_id`, so a tenant, branch, or user can no longer be deleted once audit
+  rows exist. Any future admin deletion feature must be designed around this.
+
+Blueprint amendment text awaiting owner approval:
+
+```markdown
+Halls & Tables:
+
+| Entity | Key fields | Relationships/indexes |
+|---|---|---|
+| `halls` | tenant_id, branch_id, translated_name, color, sort_order, active, deleted_at | belongs to branch; indexes on tenant, branch, and tenant+branch+deleted_at+active+sort_order+id; PostgreSQL `halls_tenant_isolation` RLS |
+| `tables` | tenant_id, branch_id, hall_id, archived_with_hall_id nullable, translated_name, type, shape, hdm_department nullable, is_delivery, sort_order, active, deleted_at | belongs to hall; branch filtering remains explicit; indexes on tenant, branch, hall, archive marker, and tenant+branch+hall+deleted_at+active+sort_order+id; PostgreSQL `tables_tenant_isolation` RLS |
+
+Tables are managed under a selected hall. `translated_name` stores the
+human-facing table label/name as a localized value object because legacy
+screens show numeric, text, and VIP labels. `type` is a constrained simple
+column for the current `standard`/`vip` distinction; a dedicated table-types
+entity remains deferred. `shape` is a constrained simple planning hint
+(`circle`, `square`, `rectangle`); floor-plan coordinates, geometry,
+commission/pricing metadata, subtables, the table board, and Orders remain
+deferred. Archiving a hall archives only currently active child tables and
+marks them with `archived_with_hall_id`; restoring the hall restores only those
+marked tables; independently archived tables remain archived. Permanent hall
+deletion is superadmin-only maintenance and permanently deletes archived child
+tables before deleting the archived hall.
+```
+
+Decisions awaiting the owner:
+- Should the Blueprint section 4 Halls & Tables amendment above be approved as
+  written, revised before approval, or deferred until after the Table Board
+  stage?
+- Should runtime PostgreSQL role separation be scheduled before any more
+  product slices, before first real-tenant onboarding, or deferred with an
+  explicit pre-production risk acceptance?
+- Should the next Table Board stage remain a read/interaction board without
+  Orders writes, or should it wait until Menu public contracts are added first?
+
+## Next steps
+Next stage: Table board (Livewire), depending on the merged Tables slice.
+Pending owner decision: approve, revise, or defer the Blueprint section 4
+amendment for Halls & Tables quoted above.
