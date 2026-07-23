@@ -13,6 +13,7 @@ return [
         'heading' => 'Categories',
         'create_title' => 'Create category',
         'edit_title' => 'Edit category',
+        'root_parent_option' => 'No parent (root category)',
     ],
     'items' => [
         'heading' => 'Items',

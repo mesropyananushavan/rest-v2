@@ -6,6 +6,7 @@ use App\Modules\Identity\Infrastructure\Models\Permission;
 use App\Modules\Identity\Infrastructure\Models\Role;
 use App\Modules\Identity\Infrastructure\Models\User;
 use App\Modules\Identity\Infrastructure\Models\UserBranchAssignment;
+use App\Modules\Menu\Application\ArchiveMenuCategory;
 use App\Modules\Menu\Application\CreateMenuCategory;
 use App\Modules\Menu\Application\CreateMenuItem;
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
@@ -61,7 +62,7 @@ it('runs menu category and item CRUD through authenticated Blade routes', functi
 
     $this->actingAs($manager['user'])
         ->withSession(['branch_id' => (int) $manager['branch']->id])
-        ->post(route('admin.menu.categories.store'), menuBladeCategoryPayload('Breakfast plates') + ['parent_id' => (int) $rootCategory->id])
+        ->post(route('admin.menu.categories.store'), menuBladeCategoryPayload('Breakfast plates', parentId: (int) $rootCategory->id))
         ->assertRedirect(route('admin.menu.index'));
 
     $category = MenuCategory::query()->whereNotNull('parent_id')->firstOrFail();
@@ -106,6 +107,111 @@ it('runs menu category and item CRUD through authenticated Blade routes', functi
 
     expect(MenuItem::query()->count())->toBe(0)
         ->and(MenuCategory::query()->pluck('id')->all())->toBe([(int) $rootCategory->id]);
+});
+
+it('renders root-only parent options on the category create form', function (): void {
+    $manager = menuBladeUser('tenant-a', 'manager-a', ['menu.categories.manage']);
+
+    app(TenantResolver::class)->set((int) $manager['tenant']->id);
+    $root = app(CreateMenuCategory::class)(menuBladeText('Root menu'), sortOrder: 10);
+    $subcategory = app(CreateMenuCategory::class)(menuBladeText('Breakfast plates'), parentId: (int) $root->id);
+    $archivedRoot = app(CreateMenuCategory::class)(menuBladeText('Archived root'), sortOrder: 20);
+    app(ArchiveMenuCategory::class)((int) $archivedRoot->id);
+
+    app(TenantResolver::class)->clear();
+
+    $this->actingAs($manager['user'])
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->get(route('admin.menu.categories.create'))
+        ->assertOk()
+        ->assertSee('name="parent_id"', false)
+        ->assertSee(__('menu.fields.parent_category'), false)
+        ->assertSee(__('menu.categories.root_parent_option'), false)
+        ->assertSee('<option value="'.(int) $root->id.'"', false)
+        ->assertSee('Root menu', false)
+        ->assertDontSee('<option value="'.(int) $subcategory->id.'"', false)
+        ->assertDontSee('Breakfast plates', false)
+        ->assertDontSee('<option value="'.(int) $archivedRoot->id.'"', false)
+        ->assertDontSee('Archived root', false);
+});
+
+it('renders the current parent on the category edit form without offering the category itself', function (): void {
+    $manager = menuBladeUser('tenant-a', 'manager-a', ['menu.categories.manage']);
+
+    app(TenantResolver::class)->set((int) $manager['tenant']->id);
+    $root = app(CreateMenuCategory::class)(menuBladeText('Root menu'), sortOrder: 10);
+    $otherRoot = app(CreateMenuCategory::class)(menuBladeText('Other root'), sortOrder: 20);
+    $subcategory = app(CreateMenuCategory::class)(menuBladeText('Breakfast plates'), parentId: (int) $root->id);
+
+    app(TenantResolver::class)->clear();
+
+    $this->actingAs($manager['user'])
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->get(route('admin.menu.categories.edit', ['category' => (int) $subcategory->id]))
+        ->assertOk()
+        ->assertSee('name="parent_id"', false)
+        ->assertSee('<option value="'.(int) $root->id.'" selected', false)
+        ->assertSee('<option value="'.(int) $otherRoot->id.'"', false)
+        ->assertDontSee('<option value="'.(int) $subcategory->id.'"', false);
+});
+
+it('creates a subcategory through the category form parent selector payload', function (): void {
+    $manager = menuBladeUser('tenant-a', 'manager-a', ['menu.categories.manage']);
+
+    app(TenantResolver::class)->set((int) $manager['tenant']->id);
+    $root = app(CreateMenuCategory::class)(menuBladeText('Root menu'), sortOrder: 10);
+    app(TenantResolver::class)->clear();
+
+    $this->actingAs($manager['user'])
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->post(route('admin.menu.categories.store'), menuBladeCategoryPayload('Breakfast plates', parentId: (int) $root->id))
+        ->assertRedirect(route('admin.menu.index'));
+
+    app(TenantResolver::class)->set((int) $manager['tenant']->id);
+
+    expect(MenuCategory::query()
+        ->where('translated_name->en', 'Breakfast plates')
+        ->firstOrFail()
+        ->parent_id)->toBe((int) $root->id);
+});
+
+it('keeps the selected parent when editing a subcategory through the category form', function (): void {
+    $manager = menuBladeUser('tenant-a', 'manager-a', ['menu.categories.manage']);
+
+    app(TenantResolver::class)->set((int) $manager['tenant']->id);
+    $root = app(CreateMenuCategory::class)(menuBladeText('Root menu'), sortOrder: 10);
+    $subcategory = app(CreateMenuCategory::class)(menuBladeText('Breakfast plates'), parentId: (int) $root->id);
+    app(TenantResolver::class)->clear();
+
+    $this->actingAs($manager['user'])
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->put(route('admin.menu.categories.update', ['category' => (int) $subcategory->id]), menuBladeCategoryPayload('Breakfast plates updated', parentId: (int) $root->id))
+        ->assertRedirect(route('admin.menu.index'));
+
+    app(TenantResolver::class)->set((int) $manager['tenant']->id);
+
+    expect(MenuCategory::query()->findOrFail((int) $subcategory->id)->parent_id)->toBe((int) $root->id);
+});
+
+it('keeps an existing category parent when a legacy update payload omits parent_id', function (): void {
+    $manager = menuBladeUser('tenant-a', 'manager-a', ['menu.categories.manage']);
+
+    app(TenantResolver::class)->set((int) $manager['tenant']->id);
+    $root = app(CreateMenuCategory::class)(menuBladeText('Root menu'), sortOrder: 10);
+    $subcategory = app(CreateMenuCategory::class)(menuBladeText('Breakfast plates'), parentId: (int) $root->id);
+    app(TenantResolver::class)->clear();
+
+    $payload = menuBladeCategoryPayload('Breakfast plates updated');
+    unset($payload['parent_id']);
+
+    $this->actingAs($manager['user'])
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->put(route('admin.menu.categories.update', ['category' => (int) $subcategory->id]), $payload)
+        ->assertRedirect(route('admin.menu.index'));
+
+    app(TenantResolver::class)->set((int) $manager['tenant']->id);
+
+    expect(MenuCategory::query()->findOrFail((int) $subcategory->id)->parent_id)->toBe((int) $root->id);
 });
 
 it('allows managers to archive and requires superadmin to restore menu records', function (): void {
@@ -519,9 +625,10 @@ function menuBladeRecords(array $user, string $name): array
 /**
  * @return array<string, mixed>
  */
-function menuBladeCategoryPayload(string $name, bool $active = true, int $sortOrder = 0): array
+function menuBladeCategoryPayload(string $name, bool $active = true, int $sortOrder = 0, int $parentId = 0): array
 {
     return [
+        'parent_id' => $parentId,
         'name_hy' => $name,
         'name_ru' => $name,
         'name_en' => $name,

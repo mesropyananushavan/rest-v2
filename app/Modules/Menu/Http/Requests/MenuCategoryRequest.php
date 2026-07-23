@@ -23,16 +23,20 @@ final class MenuCategoryRequest extends FormRequest
     public function rules(): array
     {
         $tenantId = app(TenantResolver::class)->id();
+        $parentRules = [
+            'nullable',
+            'integer',
+            'min:0',
+        ];
+
+        if ($this->integer('parent_id') > 0) {
+            $parentRules[] = Rule::exists('menu_categories', 'id')
+                ->where('tenant_id', $tenantId ?? 0)
+                ->whereNull('deleted_at');
+        }
 
         return [
-            'parent_id' => [
-                'nullable',
-                'integer',
-                'min:1',
-                Rule::exists('menu_categories', 'id')
-                    ->where('tenant_id', $tenantId ?? 0)
-                    ->whereNull('deleted_at'),
-            ],
+            'parent_id' => $parentRules,
             'name_hy' => ['required', 'string', 'max:255'],
             'name_ru' => ['required', 'string', 'max:255'],
             'name_en' => ['required', 'string', 'max:255'],
@@ -70,6 +74,15 @@ final class MenuCategoryRequest extends FormRequest
         $parentId = $this->integer('parent_id');
 
         return $parentId === 0 ? null : $parentId;
+    }
+
+    public function parentIdOr(?int $missingValue): ?int
+    {
+        if (! $this->has('parent_id')) {
+            return $missingValue;
+        }
+
+        return $this->parentId();
     }
 
     public function sortOrder(): int

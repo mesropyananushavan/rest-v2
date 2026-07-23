@@ -3,11 +3,14 @@
 declare(strict_types=1);
 
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
+use Illuminate\Support\Collection;
 
 /** @var MenuCategory|null $category */
+/** @var Collection<int, string> $parentOptions */
 
 $isEdit = $category instanceof MenuCategory;
 $title = $isEdit ? __('menu.categories.edit_title') : __('menu.categories.create_title');
+$selectedParentId = $category?->parent_id === null ? 0 : (int) $category->parent_id;
 ?>
 
 @extends('layouts.admin')
@@ -35,6 +38,13 @@ $title = $isEdit ? __('menu.categories.edit_title') : __('menu.categories.create
                 @endif
 
                 @include('modules.menu.partials.localized-name-fields', ['model' => $category])
+
+                <x-form.select
+                    name="parent_id"
+                    :label="__('menu.fields.parent_category')"
+                    :options="[0 => __('menu.categories.root_parent_option')] + $parentOptions->all()"
+                    :selected="$selectedParentId"
+                />
 
                 <div class="grid gap-3 md:grid-cols-2">
                     <div>

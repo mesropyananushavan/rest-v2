@@ -848,6 +848,16 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   HTTP endpoint level. Add a real HTTP Livewire request test or another
   endpoint-level check before relying on `assertStatus(404)` for Livewire
   methods.
+- Category hierarchy UI gap found on 2026-07-23: the backend request/action
+  path accepted `parent_id`, but `resources/views/modules/menu/category-form.blade.php`
+  did not render a parent selector, so managers could not create subcategories
+  through the visible UI. A related bug allowed a PUT request that omitted
+  `parent_id` to treat an existing subcategory as root because
+  `MenuCategoryRequest::parentId()` returned `null` for both "missing field"
+  and "root selected". The gap was missed because tests mostly called
+  Application actions directly, and the one HTTP subcategory create test
+  manually injected `parent_id` into the payload instead of proving the HTML
+  form rendered and submitted that field.
 
 ## Next steps
 Stage 1.11 Part C subcategory implementation order after owner-approved

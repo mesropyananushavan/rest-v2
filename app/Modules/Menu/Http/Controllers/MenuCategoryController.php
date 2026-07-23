@@ -12,6 +12,7 @@ use App\Modules\Menu\Application\UpdateMenuCategory;
 use App\Modules\Menu\Http\Requests\MenuCategoryRequest;
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 final class MenuCategoryController
@@ -20,6 +21,7 @@ final class MenuCategoryController
     {
         return view('modules.menu.category-form', [
             'category' => null,
+            'parentOptions' => $this->parentOptions(),
         ]);
     }
 
@@ -34,14 +36,19 @@ final class MenuCategoryController
 
     public function edit(int $category): View
     {
+        $categoryModel = MenuCategory::query()->findOrFail($category);
+
         return view('modules.menu.category-form', [
-            'category' => MenuCategory::query()->findOrFail($category),
+            'category' => $categoryModel,
+            'parentOptions' => $this->parentOptions($categoryModel),
         ]);
     }
 
     public function update(int $category, MenuCategoryRequest $request, UpdateMenuCategory $update): RedirectResponse
     {
-        $update($category, $request->localizedName(), $request->sortOrder(), $request->active(), $request->parentId());
+        $categoryModel = MenuCategory::query()->findOrFail($category);
+
+        $update($category, $request->localizedName(), $request->sortOrder(), $request->active(), $request->parentIdOr($categoryModel->parent_id === null ? null : (int) $categoryModel->parent_id));
 
         return redirect()
             ->route('admin.menu.index')
@@ -73,5 +80,27 @@ final class MenuCategoryController
         return redirect()
             ->route('admin.menu.index', ['archive_mode' => 'archived'])
             ->with('status', __('menu.flash.category_force_deleted'));
+    }
+
+    /**
+     * @return Collection<int, string>
+     */
+    private function parentOptions(?MenuCategory $category = null): Collection
+    {
+        $locale = app()->getLocale();
+        $excludedCategoryId = $category instanceof MenuCategory ? (int) $category->id : null;
+
+        return MenuCategory::query()
+            ->whereNull('parent_id')
+            ->when(
+                $excludedCategoryId !== null,
+                fn ($query) => $query->whereKeyNot($excludedCategoryId),
+            )
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->mapWithKeys(fn (MenuCategory $parent): array => [
+                (int) $parent->id => $parent->translatedName()->forLocale($locale),
+            ]);
     }
 }
