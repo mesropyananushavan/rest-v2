@@ -9,6 +9,7 @@ use App\Modules\Identity\Infrastructure\Models\User;
 use App\Modules\Identity\Infrastructure\Models\UserBranchAssignment;
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
+use App\Modules\Tables\Infrastructure\Models\Hall;
 use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Modules\Tenancy\Contracts\TenantResolver;
 use App\Modules\Tenancy\Infrastructure\Models\Branch;
@@ -351,6 +352,49 @@ it('enforces PostgreSQL row level security for audit logs', function (): void {
     expect(rawAuditLogIds())->toBe([(int) $auditB->id]);
 });
 
+it('enforces PostgreSQL row level security for halls', function (): void {
+    if (! usesPostgresRowLevelSecurity()) {
+        $this->markTestSkipped('PostgreSQL RLS coverage runs only on pgsql.');
+    }
+
+    $tenantA = tenantWithUser('tenant-a', 'manager-a', ['tables.halls.manage']);
+    $tenantB = tenantWithUser('tenant-b', 'manager-b', ['tables.halls.manage']);
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+    app(BranchContext::class)->set((int) $tenantA['branch']->id);
+
+    $hallA = Hall::query()->create([
+        'branch_id' => (int) $tenantA['branch']->id,
+        'translated_name' => ['hy' => 'Tenant A Hall', 'ru' => 'Tenant A Hall', 'en' => 'Tenant A Hall'],
+        'color' => '#5FA8D3',
+        'sort_order' => 10,
+        'active' => true,
+    ]);
+
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+    app(BranchContext::class)->set((int) $tenantB['branch']->id);
+
+    $hallB = Hall::query()->create([
+        'branch_id' => (int) $tenantB['branch']->id,
+        'translated_name' => ['hy' => 'Tenant B Hall', 'ru' => 'Tenant B Hall', 'en' => 'Tenant B Hall'],
+        'color' => '#D36B5F',
+        'sort_order' => 10,
+        'active' => true,
+    ]);
+
+    app(TenantResolver::class)->clear();
+
+    expect(rawHallIds())->toBe([]);
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+
+    expect(rawHallIds())->toBe([(int) $hallA->id]);
+
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+
+    expect(rawHallIds())->toBe([(int) $hallB->id]);
+});
+
 it('checks action permissions through the identity authorizer contract', function (): void {
     $tenant = tenantWithUser('tenant-a', 'manager-a', ['menu.items.manage']);
 
@@ -459,6 +503,16 @@ function rawMenuItemIds(): array
 function rawAuditLogIds(): array
 {
     return collect(DB::select('select id from audit_logs order by id'))
+        ->map(fn (object $row): int => (int) $row->id)
+        ->all();
+}
+
+/**
+ * @return list<int>
+ */
+function rawHallIds(): array
+{
+    return collect(DB::select('select id from halls order by id'))
         ->map(fn (object $row): int => (int) $row->id)
         ->all();
 }

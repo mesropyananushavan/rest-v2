@@ -7,6 +7,7 @@ use App\Http\Middleware\AttachLogContext;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureSuperAdminForDeletes;
 use App\Modules\Menu\Domain\MenuDomainException;
+use App\Modules\Tables\Domain\TablesDomainException;
 use App\Modules\Tenancy\Http\Middleware\ResolveBranch;
 use App\Modules\Tenancy\Http\Middleware\ResolveTenant;
 use App\Support\Api\ApiErrorRenderer;
@@ -58,6 +59,12 @@ return Application::configure(basePath: dirname(__DIR__))
 
             return back()
                 ->withErrors(['menu' => __($exception->errorCode())])
+                ->withInput();
+        });
+
+        $exceptions->render(function (TablesDomainException $exception, Request $request) {
+            return back()
+                ->withErrors(['tables' => __($exception->errorCode())])
                 ->withInput();
         });
 

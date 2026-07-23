@@ -11,6 +11,7 @@ use App\Modules\Menu\Http\Controllers\MenuCategoryController;
 use App\Modules\Menu\Http\Controllers\MenuCategoryOptionController;
 use App\Modules\Menu\Http\Controllers\MenuIndexController;
 use App\Modules\Menu\Http\Controllers\MenuItemController;
+use App\Modules\Tables\Http\Controllers\HallController;
 use App\Modules\Tenancy\Http\Controllers\BranchShowController;
 use Illuminate\Support\Facades\Route;
 
@@ -99,4 +100,31 @@ Route::middleware(['tenant', 'branch', 'auth'])->prefix('/admin/menu')->name('ad
     Route::delete('/items/{item}/force-delete', [MenuItemController::class, 'forceDelete'])
         ->middleware(['can:menu.items.manage', 'superadmin'])
         ->name('items.force-delete');
+});
+
+Route::middleware(['tenant', 'branch', 'auth'])->prefix('/admin/tables/halls')->name('admin.tables.halls.')->group(function (): void {
+    Route::get('/', [HallController::class, 'index'])
+        ->middleware('can:tables.halls.manage')
+        ->name('index');
+    Route::get('/create', [HallController::class, 'create'])
+        ->middleware('can:tables.halls.manage')
+        ->name('create');
+    Route::post('/', [HallController::class, 'store'])
+        ->middleware('can:tables.halls.manage')
+        ->name('store');
+    Route::get('/{hall}/edit', [HallController::class, 'edit'])
+        ->middleware('can:tables.halls.manage')
+        ->name('edit');
+    Route::put('/{hall}', [HallController::class, 'update'])
+        ->middleware('can:tables.halls.manage')
+        ->name('update');
+    Route::delete('/{hall}', [HallController::class, 'destroy'])
+        ->middleware('can:tables.halls.manage')
+        ->name('destroy');
+    Route::post('/{hall}/restore', [HallController::class, 'restore'])
+        ->middleware(['can:tables.halls.manage', 'superadmin'])
+        ->name('restore');
+    Route::delete('/{hall}/force-delete', [HallController::class, 'forceDelete'])
+        ->middleware(['can:tables.halls.manage', 'superadmin'])
+        ->name('force-delete');
 });

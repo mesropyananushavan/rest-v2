@@ -1265,6 +1265,23 @@ forbidden.
   replace/remove actions with actor null and generated correlation ids. Manual
   audit smoke must isolate the user action by a unique `X-Request-Id` instead
   of assuming the table starts empty after seeding.
+- Stage 1.17 legacy hall screen findings: `template/rooms-hall.html` shows
+  halls as branch operating areas grouped under future floor containers, with a
+  localized hall name, a color picker, a preparation-place selector, sortable
+  hall cards, and edit/archive-style destructive controls. `rooms-tables.html`
+  and `rooms-hall-planning.html` use hall names and colors as board filters and
+  panel backgrounds. `rooms-hall-tables.html` is table-specific and implies no
+  hall columns beyond the selected hall relationship. The resulting Stage 1.17
+  `halls` schema is branch-owned (`tenant_id`, `branch_id`), localized name
+  JSON, `color`, `sort_order`, `active`, soft delete, timestamps, tenant/branch
+  indexes, and PostgreSQL RLS. `floor_id`, floor-plan geometry, preparation
+  place FK, table counts, table shapes, commission fields, and table metadata
+  are intentionally deferred because the Blueprint has no current tables/floors
+  schema and Stage 1.17 is Halls only.
+- Stage 1.17 smoke gotcha: curl scratch files could not be written under
+  `storage/framework/testing` because that directory is owned by `www-data` in
+  the local stack. The HTTP smoke used a temporary repo-root `.codex-smoke/`
+  directory instead and removed it after collecting evidence.
 
 ## Manual UI checks before PR
 - `/admin/menu/categories/create`: create a root category; `/admin/menu`
@@ -1287,17 +1304,54 @@ forbidden.
   tenant's category/item: expected HTTP result is 404.
 
 ## Next steps
-Complete Stage 1.14 API foundation:
-- [x] Inspect the real routing, middleware, Menu actions, models, support
-  helpers, auth/session config, architecture tests, and translations before
-  implementation.
-- [x] Implement the `/api/v1/menu-items` read-only endpoint and API envelope.
-- [x] Run required gates and curl smoke.
-- [ ] Commit and push `phase-2-stage-1.14-api-foundation`, open a PR, then
-  merge only after exact-head green CI.
-- [ ] After merge, confirm final `main` CI is green and begin Phase 2
-  Halls/Tables planning from updated `main`.
-  green CI.
+Complete Stage 1.17 Halls vertical slice:
+- [x] Step 1.17.1: Run Step 0 from updated `main`, verify Stage 1.16 audit
+  infrastructure is present, inspect Blueprint/doc/template/Menu/audit/tenancy
+  conventions, and record the hall schema rationale before implementation.
+  Result: branch `phase-2-stage-1.17-halls` created from `origin/main`
+  `e365ceb633ee2cb02be4ede52e04525fe01da4c0`; Stage 1.16 head
+  `ab73bab5c6008cad8b32673ce5951f50f88ad89e` is contained in `origin/main`;
+  `app/Support/Audit` and the audit logs migration exist.
+- [x] Step 1.17.2: Add the additive `halls` migration, RLS policy, indexes,
+  Tables module skeleton, and `Hall` model using tenant scope and soft deletes.
+  Result: `2026_07_23_010000_create_halls_table.php` creates `halls` with
+  tenant/branch indexes and `halls_tenant_isolation`; `Hall` uses
+  `BelongsToTenant` and `SoftDeletes`.
+- [x] Step 1.17.3: Add branch-scoped Hall Application query and lifecycle
+  actions for create, update, archive, restore, permanent delete, and paginated
+  list, with structured logs and same-transaction audit writes using
+  `tables.hall.*` action strings.
+  Result: all hall mutations run through Application actions, filter by
+  resolved branch, and record `tables.hall.created`, `.updated`, `.archived`,
+  `.restored`, and `.permanently_deleted` audit rows inside their transactions.
+- [x] Step 1.17.4: Add admin routes, controller/request, Blade UI, sidebar
+  navigation, shared confirm-modal destructive flows, translated flashes, and
+  superadmin-only archive maintenance.
+  Result: `/admin/tables/halls` supports list/create/edit/archive and
+  superadmin-only archived view/restore/permanent delete, using existing admin
+  layout/components and translated strings.
+- [x] Step 1.17.5: Add `tables.halls.manage` to seeded permissions and grant it
+  to owner/manager roles, then seed deterministic demo halls for both demo
+  tenants.
+  Result: owner/manager roles receive `tables.halls.manage`; demo halls are
+  seeded for Arat Kentron, Arat Dilijan, and Northstar Downtown.
+- [x] Step 1.17.6: Add architecture, Application, HTTP/UI, permission,
+  branch/tenant isolation, audit, translation, and PostgreSQL RLS tests.
+  Result: SQLite `make test` passed with `150 passed / 4 skipped / 1105
+  assertions`; PostgreSQL Tenancy passed with `20 passed / 70 assertions`;
+  architecture now includes `Tables` and proves module internals stay isolated.
+- [x] Step 1.17.7: Record the hall schema decision and pending Blueprint
+  amendment, run required Makefile verification and HTTP smoke, and leave a
+  zero-context handoff for the follow-up Tables stage.
+  Result: `docs/DECISIONS.md` records the Halls schema and required Blueprint
+  amendment; `make pint`, `make stan`, `make test`, `make tenant-isolation-pgsql`,
+  and `make fresh` all passed locally. HTTP smoke request id
+  `STAGE-1.17-HALLS-SMOKE-20260723180536` created, updated, archived, and
+  restored hall id `8`; audit rows were written for created/updated/archived/
+  restored with that correlation id. Next stage after Stage 1.17 is merged:
+  implement the actual Tables schema/UI against the `halls` relationship after
+  the owner-approved Blueprint amendment; no `tables` table is created in
+  Stage 1.17.
 
 Historical Stage 1.11 Part C subcategory implementation order:
 - [x] Step A: add schema/model foundation for `menu_categories.parent_id` and

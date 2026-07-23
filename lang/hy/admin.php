@@ -10,6 +10,7 @@ return [
     'nav' => [
         'dashboard' => 'Վահանակ',
         'menu' => 'Մենյու',
+        'tables' => 'Սրահներ',
     ],
     'actions' => [
         'cancel' => 'Չեղարկել',

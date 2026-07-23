@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\File;
 
-it('contains only the phase one module directories', function (): void {
+it('contains only the current module directories', function (): void {
     $modulesPath = app_path('Modules');
 
     $modules = collect(File::directories($modulesPath))
@@ -13,11 +13,11 @@ it('contains only the phase one module directories', function (): void {
         ->values()
         ->all();
 
-    expect($modules)->toBe(['Identity', 'Menu', 'Tenancy']);
+    expect($modules)->toBe(['Identity', 'Menu', 'Tables', 'Tenancy']);
 });
 
-foreach (['Tenancy', 'Identity', 'Menu'] as $module) {
-    $otherModules = collect(['Tenancy', 'Identity', 'Menu'])
+foreach (['Tenancy', 'Identity', 'Menu', 'Tables'] as $module) {
+    $otherModules = collect(['Tenancy', 'Identity', 'Menu', 'Tables'])
         ->reject(fn (string $candidate): bool => $candidate === $module);
 
     $forbiddenNamespaces = $otherModules
