@@ -249,3 +249,20 @@ Operational note: `smartrest_app` was mentioned earlier in the Phase 1 worklog,
 but current migrations and configuration do not create or use it. Current
 `docker-compose.yml`, `.env.example`, and `config/database.php` point
 application runtime traffic at `smartrest`.
+
+## 2026-07-23 — PostgreSQL extensions are privileged provisioning
+Decision: PostgreSQL extensions such as `pg_trgm` are provisioned by a
+privileged database role before unprivileged runtime/test traffic runs
+migrations. Migrations that depend on an extension must tolerate that
+pre-provisioned state by checking `pg_extension` before attempting
+`CREATE EXTENSION`, while still creating the extension when a privileged local
+migration role runs against a fresh database.
+Reason: the PostgreSQL tenant-isolation CI job exists to exercise RLS with a
+non-superuser, non-`BYPASSRLS` app role. Database-level extension creation is a
+privileged operation and must not be smuggled into that runtime role just to
+make migrations pass.
+Rejected: granting `CREATE ON DATABASE` to `smartrest_app` — it weakens the
+runtime role and hides privilege drift; switching the pgsql CI job back to the
+privileged `smartrest` role — it bypasses the RLS condition the job is meant
+to prove; removing the trigram indexes from the migration — it changes the
+Menu search schema rather than fixing provisioning.
