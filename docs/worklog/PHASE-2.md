@@ -1,13 +1,66 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.14 API foundation verified locally; PR CI pending
-Branch: phase-2-stage-1.14-api-foundation
+Status: Stage 1.16 audit log implementation in progress
+Branch: phase-2-stage-1.16-audit-log
 
 PR state: Codex may create and merge PRs after exact-head green CI; direct
 pushes to `main`, force-push, history rewriting, and branch deletion remain
 forbidden.
 
 ## Plan
+- [x] Stage 1.16.1: preconditions, branch, and read-only inspection. Verify a
+  clean worktree, fetch `origin/main`, confirm Stage 1.14 ancestry and
+  `routes/api.php`, fast-forward `main`, create
+  `phase-2-stage-1.16-audit-log`, inspect the existing Menu mutating actions,
+  logging context/redaction plumbing, tenancy model/RLS patterns, and relevant
+  tests, then list mutating actions and transaction boundaries before code.
+  Result: started from clean `main`, fetched `origin/main` at
+  `016bf5dc773ccb66aa774758118f56c6195b6f1a`, confirmed Stage 1.14 head
+  `3ea0e46` is an ancestor and `routes/api.php` exists, branch
+  `phase-2-stage-1.16-audit-log` was created, and inspection found Menu
+  mutating actions for category/item create, update, archive, restore,
+  force-delete, item activity toggle, image replace, and image remove.
+  Existing category archive/restore/force-delete used `DB::transaction()`;
+  the other mutating actions did not.
+- [x] Stage 1.16.2: audit persistence foundation. Add the additive reversible
+  `audit_logs` migration with tenant scope, indexes, PostgreSQL RLS policy,
+  append-only database triggers, the tenant-scoped append-only Eloquent model,
+  the `app/Support/Audit` recorder contract/implementation, and container
+  binding. Result: added `audit_logs` with tenant/date/action/target/branch
+  indexes, PostgreSQL `audit_logs_tenant_isolation` RLS policy, SQLite and
+  PostgreSQL append-only triggers, tenant-scoped `AuditLog`, `AuditRecorder`,
+  `EloquentAuditRecorder`, and the `AppServiceProvider` binding.
+- [x] Stage 1.16.3: Menu audit wiring. Reuse `RecordsMenuAction` so existing
+  structured INFO/WARNING logs remain intact, and wire exactly one audit row
+  per Menu mutation for category/item create, update, archive, restore,
+  force-delete, activity toggle, image replace, and image remove. Cascades will
+  be represented in the parent target's audit JSON with descendant id/count
+  metadata rather than per-row loops. Result: wired all listed Menu mutating
+  actions; cascade archive/restore/force-delete records one parent-target audit
+  row with category level, marker category id, and affected descendant counts
+  rather than one row per descendant.
+- [x] Stage 1.16.4: automated coverage. Add tests for correct audit context and
+  payload, transaction rollback/commit behavior, append-only enforcement,
+  redaction, Eloquent tenant scope, and PostgreSQL RLS coverage in the
+  Tenancy suite. Result: added `tests/Feature/Audit/AuditLogTest.php` for
+  context/payload, rollback and audit-failure atomicity, append-only model and
+  DB trigger enforcement, redaction, Eloquent tenant scoping, and full Menu
+  action-string coverage; extended `TenantIsolationTest` with PostgreSQL RLS
+  coverage for `audit_logs`.
+- [ ] Stage 1.16.5: documentation, verification, and release. Record the
+  ADR-009 implementation decision in `docs/DECISIONS.md`, keep this worklog
+  current, run `make pint`, `make stan`, `make test`,
+  `make tenant-isolation-pgsql`, `make fresh`, perform the required audit-row
+  smoke after `make fresh`, commit scoped paths, push, open a PR, and merge
+  only after exact-head green CI. Result so far: `docs/DECISIONS.md` records
+  the audit placement/append-only/transaction/device/action/redaction decision;
+  local gates passed with Pint pass, PHPStan pass, SQLite Pest `140 passed / 3
+  skipped / 979 assertions`, PostgreSQL Tenancy `19 passed / 67 assertions`,
+  and `make fresh` pass. HTTP smoke after `make fresh` logged in as
+  `manager@arat.test`, archived item `3`, and observed exactly one audit row
+  for correlation id `audit-smoke-archive-1`:
+  `menu.item.archived|menu_item|3|audit-smoke-archive-1`. Commit, push, PR,
+  exact-head CI, and merge are still pending.
 - [x] Stage 1.1: session setup and branch baseline. Create this Phase 2
   worklog, branch from fresh `main`, confirm Phase 1 Menu CRUD is present on
   `main`, and run the starting status checks. Commit only documentation for
@@ -1207,6 +1260,11 @@ forbidden.
   `category_id` API guard therefore treats a category that only has visible
   items in another branch as 404 so the filter cannot be used to infer another
   branch's menu structure.
+- Stage 1.16 audit gotcha: `MenuDemoSeeder` calls the Menu item image
+  Application actions, so `make fresh` now creates seed audit rows for image
+  replace/remove actions with actor null and generated correlation ids. Manual
+  audit smoke must isolate the user action by a unique `X-Request-Id` instead
+  of assuming the table starts empty after seeding.
 
 ## Manual UI checks before PR
 - `/admin/menu/categories/create`: create a root category; `/admin/menu`
@@ -1340,6 +1398,7 @@ Historical Stage 1.11 Part C subcategory implementation order:
   `load-manager+20260723071232-1-restaurant-1@smartrest.test`: `POST /login`
   returned `302` to `/admin`, then `GET /admin` returned `200`.
 
-Next action: finish Stage 1.15 policy verification, push and merge the policy
-PR after exact-head green CI, then start Stage 1.14 API work from updated
-`main`.
+Next action: commit the Stage 1.16 audit-log implementation with the scoped
+documentation updates, push `phase-2-stage-1.16-audit-log`, open a PR into
+`main`, wait for exact-head green CI, then merge with a merge commit only if
+CI is green on that exact SHA.

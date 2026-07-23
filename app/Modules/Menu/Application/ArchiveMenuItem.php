@@ -7,6 +7,7 @@ namespace App\Modules\Menu\Application;
 use App\Modules\Menu\Domain\MenuDomainException;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use App\Modules\Tenancy\Contracts\BranchContext;
+use Illuminate\Support\Facades\DB;
 
 final class ArchiveMenuItem
 {
@@ -33,9 +34,20 @@ final class ArchiveMenuItem
         $item = MenuItem::query()
             ->where('branch_id', $branchId)
             ->findOrFail($itemId);
+        $before = $this->menuItemAuditPayload($item);
 
-        $item->forceFill(['archived_with_category_id' => null])->save();
-        $item->delete();
+        DB::transaction(function () use ($before, $item, $itemId): void {
+            $item->forceFill(['archived_with_category_id' => null])->save();
+            $item->delete();
+
+            $this->auditMenuMutation(
+                'menu.item.archived',
+                'menu_item',
+                $itemId,
+                $before,
+                $this->menuItemAuditPayload($item->refresh()),
+            );
+        });
 
         $this->logSuccess('menu.items.archive', $startedAt, [
             'branch_id' => $branchId,

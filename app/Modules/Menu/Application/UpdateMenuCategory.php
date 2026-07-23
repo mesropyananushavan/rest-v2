@@ -7,6 +7,7 @@ namespace App\Modules\Menu\Application;
 use App\Modules\Menu\Domain\MenuDomainException;
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use App\Support\I18n\LocalizedText;
+use Illuminate\Support\Facades\DB;
 
 final class UpdateMenuCategory
 {
@@ -25,12 +26,24 @@ final class UpdateMenuCategory
             throw MenuDomainException::categoryParentChangeBlocked();
         }
 
-        $category->update([
-            'parent_id' => $parent === null ? null : (int) $parent->id,
-            'translated_name' => $name->toArray(),
-            'sort_order' => $sortOrder,
-            'active' => $active,
-        ]);
+        $before = $this->menuCategoryAuditPayload($category);
+
+        DB::transaction(function () use ($active, $category, $name, $parent, $sortOrder, $before): void {
+            $category->update([
+                'parent_id' => $parent === null ? null : (int) $parent->id,
+                'translated_name' => $name->toArray(),
+                'sort_order' => $sortOrder,
+                'active' => $active,
+            ]);
+
+            $this->auditMenuMutation(
+                'menu.category.updated',
+                'menu_category',
+                (int) $category->id,
+                $before,
+                $this->menuCategoryAuditPayload($category->refresh()),
+            );
+        });
 
         $this->logSuccess('menu.categories.update', $startedAt, [
             'category_id' => (int) $category->id,

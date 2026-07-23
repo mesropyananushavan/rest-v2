@@ -13,6 +13,7 @@ use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Modules\Tenancy\Contracts\TenantResolver;
 use App\Modules\Tenancy\Infrastructure\Models\Branch;
 use App\Modules\Tenancy\Infrastructure\Models\Tenant;
+use App\Support\Audit\AuditLog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
@@ -299,6 +300,57 @@ it('enforces PostgreSQL row level security for menu tables', function (): void {
     expect(rawMenuItemIds())->toBe([(int) $itemB->id]);
 });
 
+it('enforces PostgreSQL row level security for audit logs', function (): void {
+    if (! usesPostgresRowLevelSecurity()) {
+        $this->markTestSkipped('PostgreSQL RLS coverage runs only on pgsql.');
+    }
+
+    $tenantA = tenantWithUser('tenant-a', 'manager-a', ['menu.items.manage']);
+    $tenantB = tenantWithUser('tenant-b', 'manager-b', ['menu.items.manage']);
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+    app(BranchContext::class)->set((int) $tenantA['branch']->id);
+
+    $auditA = AuditLog::query()->create([
+        'branch_id' => (int) $tenantA['branch']->id,
+        'actor_id' => (int) $tenantA['user']->id,
+        'action' => 'menu.item.created',
+        'target_type' => 'menu_item',
+        'target_id' => 1,
+        'before_json' => null,
+        'after_json' => ['tenant' => 'a'],
+        'correlation_id' => 'tenant-a-audit',
+        'ip_address' => null,
+    ]);
+
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+    app(BranchContext::class)->set((int) $tenantB['branch']->id);
+
+    $auditB = AuditLog::query()->create([
+        'branch_id' => (int) $tenantB['branch']->id,
+        'actor_id' => (int) $tenantB['user']->id,
+        'action' => 'menu.item.created',
+        'target_type' => 'menu_item',
+        'target_id' => 2,
+        'before_json' => null,
+        'after_json' => ['tenant' => 'b'],
+        'correlation_id' => 'tenant-b-audit',
+        'ip_address' => null,
+    ]);
+
+    app(TenantResolver::class)->clear();
+
+    expect(rawAuditLogIds())->toBe([]);
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+
+    expect(rawAuditLogIds())->toBe([(int) $auditA->id]);
+
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+
+    expect(rawAuditLogIds())->toBe([(int) $auditB->id]);
+});
+
 it('checks action permissions through the identity authorizer contract', function (): void {
     $tenant = tenantWithUser('tenant-a', 'manager-a', ['menu.items.manage']);
 
@@ -397,6 +449,16 @@ function rawBranchIds(): array
 function rawMenuItemIds(): array
 {
     return collect(DB::select('select id from menu_items order by id'))
+        ->map(fn (object $row): int => (int) $row->id)
+        ->all();
+}
+
+/**
+ * @return list<int>
+ */
+function rawAuditLogIds(): array
+{
+    return collect(DB::select('select id from audit_logs order by id'))
         ->map(fn (object $row): int => (int) $row->id)
         ->all();
 }

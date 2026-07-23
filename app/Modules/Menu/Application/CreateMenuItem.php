@@ -10,6 +10,7 @@ use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Support\I18n\LocalizedText;
 use App\Support\Money\Money;
+use Illuminate\Support\Facades\DB;
 
 final class CreateMenuItem
 {
@@ -41,16 +42,28 @@ final class CreateMenuItem
 
         $category = $this->findValidSubcategory($categoryId);
 
-        $item = MenuItem::query()->create([
-            'branch_id' => $branchId,
-            'category_id' => (int) $category->id,
-            'translated_name' => $name->toArray(),
-            'translated_description' => $description?->toArray(),
-            'price_minor' => $price->minor,
-            'currency' => $price->currency,
-            'sort_order' => $sortOrder,
-            'active' => $active,
-        ]);
+        $item = DB::transaction(function () use ($active, $branchId, $category, $description, $name, $price, $sortOrder): MenuItem {
+            $item = MenuItem::query()->create([
+                'branch_id' => $branchId,
+                'category_id' => (int) $category->id,
+                'translated_name' => $name->toArray(),
+                'translated_description' => $description?->toArray(),
+                'price_minor' => $price->minor,
+                'currency' => $price->currency,
+                'sort_order' => $sortOrder,
+                'active' => $active,
+            ]);
+
+            $this->auditMenuMutation(
+                'menu.item.created',
+                'menu_item',
+                (int) $item->id,
+                null,
+                $this->menuItemAuditPayload($item),
+            );
+
+            return $item;
+        });
 
         $this->logSuccess('menu.items.create', $startedAt, [
             'branch_id' => $branchId,

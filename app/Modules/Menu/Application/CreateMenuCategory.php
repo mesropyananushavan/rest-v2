@@ -7,6 +7,7 @@ namespace App\Modules\Menu\Application;
 use App\Modules\Menu\Domain\MenuDomainException;
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use App\Support\I18n\LocalizedText;
+use Illuminate\Support\Facades\DB;
 
 final class CreateMenuCategory
 {
@@ -17,12 +18,24 @@ final class CreateMenuCategory
         $startedAt = microtime(true);
         $parent = $this->findValidParent($parentId);
 
-        $category = MenuCategory::query()->create([
-            'parent_id' => $parent === null ? null : (int) $parent->id,
-            'translated_name' => $name->toArray(),
-            'sort_order' => $sortOrder,
-            'active' => $active,
-        ]);
+        $category = DB::transaction(function () use ($active, $name, $parent, $sortOrder): MenuCategory {
+            $category = MenuCategory::query()->create([
+                'parent_id' => $parent === null ? null : (int) $parent->id,
+                'translated_name' => $name->toArray(),
+                'sort_order' => $sortOrder,
+                'active' => $active,
+            ]);
+
+            $this->auditMenuMutation(
+                'menu.category.created',
+                'menu_category',
+                (int) $category->id,
+                null,
+                $this->menuCategoryAuditPayload($category),
+            );
+
+            return $category;
+        });
 
         $this->logSuccess('menu.categories.create', $startedAt, [
             'category_id' => (int) $category->id,

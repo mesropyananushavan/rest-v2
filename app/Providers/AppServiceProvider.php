@@ -19,6 +19,8 @@ use App\Modules\Tenancy\Infrastructure\Context\InMemoryBranchContext;
 use App\Modules\Tenancy\Infrastructure\Context\InMemoryTenantResolver;
 use App\Modules\Tenancy\Infrastructure\Directory\EloquentTenantDirectory;
 use App\Modules\Tenancy\Infrastructure\Settings\EloquentTenantSettingsReader;
+use App\Support\Audit\AuditRecorder;
+use App\Support\Audit\EloquentAuditRecorder;
 use App\Support\Logging\LogContext;
 use App\Support\Logging\Redactor;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -45,6 +47,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(Authorizer::class, EloquentAuthorizer::class);
         $this->app->bind(UserDirectory::class, EloquentUserDirectory::class);
         $this->app->bind(PermissionCatalog::class, EloquentPermissionCatalog::class);
+        $this->app->bind(AuditRecorder::class, EloquentAuditRecorder::class);
     }
 
     /**

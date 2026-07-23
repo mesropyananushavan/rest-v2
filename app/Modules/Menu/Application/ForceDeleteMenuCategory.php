@@ -26,15 +26,26 @@ final class ForceDeleteMenuCategory
         $deletedItemCount = 0;
         $categoryLevel = 'root';
         $imagesToDelete = [];
+        $before = null;
 
-        DB::transaction(function () use ($categoryId, &$deletedSubcategoryCount, &$deletedItemCount, &$categoryLevel, &$imagesToDelete): void {
+        DB::transaction(function () use ($categoryId, &$before, &$deletedSubcategoryCount, &$deletedItemCount, &$categoryLevel, &$imagesToDelete): void {
             $category = MenuCategory::onlyTrashed()->findOrFail($categoryId);
+            $before = $this->menuCategoryAuditPayload($category);
 
             if ($category->parent_id !== null) {
                 $categoryLevel = 'subcategory';
                 $deletedItemCount = $this->forceDeleteItemsForCategories([$categoryId], $imagesToDelete);
 
                 $category->forceDelete();
+
+                $this->auditMenuMutation('menu.category.permanently_deleted', 'menu_category', $categoryId, $before, [
+                    'deleted' => true,
+                    'cascade' => [
+                        'category_level' => $categoryLevel,
+                        'deleted_item_count' => $deletedItemCount,
+                        'deleted_subcategory_count' => 0,
+                    ],
+                ]);
 
                 return;
             }
@@ -60,6 +71,15 @@ final class ForceDeleteMenuCategory
                 });
 
             $category->forceDelete();
+
+            $this->auditMenuMutation('menu.category.permanently_deleted', 'menu_category', $categoryId, $before, [
+                'deleted' => true,
+                'cascade' => [
+                    'category_level' => $categoryLevel,
+                    'deleted_item_count' => $deletedItemCount,
+                    'deleted_subcategory_count' => $deletedSubcategoryCount,
+                ],
+            ]);
         });
 
         foreach ($imagesToDelete as $metadata) {

@@ -8,6 +8,7 @@ use App\Modules\Menu\Domain\MenuDomainException;
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use App\Modules\Tenancy\Contracts\BranchContext;
+use Illuminate\Support\Facades\DB;
 
 final class RestoreMenuItem
 {
@@ -34,6 +35,7 @@ final class RestoreMenuItem
         $item = MenuItem::withTrashed()
             ->where('branch_id', $branchId)
             ->findOrFail($itemId);
+        $before = $this->menuItemAuditPayload($item);
 
         $category = MenuCategory::withTrashed()->findOrFail((int) $item->category_id);
 
@@ -48,11 +50,21 @@ final class RestoreMenuItem
             throw $exception;
         }
 
-        $item->forceFill([
-            'deleted_at' => null,
-            'archived_with_category_id' => null,
-            'updated_at' => now(),
-        ])->save();
+        DB::transaction(function () use ($before, $item, $itemId): void {
+            $item->forceFill([
+                'deleted_at' => null,
+                'archived_with_category_id' => null,
+                'updated_at' => now(),
+            ])->save();
+
+            $this->auditMenuMutation(
+                'menu.item.restored',
+                'menu_item',
+                $itemId,
+                $before,
+                $this->menuItemAuditPayload($item->refresh()),
+            );
+        });
 
         $this->logSuccess('menu.items.restore', $startedAt, [
             'branch_id' => $branchId,
