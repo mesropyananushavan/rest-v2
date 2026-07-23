@@ -157,7 +157,7 @@ backfill/sync failure modes before measured need; full-text search only —
 less suitable for short substrings, partial dish names, and multilingual
 operator input.
 
-## 2026-07-21 — Menu category searchable combobox
+## 2026-07-21 — Menu category searchable combobox (revised 2026-07-23)
 Decision: Menu category selection uses one shared Alpine combobox backed by a
 shared JSON endpoint with server-side, debounced, paginated category lookup. It
 applies to both category parent selection (`parent_id` on the plain Blade

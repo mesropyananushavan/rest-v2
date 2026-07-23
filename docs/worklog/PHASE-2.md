@@ -1,6 +1,6 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.11 Part C Block 4.5 load-timing measurements recorded; owner handoff next
+Status: Stage 1.11 Part D searchable combobox implemented locally; awaiting owner review before commits
 Branch: phase-2-stage-1.11c-menu-ux
 
 PR state: owner creates and merges PRs; Codex does not create PRs.
@@ -455,15 +455,28 @@ PR state: owner creates and merges PRs; Codex does not create PRs.
   category page, item page, global search query, inactive/archive filters),
   and keep image upload behavior from Part B intact. Add `hy`/`ru`/`en`
   translations and Pest coverage for create/edit context and searchable
-  category selection. Verification note from Block 3 on 2026-07-23: this is
-  not implemented yet. The code still renders a plain `select` for
-  `category_id`, and save/cancel redirect to bare `admin.menu.index` without
-  preserving category/page/search/filter context.
-- [ ] Stage 1.11 Part D: finish deferred item form UX. Implement the
-  Livewire + Alpine searchable category combobox and context-preserving
-  save/cancel flow that were found missing during Block 3 verification.
-  Do not include this in Stage 1.11 Part C unless the owner explicitly
-  re-scopes the current branch.
+  category selection. Verification note from Block 3 on 2026-07-23: this was
+  not implemented in Part C. Part D owner re-scope on 2026-07-23 split the
+  missing work: shared searchable combobox first, context-preserving
+  save/cancel remains pending.
+- [ ] Stage 1.11 Part D: finish deferred item form UX. Implement the shared
+  JSON endpoint + shared Alpine searchable combobox for both category
+  `parent_id` and item `category_id`, then separately implement
+  context-preserving save/cancel flow that was found missing during Block 3
+  verification. Current local result on 2026-07-23: searchable combobox is
+  implemented but not committed. It adds `SearchMenuCategoryOptions`, two
+  permission-scoped JSON endpoints, one `x-form.searchable-select` Alpine
+  widget, and applies it to the plain Blade category form and Livewire item
+  form. Widget typing does not mutate hidden ids; if focus leaves without an
+  option choice, the visible text returns to the previous selected label, and
+  clearing is explicit only. The component also accepts an explicit server
+  `value`, so a missing backend label cannot overwrite an existing hidden id.
+  Gate passed: `make pint`, `make stan`, `make test` (`110 passed / 2 skipped
+  / 802 assertions`) and direct container `npm run build` produced Vite assets
+  (`public/build/assets/app-Blopmbua.js`). Current load DB proof: 5 load tenants have 600
+  categories total; one load tenant has 120 categories (20 roots, 100
+  subcategories); both forms render only 10 initial options with `has_more=true`
+  and no native `parent_id`/`category_id` select.
 - [ ] Stage 1.11.10.6 (Part C): load-data command and performance fixes. Add
   an artisan command outside `DemoSeeder` to generate about 200 categories and
   20000 items per tenant with deterministic localized names, prices, active
@@ -957,5 +970,8 @@ Stage 1.11 Part C subcategory implementation order after owner-approved
   `load-manager+20260723071232-1-restaurant-1@smartrest.test`: `POST /login`
   returned `302` to `/admin`, then `GET /admin` returned `200`.
 
-Next action: owner review/handoff for Stage 1.11 Part C. Do not create
-PRs/merges/pushes or switch branches.
+Next action: owner review of the uncommitted Stage 1.11 Part D searchable
+combobox diff. If approved, commit logically as action+tests,
+endpoint+tests, Alpine widget, and form application; then continue with the
+still-pending context-preserving save/cancel work. Do not create PRs/merges,
+pushes, or switch branches.
