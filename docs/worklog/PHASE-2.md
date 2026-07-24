@@ -2649,13 +2649,23 @@ Tenant translation override write-side plan:
   grants in `TenantTranslationOverridePermissionTest`. Verification: `make
   test` passed (`197 passed / 6 skipped / 2106 assertions`) and `make pint`
   passed (`231 files`).
-- [ ] Stage 1.13.3: write actions and validation. Add Application actions for
+- [x] Stage 1.13.3: write actions and validation. Add Application actions for
   setting and resetting tenant translation overrides; validate supported
   locale, language-file key existence, central non-overridable key rejection
   with stable domain error code, max value length, and same-tenant actor
   scope; emit structured success/failure logs and append-only audit records
   with before/after values; update `docs/DECISIONS.md` for the key-existence
-  write rule.
+  write rule. Result: added `SetTenantTranslationOverride` and
+  `ResetTenantTranslationOverride` Application actions, stable
+  `admin.translation_overrides.errors.*` domain codes with `hy`/`ru`/`en`
+  translations, the `LanguageFileTranslationKeys` language-file-only
+  existence checker, tenant-same-actor authorization, max value length, and
+  set/reset audit records including before/after payloads. `docs/DECISIONS.md`
+  now records the language-file key-existence rule. Verification: first `make
+  test` failed because `LanguageFileTranslationKeys` needed an explicit
+  binding to Laravel's `translation.loader`; after binding it, `make test`
+  passed (`203 passed / 6 skipped / 2144 assertions`), `make stan` passed
+  (`137/137`, `[OK] No errors`), and `make pint` passed (`238 files`).
 - [ ] Stage 1.13.4: centralized cache invalidation. Refactor override cache
   invalidation into one public tenant/locale write invalidation entry point
   that always refreshes/invalidates both the map layer and presence marker
@@ -2676,6 +2686,6 @@ Tenant translation override write-side plan:
   and both job statuses, then stop without creating or merging a PR.
 
 ## Next steps
-Start Stage 1.13.3: add set/reset Application actions with write-time
-validation, stable domain error codes, audit records, and the key-existence
-decision update.
+Start Stage 1.13.4: centralize tenant/locale cache invalidation so both the
+override map and presence marker are always updated together, then add the
+immediate translation-helper cache scenario tests.

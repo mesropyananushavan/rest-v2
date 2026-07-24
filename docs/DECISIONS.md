@@ -626,3 +626,9 @@ overridable. Their wording carries security, permission, or irreversible-action
 meaning; allowing tenants to soften or hide it would weaken safe operation. The
 read resolver centrally ignores database rows for those keys, so a future edit
 UI cannot make them affect rendering.
+Write rule: set/reset actions reject any translation key that does not resolve
+to a string in the committed `hy`/`ru`/`en` language files. Junk keys are not
+stored "for later" because they cannot be reviewed in context, cannot be safely
+classified against the non-overridable registry, and would make future editing
+UI behave like a free-form key/value store instead of a controlled UI wording
+override.
