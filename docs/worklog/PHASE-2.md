@@ -353,13 +353,63 @@ forbidden.
   category_id=56&per_page=25&page=1` returned `200` with `25` item ids,
   including `id=16` and excluding `id=4696`; page `2` returned `200` with
   `25` item ids, including `id=4696` and excluding `id=16`.
-- [ ] Stage 1.11C-scale-review2.6: final gates, branch diff review, worklog
+- [x] Stage 1.11C-scale-review2.6: final gates, branch diff review, worklog
   handoff, and push. Run `make pint`, `make stan`, `make test`, `make fresh`,
   PostgreSQL tenant-isolation, the combined dataset load/counts, final
   `ANALYZE`/EXPLAIN evidence, corrected paging smoke, `git diff --check`, and
   full branch diff review versus `origin/main`. Commit each logical step with
   its worklog update and push the feature branch only if green; do not create
-  or merge a PR. Result: pending.
+  or merge a PR. Result: final local gates passed. `make pint`: `PASS
+  214 files`. `make stan`: `121/121`, `[OK] No errors`. `make test`:
+  `175 passed / 5 skipped / 1399 assertions`. `make fresh`: passed; migration
+  output ends at `2026_07_24_000000_add_load_test_markers_to_menu_tables` and
+  no longer includes the removed panel-index migration. PostgreSQL tenancy
+  suite: `21 passed / 73 assertions`.
+
+  Final combined dataset after `make fresh`: `menu:load-test-data
+  --purge-generated` produced `400` generated categories and `40000` generated
+  items in `10.157s` command time (`11.93s` wall clock). `menu:seed-load
+  --mode=production-like --restaurants=100 --categories=100 --subcategories=1
+  --items=16 --batch=20000` ran without `--fresh`, inserted 100 load tenants,
+  100 branches, 100 users, 10000 roots, 10000 subcategories, and 160000 items;
+  `copy_load_seconds=59.643`, wall clock `1:02.42`. Combined counts:
+  `tenants=102`, `branches=103`, `users=108`, `menu_categories=20407`,
+  `root_categories=10042`, `subcategories=10365`, `menu_items=200007`. Demo
+  tenants min/max roots `21/21`, subcategories `182/183`, items
+  `20002/20005`; load tenants min/max roots `100/100`, subcategories
+  `100/100`, items `1600/1600`.
+
+  Final `ANALYZE` plus real captured action SQL measurements:
+
+  | Query | Without removed index | With temporary removed index | Estimate / actual |
+  |---|---:|---:|---:|
+  | Panel root count | `Index Only Scan using menu_categories_tenant_parent_deleted_active_sort_id_idx`, `0.188 ms` | `Index Only Scan using menu_categories_tenant_parent_deleted_sort_id_idx`, `0.136 ms` | `98 / 100` |
+  | Panel root page | `Bitmap Heap Scan` + active index bitmap, `0.792 ms` | `Bitmap Heap Scan` + removed-index bitmap, `0.690 ms` | `98 / 100`, returned `25` |
+  | Panel child eager-load | `Index Scan using menu_categories_parent_id_idx`, `0.245 ms` | same index, `0.259 ms` | `1 / 25` |
+  | Category item first page | `Index Scan using menu_items_tenant_branch_category_deleted_sort_id_idx`, `0.707 ms` | n/a | `1 / 54`, returned `25` |
+  | Category item deep page | same item index, `0.450 ms` | n/a | `1 / 54`, returned `4` |
+  | Global search hit | `Bitmap Heap Scan` with `BitmapAnd` over `menu_items_tenant_branch_load_test_key_idx` and `menu_items_translated_name_trgm_idx`, `0.885 ms` | n/a | `1 / 1` |
+  | Global search miss count | same bitmap indexes, `0.751 ms` | n/a | `1 / 0` |
+
+  The temporary `menu_categories_tenant_parent_deleted_sort_id_idx` was dropped
+  after measurement and `to_regclass(...)` returned null, restoring the local
+  DB to the current branch state. The deciding evidence remains removal: the
+  temporary index provides only about `0.052 ms` to `0.102 ms` on the root
+  count/page statements and does not improve child eager-load; the existing
+  active tenant/parent/deleted index already prevents sequential scans.
+
+  Final corrected paging smoke against `http://127.0.0.1:8080`: `GET /login`
+  `200`, manager `POST /login` `302`; `/admin/menu?category=56` `200` with
+  page-1 marker `Այգու պանիր ուտեստ arat-riverside 1-9` and without page-2
+  marker `Շուկայի պանիր ուտեստ arat-riverside 1-4689`;
+  `/admin/menu?category=56&item_page=2` `200` with the page-2 marker and
+  without the page-1 marker; `/api/v1/menu-items?category_id=56&per_page=25&
+  page=1` `200` with `25` ids including `16` and excluding `4696`; page `2`
+  `200` with `25` ids including `4696` and excluding `16`. `git diff --check`
+  passed. Full branch diff versus `origin/main` reviewed: 17 files, limited to
+  Menu scale/read tooling, command safety, README, decisions/worklog, Makefile
+  artisan target, load-marker migration, and Menu tests; no `docs/BLUEPRINT.md`,
+  `template/`, assets, or unrelated modules changed.
 - [x] Stage 1.16.1: preconditions, branch, and read-only inspection. Verify a
   clean worktree, fetch `origin/main`, confirm Stage 1.14 ancestry and
   `routes/api.php`, fast-forward `main`, create
@@ -2058,6 +2108,4 @@ Decisions awaiting the owner:
 ## Next steps
 Next Menu session: converge the Livewire `MenuIndex` read adapter onto the
 single `BrowseMenuItems` read path using the characterization tests from this
-review as the safety net; after that, continue the UI-only master-detail follow
-up for context-preserving save/cancel and moving archive/restore/force-delete
-controls into the row overflow.
+review as the safety net; do not redesign the UI in that convergence step.
