@@ -244,13 +244,30 @@ forbidden.
   `--fresh` for 100 synthetic load tenants with 100 roots each, one subcategory
   per root, and enough items per subcategory to make the single local database
   state reach at least 100 tenants, 10000 roots, and 200000 total menu items.
-- [ ] Stage 1.11C-scale-review2.2: build and count the combined local dataset.
+- [x] Stage 1.11C-scale-review2.2: build and count the combined local dataset.
   After one `make fresh`, run `menu:load-test-data --purge-generated` for the
   two demo tenants and run `menu:seed-load` without `--fresh` for 100 synthetic
   load tenants with at least 100 roots each and enough generated items to make
   total `menu_items >= 200000`. Record exact wall clock time, per-table counts,
   per-tenant min/max counts, and any scale ceiling or bottleneck if the target
-  cannot be reached. Result: pending.
+  cannot be reached. Result: target reached without reduction on the local dev
+  PostgreSQL database. `make fresh` passed first. `menu:load-test-data
+  --purge-generated` generated the two demo tenants in `9.713s` command time
+  (`11s` wall clock): generated rows were `menu_categories=400` and
+  `menu_items=40000`, with `arat-riverside` and `northstar-bistro` each at
+  `200` generated categories and `20000` generated items. Then
+  `menu:seed-load --mode=production-like --restaurants=100 --categories=100
+  --subcategories=1 --items=16 --batch=20000` ran without `--fresh` and
+  inserted 100 load tenants, 100 branches, 100 load-manager users, 10000 roots,
+  10000 subcategories, and 160000 items in `63.075s` command time (`64s` wall
+  clock). Combined per-table counts in the single DB state: `tenants=102`,
+  `branches=103`, `users=108`, `menu_categories=20407`, root categories
+  `10042`, subcategories `10365`, and `menu_items=200007`. Per-tenant counts:
+  demo tenants min/max roots `21/21`, subcategories `182/183`, items
+  `20002/20005` including DemoSeeder rows; load tenants min/max roots
+  `100/100`, subcategories `100/100`, items `1600/1600`. The bottleneck was
+  PostgreSQL COPY plus live index maintenance during item insertion; no scale
+  reduction was needed.
 - [ ] Stage 1.11C-scale-review2.3: capture real SQL and re-measure with/without
   the panel index. Use `DB::listen` around the actual Application actions on
   the combined dataset to capture panel, item pagination, and global search SQL.
