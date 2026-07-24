@@ -91,6 +91,60 @@ it('searches by key fragment and renders row state with all locale values', func
         ->assertSee('Панель', false);
 });
 
+it('keeps special translation values out of JavaScript evaluated attributes', function (): void {
+    $records = translationEditorUser('translation-editor-js-encoding', [TenantTranslationOverridePermissions::MANAGE]);
+    translationEditorContext($records);
+
+    $valuesByKey = [
+        'admin.brand.tagline' => "Chef's dashboard",
+        'admin.dashboard.eyebrow' => 'Quote "dashboard"',
+        'admin.dashboard.metrics.categories.label' => 'Path C:\\kitchen',
+        'admin.dashboard.metrics.items.label' => "Line one\nLine two",
+        'admin.dashboard.subtitle' => 'Unicode խոհանոց marker',
+        'admin.dashboard.title' => '<strong>Markup marker</strong>',
+    ];
+
+    foreach ($valuesByKey as $key => $value) {
+        TenantTranslationOverride::query()->create([
+            'locale' => 'en',
+            'translation_key' => $key,
+            'override_value' => $value,
+        ]);
+    }
+
+    app(TenantTranslationOverrides::class)->clearRequestCache();
+
+    $response = $this->actingAs($records['user'])
+        ->withSession(['branch_id' => (int) $records['branch']->id])
+        ->get(route('admin.translation-overrides.index', ['locale' => 'en']));
+
+    $response->assertOk();
+
+    $html = $response->getContent();
+    $javascriptAttributes = translationEditorJavascriptEvaluatedAttributes($html);
+    $startEditingAttributes = array_values(array_filter(
+        translationEditorJavascriptEvaluatedAttributeList($html),
+        fn (string $attribute): bool => str_contains($attribute, 'startEditing('),
+    ));
+
+    foreach ($valuesByKey as $value) {
+        expect($html)->toContain(e($value));
+    }
+
+    foreach (['Chef', 'Quote', 'Path C:', 'Line one', 'Unicode', 'Markup marker'] as $marker) {
+        expect($javascriptAttributes)->not->toContain($marker);
+    }
+
+    foreach ($startEditingAttributes as $attribute) {
+        expect($attribute)->not->toContain(',');
+    }
+
+    expect($startEditingAttributes)->not->toBeEmpty()
+        ->and(implode("\n", $startEditingAttributes))->toContain('admin.dashboard.title')
+        ->and($html)->toContain('&lt;strong&gt;Markup marker&lt;/strong&gt;')
+        ->and($html)->not->toContain('<strong>Markup marker</strong>');
+});
+
 it('edits and resets an override through the existing actions while preserving URL-backed state', function (): void {
     $records = translationEditorUser('translation-editor-write', [TenantTranslationOverridePermissions::MANAGE]);
     translationEditorContext($records);
@@ -98,7 +152,7 @@ it('edits and resets an override through the existing actions while preserving U
     Livewire::withQueryParams(['locale' => 'en', 'q' => 'dashboard', 'page' => 1])
         ->actingAs($records['user'])
         ->test(TranslationOverridesEditor::class)
-        ->call('startEditing', 'admin.dashboard.title', 'Dashboard')
+        ->call('startEditing', 'admin.dashboard.title')
         ->set('overrideValue', 'Ops Center')
         ->call('save')
         ->assertSet('locale', 'en')
@@ -126,7 +180,7 @@ it('rejects crafted blocked key writes through the editor', function (): void {
     Livewire::actingAs($records['user'])
         ->test(TranslationOverridesEditor::class)
         ->set('locale', 'en')
-        ->call('startEditing', 'menu.confirm.force_delete_item_message', 'Unsafe')
+        ->set('editingKey', 'menu.confirm.force_delete_item_message')
         ->set('overrideValue', 'Hide the danger')
         ->call('save')
         ->assertHasErrors('overrideValue')
@@ -144,7 +198,7 @@ it('rejects attempts to override the editor own strings', function (): void {
     Livewire::actingAs($records['user'])
         ->test(TranslationOverridesEditor::class)
         ->set('locale', 'en')
-        ->call('startEditing', 'admin.translation_overrides.actions.reset', 'Reset')
+        ->set('editingKey', 'admin.translation_overrides.actions.reset')
         ->set('overrideValue', 'Disappear')
         ->call('save')
         ->assertHasErrors('overrideValue')
@@ -164,7 +218,7 @@ it('rejects crafted cross-tenant writes through the editor', function (): void {
     Livewire::actingAs($tenantA['user'])
         ->test(TranslationOverridesEditor::class)
         ->set('locale', 'en')
-        ->call('startEditing', 'admin.dashboard.title', 'Dashboard')
+        ->call('startEditing', 'admin.dashboard.title')
         ->set('overrideValue', 'Foreign tenant text')
         ->call('save')
         ->assertStatus(403);
@@ -187,7 +241,7 @@ it('denies users without the permission from viewing or writing through the edit
     Livewire::actingAs($records['user'])
         ->test(TranslationOverridesEditor::class)
         ->set('locale', 'en')
-        ->call('startEditing', 'admin.dashboard.title', 'Dashboard')
+        ->call('startEditing', 'admin.dashboard.title')
         ->assertStatus(403);
 
     Livewire::actingAs($records['user'])
@@ -300,6 +354,28 @@ function translationEditorContext(array $records): void
 {
     app(TenantResolver::class)->set((int) $records['tenant']->id);
     app(BranchContext::class)->set((int) $records['branch']->id);
+}
+
+function translationEditorJavascriptEvaluatedAttributes(string $html): string
+{
+    return implode("\n", translationEditorJavascriptEvaluatedAttributeList($html));
+}
+
+/**
+ * @return list<string>
+ */
+function translationEditorJavascriptEvaluatedAttributeList(string $html): array
+{
+    preg_match_all(
+        '/\s(?:wire:click|x-data|x-on:[A-Za-z0-9_:.\-]+|@[A-Za-z][A-Za-z0-9_:.\-]*|onclick)=([\'"])(.*?)\1/s',
+        $html,
+        $matches,
+    );
+
+    return array_map(
+        fn (string $attribute): string => html_entity_decode($attribute, ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+        $matches[2],
+    );
 }
 
 /**

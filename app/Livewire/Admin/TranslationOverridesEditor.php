@@ -52,12 +52,22 @@ final class TranslationOverridesEditor extends Component
         ]);
     }
 
-    public function startEditing(string $key, string $effectiveValue): void
+    public function startEditing(string $key): void
     {
         $this->authorizeEditor();
 
+        $row = app(SearchTenantTranslationOverrides::class)->rowForKey($this->locale, $key);
+
+        if ($row === null) {
+            $this->editingKey = null;
+            $this->overrideValue = '';
+            $this->errorMessage = __('admin.translation_overrides.errors.translation_key_missing');
+
+            return;
+        }
+
         $this->editingKey = $key;
-        $this->overrideValue = $effectiveValue;
+        $this->overrideValue = $row->effectiveValue;
         $this->resetErrorBag('overrideValue');
     }
 

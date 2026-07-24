@@ -217,6 +217,12 @@ each other and you cannot resolve it safely.
 - Mutating actions return translated success/error flash messages.
 - Screens are responsive for desktop, tablets, and mobile using Blade,
   Livewire, Alpine.js, and Tailwind CSS with the SmartRest Tailwind theme.
+- PHP values, including translation strings and user-entered text, must never
+  be interpolated raw into Alpine directives, inline `on*` handlers, or
+  `wire:click` expressions. Pass the minimum identifier through a framework JS
+  encoder such as `@js` / `Js::from`, or resolve human-readable values
+  server-side; server-side tests and curl smokes do not prove browser
+  expression validity.
 - SPA frameworks (React, Vue, Angular, etc.) are not used for admin screens.
 - Focused UI libraries for specific widgets are allowed and encouraged when a
   real widget need exists, for example searchable selects, calendars/date

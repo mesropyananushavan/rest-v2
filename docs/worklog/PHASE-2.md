@@ -2463,6 +2463,11 @@ Gotchas:
   proves URL round-trip, not the operator's search landing. The durable smoke
   target checks the HTML-escaped cancel URL because Blade renders `&` as
   `&amp;` inside href attributes.
+- Server-side Blade/Livewire tests and curl smokes that post directly to the
+  Livewire endpoint cannot detect broken client-side expressions. Translation
+  strings, user-entered text, and other PHP values must never be interpolated
+  raw into Alpine directives, inline handlers, or `wire:click` expressions;
+  pass encoded identifiers or resolve values server-side.
 
 Owner review-correction plan:
 - [x] Stage 1.11D-review.1: hostile context redirect proof. Re-read the
@@ -2830,8 +2835,41 @@ Tenant translation override editing-screen plan:
   insertions(+), 12 deletions(-)`, and no `docs/BLUEPRINT.md` or `template/`
   changes are present. Push and CI details are intentionally kept in the final
   report, not the worklog.
+- [x] Stage 1.14.8: Alpine/Livewire expression escaping correction. Reproduce
+  the owner-reported translation editor click failure by inspecting rendered
+  JavaScript-evaluated attributes; identify the exact unsafe expression and a
+  concrete key/value that break it; change the editor so click handlers carry
+  only framework-encoded identifiers and resolve human-readable values
+  server-side; audit the same defect class across Alpine, inline, and
+  `wire:click` attributes including `x-row-overflow` and Menu; add regression
+  coverage for apostrophe, quote, backslash, newline, non-ASCII, and
+  HTML-looking values; record the client-expression gotcha in this worklog and
+  AGENTS UI DoD; rerun required gates, rebuild the bundle, smoke the editor,
+  push this branch only, and stop for owner browser re-check. Result: fixed
+  the unsafe editor expression
+  `wire:click='startEditing(@json($row->key), @json($row->effectiveValue))'`
+  by passing only `Js::from($row->key)` and resolving the effective value
+  server-side through `SearchTenantTranslationOverrides::rowForKey()`. A
+  rendered value such as `admin.brand.tagline` = `Chef's dashboard` broke the
+  old single-quoted JavaScript expression because the apostrophe terminated
+  the HTML attribute; regression coverage now renders apostrophe, double
+  quote, backslash, newline, non-ASCII, and HTML-looking values and asserts
+  they are escaped in markup but absent from JavaScript-evaluated attributes.
+  The same defect class was audited across `x-row-overflow`, searchable
+  select, Menu archive mode, Menu integer handlers, and pagination handlers;
+  searchable-select field ids and Menu archive-mode values now use `@js`,
+  while integer IDs and fixed method-name variables were verified safe. Local
+  verification passed: `make pint` (`PASS 247 files`), `make stan`
+  (`142/142`, `[OK] No errors`), `make test` (`225 passed / 6 skipped /
+  2269 assertions`), `make fresh`, `make tenant-isolation-pgsql` (`22 passed
+  / 76 assertions`), and `make build` with bundles
+  `public/build/assets/app-B3tq4fLr.css` and
+  `public/build/assets/app-Blopmbua.js`. HTTP smoke passed through real curl
+  login and Livewire update calls: found `admin.dashboard.title`, saved
+  `<title>Smoke Dashboard Title</title>`, reset, and confirmed
+  `<title>Dashboard</title>`.
 
 ## Next steps
-Owner review / merge-only authorization for
-`phase-2-stage-1.14-tenant-translation-ui` after reviewing the pushed branch and
-green CI. Do not open a PR or merge until explicitly authorized.
+Owner manual browser re-check of the translation editor edit click is the next
+gate before merge authorization. Do not open a PR or merge until explicitly
+authorized.

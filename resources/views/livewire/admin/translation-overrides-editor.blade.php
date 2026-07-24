@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Support\I18n\Application\TenantTranslationOverrideRow;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Js;
 
 /** @var list<string> $locales */
 /** @var int $maxValueLength */
@@ -129,11 +130,11 @@ use Illuminate\Pagination\LengthAwarePaginator;
                             </td>
                             <td>
                                 <div class="flex justify-end gap-2">
-                                    <x-button type="button" variant="outline-primary" size="sm" wire:click='startEditing(@json($row->key), @json($row->effectiveValue))'>
+                                    <x-button type="button" variant="outline-primary" size="sm" wire:click="startEditing({{ Js::from($row->key) }})">
                                         {{ __('admin.translation_overrides.actions.edit') }}
                                     </x-button>
                                     @if ($row->overridden)
-                                        <x-button type="button" variant="outline-danger" size="sm" wire:click='resetOverride(@json($row->key))'>
+                                        <x-button type="button" variant="outline-danger" size="sm" wire:click="resetOverride({{ Js::from($row->key) }})">
                                             {{ __('admin.translation_overrides.actions.reset') }}
                                         </x-button>
                                     @endif

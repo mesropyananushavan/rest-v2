@@ -59,6 +59,28 @@ final class SearchTenantTranslationOverrides
         ]);
     }
 
+    public function rowForKey(string $locale, string $key): ?TenantTranslationOverrideRow
+    {
+        $locale = TenantTranslationOverrideRules::isSupportedLocale($locale) ? $locale : 'hy';
+        $catalogues = $this->cataloguesByLocale();
+
+        if (! in_array($key, $this->editableKeys($catalogues), true)) {
+            return null;
+        }
+
+        $overrides = $this->overridesByLocale();
+        $languageValues = $this->valuesForKey($catalogues, $key);
+        $effectiveValues = $this->effectiveValuesForKey($languageValues, $overrides, $key);
+
+        return new TenantTranslationOverrideRow(
+            key: $key,
+            effectiveValue: $effectiveValues[$locale] ?? '',
+            overridden: array_key_exists($key, $overrides[$locale] ?? []),
+            values: $effectiveValues,
+            languageValues: $languageValues,
+        );
+    }
+
     /**
      * @return array<string, array<string, string>>
      */
