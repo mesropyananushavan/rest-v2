@@ -1444,10 +1444,10 @@ forbidden.
 - Stage 1.9 intentionally treats delete as an additional superadmin gate on
   top of normal permissions, not as a replacement for existing
   create/read/update permission checks.
-- Historical: GitHub Actions emitted non-blocking Node.js 20 deprecation
-  annotations for `actions/checkout@v4` / `actions/setup-node@v4` while the
-  jobs still passed. The active fix is tracked in the CI maintenance section
-  below.
+- Resolved by CI maintenance: GitHub Actions previously emitted non-blocking
+  Node.js 20 deprecation annotations for `actions/checkout@v4` /
+  `actions/setup-node@v4`; `phase-2-ci-node24-actions` bumps both GitHub
+  JavaScript actions to `@v7` with `node24` manifests.
 - `docs/BLUEPRINT.md` ADR-004 still names Bootstrap 5 in the original v1.0
   frontend decision. Stage 1.10 is intentionally superseding that via
   `docs/DECISIONS.md`; do not edit `docs/BLUEPRINT.md` without explicit owner
@@ -1761,8 +1761,8 @@ forbidden.
   was intentionally not changed in the Stage 1.12 follow-up.
 - Stage 1.12 follow-up historical note: GitHub Actions still emitted the
   Node.js 20 deprecation warning for `actions/checkout@v4`; this was
-  intentionally recorded only and not fixed in the Stage 1.12 follow-up. The
-  active fix is tracked in the CI maintenance section below.
+  intentionally recorded only and not fixed in the Stage 1.12 follow-up.
+  `phase-2-ci-node24-actions` resolves it with a later workflow-only bump.
 - Stage 1.14 API gotcha: the API route uses the session guard, so the route
   must include session-compatible middleware. `AttachLogContext` must also run
   before auth failures; otherwise unauthenticated API 401 responses generate a
@@ -2221,7 +2221,7 @@ Decisions awaiting the owner:
 
 ## CI maintenance: Node 24 action runtime
 
-Status: local verification complete; push/CI evidence pending
+Status: pushed run green; final docs-evidence push pending
 Branch: `phase-2-ci-node24-actions`
 Base: `origin/main` at `c3e1f13`
 
@@ -2282,9 +2282,23 @@ Plan:
   maintenance step, push the branch, retrieve the GitHub Actions run, record
   both job statuses and any remaining runner warnings, then stop without PR or
   merge.
+  Result so far: committed `b44cb82` (`ci: move actions to node24 runtime`) and
+  pushed `phase-2-ci-node24-actions`. GitHub Actions run `30079876185` on head
+  `b44cb823b2daca092e31efca9b196daa702d876b` passed: `quality` succeeded in
+  `47s` and `tenant-isolation-pgsql` succeeded in `38s`. Check-run API
+  reported `annotations_count=0` for both jobs. Log searches found no
+  `Node.js 20 is deprecated`, `forced to run on Node.js 24`, `node20`, or
+  forbidden suppression-variable text. Remaining non-Node warning-like output
+  is pre-existing: Git's default initial branch hint during checkout, Pest
+  warning summaries (`quality`: `176 warnings`; `tenant-isolation-pgsql`:
+  `21 warnings`) with `file_get_contents(...)` warning snippets, and the
+  PostgreSQL service log line `initdb: warning: enabling "trust"
+  authentication for local connections`. This worklog evidence update is
+  docs-only and will trigger one additional push CI run; final report must
+  name the exact latest run.
 
 ## Next steps
-Continue CI-node24.3 on `phase-2-ci-node24-actions`: commit the workflow and
-worklog update, push the branch, retrieve the resulting GitHub Actions run,
-record both job statuses and any remaining runner warnings, then stop without
+Continue CI-node24.3 on `phase-2-ci-node24-actions`: commit and push this
+docs-only CI evidence update, retrieve the resulting latest GitHub Actions run,
+report both job statuses and any remaining runner warnings, then stop without
 creating a PR or merging.
