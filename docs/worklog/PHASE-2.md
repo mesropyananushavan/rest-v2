@@ -2702,15 +2702,24 @@ Tenant translation override write-side plan:
   safety test passed (`1 passed / 3 assertions`), `make pint` passed (`240
   files`), `make stan` passed (`137/137`, `[OK] No errors`), and `make test`
   passed (`212 passed / 6 skipped / 2171 assertions`).
-- [ ] Stage 1.13.6: required gates, diff review, commit, push, and CI handoff.
+- [x] Stage 1.13.6: required gates, diff review, commit, push, and CI handoff.
   Run `make pint`, `make stan`, `make test`, `make fresh`,
   `make tenant-isolation-pgsql`, `make build`, `git diff --check`, `git
   status`, and full branch diff review versus `origin/main`; commit logical
   steps with matching worklog updates, push this branch only, collect CI run id
-  and both job statuses, then stop without creating or merging a PR.
+  and both job statuses, then stop without creating or merging a PR. Result:
+  local final gates passed: `make pint` (`PASS 240 files`), `make stan`
+  (`137/137`, `[OK] No errors`), `make test` (`212 passed / 6 skipped / 2171
+  assertions`), `make fresh`, `make tenant-isolation-pgsql` (`22 passed / 76
+  assertions`), `make build`, `git diff --check`, clean `git status`, and full
+  branch diff review versus `origin/main` (`22 files changed, 1285
+  insertions(+), 39 deletions(-)`) with no `docs/BLUEPRINT.md` or `template/`
+  changes. Push and CI run id/job statuses are intentionally kept in the final
+  report, not the worklog.
 
 ## Next steps
-Start Stage 1.13.6: run the final required gates, complete the branch diff
-review versus `origin/main`, commit the final worklog handoff, push only
-`phase-2-stage-1.13-tenant-translation-write`, and collect the CI run id plus
-both job statuses.
+Start the next session with the tenant translation override editing screen:
+admin-facing search/list UI for overridable language-file keys, wired to the
+existing permission and `SetTenantTranslationOverride` /
+`ResetTenantTranslationOverride` actions without changing read-side fallback
+order or `LocalizedText`.
