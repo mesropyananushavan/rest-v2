@@ -632,3 +632,13 @@ stored "for later" because they cannot be reviewed in context, cannot be safely
 classified against the non-overridable registry, and would make future editing
 UI behave like a free-form key/value store instead of a controlled UI wording
 override.
+Cache invariant: the read side uses two cache layers. The override map
+`tenant:{tenant_id}:translation_overrides:{locale}:v1` holds the tenant/locale
+key-value rows, while the presence marker
+`tenant:{tenant_id}:translation_overrides:locales:v1` stores which locales have
+any overrides so zero-override tenants/locales avoid an added database read.
+Every successful write invalidation for a tenant/locale must refresh both
+layers together through the single cache service entry point; invalidating only
+the map can leave a first-ever override hidden until the stale empty presence
+marker expires, and invalidating only the presence marker can leave stale
+override values visible.

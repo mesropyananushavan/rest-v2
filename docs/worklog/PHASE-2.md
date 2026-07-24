@@ -2666,14 +2666,27 @@ Tenant translation override write-side plan:
   binding to Laravel's `translation.loader`; after binding it, `make test`
   passed (`203 passed / 6 skipped / 2144 assertions`), `make stan` passed
   (`137/137`, `[OK] No errors`), and `make pint` passed (`238 files`).
-- [ ] Stage 1.13.4: centralized cache invalidation. Refactor override cache
+- [x] Stage 1.13.4: centralized cache invalidation. Refactor override cache
   invalidation into one public tenant/locale write invalidation entry point
   that always refreshes/invalidates both the map layer and presence marker
   together; wire set/reset and model-event defence-in-depth through it; update
   `docs/DECISIONS.md` with the two-layer cache invariant; add immediate
   translation-helper tests for first-ever override, adding another override,
   editing an override, resetting to the language file, last-override reset,
-  locale isolation, and tenant isolation.
+  locale isolation, and tenant isolation. Result: replaced separate map and
+  presence marker calls with
+  `TenantTranslationOverrides::invalidateTenantLocaleAfterWrite()`, which
+  clears the request-local tenant/locale map, forgets
+  `tenant:{tenant_id}:translation_overrides:{locale}:v1`, and refreshes
+  `tenant:{tenant_id}:translation_overrides:locales:v1` from the affected
+  tenant's current override locales. Model saved/deleted events call the same
+  entry point for defence-in-depth. Cache tests prove first-ever override,
+  adding another override, editing, reset, last reset to empty marker,
+  locale isolation, tenant isolation, and absence of the old public one-layer
+  invalidators. `docs/DECISIONS.md` now records the two-layer cache invariant.
+  Verification: `make pint` passed (`239 files`), `make stan` passed
+  (`137/137`, `[OK] No errors`), and `make test` passed (`211 passed /
+  6 skipped / 2168 assertions`).
 - [ ] Stage 1.13.5: output-safety proof. Inspect raw translation rendering
   paths; make any reachable raw path safe without changing translation
   resolution semantics; prove a stored override containing markup renders
@@ -2686,6 +2699,5 @@ Tenant translation override write-side plan:
   and both job statuses, then stop without creating or merging a PR.
 
 ## Next steps
-Start Stage 1.13.4: centralize tenant/locale cache invalidation so both the
-override map and presence marker are always updated together, then add the
-immediate translation-helper cache scenario tests.
+Start Stage 1.13.5: make any reachable raw translation rendering path safe and
+prove an override containing markup renders escaped.
