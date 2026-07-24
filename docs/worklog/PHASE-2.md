@@ -2561,10 +2561,17 @@ Tenant translation override read-side plan:
   tenant-only DB storage, five-step resolution order, translator-subclass hook
   choice over loader replacement, tenant/locale cache key shape, and
   non-overridable safety/auth/destructive keys.
-- [ ] Stage 1.12.2: tenant-owned override schema and model. Add the additive
+- [x] Stage 1.12.2: tenant-owned override schema and model. Add the additive
   reversible `tenant_translation_overrides` migration with tenant/locale/key
   uniqueness, tenant-leading read indexes, PostgreSQL RLS policy guarded by
   driver, and an Eloquent model using the established tenant scoping traits.
+  Result: added `tenant_translation_overrides` with `tenant_id`, `locale`,
+  `translation_key`, `override_value`, timestamps, tenant/locale read index,
+  tenant/locale/key uniqueness, PostgreSQL RLS policy, and
+  `TenantTranslationOverride` using `BelongsToTenant`; added SQLite schema and
+  uniqueness tests plus PostgreSQL tenant-isolation coverage. Verification:
+  `make test` passed (`185 passed / 6 skipped / 1579 assertions`) and
+  `make pint` passed after fixing one style issue (`223 files`).
 - [ ] Stage 1.12.3: resolution layer and non-overridable registry. Add the
   central non-overridable key registry plus the tenant override repository,
   cache key builder, and custom translator integration without changing
@@ -2580,4 +2587,4 @@ Tenant translation override read-side plan:
   and both job statuses, then stop without PR or merge.
 
 ## Next steps
-Continue with Stage 1.12.2: tenant-owned override schema and model.
+Continue with Stage 1.12.3: resolution layer and non-overridable registry.
