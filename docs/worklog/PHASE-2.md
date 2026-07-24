@@ -2749,13 +2749,25 @@ Tenant translation override editing-screen plan:
   dotted permission checks, while authentication, inactive-user denial,
   tenant-scoped models, PostgreSQL RLS, branch assignment, route-model
   isolation, and explicit same-tenant action validation still apply.
-- [ ] Stage 1.14.3: catalogue/read model. Add an Application/read-side service
+- [x] Stage 1.14.3: catalogue/read model. Add an Application/read-side service
   that flattens committed language-file string leaves for each supported
   locale, caches the per-locale catalogue with a deployment-aware version key,
   excludes `NonOverridableTranslationKeys`, overlays current tenant overrides
   through `TenantTranslationOverrides`, matches search case-insensitively by
   effective visible value plus key fragment, and returns a paginator/read model
   with effective value, key, overridden state, and all supported locale values.
+  Result: added `LanguageFileTranslationCatalogue` with per-locale cache keys
+  shaped as
+  `app:language_file_translation_catalogue:{locale}:{fingerprint}:v1`, where
+  the fingerprint uses locale language-file names, mtimes, and sizes so a
+  deployment changing language files moves to a fresh cache key. Added
+  `SearchTenantTranslationOverrides` and `TenantTranslationOverrideRow` to
+  build editable rows from cached language catalogues plus the existing
+  tenant/locale override cache layer, excluding non-overridable keys and
+  matching the edited locale's effective value or the key fragment with
+  Unicode-aware lowercase comparisons. Verification: focused catalogue test
+  passed (`3 passed / 11 assertions`) and `make pint` passed (`244 files`, one
+  provider style issue fixed).
 - [ ] Stage 1.14.4: admin route, navigation, Livewire adapter, and Blade UI.
   Add a permission-gated admin route and navigation link, a thin controller,
   URL-backed Livewire state for search/locale/page/editing row/value, shared
@@ -2783,6 +2795,6 @@ Tenant translation override editing-screen plan:
   statuses for the final report, then stop without creating or merging a PR.
 
 ## Next steps
-Start Stage 1.14.3: implement the cached language-file catalogue/read model for
-the editing screen, excluding non-overridable keys and overlaying existing
-tenant overrides through the current cache layer.
+Start Stage 1.14.4: add the permission-gated admin route, navigation link,
+thin controller, Livewire adapter, Blade screen, translated strings, and
+set/reset flows through the existing Application actions.
