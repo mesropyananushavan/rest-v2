@@ -265,7 +265,7 @@ Authn/Authz: Laravel session auth for admin/employee UI; token auth for guest QR
 
 Multi-tenancy: `ResolveTenant` middleware derives tenant from domain/header/session/token; `ResolveBranch` sets branch context. All tenant models use `TenantScoped` global scope and `BelongsToTenant` trait. Jobs serialize tenant/branch ids and restore context before execution. Cache keys use `tenant:{id}:branch:{id}:...`.
 
-i18n: UI strings use translation keys. DB localized names use JSON translation value object with fallback order user locale -> tenant locale -> `en`. Currency/date/number formatting happens in presenters/resources, not domain services.
+i18n: UI strings use translation keys and resolve through a tenant-level database override layer on top of the `hy`/`ru`/`en` language files. Overrides are tenant-only, never branch-level, and a defined safety/auth/destructive-action key set is not overridable. DB localized names that users edit keep using the JSON translation value object unchanged, with fallback order user locale -> tenant locale -> `en`; those names are not part of the UI translation override layer. Currency/date/number formatting happens in presenters/resources, not domain services.
 
 Audit logging: Application actions emit audit records for mutable operations. Logs include actor, tenant, branch, device, IP, target, before/after, command payload hash, correlation id.
 
