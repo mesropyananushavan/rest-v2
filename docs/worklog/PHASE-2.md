@@ -2687,10 +2687,21 @@ Tenant translation override write-side plan:
   Verification: `make pint` passed (`239 files`), `make stan` passed
   (`137/137`, `[OK] No errors`), and `make test` passed (`211 passed /
   6 skipped / 2168 assertions`).
-- [ ] Stage 1.13.5: output-safety proof. Inspect raw translation rendering
+- [x] Stage 1.13.5: output-safety proof. Inspect raw translation rendering
   paths; make any reachable raw path safe without changing translation
   resolution semantics; prove a stored override containing markup renders
-  escaped through an ordinary rendering path.
+  escaped through an ordinary rendering path. Result: raw translation rendering
+  inspection found the reachable admin title path in
+  `resources/views/layouts/admin.blade.php`; other translation render paths
+  inspected were escaped Blade output or JSON encoding. The layout now escapes
+  the default translated title and emits Blade shorthand title-section content
+  without double escaping; those title sections are already escaped by Blade.
+  `TenantTranslationOverrideOutputSafetyTest` stores a markup/script override
+  for `admin.dashboard.title` and proves the real admin dashboard response
+  contains escaped entities, not raw markup. Verification: focused output
+  safety test passed (`1 passed / 3 assertions`), `make pint` passed (`240
+  files`), `make stan` passed (`137/137`, `[OK] No errors`), and `make test`
+  passed (`212 passed / 6 skipped / 2171 assertions`).
 - [ ] Stage 1.13.6: required gates, diff review, commit, push, and CI handoff.
   Run `make pint`, `make stan`, `make test`, `make fresh`,
   `make tenant-isolation-pgsql`, `make build`, `git diff --check`, `git
@@ -2699,5 +2710,7 @@ Tenant translation override write-side plan:
   and both job statuses, then stop without creating or merging a PR.
 
 ## Next steps
-Start Stage 1.13.5: make any reachable raw translation rendering path safe and
-prove an override containing markup renders escaped.
+Start Stage 1.13.6: run the final required gates, complete the branch diff
+review versus `origin/main`, commit the final worklog handoff, push only
+`phase-2-stage-1.13-tenant-translation-write`, and collect the CI run id plus
+both job statuses.
