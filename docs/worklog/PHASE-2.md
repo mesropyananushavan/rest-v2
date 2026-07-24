@@ -2820,14 +2820,18 @@ Tenant translation override editing-screen plan:
   `<title>Smoke Dashboard Title</title>`, reset the override through the
   Livewire update endpoint, confirmed `/admin` rendered
   `<title>Dashboard</title>`, and removed the temporary smoke directory.
-- [ ] Stage 1.14.7: final diff review, push, and CI handoff. Run `git status`,
+- [x] Stage 1.14.7: final diff review, push, and CI handoff. Run `git status`,
   `git diff --check`, full branch diff review versus `origin/main`, confirm no
   `template/` or unapproved `docs/BLUEPRINT.md` changes, push only
   `phase-2-stage-1.14-tenant-translation-ui`, collect CI run id and both job
   statuses for the final report, then stop without creating or merging a PR.
+  Result: final pre-push review passed: `git status` clean, `git diff --check`
+  clean, branch diff versus `origin/main` is `18 files changed, 1435
+  insertions(+), 12 deletions(-)`, and no `docs/BLUEPRINT.md` or `template/`
+  changes are present. Push and CI details are intentionally kept in the final
+  report, not the worklog.
 
 ## Next steps
-Start Stage 1.14.7: run final `git status`, `git diff --check`, and full
-branch diff review versus `origin/main`, confirm no `template/` or unapproved
-`docs/BLUEPRINT.md` changes, push the branch, collect CI run id and both job
-statuses, and stop without opening a PR.
+Owner review / merge-only authorization for
+`phase-2-stage-1.14-tenant-translation-ui` after reviewing the pushed branch and
+green CI. Do not open a PR or merge until explicitly authorized.
