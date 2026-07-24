@@ -2593,13 +2593,28 @@ Tenant translation override read-side plan:
   without tenant context, and sequential tenant A/B isolation. Verification:
   `make pint` passed (`229 files`), `make stan` passed (`[OK] No errors`),
   and `make test` passed (`193 passed / 6 skipped / 2098 assertions`).
-- [ ] Stage 1.12.5: required gates, diff review, commit, push, and CI handoff.
+- [x] Stage 1.12.5: required gates, diff review, commit, push, and CI handoff.
   Run `make pint`, `make stan`, `make test`, `make fresh`,
   `make tenant-isolation-pgsql`, `make build`, `git diff --check`, full branch
   diff review versus `origin/main`, push only this branch, collect CI run id
-  and both job statuses, then stop without PR or merge.
+  and both job statuses, then stop without PR or merge. Result: final local
+  gates passed. `make pint`: `PASS 229 files`. `make stan`: `130/130`, no
+  errors. `make test`: `193 passed / 6 skipped / 2098 assertions`.
+  `make fresh`: storage link, all PostgreSQL migrations including
+  `2026_07_24_020000_create_tenant_translation_overrides_table`, and
+  `DemoSeeder` completed successfully. `make tenant-isolation-pgsql`:
+  `22 passed / 76 assertions`, including translation override RLS coverage.
+  `make build`: composer install, key generation, storage link, `npm ci`, and
+  Vite build completed; known local warnings were Composer Git dubious
+  ownership and npm major-version notices. `git diff --check` passed. Full
+  branch diff versus `origin/main` reviewed: 15 files limited to the approved
+  i18n blueprint paragraph, one dated decision, tenant translation override
+  migration/model, translator/cache support layer, focused i18n and RLS tests,
+  and this worklog; no `template/`, UI, write action, permission, seeder,
+  Menu/Halls/Tables/Audit feature changes, or unrelated module changes.
 
 ## Next steps
-Continue with Stage 1.12.5: run the required final gates, review the full
-branch diff versus `origin/main`, commit/push the branch, collect CI run id
-and job statuses, and stop without creating a PR.
+Continue with the next session for the tenant translation override write path:
+add the dedicated permission, permission-gated superadmin/authorized editing
+actions, cache invalidation on write, and any owner-approved UI; do not create
+branch-level overrides.
