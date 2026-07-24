@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
+use App\Modules\Menu\Http\MenuIndexContext;
 
 /** @var MenuCategory|null $category */
+/** @var MenuIndexContext $menuContext */
 /** @var string $parentOptionsEndpoint */
 /** @var list<array{id: int, label: string}> $parentInitialOptions */
 /** @var int $selectedParentValue */
@@ -24,7 +26,7 @@ $title = $isEdit ? __('menu.categories.edit_title') : __('menu.categories.create
         :title="$title"
     >
         <x-slot:actions>
-            <x-button :href="route('admin.menu.index')" variant="outline-secondary" size="sm">
+            <x-button :href="$menuContext->url()" variant="outline-secondary" size="sm">
                 {{ __('menu.actions.back') }}
             </x-button>
         </x-slot:actions>
@@ -37,6 +39,9 @@ $title = $isEdit ? __('menu.categories.edit_title') : __('menu.categories.create
                 @if ($isEdit)
                     @method('put')
                 @endif
+                @foreach ($menuContext->toQuery() as $key => $value)
+                    <input type="hidden" name="context[{{ $key }}]" value="{{ $value }}">
+                @endforeach
 
                 @include('modules.menu.partials.localized-name-fields', ['model' => $category])
 
@@ -74,7 +79,7 @@ $title = $isEdit ? __('menu.categories.edit_title') : __('menu.categories.create
                     <x-button type="submit">
                         {{ $isEdit ? __('menu.actions.save') : __('menu.actions.create') }}
                     </x-button>
-                    <x-button :href="route('admin.menu.index')" variant="outline-secondary">
+                    <x-button :href="$menuContext->url()" variant="outline-secondary">
                         {{ __('menu.actions.cancel') }}
                     </x-button>
                 </div>

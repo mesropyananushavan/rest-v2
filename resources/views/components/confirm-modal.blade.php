@@ -10,6 +10,7 @@ declare(strict_types=1);
 /** @var string $cancelLabel */
 /** @var string $triggerLabel */
 /** @var string $method */
+/** @var string|null $triggerClass */
 ?>
 
 @props([
@@ -21,12 +22,17 @@ declare(strict_types=1);
     'cancelLabel' => __('admin.actions.cancel'),
     'triggerLabel' => __('admin.actions.delete'),
     'method' => 'delete',
+    'triggerClass' => null,
 ])
+
+@php
+    $triggerClasses = $triggerClass ?? 'inline-flex items-center justify-center rounded-sr-brand border border-smartrest-danger/30 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-smartrest-danger';
+@endphp
 
 <div x-data="{ open: false }" class="inline-flex" @keydown.escape.window="open = false">
     <button
         type="button"
-        {{ $attributes->class(['inline-flex items-center justify-center rounded-sr-brand border border-smartrest-danger/30 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-smartrest-danger']) }}
+        {{ $attributes->class([$triggerClasses]) }}
         @click="open = true"
     >
         {{ $triggerLabel }}

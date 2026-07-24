@@ -2300,6 +2300,257 @@ Plan:
   the exact latest pushed-head CI run to avoid an endless loop where recording a
   run id creates a newer run.
 
+## Menu context + overflow follow-up
+
+Status: Stage 1.11D owner review-correction pass in progress
+Branch: `phase-2-stage-1.11d-menu-context-overflow`
+Base: `origin/main` at `cc46b95`
+
+Scope:
+- UI-only Menu admin follow-up.
+- Preserve Menu screen context across item/category create/edit save and cancel.
+- Move rare destructive row actions into a compact Alpine overflow.
+- No read-action, API, response-shape, schema, migration, npm package,
+  `docs/BLUEPRINT.md`, `template/`, Audit, Halls, Tables, or unrelated module
+  changes.
+
+Read-only inspection result:
+- `git fetch origin` and `git merge --ff-only origin/main` on local `main`
+  reported `Already up to date`; new branch
+  `phase-2-stage-1.11d-menu-context-overflow` was created from fresh
+  `origin/main`.
+- Starting git state was clean. `git log --oneline -5` showed `cc46b95`
+  merge of `phase-2-ci-node24-actions`, then the node24 action commits, then
+  `c3e1f13` merge of Menu read convergence.
+- No root `.smoke-tmp` or related smoke-temp artifact exists; `git ls-files`
+  for those patterns returned no tracked paths.
+- Preconditions are present on this base: `.github/workflows/ci.yml` uses
+  `actions/checkout@v7` and `actions/setup-node@v7`; `MenuIndex` obtains read
+  data through `BrowseMenuItems::forMenuIndex()`, and no longer directly calls
+  `ResolveMenuCategorySelection`, `PaginateMenuCategories`,
+  `PaginateMenuItems`, or `SearchMenuItems` from `render()`.
+- Current Menu index URL/component context contract:
+  `category` -> `MenuIndex::$category`;
+  `q` -> `MenuIndex::$search`;
+  `category_page` -> `MenuIndex::$categoryPage`;
+  `item_page` -> `MenuIndex::$itemPage`;
+  `search_page` -> `MenuIndex::$searchPage`;
+  `show_inactive` -> `MenuIndex::$showInactive`;
+  `archive_mode` -> `MenuIndex::$archiveMode`.
+  `categorySearch` is component-only and is not bookmarkable today.
+- The context requested for this follow-up maps to `category`, `item_page`,
+  `q`, and `archive_mode`; `search_page` remains existing search-pagination
+  state but is not part of the prompt's required return-context set.
+- Current create/edit forms reset to `route('admin.menu.index')` on save and
+  cancel. Category forms are plain Blade/controller forms; item forms are a
+  plain Blade wrapper with a Livewire `MenuItemForm` component.
+- Current destructive controls are visible row buttons/forms in
+  `category-actions.blade.php` and `item-list.blade.php`; archive uses the
+  shared `x-confirm-modal`, restore is a plain POST form button, and
+  force-delete uses `x-confirm-modal` with irreversible copy.
+- Current routes preserve archive authorization correctly: archive routes have
+  normal manage permission; restore and force-delete routes also require
+  `superadmin`.
+- Characterization tests pin default category selection, search ignoring
+  selected category, clearing search returning to category context, empty
+  root/category rendering, superadmin-only archive controls, and Livewire
+  query-count invariance. Query-count tests currently pin
+  `BrowseMenuItems` category `6`, `BrowseMenuItems` search `3`,
+  `MenuIndex` category render `10`, and `MenuIndex` search render `10`.
+
+Plan:
+- [x] Stage 1.11D.1: preconditions, branch, and read-only inspection. Read the
+  required sources; fast-forward local `main`; verify Menu read convergence and
+  node24 actions; confirm no tracked or untracked smoke-temp artifacts; create
+  the feature branch; inspect Menu index/form/controller/shared-component
+  surfaces, routes, translations, and pinned tests; record the current URL
+  contract and plan before code. Result: completed as recorded above.
+- [x] Stage 1.11D.2: context carrier and form return path. Add a small
+  Menu HTTP context helper/request DTO that accepts only bookmarkable Menu
+  context parameters, sanitizes them through `BrowseMenuItems` selection
+  behavior without leaking invalid ids, renders them into create/edit links
+  and form hidden fields, and redirects successful item/category create/edit
+  plus cancel/back to the sanitized Menu URL with flash preserved.
+  Result: added `MenuIndexContext` using a nested `context[...]` carrier on
+  form/action URLs to avoid conflicting with route parameters such as
+  `/categories/{category}` while still returning to the existing `/admin/menu`
+  query keys. Category Blade forms now render hidden context fields and
+  context-aware back/cancel URLs; `MenuItemForm` receives sanitized context,
+  preselects the context category on create, and redirects successful Livewire
+  saves back to the sanitized Menu URL. Raw item/category POST/PUT routes and
+  archive/restore/force-delete redirects also preserve context when supplied.
+  Existing pinned Menu index characterization stayed unchanged; one initial
+  regression on the empty-root create-subcategory URL was fixed by not
+  emitting implicit default category context.
+- [x] Stage 1.11D.3: context preservation tests. Add tests for item/category
+  create and edit save/cancel returning to category, item page, search term,
+  and archive mode; validation failures retaining context; direct/bookmarked
+  form URLs carrying context after reload; and foreign-tenant, archived, and
+  nonexistent context category ids degrading to the default selected category
+  without error or disclosure.
+  Result: added `tests/Feature/Menu/MenuContextReturnTest.php` covering
+  category create/edit save and cancel/back, item create/edit Livewire save and
+  cancel/back, validation failure re-render with context intact, directly
+  loaded/bookmarked form URLs, and foreign-tenant/archived/nonexistent context
+  category degradation to the default category without rendering the invalid
+  id. Focused gates after this slice: `make test` passed (`179 passed /
+  5 skipped / 1443 assertions`), `make pint` passed after fixing two style
+  issues (`217 files`), and `make stan` passed (`123/123`, `[OK] No errors`).
+- [x] Stage 1.11D.4: shared row overflow. Add a reusable Alpine-only row
+  overflow component for compact per-row rare actions with one-open-at-a-time
+  coordination, focusable keyboard trigger, Escape close with focus return,
+  outside-click close, and tablet-safe positioning. Move archive, restore, and
+  force-delete for Menu items/categories into that overflow while keeping edit
+  visible and keeping destructive actions on shared confirm-modal flow.
+  Result: added reusable `x-row-overflow` with Alpine-only one-open-at-a-time
+  coordination, focusable trigger, Escape close/focus return, outside-click
+  close, and first-item focus on open. Menu item/category archive, restore,
+  and force-delete controls now render inside per-row overflow menus while
+  edit remains visible; destructive archive/force-delete controls continue to
+  use the shared `x-confirm-modal`, now with an optional trigger class for
+  menu placement.
+- [x] Stage 1.11D.5: overflow tests and translations. Add `hy`/`ru`/`en`
+  strings for the overflow trigger/label; prove managers do not see archived
+  rows, archive-mode controls, restore, or force-delete inside overflow
+  content; prove archive/restore/force-delete moved out of visible row actions
+  and force-delete irreversible copy remains rendered only through confirm
+  modal content.
+  Result: added the `menu.actions.more` translation in all three locales and
+  `tests/Feature/Menu/MenuOverflowTest.php` covering active archive actions
+  inside category/item overflow menus, superadmin archived restore and
+  force-delete content inside overflow menus with irreversible copy preserved,
+  non-superadmin absence of archived row maintenance content inside overflow,
+  and Alpine accessibility hooks for trigger, Escape, outside click, focus
+  return, and one-open-at-a-time dispatch. Verification after this slice:
+  `make test` passed (`182 passed / 5 skipped / 1501 assertions`),
+  `make pint` passed (`218 files`), and `make stan` passed (`123/123`,
+  `[OK] No errors`).
+- [x] Stage 1.11D.6: verification, smoke, commit, push, and handoff. Run
+  focused tests after each implementation step, then final `make pint`,
+  `make stan`, `make test`, `make fresh`, `make tenant-isolation-pgsql`,
+  `npm run build` or `make build`, HTTP smoke for save/cancel context on
+  `/admin/menu`, `git status`, `git diff --check`, and full diff review
+  versus `origin/main`. Commit logical steps with this worklog updated, push
+  the branch, record CI evidence in the final response only, and stop without
+  PR or merge.
+  Result: final local verification passed after commits: `make pint` (`PASS`,
+  `218 files`), `make stan` (`[OK] No errors`, `123/123`), `make test`
+  (`182 passed / 5 skipped / 1501 assertions`), `make fresh` (migrations and
+  `Database\Seeders\DemoSeeder` completed), `make tenant-isolation-pgsql`
+  (`21 passed / 73 assertions` with PostgreSQL RLS tests active), and
+  `make build` (composer install, key generation, storage link, `npm ci`, and
+  Vite build completed). HTTP smoke on `/admin/menu` passed through in-container
+  Artisan/Tinker using the seeded `manager@arat.test` user and real Armenian
+  markers: index/edit/save/cancel all returned to
+  `/admin/menu?category=2&q=%D4%BC%D5%B8%D5%BC%D5%AB&item_page=2`, with save
+  returning `302` and the landing page showing `Դիրքը թարմացվեց։`. `git
+  diff --check` passed and full branch diff review versus `origin/main` showed
+  only Menu/UI/test/translation/worklog files in scope. CI evidence belongs in
+  the final response only after the branch push.
+
+Gotchas:
+- The `make test` target does not forward trailing file arguments, so the first
+  overflow-test command intentionally ended up running the full suite.
+- The final HTTP smoke was run through `make artisan ARGS="tinker --execute=..."`
+  to avoid host PHP; inline PHP required Make-safe dollar escaping, and the
+  successful save request used the real CSRF token parsed from the rendered
+  edit form.
+- `make build` completed successfully but emitted local tool notices: Composer
+  reported Git dubious ownership inside `/var/www/html`, and npm reported a
+  newer major npm version. Neither stopped the build.
+- Review correction smoke gotchas: category mode must use `item_page`, while
+  global search mode must use `search_page`; using `item_page` with `q` only
+  proves URL round-trip, not the operator's search landing. The durable smoke
+  target checks the HTML-escaped cancel URL because Blade renders `&` as
+  `&amp;` inside href attributes.
+
+Owner review-correction plan:
+- [x] Stage 1.11D-review.1: hostile context redirect proof. Re-read the
+  required sources; verify the clean branch at `154d944`; inspect how
+  `context[...]` becomes a return URL; add focused tests for absolute external
+  URLs, protocol-relative values, other admin paths, newline/encoded separator
+  smuggling, unexpected context keys, and scalar/array type confusion. If any
+  case escapes the named Menu index route, fix the defect without changing the
+  legitimate context contract. Result: `MenuIndexContext` rebuilds every
+  return target with `route('admin.menu.index', $this->toQuery())` after
+  whitelisting known keys and type-normalizing values; it never consumes a raw
+  return URL. Added `MenuContextRedirectSecurityTest` covering all requested
+  hostile cases against both rendered cancel/back URLs and save redirects. No
+  redirect escape or code defect was found. Verification: initial `make test`
+  failed because the new test incorrectly forbade legitimate search text inside
+  the encoded Menu URL; after narrowing that assertion to target/path safety,
+  `make test` passed (`183 passed / 5 skipped / 1572 assertions`) and
+  `make pint` passed (`219 files`).
+- [x] Stage 1.11D-review.2: durable Menu context HTTP smoke. Add a repeatable
+  Make target that runs inside the PHP container without host PHP or temporary
+  files, authenticates through the real login/session/CSRF flow, uses
+  `menu:load-test-data` data, and proves category-mode and search-mode
+  save/cancel landings with rendered Armenian markers. Document the target in
+  `README.md`; do not add smoke-only routes, controllers, middleware bypasses,
+  packages, or a general smoke framework. Result: added
+  `smoke:menu-context` and `make smoke-menu-context`; the Make target starts
+  Nginx if needed and runs the command inside the PHP container. The smoke uses
+  a Guzzle cookie jar through Laravel's HTTP client, parses CSRF tokens from
+  the real login/edit forms, submits the existing authenticated item update
+  route with method spoofing, and does not disable middleware or add any
+  smoke-only route/controller/middleware. README documents the target beside
+  the other local commands. Verification so far: `make pint` passed
+  (`220 files` after one style fix), `make stan` passed (`124/124`,
+  `[OK] No errors`), and `make smoke-menu-context` passed after fixing the
+  command's own HTML-escaped cancel-link assertion.
+- [x] Stage 1.11D-review.3: execute smoke data and record outcome. Run
+  `make fresh`, load deterministic multi-page Menu data with
+  `menu:load-test-data`, record the resulting counts/category selected for the
+  smoke, run the new smoke target, and record gotchas including the category
+  mode `item_page` versus search mode `search_page` distinction. Result:
+  `make fresh` passed through migrations and `DemoSeeder`; `make artisan
+  ARGS="menu:load-test-data --purge-generated"` purged `0` generated rows,
+  loaded `menu_categories=400`, `menu_items=40000`, and reported
+  `tenant=arat-riverside menu_categories=200 menu_items=20000` plus
+  `tenant=northstar-bistro menu_categories=200 menu_items=20000`
+  (`elapsed_seconds=9.867`). The final `make smoke-menu-context` selected
+  category `48` with `53` active rendered items and search term
+  `arat-riverside 1-` with `9474` active results. Smoke HTTP statuses:
+  login form `200`, login submit `302`; category page 1 `200` marker
+  `Թարմ ոսպ ուտեստ arat-riverside 1-1`; category page 2 `200`, edit page
+  `200`, save landing `200`, and cancel landing `200` all used/kept marker
+  `Այգու պանիր ուտեստ arat-riverside 1-4861` and excluded the page-1 marker.
+  Search page 2 `200`, edit page `200`, and save landing `200` used/kept marker
+  `Շուկայի սունկ ուտեստ arat-riverside 1-27` and excluded reset/page-1 marker
+  `Թարմ ոսպ ուտեստ arat-riverside 1-1`.
+- [x] Stage 1.11D-review.4: required gates, diff review, commit, push, and CI
+  handoff. Run `make pint`, `make stan`, `make test`, `make fresh`, the
+  load/count command, the new smoke target, `make tenant-isolation-pgsql`,
+  `make build`, `git diff --check`, `git status`, and full branch diff review
+  versus `origin/main`. Commit scoped logical steps with worklog updates, push
+  this branch only, collect CI run id and both job statuses, then stop without
+  creating or merging a PR. Result: final local gates passed from committed
+  code. `make pint`: `PASS 220 files`. `make stan`: `124/124`, `[OK] No
+  errors`. `make test`: `183 passed / 5 skipped / 1572 assertions`. `make
+  fresh`: migrations and `DemoSeeder` completed successfully. Final
+  `menu:load-test-data --purge-generated`: purged `0` generated rows and loaded
+  `menu_categories=400`, `menu_items=40000` in `9.698s`, with each demo tenant
+  at `200` generated categories and `20000` generated items. Final
+  `make smoke-menu-context`: selected category `48` with `53` active rendered
+  items and search term `arat-riverside 1-` with `9474` active results; login
+  form `200`, login submit `302`; category page 1/page 2/edit/save
+  landing/cancel landing all returned `200` and proved page-2 marker
+  `Այգու պանիր ուտեստ arat-riverside 1-4861` present while page-1 marker
+  `Թարմ ոսպ ուտեստ arat-riverside 1-1` was absent after save/cancel; search
+  page 2/edit/save landing all returned `200` and proved marker
+  `Շուկայի սունկ ուտեստ arat-riverside 1-27` present while reset/page-1 marker
+  `Թարմ ոսպ ուտեստ arat-riverside 1-1` was absent. PostgreSQL tenant-isolation:
+  `21 passed / 73 assertions`. `make build`: composer install, key generation,
+  storage link, `npm ci`, and Vite build completed; known local warnings were
+  Composer Git dubious ownership and npm major-version notices. `git diff
+  --check` passed. Full branch diff versus `origin/main` reviewed: 24 files,
+  limited to accepted Menu context/overflow files plus the new smoke target,
+  README/Makefile/bootstrap registration, translations, tests, and this
+  worklog; no `docs/BLUEPRINT.md`, `template/`, schema/migration, API
+  response-shape, npm package, or unrelated product-module changes. This final
+  worklog handoff commit is the remaining commit to push; CI run id and job
+  statuses belong in the final response only.
+
 ## Next steps
-Owner review `phase-2-ci-node24-actions`; no PR has been created, and no merge
-is authorized in this session.
+Owner review is next. Do not create or merge a PR until the owner authorizes the
+release flow for this branch.

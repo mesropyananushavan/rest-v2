@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Console\Commands\MenuContextSmokeCommand;
 use App\Console\Commands\MenuLoadTestDataCommand;
 use App\Console\Commands\MenuSeedLoadCommand;
 use App\Http\Middleware\AttachLogContext;
@@ -26,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withCommands([
+        MenuContextSmokeCommand::class,
         MenuLoadTestDataCommand::class,
         MenuSeedLoadCommand::class,
     ])

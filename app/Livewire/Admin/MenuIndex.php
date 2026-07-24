@@ -6,6 +6,7 @@ namespace App\Livewire\Admin;
 
 use App\Modules\Menu\Application\BrowseMenuItems;
 use App\Modules\Menu\Application\ToggleMenuItemActivity;
+use App\Modules\Menu\Http\MenuIndexContext;
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use App\Modules\Menu\Infrastructure\Storage\MenuItemImageUrlResolver;
 use Illuminate\Contracts\View\View;
@@ -43,10 +44,13 @@ final class MenuIndex extends Component
     #[Url(as: 'archive_mode', history: true, except: self::ARCHIVE_MODE_ACTIVE)]
     public string $archiveMode = self::ARCHIVE_MODE_ACTIVE;
 
+    public bool $hasExplicitCategoryContext = false;
+
     public ?string $statusMessage = null;
 
     public function mount(): void
     {
+        $this->hasExplicitCategoryContext = $this->category !== null;
         $this->normalizeState();
     }
 
@@ -85,6 +89,15 @@ final class MenuIndex extends Component
             'imageUrls' => $imageUrls,
             'isSearching' => $readModel->isSearching,
             'items' => $readModel->items,
+            'menuContext' => MenuIndexContext::fromState(
+                category: $this->hasExplicitCategoryContext ? $selectedCategoryId : null,
+                categoryPage: $this->categoryPage,
+                itemPage: $this->itemPage,
+                searchPage: $this->searchPage,
+                search: $this->search,
+                showInactive: $this->showInactive,
+                archiveMode: $readModel->archiveMode,
+            )->toFormQuery(),
             'selectedCategory' => $readModel->selectedCategory,
             'selectedCategoryId' => $selectedCategoryId,
         ]);
@@ -103,6 +116,7 @@ final class MenuIndex extends Component
         }
 
         $this->category = (int) $category->id;
+        $this->hasExplicitCategoryContext = true;
         $this->search = '';
         $this->itemPage = 1;
         $this->searchPage = 1;

@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Livewire\Admin;
 
+use App\Modules\Menu\Application\BrowseMenuItems;
 use App\Modules\Menu\Application\CreateMenuItem;
 use App\Modules\Menu\Application\RemoveMenuItemImage;
 use App\Modules\Menu\Application\ReplaceMenuItemImage;
 use App\Modules\Menu\Application\SearchMenuCategoryOptions;
 use App\Modules\Menu\Application\UpdateMenuItem;
 use App\Modules\Menu\Domain\MenuItemImageSlot;
+use App\Modules\Menu\Http\MenuIndexContext;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use App\Modules\Menu\Infrastructure\Storage\MenuItemImageUrlResolver;
 use App\Support\I18n\LocalizedText;
@@ -55,17 +57,28 @@ final class MenuItemForm extends Component
 
     public ?TemporaryUploadedFile $publicUpload = null;
 
+    /**
+     * @var array<string, mixed>
+     */
+    public array $menuContext = [];
+
     /** @var array<string, mixed>|null */
     public ?array $internalImage = null;
 
     /** @var array<string, mixed>|null */
     public ?array $publicImage = null;
 
-    public function mount(string $defaultCurrency, ?MenuItem $item = null): void
+    /**
+     * @param  array<string, mixed>  $menuContext
+     */
+    public function mount(string $defaultCurrency, ?MenuItem $item = null, array $menuContext = []): void
     {
         $this->currency = $defaultCurrency;
+        $this->menuContext = $this->sanitizedMenuContext($menuContext)->toQuery();
 
         if (! $item instanceof MenuItem) {
+            $this->category_id = $this->sanitizedMenuContext($this->menuContext)->category;
+
             return;
         }
 
@@ -93,6 +106,7 @@ final class MenuItemForm extends Component
         return view('livewire.admin.menu.item-form', [
             'categoryInitialOptions' => $categoryOptions(SearchMenuCategoryOptions::MODE_SUBCATEGORIES)['options'],
             'categoryOptionsEndpoint' => route('admin.menu.category-options.item-categories'),
+            'menuContextUrl' => $this->sanitizedMenuContext($this->menuContext)->url(),
             'selectedCategoryOption' => $categoryOptions->selectedOption(
                 SearchMenuCategoryOptions::MODE_SUBCATEGORIES,
                 $this->category_id,
@@ -133,7 +147,7 @@ final class MenuItemForm extends Component
 
         session()->flash('status', $this->isEdit ? __('menu.flash.item_updated') : __('menu.flash.item_created'));
 
-        $this->redirectRoute('admin.menu.index');
+        $this->redirectRoute('admin.menu.index', $this->sanitizedMenuContext($this->menuContext)->toQuery());
     }
 
     public function removeInternalImage(): void
@@ -305,6 +319,18 @@ final class MenuItemForm extends Component
         return new Money(
             MoneyFormatter::minorFromMajor($this->price_major, $this->currency),
             $this->currency,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $menuContext
+     */
+    private function sanitizedMenuContext(array $menuContext): MenuIndexContext
+    {
+        return MenuIndexContext::fromInput(
+            $menuContext,
+            app(BrowseMenuItems::class),
+            (bool) data_get(auth()->user(), 'is_superadmin'),
         );
     }
 

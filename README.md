@@ -19,6 +19,7 @@ Use Docker through the Makefile; host PHP is not required.
 - `make pint` formats with Pint.
 - `make fresh` creates the public storage link and runs `migrate:fresh --seed`.
 - `make build` installs dependencies, creates the app key and public storage link, and builds Vite assets.
+- `make smoke-menu-context` runs the Menu context-preservation HTTP smoke inside Docker after demo Menu load data has been generated.
 - `make tools` starts dev-profile tools, currently Adminer at `http://localhost:8081`.
 
 ## Horizon

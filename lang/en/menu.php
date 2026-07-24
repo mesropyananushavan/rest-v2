@@ -62,6 +62,7 @@ return [
         'edit' => 'Edit',
         'force_delete' => 'Delete forever',
         'hide_archived' => 'Hide archived',
+        'more' => 'More actions',
         'remove_image' => 'Remove image',
         'replace_image' => 'Replace',
         'restore' => 'Restore',
