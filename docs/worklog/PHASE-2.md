@@ -1,13 +1,415 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.18 Tables vertical slice in progress
-Branch: phase-2-stage-1.18-tables
+Status: Stage 1.11 Part C backend scale hardening in progress
+Branch: phase-2-stage-1.11c-menu-scale
 
 PR state: Codex may create and merge PRs after exact-head green CI; direct
 pushes to `main`, force-push, history rewriting, and branch deletion remain
 forbidden.
 
 ## Plan
+- [x] Stage 1.11C-scale.1: baseline reconciliation and backend-only plan.
+  Read `AGENTS.md`, `docs/BLUEPRINT.md`, `docs/DECISIONS.md`, and this
+  worklog; run `git status`, `git log --oneline -8`, and `git fetch origin`;
+  verify Part B head `d0065ae` ancestry; create
+  `phase-2-stage-1.11c-menu-scale` from fresh `origin/main`; inspect the real
+  Menu module, migrations, command registration, and Make targets; record that
+  the prompt's "Part C not started" note is stale against current `main`, which
+  already contains Stage 1.11 Part C UI/read-model work plus later
+  Audit/Halls/Tables merges. Result: `git status` was clean on
+  `main...origin/main`; `git fetch origin`
+  succeeded; `d0065ae` is an ancestor of `origin/main`; branch
+  `phase-2-stage-1.11c-menu-scale` was created from `origin/main` at
+  `fb909c0`. Actual current Menu code already has `PaginateMenuCategories`,
+  `PaginateMenuItems`, `SearchMenuItems`, PostgreSQL trigram JSONB expression
+  indexes, and the broad `menu:seed-load` command, but it does not have the
+  prompt-compatible per-demo-tenant `menu:load-test-data` command or the
+  required fresh backend measurement proof for that exact slice.
+- [x] Stage 1.11C-scale.2: prompt-compatible load-test command. Add a
+  standalone `menu:load-test-data` command registered in `bootstrap/app.php`
+  that runs only in local/testing, targets the existing two demo tenants,
+  deterministically creates about 200 categories and 20000 items per tenant
+  without running from `DemoSeeder` or `make fresh`, batches raw inserts with
+  bounded memory, and provides an explicit purge option that removes only rows
+  carrying its own generated marker while leaving DemoSeeder and human rows
+  intact. Add focused command tests for guard, idempotency, purge safety,
+  tenant/branch/name/money shape, and generated counts. Result: added
+  nullable `load_test_key` markers and purge indexes to Menu tables; registered
+  `menu:load-test-data`; added `make artisan ARGS="..."`; documented command
+  usage in `README.md`; command defaults to exactly 200 category rows and
+  20000 item rows per demo tenant, splits Arat rows across both demo branches,
+  refuses outside local/testing, fails instead of duplicating generated rows,
+  and `--purge-generated` / `--purge-only` delete only rows marked by this
+  command. Verification so far: Pint pass (`211 files`), PHPStan pass
+  (`[OK] No errors`), SQLite Pest pass (`163 passed / 5 skipped /
+  1235 assertions`).
+- [x] Stage 1.11C-scale.3: read-model proof and index decision refresh. Keep
+  the existing PostgreSQL `pg_trgm` JSONB expression-index strategy unless
+  measurement proves a gap; add any needed additive/reversible index migration
+  for the measured query shapes; update `docs/DECISIONS.md` with a dated entry
+  for the backend-scale slice; strengthen read-model/API tests for tenant and
+  branch isolation in search plus bounded query count for the paginated item
+  list. Result: added `BrowseMenuItems` as a coherent Application facade for
+  category/default item browsing and global search, switched the API controller
+  to that facade, recorded the 2026-07-24 JSONB trigram/search-index decision,
+  extended search coverage with a matching tenant-B row that must not leak,
+  and added a bounded-query-count assertion for `PaginateMenuItems` while
+  touching each eager-loaded category. No additional search migration was
+  needed before measurement. Verification: Pint pass (`212 files`), PHPStan
+  pass (`[OK] No errors`), SQLite Pest pass (`164 passed / 5 skipped /
+  1264 assertions`).
+- [x] Stage 1.11C-scale.4: PostgreSQL load run and measurements. Run
+  `make fresh`, execute the new load command in the container with purge/load
+  options, capture per-tenant row counts, run `EXPLAIN (ANALYZE, BUFFERS)` for
+  first page, deep page, global search hit, global search miss, and category
+  panel/list queries, fix any sequential-scan slow path with query/index shape
+  rather than caching, and record timings/index evidence in this worklog.
+  Result: `make fresh` passed on PostgreSQL through
+  `2026_07_24_010000_add_menu_category_panel_index`; final load command
+  `make artisan ARGS="menu:load-test-data --purge-generated"` generated
+  `menu_categories=400`, `menu_items=40000` in `9.747s`. Row counts per demo
+  tenant were `arat-riverside: 200 categories / 20000 items` and
+  `northstar-bistro: 200 categories / 20000 items`. The first category-panel
+  measurement used the marker purge index as a tenant-leading index rather
+  than the parent-panel index; to keep the intended tenant/parent/deleted/sort
+  access path available at larger tenant counts, an additive
+  `menu_categories_tenant_parent_deleted_sort_id_idx` migration was added and
+  covered by `MenuSchemaTest`.
+
+  Stage 1.11C-scale.4 measurements on local PostgreSQL after the final fresh
+  load:
+
+  | Query | Scale | Time | Index evidence |
+  |---|---:|---:|---|
+  | Category item first page (`tenant_id=1`, `branch_id=1`, `category_id=48`, `limit 25`) | 400 categories / 40000 items | `Execution Time: 2.259 ms` | `Index Scan using menu_items_tenant_branch_category_deleted_active_sort_id_idx` |
+  | Category item deep page (`offset 50`) | same | `Execution Time: 0.957 ms` | `Index Scan using menu_items_tenant_branch_category_deleted_active_sort_id_idx` |
+  | Global search hit (`LIKE '%1-9999%'`) | same | `Execution Time: 2.026 ms` | `Bitmap Index Scan on menu_items_translated_name_trgm_idx` |
+  | Global search miss (`LIKE '%zz-no-match-zz%'`) | same | `Execution Time: 0.810 ms` | `Bitmap Index Scan on menu_items_translated_name_trgm_idx` |
+  | Category panel roots (`tenant_id=1`, roots, `limit 25`) | same | `Execution Time: 0.386 ms` | `Index Scan using menu_categories_parent_id_idx`; no sequential scan |
+  Superseded on 2026-07-24: the category-panel measurement above used only
+  the two demo tenants and is unrepresentative for the panel-index decision.
+  The representative combined-dataset measurements in
+  Stage 1.11C-scale-review2 supersede it.
+- [x] Stage 1.11C-scale.5: final verification and scoped commit/push. Run
+  `make pint`, `make stan`, `make test`, `make fresh`, any required focused
+  PostgreSQL checks, and a full branch diff review; commit each logical step
+  with its worklog update and push the feature branch only if all required
+  verification is green. Do not create or merge a PR. Result: final local
+  gates are green: Pint pass (`213 files`), PHPStan pass (`[OK] No errors`),
+  SQLite Pest pass (`164 passed / 5 skipped / 1265 assertions`), PostgreSQL
+  Tenancy/RLS pass (`21 passed / 73 assertions`), and `make fresh` pass.
+  The final fresh PostgreSQL load command generated `400` categories and
+  `40000` items in `9.747s`; corrected per-tenant row counts were
+  `arat-riverside: 200 categories / 20000 items` and
+  `northstar-bistro: 200 categories / 20000 items`. EXPLAIN checks used
+  indexes for category item pagination, global search hit/miss, and category
+  panel roots with no sequential scans. No asset-affecting files changed, so
+  `npm run build` / `make build` was not required. Full branch diff reviewed;
+  branch push remains pending.
+- [x] Stage 1.11C-scale-review.1: review-correction baseline and worklog plan.
+  Re-read the required sources, confirm branch/worktree state, inspect the API
+  and Livewire Menu read paths, inspect `menu:seed-load`, inspect marker-column
+  exposure, and write this corrective plan before code. Result: branch
+  `phase-2-stage-1.11c-menu-scale` is clean and tracks
+  `origin/phase-2-stage-1.11c-menu-scale`; commits `672a43a`, `7bc39f6`,
+  `27297e8`, `74e0220`, and `942598e` are present. API item listing uses
+  `BrowseMenuItems`; Livewire `MenuIndex` still calls
+  `ResolveMenuCategorySelection`, `PaginateMenuCategories`,
+  `PaginateMenuItems`, and `SearchMenuItems` directly. `menu:seed-load
+  --fresh` currently expresses schema recreation and is local-database guarded,
+  while `--force` bypasses the top-level environment guard before the
+  schema-recreation assertion; marker columns are not currently fillable,
+  cast, appended, or returned by `MenuItemResource`, but need explicit tests.
+- [x] Stage 1.11C-scale-review.2: real read-path query-count proof and
+  Livewire characterization. Add tests proving query count is identical for
+  small and large page sizes on both `BrowseMenuItems` category/search modes
+  and full `MenuIndex` Livewire category/search renders. Add behavior
+  characterization tests for current Livewire semantics without migrating it to
+  `BrowseMenuItems`: global search ignores selected category, clearing search
+  returns to selected category context, default category selection, empty
+  category empty-list rendering, and superadmin-only archive controls. Record
+  the current two-read-path state and deferred convergence decision in
+  `docs/DECISIONS.md`. Result: added exact-count invariance tests:
+  `BrowseMenuItems` category mode `5` vs `30` rows both execute `6` queries;
+  `BrowseMenuItems` search mode `5` vs `30` rows both execute `3` queries;
+  `MenuIndex` category render small vs full page both execute `10` queries;
+  `MenuIndex` search render small vs full page both execute `13` queries.
+  Added Livewire characterization coverage for search ignoring selected
+  category, clearing search back to selected category context, default
+  category selection, empty subcategory empty-list rendering, and existing
+  superadmin-only archive behavior coverage. Recorded the split-read-path
+  decision and deferred convergence target in `docs/DECISIONS.md`. Verification:
+  initial `make test` exposed a stale Livewire test query-string setup issue;
+  after clearing query params explicitly, `make test` passed (`169 passed /
+  5 skipped / 1375 assertions`) and `make pint` passed (`213 files`).
+- [x] Stage 1.11C-scale-review.3: `menu:seed-load` safety and command
+  separation. Determine precisely what `--force` bypasses before changing code;
+  make environment and local-database guards unconditional if needed; require
+  confirmation for schema recreation unless explicitly suppressed by `--force`;
+  add focused command tests; update README and `docs/DECISIONS.md` to clarify
+  `menu:seed-load` versus `menu:load-test-data`. Result: before this change,
+  `--force` bypassed the top-level local/testing environment guard for ordinary
+  `menu:seed-load` runs, but did not bypass the schema-recreation
+  local-database assertion; non-interactive `--fresh` schema recreation could
+  skip confirmation because confirmation was only asked for interactive input.
+  After this change, local/testing and local-database guards are unconditional
+  and `--force` only suppresses the schema-recreation confirmation. Added
+  command safety tests proving `--force` cannot run outside local/testing,
+  schema recreation is blocked for non-local database config even with
+  `--force`, and confirmation is required for local schema recreation without
+  `--force`. README now distinguishes `menu:load-test-data` demo-tenant loads
+  from `menu:seed-load` synthetic-tenant loads; `docs/DECISIONS.md` records the
+  command separation and safety contract. Verification: `make test` passed
+  (`172 passed / 5 skipped / 1382 assertions`) and `make pint` passed
+  (`214 files`).
+- [x] Stage 1.11C-scale-review.4: marker-column containment. Add tests proving
+  `load_test_key` is not fillable, not cast, not appended, not present in API
+  resources, not present in serialized model output, and not rendered in Menu
+  views. Record the dev/test-tooling-only marker-column decision and exit path
+  in `docs/DECISIONS.md`. Result: added `#[Hidden(['load_test_key'])]` to
+  `MenuCategory` and `MenuItem` so hydrated marker columns do not leak through
+  model serialization. Added marker exposure tests proving marker columns are
+  not fillable, not cast, not appended, absent from serialized model output,
+  absent from `MenuItemResource`/API responses, and not rendered by the Menu
+  screen. Recorded the dev/test-tooling-only marker decision and exit path in
+  `docs/DECISIONS.md`. Verification: `make pint` passed (`215 files`, one
+  style issue fixed in the new test) and `make test` passed (`175 passed /
+  5 skipped / 1400 assertions`).
+- [x] Stage 1.11C-scale-review.5: realistic panel measurement and index
+  decision. Use `menu:seed-load` without schema recreation to create at least
+  about 200 local load tenants, run `ANALYZE`, capture the exact SQL generated
+  by `PaginateMenuCategories`, measure `EXPLAIN (ANALYZE, BUFFERS)` before and
+  after the panel-index decision, and either keep the unmerged composite index
+  with plan evidence or remove its migration/test assertion and record why in
+  `docs/DECISIONS.md`. Result: `make fresh` succeeded, then
+  `menu:seed-load --mode=production-like --restaurants=200 --categories=1
+  --subcategories=1 --items=1 --batch=5000` ran without `--fresh` and inserted
+  200 load tenants, 200 roots, 200 subcategories, and 200 items
+  (`copy_load_seconds=54.098`). Per-tenant aggregate counts were stable:
+  200 load tenants, min/max roots `1/1`, subcategories `1/1`, items `1/1`.
+  Captured the exact active panel SQL from `PaginateMenuCategories` via
+  interactive Tinker/`DB::listen`: root count, root page select ordered by
+  `sort_order`, localized `hy/ru/en` lower expression, `id`, and child eager
+  load for the selected root ids. After `ANALYZE`, before the decision, root
+  count used `Index Only Scan using
+  menu_categories_tenant_parent_deleted_sort_id_idx` (`0.196 ms`), root page
+  select used `Index Scan using
+  menu_categories_tenant_parent_deleted_sort_id_idx` (`0.195 ms`), and child
+  eager-load used `Index Scan using menu_categories_parent_id_idx`
+  (`0.087 ms`). The composite panel index is kept. After the keep decision and
+  repeat `ANALYZE`, the same plan nodes were used: root count `0.203 ms`, root
+  page select `0.100 ms`, child eager-load `0.078 ms`. Recorded the
+  panel-index decision in `docs/DECISIONS.md`. Superseded on 2026-07-24: this
+  dataset had high tenant cardinality but only 400 category rows and 200 item
+  rows, so it did not validate the panel path under many tenants, many roots
+  per tenant, and a large item table simultaneously.
+- [x] Stage 1.11C-scale-review.6: HTTP smoke, final gates, diff review, and
+  push. Run `make pint`, `make stan`, `make test`, `make fresh`, PostgreSQL
+  tenant-isolation, the multi-tenant load/counts, `ANALYZE`/EXPLAIN evidence,
+  HTTP smoke for `/admin/menu` and `/api/v1/menu-items`, `git diff --check`,
+  and full branch diff review. Commit the final worklog handoff and push the
+  feature branch only if green; do not create or merge a PR. Result: final
+  gates passed. `make pint`: `PASS 215 files`. `make stan`: `121/121`, no
+  errors. `make test`: `175 passed / 5 skipped / 1400 assertions`.
+  `make fresh`: migrations and `DemoSeeder` completed successfully, including
+  `2026_07_24_010000_add_menu_category_panel_index`. PostgreSQL tenancy suite:
+  `21 passed / 73 assertions`. Final multi-tenant load after `make fresh`:
+  `menu:seed-load --mode=production-like --restaurants=200 --categories=1
+  --subcategories=1 --items=1 --batch=5000`, no `--fresh`,
+  `copy_load_seconds=53.008`, verified `tenants=200`, `roots=200`,
+  `subcategories=200`, `menu_categories=400`, `menu_items=200`; per-load-tenant
+  min/max roots `1/1`, subcategories `1/1`, items `1/1`. Final `ANALYZE` plus
+  exact category-panel EXPLAIN used `Index Only Scan using
+  menu_categories_tenant_parent_deleted_sort_id_idx` for root count
+  (`0.100 ms`), `Index Scan using
+  menu_categories_tenant_parent_deleted_sort_id_idx` for root page select
+  (`0.250 ms`), and `Index Scan using menu_categories_parent_id_idx` for child
+  eager-load (`0.080 ms`). Superseded on 2026-07-24: these final panel numbers
+  were measured on the same undersized 400-category/200-item synthetic state
+  and are not the deciding evidence for the index. HTTP smoke against
+  `http://127.0.0.1:8080` passed:
+  manager and owner logins returned final `200`; manager `/admin/menu`,
+  category, page-forward, search-hit, search-miss, and clear-back requests all
+  returned `200` with expected Armenian content markers; manager did not see
+  archive controls, owner did; API category paging, global-search hit ignoring
+  `category_id=3`, search miss, and clear-back category request all returned
+  `200` with expected pagination/data markers. `git diff --check` passed. Full
+  branch diff versus `origin/main` reviewed: 19 files, Menu scale/read actions,
+  command safety, README/docs/worklog, additive migrations, and Menu tests only;
+  no `docs/BLUEPRINT.md`, `template/`, frontend asset, or unrelated module
+  changes.
+- [x] Stage 1.11C-scale-review2.1: representative combined-dataset plan and
+  loader choice. Re-read the source docs, verify the clean pushed branch at
+  `9f65491`, inspect `PaginateMenuCategories`, `PaginateMenuItems`,
+  `SearchMenuItems`, `menu:load-test-data`, and `menu:seed-load`, then decide
+  the cheapest safe local-only dataset build that contains both high tenant
+  cardinality and high item-table scale in one database state. Result: branch
+  `phase-2-stage-1.11c-menu-scale` was clean and tracking origin at
+  `9f65491`. No blueprint/source conflict found. The earlier 2026-07-24
+  panel-index decision is accepted as needing supersession because it measured
+  high item counts and high tenant cardinality on separate or undersized
+  database states. Chosen build: after one `make fresh`, run
+  `menu:load-test-data --purge-generated` for the two demo tenants to keep two
+  tenants at about 20000 items each, then run `menu:seed-load` without
+  `--fresh` for 100 synthetic load tenants with 100 roots each, one subcategory
+  per root, and enough items per subcategory to make the single local database
+  state reach at least 100 tenants, 10000 roots, and 200000 total menu items.
+- [x] Stage 1.11C-scale-review2.2: build and count the combined local dataset.
+  After one `make fresh`, run `menu:load-test-data --purge-generated` for the
+  two demo tenants and run `menu:seed-load` without `--fresh` for 100 synthetic
+  load tenants with at least 100 roots each and enough generated items to make
+  total `menu_items >= 200000`. Record exact wall clock time, per-table counts,
+  per-tenant min/max counts, and any scale ceiling or bottleneck if the target
+  cannot be reached. Result: target reached without reduction on the local dev
+  PostgreSQL database. `make fresh` passed first. `menu:load-test-data
+  --purge-generated` generated the two demo tenants in `9.713s` command time
+  (`11s` wall clock): generated rows were `menu_categories=400` and
+  `menu_items=40000`, with `arat-riverside` and `northstar-bistro` each at
+  `200` generated categories and `20000` generated items. Then
+  `menu:seed-load --mode=production-like --restaurants=100 --categories=100
+  --subcategories=1 --items=16 --batch=20000` ran without `--fresh` and
+  inserted 100 load tenants, 100 branches, 100 load-manager users, 10000 roots,
+  10000 subcategories, and 160000 items in `63.075s` command time (`64s` wall
+  clock). Combined per-table counts in the single DB state: `tenants=102`,
+  `branches=103`, `users=108`, `menu_categories=20407`, root categories
+  `10042`, subcategories `10365`, and `menu_items=200007`. Per-tenant counts:
+  demo tenants min/max roots `21/21`, subcategories `182/183`, items
+  `20002/20005` including DemoSeeder rows; load tenants min/max roots
+  `100/100`, subcategories `100/100`, items `1600/1600`. The bottleneck was
+  PostgreSQL COPY plus live index maintenance during item insertion; no scale
+  reduction was needed.
+- [x] Stage 1.11C-scale-review2.3: capture real SQL and re-measure with/without
+  the panel index. Use `DB::listen` around the actual Application actions on
+  the combined dataset to capture panel, item pagination, and global search SQL.
+  Run `ANALYZE`, then `EXPLAIN (ANALYZE, BUFFERS)` for panel root count, panel
+  root page select, panel child eager-load, category item first page, category
+  item deep page, global search hit, and global search miss. Drop the local
+  `menu_categories_tenant_parent_deleted_sort_id_idx` only for the comparison
+  measurement, recreate it immediately, and record plan nodes, estimates,
+  actual rows, timings, and restored index state. Result: captured real SQL via
+  interactive Tinker/`DB::listen` on the combined dataset. Panel action used
+  synthetic tenant `3` and emitted root count, root page select, and child
+  eager-load for root ids `408..432`. Item/search actions used Arat tenant `1`,
+  branch `1`, category `56` (`54` active items), search hit `1-9999`, and
+  search miss `zz-no-match-zz`; the real miss path emitted only the count query
+  because Laravel skips the page select when total is zero. After `ANALYZE`,
+  with the composite index present: panel root count used `Index Only Scan
+  using menu_categories_tenant_parent_deleted_sort_id_idx`, estimate/actual
+  `98/100`, `0.261 ms`; panel root page used `Bitmap Heap Scan` plus
+  `Bitmap Index Scan on menu_categories_tenant_parent_deleted_sort_id_idx`,
+  estimate/actual `98/100` before limit and returned `25`, `0.753 ms`; child
+  eager-load used `Index Scan using menu_categories_parent_id_idx`,
+  estimate/actual `1/25`, `0.319 ms`; category item first page used
+  `Index Scan using menu_items_tenant_branch_category_deleted_sort_id_idx`,
+  estimate/actual `1/54` before limit and returned `25`, `0.704 ms`; category
+  item deep page used the same index, estimate/actual `1/54` before offset and
+  returned `4`, `0.440 ms`; global search hit used `Bitmap Heap Scan` with
+  `BitmapAnd` over `menu_items_tenant_branch_load_test_key_idx` and
+  `menu_items_translated_name_trgm_idx`, estimate/actual `1/1`, `1.890 ms`;
+  global search miss count used `Bitmap Heap Scan` with the same bitmap indexes,
+  estimate/actual `1/0`, `1.673 ms`. Dropped the local composite index only for
+  comparison, ran `ANALYZE menu_categories`, then measured panel again:
+  root count used the existing `Index Only Scan using
+  menu_categories_tenant_parent_deleted_active_sort_id_idx`, estimate/actual
+  `98/100`, `0.141 ms`; root page used `Bitmap Heap Scan` plus
+  `Bitmap Index Scan on menu_categories_tenant_parent_deleted_active_sort_id_idx`,
+  estimate/actual `98/100` before limit and returned `25`, `0.674 ms`; child
+  eager-load still used `menu_categories_parent_id_idx`, estimate/actual
+  `1/25`, `0.267 ms`. Recreated the local
+  `menu_categories_tenant_parent_deleted_sort_id_idx` immediately and confirmed
+  it exists before making the branch-level decision.
+- [x] Stage 1.11C-scale-review2.4: supersede the panel-index decision. Based
+  only on the representative same-dataset with/without evidence, either keep
+  the composite index or remove the unmerged migration and schema-test
+  assertion. Add a dated `docs/DECISIONS.md` entry that explicitly supersedes
+  the 2026-07-24 keep decision, explains why the earlier evidence was
+  inadequate, and records the deciding plan evidence. Keep earlier worklog
+  numbers but mark them as unrepresentative and superseded. Result: removed
+  the unmerged `2026_07_24_010000_add_menu_category_panel_index` migration and
+  the schema assertion for `menu_categories_tenant_parent_deleted_sort_id_idx`.
+  Added a superseding `docs/DECISIONS.md` entry: on the representative
+  single-state dataset, the new index used `0.261 ms` root count and
+  `0.753 ms` root page plans, while existing
+  `menu_categories_tenant_parent_deleted_active_sort_id_idx` used `0.141 ms`
+  and `0.674 ms` for the same statements after dropping the new index locally.
+  The new index is therefore redundant and removed from this branch.
+  Verification: `make test` passed (`175 passed / 5 skipped /
+  1399 assertions`); the assertion count decreased by one only because the
+  owner-approved schema assertion for the removed unmerged index was deleted
+  with that migration, while total test count stayed at `175`.
+- [x] Stage 1.11C-scale-review2.5: corrected paging smoke. Re-run HTTP smoke
+  without host PHP against `/admin/menu` and `/api/v1/menu-items` using a
+  category with more than one page of items; prove page 2 is non-empty and
+  contains a different item set than page 1, with real status codes and
+  distinguishing rendered/API markers. Result: used Arat category `56`
+  (`Թարմ ոսպ բաժին arat-riverside 1-9`) with `54` active branch-1 items.
+  Curl smoke against `http://127.0.0.1:8080` used the real login form:
+  `GET /login` returned `200` and manager `POST /login` returned `302`.
+  `/admin/menu?category=56` returned `200`, rendered page-1 marker
+  `Այգու պանիր ուտեստ arat-riverside 1-9`, and did not render page-2 marker
+  `Շուկայի պանիր ուտեստ arat-riverside 1-4689`.
+  `/admin/menu?category=56&item_page=2` returned `200`, rendered the page-2
+  marker, and did not render the page-1 marker. `/api/v1/menu-items?
+  category_id=56&per_page=25&page=1` returned `200` with `25` item ids,
+  including `id=16` and excluding `id=4696`; page `2` returned `200` with
+  `25` item ids, including `id=4696` and excluding `id=16`.
+- [x] Stage 1.11C-scale-review2.6: final gates, branch diff review, worklog
+  handoff, and push. Run `make pint`, `make stan`, `make test`, `make fresh`,
+  PostgreSQL tenant-isolation, the combined dataset load/counts, final
+  `ANALYZE`/EXPLAIN evidence, corrected paging smoke, `git diff --check`, and
+  full branch diff review versus `origin/main`. Commit each logical step with
+  its worklog update and push the feature branch only if green; do not create
+  or merge a PR. Result: final local gates passed. `make pint`: `PASS
+  214 files`. `make stan`: `121/121`, `[OK] No errors`. `make test`:
+  `175 passed / 5 skipped / 1399 assertions`. `make fresh`: passed; migration
+  output ends at `2026_07_24_000000_add_load_test_markers_to_menu_tables` and
+  no longer includes the removed panel-index migration. PostgreSQL tenancy
+  suite: `21 passed / 73 assertions`.
+
+  Final combined dataset after `make fresh`: `menu:load-test-data
+  --purge-generated` produced `400` generated categories and `40000` generated
+  items in `10.157s` command time (`11.93s` wall clock). `menu:seed-load
+  --mode=production-like --restaurants=100 --categories=100 --subcategories=1
+  --items=16 --batch=20000` ran without `--fresh`, inserted 100 load tenants,
+  100 branches, 100 users, 10000 roots, 10000 subcategories, and 160000 items;
+  `copy_load_seconds=59.643`, wall clock `1:02.42`. Combined counts:
+  `tenants=102`, `branches=103`, `users=108`, `menu_categories=20407`,
+  `root_categories=10042`, `subcategories=10365`, `menu_items=200007`. Demo
+  tenants min/max roots `21/21`, subcategories `182/183`, items
+  `20002/20005`; load tenants min/max roots `100/100`, subcategories
+  `100/100`, items `1600/1600`.
+
+  Final `ANALYZE` plus real captured action SQL measurements:
+
+  | Query | Without removed index | With temporary removed index | Estimate / actual |
+  |---|---:|---:|---:|
+  | Panel root count | `Index Only Scan using menu_categories_tenant_parent_deleted_active_sort_id_idx`, `0.188 ms` | `Index Only Scan using menu_categories_tenant_parent_deleted_sort_id_idx`, `0.136 ms` | `98 / 100` |
+  | Panel root page | `Bitmap Heap Scan` + active index bitmap, `0.792 ms` | `Bitmap Heap Scan` + removed-index bitmap, `0.690 ms` | `98 / 100`, returned `25` |
+  | Panel child eager-load | `Index Scan using menu_categories_parent_id_idx`, `0.245 ms` | same index, `0.259 ms` | `1 / 25` |
+  | Category item first page | `Index Scan using menu_items_tenant_branch_category_deleted_sort_id_idx`, `0.707 ms` | n/a | `1 / 54`, returned `25` |
+  | Category item deep page | same item index, `0.450 ms` | n/a | `1 / 54`, returned `4` |
+  | Global search hit | `Bitmap Heap Scan` with `BitmapAnd` over `menu_items_tenant_branch_load_test_key_idx` and `menu_items_translated_name_trgm_idx`, `0.885 ms` | n/a | `1 / 1` |
+  | Global search miss count | same bitmap indexes, `0.751 ms` | n/a | `1 / 0` |
+
+  The temporary `menu_categories_tenant_parent_deleted_sort_id_idx` was dropped
+  after measurement and `to_regclass(...)` returned null, restoring the local
+  DB to the current branch state. The deciding evidence remains removal: the
+  temporary index provides only about `0.052 ms` to `0.102 ms` on the root
+  count/page statements and does not improve child eager-load; the existing
+  active tenant/parent/deleted index already prevents sequential scans.
+
+  Final corrected paging smoke against `http://127.0.0.1:8080`: `GET /login`
+  `200`, manager `POST /login` `302`; `/admin/menu?category=56` `200` with
+  page-1 marker `Այգու պանիր ուտեստ arat-riverside 1-9` and without page-2
+  marker `Շուկայի պանիր ուտեստ arat-riverside 1-4689`;
+  `/admin/menu?category=56&item_page=2` `200` with the page-2 marker and
+  without the page-1 marker; `/api/v1/menu-items?category_id=56&per_page=25&
+  page=1` `200` with `25` ids including `16` and excluding `4696`; page `2`
+  `200` with `25` ids including `4696` and excluding `16`. `git diff --check`
+  passed. Full branch diff versus `origin/main` reviewed: 17 files, limited to
+  Menu scale/read tooling, command safety, README, decisions/worklog, Makefile
+  artisan target, load-marker migration, and Menu tests; no `docs/BLUEPRINT.md`,
+  `template/`, assets, or unrelated modules changed.
 - [x] Stage 1.16.1: preconditions, branch, and read-only inspection. Verify a
   clean worktree, fetch `origin/main`, confirm Stage 1.14 ancestry and
   `routes/api.php`, fast-forward `main`, create
@@ -974,6 +1376,12 @@ forbidden.
   name expression index and Livewire + Alpine category combobox decisions on
   2026-07-21. Final load measurements must include write latency for creating
   a menu item and toggling activity on the filled table, not only read paths.
+- During Stage 1.11 Part C backend-scale measurements, PostgreSQL chose the
+  older `menu_categories_parent_id_idx` for the tiny two-tenant root category
+  panel query even after a tenant/parent/deleted/sort index was available.
+  The measured path is still an index scan with no sequential scan; keep the
+  tenant/parent composite index because it gives the planner a tenant-leading
+  path when root categories grow across many tenants.
 - During Stage 1.11.10.3 WIP reconciliation, existing `PaginateMenuCategories`
   covers category panel pagination/search and first-page lookup, but no
   existing Application action fetches one selected category by id without
@@ -1639,6 +2047,13 @@ Prioritized remaining work:
 - `tests/Feature/Menu/MenuSchemaTest.php` early-returns on non-pgsql drivers,
   so it silently passes without asserting anything, and it is not included in
   the `tenant-isolation-pgsql` job.
+- During the Stage 1.11C review-correction HTTP smoke, the first curl script
+  forced `-X POST` while following redirects, so curl preserved POST across the
+  login redirect and reported a final `405`; it also included a host-PHP helper
+  to format an unused marker, which violated the project workflow and was
+  discarded. The corrected smoke used normal form POST redirect handling, no
+  host PHP, and passed with explicit manager/owner/UI/API status and content
+  markers.
 - Menu UX carry-over from Stage 1.11 Part D: context-preserving save/cancel,
   and moving archive/restore/force-delete controls into a row overflow menu.
 - No admin UI or API for reading audit logs.
@@ -1691,6 +2106,6 @@ Decisions awaiting the owner:
   Orders writes, or should it wait until Menu public contracts are added first?
 
 ## Next steps
-Next stage: Table board (Livewire), depending on the merged Tables slice.
-Pending owner decision: approve, revise, or defer the Blueprint section 4
-amendment for Halls & Tables quoted above.
+Next Menu session: converge the Livewire `MenuIndex` read adapter onto the
+single `BrowseMenuItems` read path using the characterization tests from this
+review as the safety net; do not redesign the UI in that convergence step.

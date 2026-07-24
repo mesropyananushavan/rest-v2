@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Console\Commands\MenuLoadTestDataCommand;
 use App\Console\Commands\MenuSeedLoadCommand;
 use App\Http\Middleware\AttachLogContext;
 use App\Http\Middleware\EnsureSuperAdmin;
@@ -25,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withCommands([
+        MenuLoadTestDataCommand::class,
         MenuSeedLoadCommand::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {

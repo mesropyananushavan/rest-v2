@@ -432,3 +432,149 @@ because that violates the Halls-only scope; storing preparation place as free
 text, because it would likely conflict with the future kitchen/printing
 domain; creating a new Reporting/Admin audit module, because audit writes are
 already cross-cutting and Reads remain future Reports & Analytics work.
+
+## 2026-07-24 — Menu scale backend proof keeps JSONB trigram search
+Decision: the Menu backend scale slice keeps `translated_name` JSON/JSONB as
+the source of truth and uses the existing PostgreSQL `pg_trgm` GIN expression
+indexes over the lower-case concatenation of `hy`, `ru`, and `en` localized
+name values for contains-style item/category search. Runtime read paths go
+through paginated Application queries, with `BrowseMenuItems` as the coherent
+item-list facade for category context, global search, active filtering, archive
+mode, stable ordering, and page pagination. Load-test rows are marked with
+nullable `load_test_key` columns and narrow purge indexes so local scale data
+can be regenerated without touching DemoSeeder or human rows.
+Reason: measured Menu search must support multilingual partial operator input
+around tens of thousands of rows per tenant without a denormalized mutable
+search column or in-memory filtering. The current trigram expression strategy
+matches that workflow, stays compatible with the existing localized value
+object model, and lets SQLite tests keep a driver-aware LIKE fallback while
+PostgreSQL proves real index usage.
+Rejected: unindexed JSONB `ILIKE` scans, because they do not scale at the
+target tenant/row counts; a generated or application-maintained `search_text`
+column, because it adds write-path synchronization and backfill risk before
+measurements require it; full-text search alone, because short substrings and
+partial multilingual dish names are a better fit for trigrams; caching the Menu
+list/search paths, because this slice is intended to prove query and index
+shape rather than hide slow scans.
+
+## 2026-07-24 — Menu item read paths temporarily remain split
+Decision: the JSON API item list now goes through `BrowseMenuItems`, while the
+existing Livewire `MenuIndex` screen remains on its current direct calls to
+`ResolveMenuCategorySelection`, `PaginateMenuCategories`, `PaginateMenuItems`,
+and `SearchMenuItems` for this correction session. Convergence is deferred; the
+planned end state is one `BrowseMenuItems` read facade used by both API and
+Livewire adapters.
+Reason: this session is proving that the previous backend-scale refactor did
+not change user-visible behavior. Moving the Livewire adapter to the new facade
+in the same proof session would invalidate that evidence by changing the path
+being characterized. The new tests named `characterizes current search and
+category context semantics`, `keeps menu index category render query count
+independent of rendered result size`, and `keeps menu index search render query
+count independent of rendered result size` pin the current Livewire behavior so
+a later convergence change has a safety net.
+Rejected: migrating Livewire to `BrowseMenuItems` now, because it would combine
+behavior proof with adapter convergence; leaving the divergence undocumented,
+because future reviewers would not know whether the split is intentional or an
+accidental regression.
+
+## 2026-07-24 — Menu load commands have separate safety contracts
+Decision: `menu:load-test-data` is the repeatable demo-tenant scale-data command;
+it only targets existing demo tenants and purges rows marked by its own
+`load_test_key`. `menu:seed-load` is the broader local PostgreSQL synthetic-load
+command; it creates load tenants with `seed_source = load` and may recreate only
+the guarded local SmartRest database when `--fresh` is used in
+`production-like` mode. `--force` no longer bypasses the local/testing
+environment guard or local-database assertion; it only suppresses the
+schema-recreation confirmation.
+Reason: the two commands serve different measurement needs. Demo-tenant data is
+for repeatable UI/API scale checks after `make fresh`, while synthetic tenants
+are for planner/cardinality experiments such as 200-tenant category-panel
+measurements. Schema recreation must remain an explicit local-dev operation and
+must never become available through an environment-bypass flag.
+Rejected: deleting `menu:seed-load`, because it remains useful for
+multi-tenant planner evidence; letting `--force` bypass environment or database
+guards, because that could run load tooling against the wrong database; merging
+both commands, because demo-row idempotency and synthetic-tenant generation have
+different cleanup semantics.
+
+## 2026-07-24 — Menu load-test markers are dev/test tooling only
+Decision: `menu_categories.load_test_key` and `menu_items.load_test_key` are
+dev/test-tooling columns used only by `menu:load-test-data` to make generated
+rows idempotent and purgeable without touching DemoSeeder or human data. The
+columns stay on the tenant-owned Menu tables because the purge boundary must
+follow the rows being generated and deleted, but they are hidden from Eloquent
+serialization, excluded from mass assignment, not cast, not appended, and not
+returned by Menu API resources or rendered views.
+Reason: marker columns keep local scale data deterministic and safely removable
+without introducing a second tracking table whose lifecycle could drift from
+tenant-owned Menu rows. Treating the markers as tooling metadata preserves the
+runtime API/UI contract while still giving the load generator an auditable
+cleanup key.
+Exit path: if generated-row metadata becomes broader than local dev/test
+tooling, move it to a dedicated internal metadata table keyed by table name,
+row id, tenant id, and generator name, then backfill/purge the marker columns in
+a separate owner-approved migration.
+Rejected: exposing marker values in resources or model serialization, because
+they are not product data; removing or renaming the columns in this correction
+session, because the review explicitly keeps them and asks only to contain
+their exposure.
+
+## 2026-07-24 — Keep the Menu category panel tenant-leading index
+Decision: keep the unmerged `menu_categories_tenant_parent_deleted_sort_id_idx`
+index from the Menu scale branch. On a local PostgreSQL dataset with 200
+synthetic load tenants, each with one active root category, one subcategory, and
+one item, the exact `PaginateMenuCategories` active panel query used the
+tenant-leading index for the root count and root page select. The eager-loaded
+child query continued to use the existing `menu_categories_parent_id_idx`.
+Evidence before the keep decision, after `ANALYZE`: root count used
+`Index Only Scan using menu_categories_tenant_parent_deleted_sort_id_idx`
+with execution time `0.196 ms`; root page select used
+`Index Scan using menu_categories_tenant_parent_deleted_sort_id_idx` with
+execution time `0.195 ms`; child eager-load used
+`Index Scan using menu_categories_parent_id_idx` with execution time
+`0.087 ms`. Evidence after the keep decision and a repeat `ANALYZE`: root
+count used the same `Index Only Scan` with execution time `0.203 ms`; root
+page select used the same `Index Scan` with execution time `0.100 ms`; child
+eager-load used `menu_categories_parent_id_idx` with execution time `0.078 ms`.
+Reason: the prior two-tenant measurement was too small to validate the
+tenant-leading path. At realistic multi-tenant cardinality, the planner chooses
+the composite index for the root panel access pattern, so removing it would
+discard measured protection against tenant-wide category scans.
+Rejected: removing the migration, because the intended index is chosen by the
+real read-model SQL at 200 tenants; adding another panel index, because the
+current root and child panel statements already use indexes and no sequential
+scan remains on the measured path.
+
+## 2026-07-24 — Supersede and remove the Menu category panel tenant-leading index
+Decision: supersede the earlier 2026-07-24 keep decision and remove the
+unmerged `menu_categories_tenant_parent_deleted_sort_id_idx` migration from
+this branch. The representative combined dataset reached `102` tenants,
+`10042` root categories, `20407` category rows, and `200007` item rows in one
+local PostgreSQL database state. On that data, dropping the new index did not
+hurt the real `PaginateMenuCategories` panel path because the existing
+`menu_categories_tenant_parent_deleted_active_sort_id_idx` served the same
+active root predicates.
+Evidence: with the new index present, panel root count used
+`Index Only Scan using menu_categories_tenant_parent_deleted_sort_id_idx`,
+estimate/actual `98/100`, execution `0.261 ms`; root page used a
+`Bitmap Heap Scan` with `Bitmap Index Scan on
+menu_categories_tenant_parent_deleted_sort_id_idx`, estimate/actual `98/100`
+before limit, execution `0.753 ms`; child eager-load used
+`menu_categories_parent_id_idx`, estimate/actual `1/25`, execution `0.319 ms`.
+With only existing indexes, root count used `Index Only Scan using
+menu_categories_tenant_parent_deleted_active_sort_id_idx`, estimate/actual
+`98/100`, execution `0.141 ms`; root page used a `Bitmap Heap Scan` with
+`Bitmap Index Scan on menu_categories_tenant_parent_deleted_active_sort_id_idx`,
+estimate/actual `98/100` before limit, execution `0.674 ms`; child eager-load
+again used `menu_categories_parent_id_idx`, estimate/actual `1/25`, execution
+`0.267 ms`.
+Reason: the earlier keep decision was based on two unrepresentative states:
+one state had high per-tenant item rows but only two tenants, while the later
+state had 200 tenants but only 400 category rows and 200 item rows. Those
+measurements did not prove the panel path under many tenants, many roots per
+tenant, and a large item table at the same time. The representative same-data
+comparison shows the new index is redundant and no material improvement exists.
+Rejected: keeping both tenant-leading category indexes, because the measured
+path already has equivalent active-panel coverage through the existing index;
+removing the existing active index, because it predates this branch and also
+covers active-state category paths beyond the narrow panel comparison.

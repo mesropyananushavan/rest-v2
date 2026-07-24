@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Menu\Application\ArchiveMenuCategory;
 use App\Modules\Menu\Application\ArchiveMenuItem;
+use App\Modules\Menu\Application\BrowseMenuItems;
 use App\Modules\Menu\Application\CreateMenuCategory;
 use App\Modules\Menu\Application\CreateMenuItem;
 use App\Modules\Menu\Application\PaginateMenuCategories;
@@ -20,6 +21,7 @@ use App\Modules\Tenancy\Infrastructure\Models\Tenant;
 use App\Support\I18n\LocalizedText;
 use App\Support\Money\Money;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 
 uses(RefreshDatabase::class);
 
@@ -156,6 +158,139 @@ it('paginates selected-category items and applies inactive and archive filters',
         ->and(collect($withArchived->items())->contains(fn (MenuItem $item): bool => $item->trashed()))->toBeTrue();
 });
 
+it('keeps selected-category item pagination query count bounded while rendering categories', function (): void {
+    $records = menuQueryTenant('tenant-a', 'Tenant A');
+
+    app(TenantResolver::class)->set((int) $records['tenant']->id);
+    app(BranchContext::class)->set((int) $records['branch']->id);
+
+    $root = app(CreateMenuCategory::class)(menuQueryText('Menu'));
+    $category = app(CreateMenuCategory::class)(menuQueryText('Breakfast'), parentId: (int) $root->id);
+
+    for ($index = 1; $index <= 30; $index++) {
+        app(CreateMenuItem::class)(
+            (int) $category->id,
+            menuQueryText("Bounded Dish {$index}"),
+            null,
+            new Money(100000 + $index, 'AMD'),
+            sortOrder: $index,
+        );
+    }
+
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+
+    $page = app(PaginateMenuItems::class)((int) $category->id, perPage: 25);
+
+    foreach ($page->items() as $item) {
+        expect($item->relationLoaded('category'))->toBeTrue();
+        $item->category?->translatedName()->forLocale('en');
+    }
+
+    $queryCount = count(DB::getQueryLog());
+    DB::disableQueryLog();
+
+    expect($page->count())->toBe(25)
+        ->and($queryCount)->toBeLessThanOrEqual(4);
+});
+
+it('keeps browse item category mode query count independent of page size', function (): void {
+    $records = menuQueryTenant('tenant-a', 'Tenant A');
+
+    app(TenantResolver::class)->set((int) $records['tenant']->id);
+    app(BranchContext::class)->set((int) $records['branch']->id);
+
+    $root = app(CreateMenuCategory::class)(menuQueryText('Menu'));
+    $category = app(CreateMenuCategory::class)(menuQueryText('Breakfast'), parentId: (int) $root->id);
+
+    for ($index = 1; $index <= 30; $index++) {
+        app(CreateMenuItem::class)(
+            (int) $category->id,
+            menuQueryText("Browse Category Dish {$index}"),
+            null,
+            new Money(100000 + $index, 'AMD'),
+            sortOrder: $index,
+        );
+    }
+
+    [$smallPage, $smallQueryCount] = menuQueryCount(function () use ($category) {
+        return app(BrowseMenuItems::class)(
+            categoryId: (int) $category->id,
+            perPage: 5,
+        );
+    });
+    [$largePage, $largeQueryCount] = menuQueryCount(function () use ($category) {
+        return app(BrowseMenuItems::class)(
+            categoryId: (int) $category->id,
+            perPage: 30,
+        );
+    });
+
+    foreach ($smallPage->items() as $item) {
+        expect($item->relationLoaded('category'))->toBeTrue();
+        $item->category?->translatedName()->forLocale('en');
+    }
+
+    foreach ($largePage->items() as $item) {
+        expect($item->relationLoaded('category'))->toBeTrue();
+        $item->category?->translatedName()->forLocale('en');
+    }
+
+    expect($smallPage->count())->toBe(5)
+        ->and($largePage->count())->toBe(30)
+        ->and($smallQueryCount)->toBe($largeQueryCount)
+        ->and($smallQueryCount)->toBe(6);
+});
+
+it('keeps browse item global search query count independent of page size', function (): void {
+    $records = menuQueryTenant('tenant-a', 'Tenant A');
+
+    app(TenantResolver::class)->set((int) $records['tenant']->id);
+    app(BranchContext::class)->set((int) $records['branch']->id);
+
+    $root = app(CreateMenuCategory::class)(menuQueryText('Menu'));
+    $breakfast = app(CreateMenuCategory::class)(menuQueryText('Breakfast'), parentId: (int) $root->id);
+    $lunch = app(CreateMenuCategory::class)(menuQueryText('Lunch'), parentId: (int) $root->id);
+
+    for ($index = 1; $index <= 30; $index++) {
+        app(CreateMenuItem::class)(
+            $index <= 15 ? (int) $breakfast->id : (int) $lunch->id,
+            menuQueryText("Browse Search Needle {$index}"),
+            null,
+            new Money(100000 + $index, 'AMD'),
+            sortOrder: $index,
+        );
+    }
+
+    [$smallPage, $smallQueryCount] = menuQueryCount(fn () => app(BrowseMenuItems::class)(
+        categoryId: (int) $breakfast->id,
+        search: 'needle',
+        perPage: 5,
+    ));
+    [$largePage, $largeQueryCount] = menuQueryCount(fn () => app(BrowseMenuItems::class)(
+        categoryId: (int) $breakfast->id,
+        search: 'needle',
+        perPage: 30,
+    ));
+
+    foreach ($smallPage->items() as $item) {
+        expect($item->relationLoaded('category'))->toBeTrue();
+        $item->category?->translatedName()->forLocale('en');
+    }
+
+    foreach ($largePage->items() as $item) {
+        expect($item->relationLoaded('category'))->toBeTrue();
+        $item->category?->translatedName()->forLocale('en');
+    }
+
+    expect($smallPage->count())->toBe(5)
+        ->and($largePage->count())->toBe(30)
+        ->and($smallPage->total())->toBe(30)
+        ->and($largePage->total())->toBe(30)
+        ->and($smallQueryCount)->toBe($largeQueryCount)
+        ->and($smallQueryCount)->toBe(3);
+});
+
 it('shows only archived category containers in archived category panel mode', function (): void {
     $records = menuQueryTenant('tenant-a', 'Tenant A');
 
@@ -232,7 +367,15 @@ it('searches menu items across all localized names within the current branch onl
     app(BranchContext::class)->set((int) $otherBranch->id);
     app(CreateMenuItem::class)((int) $category->id, menuQueryText('Other Branch Omelette', 'Այլ ձվածեղ', 'Другой омлет'), null, new Money(180000, 'AMD'));
 
+    $tenantB = menuQueryTenant('tenant-b', 'Tenant B');
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+    app(BranchContext::class)->set((int) $tenantB['branch']->id);
+    $rootB = app(CreateMenuCategory::class)(menuQueryText('Tenant B Menu'));
+    $categoryB = app(CreateMenuCategory::class)(menuQueryText('Tenant B Breakfast'), parentId: (int) $rootB->id);
+    $tenantBItem = app(CreateMenuItem::class)((int) $categoryB->id, menuQueryText('Tenant B Omelette', 'Tenant B ձվածեղ', 'Tenant B омлет'), null, new Money(180000, 'AMD'));
+
     app(BranchContext::class)->set((int) $records['branch']->id);
+    app(TenantResolver::class)->set((int) $records['tenant']->id);
 
     $armenian = app(SearchMenuItems::class)('ձվածեղ');
     $russian = app(SearchMenuItems::class)('омлет');
@@ -251,7 +394,8 @@ it('searches menu items across all localized names within the current branch onl
         ->and($withInactive->items()[0]->active)->toBeFalse()
         ->and($archived->total())->toBe(1)
         ->and(collect($archived->items())->every(fn (MenuItem $item): bool => $item->trashed()))->toBeTrue()
-        ->and($allArchived->total())->toBe(1);
+        ->and($allArchived->total())->toBe(1)
+        ->and(collect($armenian->items())->pluck('id')->contains((int) $tenantBItem->id))->toBeFalse();
 });
 
 it('requires branch context for paginated item query actions', function (): void {
@@ -307,4 +451,25 @@ function menuQueryText(string $en, ?string $hy = null, ?string $ru = null): Loca
         'ru' => $ru ?? $en,
         'en' => $en,
     ]);
+}
+
+/**
+ * @template TReturn
+ *
+ * @param  callable(): TReturn  $callback
+ * @return array{0: TReturn, 1: int}
+ */
+function menuQueryCount(callable $callback): array
+{
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+
+    try {
+        $result = $callback();
+
+        return [$result, count(DB::getQueryLog())];
+    } finally {
+        DB::disableQueryLog();
+        DB::flushQueryLog();
+    }
 }

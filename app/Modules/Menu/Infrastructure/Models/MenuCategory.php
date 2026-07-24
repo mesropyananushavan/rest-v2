@@ -7,12 +7,14 @@ namespace App\Modules\Menu\Infrastructure\Models;
 use App\Modules\Tenancy\Contracts\BelongsToTenant;
 use App\Support\I18n\LocalizedText;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable(['tenant_id', 'parent_id', 'archived_with_category_id', 'translated_name', 'sort_order', 'active'])]
+#[Hidden(['load_test_key'])]
 final class MenuCategory extends Model
 {
     use BelongsToTenant;

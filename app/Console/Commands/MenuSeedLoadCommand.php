@@ -199,23 +199,23 @@ final class MenuSeedLoadCommand extends Command
         {--batch=10000 : Raw insert batch size, 5000-20000}
         {--drop-rebuild-trgm : Drop and recreate menu PostgreSQL GIN trigram indexes around the load}
         {--fresh : In production-like mode, recreate the local schema with baseline seed before loading; in other modes, delete previous load-generated tenants}
-        {--force : Allow running outside local/testing environments}';
+        {--force : Suppress schema-recreation confirmation; does not bypass local/testing or local-database guards}';
 
-    protected $description = 'Seed large menu datasets for local PostgreSQL load and UI performance testing.';
+    protected $description = 'Create synthetic tenants and large Menu datasets for local PostgreSQL load and UI performance testing.';
 
     public function handle(): int
     {
-        if (! app()->environment(['local', 'testing']) && ! (bool) $this->option('force')) {
-            $this->error('Refusing to run outside local/testing without --force.');
+        if (! app()->environment(['local', 'testing'])) {
+            $this->error('Refusing to run outside local/testing environments.');
 
             return self::FAILURE;
         }
 
         DB::disableQueryLog();
         @set_time_limit(0);
-        $this->configurePostgresSessionTimeouts();
 
         $config = $this->config();
+        $this->assertSchemaRecreationAllowed($config);
         $this->printPlan($config);
 
         $trgmDropped = false;
@@ -229,6 +229,8 @@ final class MenuSeedLoadCommand extends Command
                 $this->deletePreviousLoadTenants($config);
                 $cleanupSeconds = microtime(true) - $startedAt;
             }
+
+            $this->configurePostgresSessionTimeouts();
 
             if ($config['dropRebuildTrgm']) {
                 $this->dropTrgmIndexes();
@@ -329,14 +331,24 @@ final class MenuSeedLoadCommand extends Command
     }
 
     /**
+     * @param  array{mode: 'production-like'|'giant-menu', fresh: bool}  $config
+     */
+    private function assertSchemaRecreationAllowed(array $config): void
+    {
+        if ($config['mode'] !== self::MODE_PRODUCTION_LIKE || ! $config['fresh']) {
+            return;
+        }
+
+        $this->assertCanRecreateLocalSchema();
+    }
+
+    /**
      * @param  array{mode: 'production-like'|'giant-menu'}  $config
      */
     private function deletePreviousLoadTenants(array $config): void
     {
         if ($config['mode'] === self::MODE_PRODUCTION_LIKE) {
-            $this->assertCanRecreateLocalSchema();
-
-            if ($this->input->isInteractive() && ! $this->confirm('This will delete the entire local database, including demo tenants. Continue?', false)) {
+            if (! (bool) $this->option('force') && ! $this->confirm('This will delete the entire local database, including demo tenants. Continue?', false)) {
                 $this->fail('Fresh load cleanup cancelled before recreating the local schema.');
             }
 

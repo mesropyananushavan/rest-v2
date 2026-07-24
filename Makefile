@@ -28,7 +28,7 @@ APP_TEST_PGSQL := $(COMPOSE) run --rm --no-deps \
 	php-fpm
 NODE := docker run --rm -u $$(id -u):$$(id -g) -v "$$(pwd)":/app -w /app node:24-alpine
 
-.PHONY: up down restart shell test tenant-isolation-pgsql prepare-pgsql-test-db stan pint fresh build tools logs logs-queue
+.PHONY: up down restart shell artisan pgsql test tenant-isolation-pgsql prepare-pgsql-test-db stan pint fresh build tools logs logs-queue
 
 up:
 	$(COMPOSE) up -d --build
@@ -42,6 +42,12 @@ restart:
 
 shell:
 	$(APP) bash
+
+artisan:
+	$(APP) php artisan $(ARGS)
+
+pgsql:
+	$(COMPOSE) exec -T postgres psql -U smartrest -d smartrest $(ARGS)
 
 test:
 	$(APP_TEST) vendor/bin/pest
