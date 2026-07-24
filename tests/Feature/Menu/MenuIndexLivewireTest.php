@@ -194,7 +194,7 @@ it('keeps menu index search render query count independent of rendered result si
     );
 
     expect($smallQueryCount)->toBe($largeQueryCount)
-        ->and($smallQueryCount)->toBe(13);
+        ->and($smallQueryCount)->toBe(10);
 });
 
 it('uses the category URL state and filters the category panel search', function (): void {

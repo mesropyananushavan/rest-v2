@@ -1,7 +1,7 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.11 Part C backend scale hardening in progress
-Branch: phase-2-stage-1.11c-menu-scale
+Status: Stage 1.11 Part C Menu read-path convergence complete
+Branch: phase-2-stage-1.11c-menu-read-convergence
 
 PR state: Codex may create and merge PRs after exact-head green CI; direct
 pushes to `main`, force-push, history rewriting, and branch deletion remain
@@ -410,6 +410,107 @@ forbidden.
   Menu scale/read tooling, command safety, README, decisions/worklog, Makefile
   artisan target, load-marker migration, and Menu tests; no `docs/BLUEPRINT.md`,
   `template/`, assets, or unrelated modules changed.
+- [x] Stage 1.11C-converge.1: baseline, path comparison, and convergence plan.
+  Verify repository state; fetch `origin`; check whether `27f5650` is merged to
+  `origin/main`; create the session branch from the correct base; inspect
+  `BrowseMenuItems`, `MenuIndex`, the API controller, and the read actions it
+  bypasses; read the characterization and query-count tests; write the
+  comparison and plan before implementation. Result: baseline is stacked
+  because `27f5650` is not an ancestor of `origin/main` (`origin/main` is
+  `fb909c0`); branch `phase-2-stage-1.11c-menu-read-convergence` was created
+  from `origin/phase-2-stage-1.11c-menu-scale` at `27f5650`.
+
+  Path comparison before convergence:
+
+  | Aspect | API / `BrowseMenuItems` behavior before | Livewire `MenuIndex` behavior before | Converged target |
+  |---|---|---|---|
+  | Default category when none requested | If no search/category is supplied, `BrowseMenuItems` calls `ResolveMenuCategorySelection(null, active)` and paginates the resolved subcategory; if none exists it returns an empty paginator. | `MenuIndex` calls the same resolver, writes the resolved id back to URL state, and renders the selected-category item page or empty category state. | Facade returns the resolved selected category plus item page so API keeps item pagination and UI keeps URL normalization. |
+  | Search ignores selected category | Non-empty `search` calls `SearchMenuItems`; `category_id` is ignored. | Non-empty `search` renders `SearchMenuItems` results even when `category` is selected; the selected category remains in component state. | Same search path through facade; selected category is retained for UI state but not applied to search. |
+  | Search cleared | Stateless API: a later request without `search` falls back to `category_id` or default selection. | `clearSearch()` empties `search`, keeps `category`, resets `searchPage`, and shows category items. | UI calls facade with retained category and null search; API remains stateless. |
+  | Empty category | Explicit empty subcategory produces an empty paginator with normal metadata. | Empty selected subcategory renders `menu.empty.no_items_title`, not an error. | Same empty paginator returned from facade for both adapters. |
+  | Root/foreign category URL state | API `category_id` is a strict item filter; root, foreign-tenant, or foreign-branch category filters return 404 through `ResolveMenuItemListCategory`. | UI `category` is selection state; a root with selectable children normalizes to the first child, an empty root becomes unselected, and a foreign selected id falls back to the current tenant default. | Preserve both adapter contracts explicitly inside one facade: API strict item filter, UI selection-state mode. |
+  | Archived visibility | API controller always passes `archiveMode='active'`; unsupported `show_archived` input is ignored by validation/request accessors. | `MenuIndex` clamps archive mode to active for non-superadmins; superadmins may use `archived` and `all`. | Archive-mode normalization moves into the facade call so both adapters rely on one read-path gate while keeping API active-only and UI superadmin-only archive visibility. |
+  | Ordering | Category and search item paths order by `sort_order`, localized lower `hy/ru/en` expression, then `id`. | Uses the same underlying `PaginateMenuItems` and `SearchMenuItems` ordering. | Unchanged. |
+  | Page size | API defaults to `25` and clamps `per_page` to `50`; empty facade paginator uses the requested/clamped value. | UI category/items/search pages use fixed `25`. | Unchanged adapter inputs; facade delegates to existing paginated actions. |
+  | Pagination metadata | API serializes `LengthAwarePaginator` metadata through `ApiResponse::pagination`. | UI renders paginator totals/current pages through the Blade partials. | Paginator instances remain the source of metadata; API response shape stays unchanged. |
+
+  Go/no-go: proceed. The only adapter-contract difference is strict API
+  category filtering versus UI category selection-state normalization; both are
+  already pinned by tests and will be preserved inside the single facade rather
+  than resolved as a product behavior change.
+- [x] Stage 1.11C-converge.2: extend `BrowseMenuItems` for both adapters.
+  Add only the data needed for the Livewire screen: category panel paginator,
+  resolved selected category, selected-category item paginator, optional global
+  search paginator, normalized archive mode, and search-mode flag. Keep the
+  facade as a thin Application layer over `ResolveMenuCategorySelection`,
+  `ResolveMenuItemListCategory`, `PaginateMenuCategories`, `PaginateMenuItems`,
+  and `SearchMenuItems`; keep API response behavior unchanged. Result: added
+  `BrowseMenuItemsResult` plus `BrowseMenuItems::forMenuIndex()` and
+  `BrowseMenuItems::selectedCategoryForMenuIndex()`. The API `__invoke()`
+  path and response paginator remain unchanged; the new UI mode preserves the
+  UI selection-state contract while centralizing archive-mode normalization in
+  the facade.
+- [x] Stage 1.11C-converge.3: switch `MenuIndex` to the facade. Remove direct
+  read-action dependencies from `render()` and `selectCategory()`; keep the
+  component as state binding, mutation dispatch, and presentation only. Preserve
+  current URL state, archive visibility, selected-category behavior, and search
+  clearing without markup or styling changes. Result: `MenuIndex` now obtains
+  category panel data, selected category, item paginator, and global search
+  paginator through `BrowseMenuItems`; `rg` confirms no direct calls to
+  `ResolveMenuCategorySelection`, `PaginateMenuCategories`,
+  `PaginateMenuItems`, or `SearchMenuItems` remain in the component. No Blade,
+  CSS, route, or API-resource markup changed.
+- [x] Stage 1.11C-converge.4: prove behavior and query-count invariance. Run
+  the existing characterization tests unmodified, preserve API tests, and keep
+  query-count invariance for `BrowseMenuItems` category/search and full
+  `MenuIndex` category/search renders. Record before/after absolute counts and
+  justify or reduce any increases. Result: characterization tests passed
+  unmodified and API tests stayed green. Query-count before -> after:
+  `BrowseMenuItems` category `6 -> 6`, `BrowseMenuItems` search `3 -> 3`,
+  `MenuIndex` category render `10 -> 10`, `MenuIndex` search render
+  `13 -> 10`. The Livewire search count decreased because the converged facade
+  no longer calculates the hidden selected-category item page while global
+  search results are visible. Verification: `make test` passed (`175 passed /
+  5 skipped / 1399 assertions`).
+- [x] Stage 1.11C-converge.5: decisions, gotchas, and final verification. Add a
+  dated `docs/DECISIONS.md` entry superseding the temporary split-read-path
+  entry; add the PostgreSQL measurement caveats to Gotchas; run `make pint`,
+  `make stan`, `make test`, `make fresh`, `make tenant-isolation-pgsql`, HTTP
+  smoke for `/admin/menu` and `/api/v1/menu-items`, `git diff --check`, and a
+  full branch diff review; push the branch only if green. Result: added the
+  2026-07-24 `Menu adapters use one BrowseMenuItems read path` decision,
+  explicitly superseding the temporary split decision. Added Gotchas for the
+  dev-only marker index appearing in local PostgreSQL search `BitmapAnd` plans
+  and the 200k-row selected-category estimate drift. Final verification:
+  `make pint` passed (`PASS 215 files`), `make stan` passed (`122/122`,
+  `[OK] No errors`), `make test` passed (`175 passed / 5 skipped /
+  1399 assertions`), `make fresh` passed with migrations through
+  `2026_07_24_000000_add_load_test_markers_to_menu_tables` and `DemoSeeder`
+  complete, and `make tenant-isolation-pgsql` passed (`21 passed /
+  73 assertions`). For HTTP smoke, `menu:load-test-data --purge-generated`
+  generated deterministic page-2 data (`400` generated categories,
+  `40000` generated items, `9.885s`; demo totals including seed rows:
+  `arat-riverside 204 categories / 20005 items`, `northstar-bistro
+  203 categories / 20002 items`). Manager smoke: login form `200`, login
+  submit `302`; `/admin/menu?category=48` `200` with page-1 marker
+  `Թարմ ոսպ ուտեստ arat-riverside 1-1` and no page-2 marker; `/admin/menu?
+  category=48&item_page=2` `200` with distinct page-2 marker
+  `Այգու պանիր ուտեստ arat-riverside 1-4861`; `/admin/menu?category=49&
+  q=4861` `200` showed the category-48 search hit, proving search ignores the
+  selected category; `/admin/menu?category=49&q=zz-no-match-zz` `200` showed
+  `Համընկնող դիրքեր չկան։`; `/admin/menu?category=49` `200` showed
+  `Այգու ոսպ ուտեստ arat-riverside 1-2`, proving cleared search returns to
+  category context; manager archive-mode filter marker was absent. API smoke:
+  `/api/v1/menu-items?category_id=48&per_page=25&page=1` `200` contained
+  `id=8` and `current_page=1`; page `2` `200` contained `id=4868` and
+  `current_page=2`; `/api/v1/menu-items?category_id=49&search=4861` `200`
+  contained `id=4868`, proving search ignores `category_id`; miss search
+  returned `data=[]` and `total=0`. Owner smoke: login form `200`, login submit
+  `302`, `/admin/menu?category=48` `200` with archive-mode filter marker
+  present. No asset-affecting files changed, so `make build` / `npm run build`
+  was not required. `git diff --check` passed; full branch diff versus
+  `origin/main` reviewed as 19 files limited to Menu scale tooling/read path,
+  tests, README, Makefile artisan target, and decisions/worklog.
 - [x] Stage 1.16.1: preconditions, branch, and read-only inspection. Verify a
   clean worktree, fetch `origin/main`, confirm Stage 1.14 ancestry and
   `routes/api.php`, fast-forward `main`, create
@@ -2054,6 +2155,14 @@ Prioritized remaining work:
   discarded. The corrected smoke used normal form POST redirect handling, no
   host PHP, and passed with explicit manager/owner/UI/API status and content
   markers.
+- Stage 1.11C local PostgreSQL search measurements include the dev/test-only
+  `menu_items_tenant_branch_load_test_key_idx` marker index in a `BitmapAnd`
+  on the generated load dataset. That marker index is for purge tooling, so it
+  must not be treated as production search-plan evidence.
+- Stage 1.11C representative item-path measurements showed PostgreSQL
+  materially underestimating selected-category item rows at 200k-row scale
+  (`estimate 1` versus `actual 54`). Future Menu item-path index reviews must
+  check estimates as well as whether the chosen node is an index scan.
 - Menu UX carry-over from Stage 1.11 Part D: context-preserving save/cancel,
   and moving archive/restore/force-delete controls into a row overflow menu.
 - No admin UI or API for reading audit logs.
@@ -2106,6 +2215,6 @@ Decisions awaiting the owner:
   Orders writes, or should it wait until Menu public contracts are added first?
 
 ## Next steps
-Next Menu session: converge the Livewire `MenuIndex` read adapter onto the
-single `BrowseMenuItems` read path using the characterization tests from this
-review as the safety net; do not redesign the UI in that convergence step.
+Owner review/merge this read-convergence branch. Next coding session after
+merge: Menu UX carry-over only, starting with context-preserving save/cancel
+and moving archive/restore/force-delete controls into a row overflow menu.
