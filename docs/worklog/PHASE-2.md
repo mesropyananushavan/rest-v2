@@ -2458,6 +2458,13 @@ Gotchas:
 - `make build` completed successfully but emitted local tool notices: Composer
   reported Git dubious ownership inside `/var/www/html`, and npm reported a
   newer major npm version. Neither stopped the build.
+- Review correction smoke gotchas: category mode must use `item_page`, while
+  global search mode must use `search_page`; using `item_page` with `q` only
+  proves URL round-trip, not the operator's search landing. The durable smoke
+  target checks the HTML-escaped cancel URL because Blade renders `&` as
+  `&amp;` inside href attributes.
+
+Owner review-correction plan:
 - [x] Stage 1.11D-review.1: hostile context redirect proof. Re-read the
   required sources; verify the clean branch at `154d944`; inspect how
   `context[...]` becomes a return URL; add focused tests for absolute external
@@ -2474,18 +2481,43 @@ Gotchas:
   the encoded Menu URL; after narrowing that assertion to target/path safety,
   `make test` passed (`183 passed / 5 skipped / 1572 assertions`) and
   `make pint` passed (`219 files`).
-- [ ] Stage 1.11D-review.2: durable Menu context HTTP smoke. Add a repeatable
+- [x] Stage 1.11D-review.2: durable Menu context HTTP smoke. Add a repeatable
   Make target that runs inside the PHP container without host PHP or temporary
   files, authenticates through the real login/session/CSRF flow, uses
   `menu:load-test-data` data, and proves category-mode and search-mode
   save/cancel landings with rendered Armenian markers. Document the target in
   `README.md`; do not add smoke-only routes, controllers, middleware bypasses,
-  packages, or a general smoke framework.
-- [ ] Stage 1.11D-review.3: execute smoke data and record outcome. Run
+  packages, or a general smoke framework. Result: added
+  `smoke:menu-context` and `make smoke-menu-context`; the Make target starts
+  Nginx if needed and runs the command inside the PHP container. The smoke uses
+  a Guzzle cookie jar through Laravel's HTTP client, parses CSRF tokens from
+  the real login/edit forms, submits the existing authenticated item update
+  route with method spoofing, and does not disable middleware or add any
+  smoke-only route/controller/middleware. README documents the target beside
+  the other local commands. Verification so far: `make pint` passed
+  (`220 files` after one style fix), `make stan` passed (`124/124`,
+  `[OK] No errors`), and `make smoke-menu-context` passed after fixing the
+  command's own HTML-escaped cancel-link assertion.
+- [x] Stage 1.11D-review.3: execute smoke data and record outcome. Run
   `make fresh`, load deterministic multi-page Menu data with
   `menu:load-test-data`, record the resulting counts/category selected for the
   smoke, run the new smoke target, and record gotchas including the category
-  mode `item_page` versus search mode `search_page` distinction.
+  mode `item_page` versus search mode `search_page` distinction. Result:
+  `make fresh` passed through migrations and `DemoSeeder`; `make artisan
+  ARGS="menu:load-test-data --purge-generated"` purged `0` generated rows,
+  loaded `menu_categories=400`, `menu_items=40000`, and reported
+  `tenant=arat-riverside menu_categories=200 menu_items=20000` plus
+  `tenant=northstar-bistro menu_categories=200 menu_items=20000`
+  (`elapsed_seconds=9.867`). The final `make smoke-menu-context` selected
+  category `48` with `53` active rendered items and search term
+  `arat-riverside 1-` with `9474` active results. Smoke HTTP statuses:
+  login form `200`, login submit `302`; category page 1 `200` marker
+  `Թարմ ոսպ ուտեստ arat-riverside 1-1`; category page 2 `200`, edit page
+  `200`, save landing `200`, and cancel landing `200` all used/kept marker
+  `Այգու պանիր ուտեստ arat-riverside 1-4861` and excluded the page-1 marker.
+  Search page 2 `200`, edit page `200`, and save landing `200` used/kept marker
+  `Շուկայի սունկ ուտեստ arat-riverside 1-27` and excluded reset/page-1 marker
+  `Թարմ ոսպ ուտեստ arat-riverside 1-1`.
 - [ ] Stage 1.11D-review.4: required gates, diff review, commit, push, and CI
   handoff. Run `make pint`, `make stan`, `make test`, `make fresh`, the
   load/count command, the new smoke target, `make tenant-isolation-pgsql`,
@@ -2495,6 +2527,6 @@ Gotchas:
   creating or merging a PR.
 
 ## Next steps
-Continue with Stage 1.11D-review.2: add the durable CSRF-respecting Menu
-context HTTP smoke Make target and README documentation without adding
-application route or middleware bypasses.
+Continue with Stage 1.11D-review.4: run final required gates, review the full
+branch diff versus `origin/main`, commit/push the remaining scoped changes, and
+collect CI evidence without creating or merging a PR.

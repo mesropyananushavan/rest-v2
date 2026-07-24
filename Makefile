@@ -28,7 +28,7 @@ APP_TEST_PGSQL := $(COMPOSE) run --rm --no-deps \
 	php-fpm
 NODE := docker run --rm -u $$(id -u):$$(id -g) -v "$$(pwd)":/app -w /app node:24-alpine
 
-.PHONY: up down restart shell artisan pgsql test tenant-isolation-pgsql prepare-pgsql-test-db stan pint fresh build tools logs logs-queue
+.PHONY: up down restart shell artisan pgsql test tenant-isolation-pgsql prepare-pgsql-test-db stan pint fresh build smoke-menu-context tools logs logs-queue
 
 up:
 	$(COMPOSE) up -d --build
@@ -81,6 +81,10 @@ build:
 	$(APP_NO_DEPS) php artisan storage:link --force
 	$(NODE) npm ci
 	$(NODE) npm run build
+
+smoke-menu-context:
+	$(COMPOSE) up -d nginx
+	$(APP) php artisan smoke:menu-context
 
 tools:
 	$(COMPOSE) --profile dev up -d adminer
