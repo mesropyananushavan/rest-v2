@@ -2302,8 +2302,7 @@ Plan:
 
 ## Menu context + overflow follow-up
 
-Status: Stage 1.11D implementation and local verification complete; branch
-push and final CI evidence handoff pending
+Status: Stage 1.11D owner review-correction pass in progress
 Branch: `phase-2-stage-1.11d-menu-context-overflow`
 Base: `origin/main` at `cc46b95`
 
@@ -2459,9 +2458,43 @@ Gotchas:
 - `make build` completed successfully but emitted local tool notices: Composer
   reported Git dubious ownership inside `/var/www/html`, and npm reported a
   newer major npm version. Neither stopped the build.
+- [x] Stage 1.11D-review.1: hostile context redirect proof. Re-read the
+  required sources; verify the clean branch at `154d944`; inspect how
+  `context[...]` becomes a return URL; add focused tests for absolute external
+  URLs, protocol-relative values, other admin paths, newline/encoded separator
+  smuggling, unexpected context keys, and scalar/array type confusion. If any
+  case escapes the named Menu index route, fix the defect without changing the
+  legitimate context contract. Result: `MenuIndexContext` rebuilds every
+  return target with `route('admin.menu.index', $this->toQuery())` after
+  whitelisting known keys and type-normalizing values; it never consumes a raw
+  return URL. Added `MenuContextRedirectSecurityTest` covering all requested
+  hostile cases against both rendered cancel/back URLs and save redirects. No
+  redirect escape or code defect was found. Verification: initial `make test`
+  failed because the new test incorrectly forbade legitimate search text inside
+  the encoded Menu URL; after narrowing that assertion to target/path safety,
+  `make test` passed (`183 passed / 5 skipped / 1572 assertions`) and
+  `make pint` passed (`219 files`).
+- [ ] Stage 1.11D-review.2: durable Menu context HTTP smoke. Add a repeatable
+  Make target that runs inside the PHP container without host PHP or temporary
+  files, authenticates through the real login/session/CSRF flow, uses
+  `menu:load-test-data` data, and proves category-mode and search-mode
+  save/cancel landings with rendered Armenian markers. Document the target in
+  `README.md`; do not add smoke-only routes, controllers, middleware bypasses,
+  packages, or a general smoke framework.
+- [ ] Stage 1.11D-review.3: execute smoke data and record outcome. Run
+  `make fresh`, load deterministic multi-page Menu data with
+  `menu:load-test-data`, record the resulting counts/category selected for the
+  smoke, run the new smoke target, and record gotchas including the category
+  mode `item_page` versus search mode `search_page` distinction.
+- [ ] Stage 1.11D-review.4: required gates, diff review, commit, push, and CI
+  handoff. Run `make pint`, `make stan`, `make test`, `make fresh`, the
+  load/count command, the new smoke target, `make tenant-isolation-pgsql`,
+  `make build`, `git diff --check`, `git status`, and full branch diff review
+  versus `origin/main`. Commit scoped logical steps with worklog updates, push
+  this branch only, collect CI run id and both job statuses, then stop without
+  creating or merging a PR.
 
 ## Next steps
-After this worklog update is committed, push
-`phase-2-stage-1.11d-menu-context-overflow`, collect the GitHub Actions run id
-and both job statuses for the pushed head, report them in the final response,
-and stop without creating a PR or merge.
+Continue with Stage 1.11D-review.2: add the durable CSRF-respecting Menu
+context HTTP smoke Make target and README documentation without adding
+application route or middleware bypasses.
