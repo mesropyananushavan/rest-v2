@@ -16,7 +16,9 @@ use App\Support\I18n\TenantTranslationOverridePermissions;
 use App\Support\I18n\TenantTranslationOverrides;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
@@ -199,6 +201,30 @@ it('denies users without the permission from viewing or writing through the edit
     expect(TenantTranslationOverride::query()->count())->toBe(0);
 });
 
+it('keeps editor render query count independent of rendered result size', function (): void {
+    $records = translationEditorUser('translation-editor-query-count', [TenantTranslationOverridePermissions::MANAGE]);
+
+    $small = translationEditorRenderQueryCount(
+        $records,
+        ['locale' => 'en', 'q' => 'dashboard.title'],
+        fn (Testable $component): Testable => $component
+            ->assertSee('admin.dashboard.title', false)
+            ->assertDontSee('admin.dashboard.heading', false),
+    );
+    $large = translationEditorRenderQueryCount(
+        $records,
+        ['locale' => 'en'],
+        fn (Testable $component): Testable => $component
+            ->assertSee('admin.dashboard.title', false)
+            ->assertSee('admin.dashboard.heading', false)
+            ->assertSee('admin.dashboard.subtitle', false),
+    );
+
+    expect($small['total'])->toBe($large['total'])
+        ->and($small['override_reads'])->toBe($large['override_reads'])
+        ->and($small['override_reads'])->toBeLessThanOrEqual(3);
+});
+
 /**
  * @param  list<string>  $permissionCodes
  * @return array{tenant: Tenant, branch: Branch, user: User}
@@ -274,4 +300,41 @@ function translationEditorContext(array $records): void
 {
     app(TenantResolver::class)->set((int) $records['tenant']->id);
     app(BranchContext::class)->set((int) $records['branch']->id);
+}
+
+/**
+ * @param  array{tenant: Tenant, branch: Branch, user: User}  $records
+ * @param  array<string, mixed>  $queryParams
+ * @param  callable(Testable<TranslationOverridesEditor>): Testable<TranslationOverridesEditor>  $assertions
+ * @return array{total: int, override_reads: int}
+ */
+function translationEditorRenderQueryCount(array $records, array $queryParams, callable $assertions): array
+{
+    Cache::flush();
+    app(TenantTranslationOverrides::class)->clearRequestCache();
+    translationEditorContext($records);
+    $records['user']->loadMissing('role.permissions');
+
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+
+    try {
+        /** @var Testable<TranslationOverridesEditor> $component */
+        $component = Livewire::withQueryParams($queryParams)
+            ->actingAs($records['user'])
+            ->test(TranslationOverridesEditor::class);
+        $assertions($component);
+
+        $queries = DB::getQueryLog();
+
+        return [
+            'total' => count($queries),
+            'override_reads' => collect($queries)
+                ->filter(fn (array $query): bool => str_contains((string) ($query['query'] ?? ''), 'tenant_translation_overrides'))
+                ->count(),
+        ];
+    } finally {
+        DB::disableQueryLog();
+        DB::flushQueryLog();
+    }
 }

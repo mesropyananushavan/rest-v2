@@ -2787,12 +2787,23 @@ Tenant translation override editing-screen plan:
   to a safe language-file default; archive/force-delete destructive semantics
   do not apply. Verification: focused editor test passed (`8 passed / 46
   assertions`) and `make pint` passed (`247 files`).
-- [ ] Stage 1.14.5: safety and behavior tests. Cover permission-gated view and
+- [x] Stage 1.14.5: safety and behavior tests. Cover permission-gated view and
   write operations, visible-text search in Armenian/Russian/English, secondary
   key-fragment search, row content, edit/reset state preservation, crafted
   blocked-key write rejection, crafted cross-tenant write rejection, this
   screen's own strings being non-overridable, escaped output retention, and a
-  bounded query-count render test independent of page result count.
+  bounded query-count render test independent of page result count. Result:
+  extended `TenantTranslationOverrideEditorTest` to cover the permission-gated
+  route/navigation, visible-text search in `hy`/`ru`/`en`, key-fragment search,
+  effective value/key/overridden/all-locale row content, edit/reset through the
+  existing actions while preserving `q`/`locale`/`page`, crafted blocked-key
+  write rejection, crafted self-editor string write rejection, crafted
+  cross-tenant write rejection through the action's same-tenant check,
+  missing-permission route and write denial, and bounded render query count.
+  Query evidence from the measured test path: narrow result render and full
+  page render both used `3` total queries and `3` `tenant_translation_overrides`
+  reads under the same cold-cache state. Verification: focused editor test
+  passed (`9 passed / 55 assertions`).
 - [ ] Stage 1.14.6: local verification and HTTP smoke. Run focused tests,
   `make pint`, `make stan`, `make test`, `make fresh`,
   `make tenant-isolation-pgsql`, `make build`, and a no-host-PHP HTTP smoke
@@ -2806,5 +2817,5 @@ Tenant translation override editing-screen plan:
   statuses for the final report, then stop without creating or merging a PR.
 
 ## Next steps
-Start Stage 1.14.5: add the bounded query-count/performance proof and any
-remaining behavior coverage for the translation override editor.
+Start Stage 1.14.6: run focused tests, all required local verification gates,
+and the no-host-PHP HTTP smoke for search/edit/reset against the real admin UI.
