@@ -102,6 +102,54 @@ forbidden.
   panel roots with no sequential scans. No asset-affecting files changed, so
   `npm run build` / `make build` was not required. Full branch diff reviewed;
   branch push remains pending.
+- [x] Stage 1.11C-scale-review.1: review-correction baseline and worklog plan.
+  Re-read the required sources, confirm branch/worktree state, inspect the API
+  and Livewire Menu read paths, inspect `menu:seed-load`, inspect marker-column
+  exposure, and write this corrective plan before code. Result: branch
+  `phase-2-stage-1.11c-menu-scale` is clean and tracks
+  `origin/phase-2-stage-1.11c-menu-scale`; commits `672a43a`, `7bc39f6`,
+  `27297e8`, `74e0220`, and `942598e` are present. API item listing uses
+  `BrowseMenuItems`; Livewire `MenuIndex` still calls
+  `ResolveMenuCategorySelection`, `PaginateMenuCategories`,
+  `PaginateMenuItems`, and `SearchMenuItems` directly. `menu:seed-load
+  --fresh` currently expresses schema recreation and is local-database guarded,
+  while `--force` bypasses the top-level environment guard before the
+  schema-recreation assertion; marker columns are not currently fillable,
+  cast, appended, or returned by `MenuItemResource`, but need explicit tests.
+- [ ] Stage 1.11C-scale-review.2: real read-path query-count proof and
+  Livewire characterization. Add tests proving query count is identical for
+  small and large page sizes on both `BrowseMenuItems` category/search modes
+  and full `MenuIndex` Livewire category/search renders. Add behavior
+  characterization tests for current Livewire semantics without migrating it to
+  `BrowseMenuItems`: global search ignores selected category, clearing search
+  returns to selected category context, default category selection, empty
+  category empty-list rendering, and superadmin-only archive controls. Record
+  the current two-read-path state and deferred convergence decision in
+  `docs/DECISIONS.md`. Result: pending.
+- [ ] Stage 1.11C-scale-review.3: `menu:seed-load` safety and command
+  separation. Determine precisely what `--force` bypasses before changing code;
+  make environment and local-database guards unconditional if needed; require
+  confirmation for schema recreation unless explicitly suppressed by `--force`;
+  add focused command tests; update README and `docs/DECISIONS.md` to clarify
+  `menu:seed-load` versus `menu:load-test-data`. Result: pending.
+- [ ] Stage 1.11C-scale-review.4: marker-column containment. Add tests proving
+  `load_test_key` is not fillable, not cast, not appended, not present in API
+  resources, not present in serialized model output, and not rendered in Menu
+  views. Record the dev/test-tooling-only marker-column decision and exit path
+  in `docs/DECISIONS.md`. Result: pending.
+- [ ] Stage 1.11C-scale-review.5: realistic panel measurement and index
+  decision. Use `menu:seed-load` without schema recreation to create at least
+  about 200 local load tenants, run `ANALYZE`, capture the exact SQL generated
+  by `PaginateMenuCategories`, measure `EXPLAIN (ANALYZE, BUFFERS)` before and
+  after the panel-index decision, and either keep the unmerged composite index
+  with plan evidence or remove its migration/test assertion and record why in
+  `docs/DECISIONS.md`. Result: pending.
+- [ ] Stage 1.11C-scale-review.6: HTTP smoke, final gates, diff review, and
+  push. Run `make pint`, `make stan`, `make test`, `make fresh`, PostgreSQL
+  tenant-isolation, the multi-tenant load/counts, `ANALYZE`/EXPLAIN evidence,
+  HTTP smoke for `/admin/menu` and `/api/v1/menu-items`, `git diff --check`,
+  and full branch diff review. Commit the final worklog handoff and push the
+  feature branch only if green; do not create or merge a PR. Result: pending.
 - [x] Stage 1.16.1: preconditions, branch, and read-only inspection. Verify a
   clean worktree, fetch `origin/main`, confirm Stage 1.14 ancestry and
   `routes/api.php`, fast-forward `main`, create
