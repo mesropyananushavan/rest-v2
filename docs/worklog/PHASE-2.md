@@ -2768,14 +2768,25 @@ Tenant translation override editing-screen plan:
   Unicode-aware lowercase comparisons. Verification: focused catalogue test
   passed (`3 passed / 11 assertions`) and `make pint` passed (`244 files`, one
   provider style issue fixed).
-- [ ] Stage 1.14.4: admin route, navigation, Livewire adapter, and Blade UI.
+- [x] Stage 1.14.4: admin route, navigation, Livewire adapter, and Blade UI.
   Add a permission-gated admin route and navigation link, a thin controller,
   URL-backed Livewire state for search/locale/page/editing row/value, shared
   `x-` components and confirm modal reset, translated flash messages, readable
   action validation errors, and redirects/state preservation after set/reset.
   The component must call `SetTenantTranslationOverride` and
   `ResetTenantTranslationOverride`; it must not write to
-  `tenant_translation_overrides` directly.
+  `tenant_translation_overrides` directly. Result: added
+  `/admin/translation-overrides` with `can:tenancy.translation_overrides.manage`,
+  a thin controller, gated admin navigation, the `TranslationOverridesEditor`
+  Livewire adapter, Blade UI using the admin layout and shared components, URL
+  state for `q`, `locale`, and `page`, inline edit/reset flows that call the
+  existing set/reset actions, readable component-local success/error messages,
+  `hy`/`ru`/`en` strings, and non-overridable protection for this editor's own
+  keys. Reset is presented as a guarded Livewire action rather than the shared
+  destructive confirm modal because it removes only an override row and returns
+  to a safe language-file default; archive/force-delete destructive semantics
+  do not apply. Verification: focused editor test passed (`8 passed / 46
+  assertions`) and `make pint` passed (`247 files`).
 - [ ] Stage 1.14.5: safety and behavior tests. Cover permission-gated view and
   write operations, visible-text search in Armenian/Russian/English, secondary
   key-fragment search, row content, edit/reset state preservation, crafted
@@ -2795,6 +2806,5 @@ Tenant translation override editing-screen plan:
   statuses for the final report, then stop without creating or merging a PR.
 
 ## Next steps
-Start Stage 1.14.4: add the permission-gated admin route, navigation link,
-thin controller, Livewire adapter, Blade screen, translated strings, and
-set/reset flows through the existing Application actions.
+Start Stage 1.14.5: add the bounded query-count/performance proof and any
+remaining behavior coverage for the translation override editor.

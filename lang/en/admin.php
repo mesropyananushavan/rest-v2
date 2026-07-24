@@ -10,6 +10,7 @@ return [
     'nav' => [
         'dashboard' => 'Dashboard',
         'menu' => 'Menu',
+        'translation_overrides' => 'Translations',
         'tables' => 'Halls & Tables',
     ],
     'actions' => [
@@ -61,6 +62,56 @@ return [
         ],
     ],
     'translation_overrides' => [
+        'title' => 'Translations',
+        'eyebrow' => 'Tenant wording',
+        'heading' => 'Translation overrides',
+        'subtitle' => 'Find the exact text an operator sees, review its key and locale values, then override or reset it for this tenant.',
+        'search' => [
+            'label' => 'Search visible text',
+            'placeholder' => 'Type words shown in the UI or a key fragment',
+            'help' => 'Matches the effective value for the selected locale. Existing overrides are searched before language-file defaults.',
+        ],
+        'locale' => [
+            'label' => 'Editing language',
+            'help' => 'Edits affect one locale at a time.',
+        ],
+        'results' => [
+            'heading' => 'Matching strings',
+        ],
+        'table' => [
+            'effective_value' => 'Effective value',
+            'key' => 'Key',
+            'status' => 'Status',
+            'locale_values' => 'Locale values',
+            'actions' => 'Actions',
+        ],
+        'status' => [
+            'default' => 'Default',
+            'overridden' => 'Overridden',
+        ],
+        'actions' => [
+            'clear_search' => 'Clear search',
+            'edit' => 'Edit',
+            'save' => 'Save override',
+            'reset' => 'Reset',
+        ],
+        'edit' => [
+            'value_label' => 'Override text',
+            'default_value' => 'Language-file default: :value',
+        ],
+        'flash' => [
+            'saved' => 'Translation override saved.',
+            'reset' => 'Translation override reset to the language-file default.',
+        ],
+        'pagination' => [
+            'page_of' => 'Page :page of :pages',
+            'previous' => 'Previous',
+            'next' => 'Next',
+        ],
+        'empty' => [
+            'title' => 'No matching strings',
+            'body' => 'Try a different visible word or translation key fragment.',
+        ],
         'errors' => [
             'tenant_context_required' => 'Tenant context is required to manage translation overrides.',
             'invalid_locale' => 'Choose one of the supported interface languages.',

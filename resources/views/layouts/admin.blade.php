@@ -57,6 +57,12 @@ $locale = $adminShell['locale'] ?? app()->getLocale();
                         <span class="h-2 w-2 rounded-full {{ request()->routeIs('admin.menu.*') ? 'bg-smartrest-success' : 'bg-current opacity-50' }}"></span>
                         <span>{{ __('admin.nav.menu') }}</span>
                     </a>
+                    @can('tenancy.translation_overrides.manage')
+                        <a href="{{ route('admin.translation-overrides.index') }}" class="flex items-center gap-3 rounded-sr-brand px-3 py-3 text-sm font-semibold no-underline transition {{ request()->routeIs('admin.translation-overrides.*') ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white' }}">
+                            <span class="h-2 w-2 rounded-full {{ request()->routeIs('admin.translation-overrides.*') ? 'bg-smartrest-success' : 'bg-current opacity-50' }}"></span>
+                            <span>{{ __('admin.nav.translation_overrides') }}</span>
+                        </a>
+                    @endcan
                     @can('tables.halls.manage')
                         <a href="{{ route('admin.tables.halls.index') }}" class="flex items-center gap-3 rounded-sr-brand px-3 py-3 text-sm font-semibold no-underline transition {{ request()->routeIs('admin.tables.*') ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white' }}">
                             <span class="h-2 w-2 rounded-full {{ request()->routeIs('admin.tables.*') ? 'bg-smartrest-success' : 'bg-current opacity-50' }}"></span>

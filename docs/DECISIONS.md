@@ -621,11 +621,14 @@ into loaded groups or require more invasive call-site changes for pluralization
 and fallback behavior.
 Non-overridable rule: authentication/login strings, authorization and
 permission-denied messages, destructive confirmation copy and labels for
-archive/restore/force-delete, and safety-warning wording are deliberately not
-overridable. Their wording carries security, permission, or irreversible-action
-meaning; allowing tenants to soften or hide it would weaken safe operation. The
-read resolver centrally ignores database rows for those keys, so a future edit
-UI cannot make them affect rendering.
+archive/restore/force-delete, safety-warning wording, and the tenant
+translation override editor's own labels/actions/help text are deliberately not
+overridable. Their wording carries security, permission, irreversible-action, or
+self-recovery meaning; allowing tenants to soften or hide it would weaken safe
+operation, and allowing the editor to override itself could make the reset path
+unreadable. The read resolver centrally ignores database rows for those keys,
+and write actions reject them, so the edit UI cannot make them affect
+rendering.
 Write rule: set/reset actions reject any translation key that does not resolve
 to a string in the committed `hy`/`ru`/`en` language files. Junk keys are not
 stored "for later" because they cannot be reviewed in context, cannot be safely
