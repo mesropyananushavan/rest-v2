@@ -268,7 +268,7 @@ forbidden.
   `100/100`, subcategories `100/100`, items `1600/1600`. The bottleneck was
   PostgreSQL COPY plus live index maintenance during item insertion; no scale
   reduction was needed.
-- [ ] Stage 1.11C-scale-review2.3: capture real SQL and re-measure with/without
+- [x] Stage 1.11C-scale-review2.3: capture real SQL and re-measure with/without
   the panel index. Use `DB::listen` around the actual Application actions on
   the combined dataset to capture panel, item pagination, and global search SQL.
   Run `ANALYZE`, then `EXPLAIN (ANALYZE, BUFFERS)` for panel root count, panel
@@ -276,7 +276,38 @@ forbidden.
   item deep page, global search hit, and global search miss. Drop the local
   `menu_categories_tenant_parent_deleted_sort_id_idx` only for the comparison
   measurement, recreate it immediately, and record plan nodes, estimates,
-  actual rows, timings, and restored index state. Result: pending.
+  actual rows, timings, and restored index state. Result: captured real SQL via
+  interactive Tinker/`DB::listen` on the combined dataset. Panel action used
+  synthetic tenant `3` and emitted root count, root page select, and child
+  eager-load for root ids `408..432`. Item/search actions used Arat tenant `1`,
+  branch `1`, category `56` (`54` active items), search hit `1-9999`, and
+  search miss `zz-no-match-zz`; the real miss path emitted only the count query
+  because Laravel skips the page select when total is zero. After `ANALYZE`,
+  with the composite index present: panel root count used `Index Only Scan
+  using menu_categories_tenant_parent_deleted_sort_id_idx`, estimate/actual
+  `98/100`, `0.261 ms`; panel root page used `Bitmap Heap Scan` plus
+  `Bitmap Index Scan on menu_categories_tenant_parent_deleted_sort_id_idx`,
+  estimate/actual `98/100` before limit and returned `25`, `0.753 ms`; child
+  eager-load used `Index Scan using menu_categories_parent_id_idx`,
+  estimate/actual `1/25`, `0.319 ms`; category item first page used
+  `Index Scan using menu_items_tenant_branch_category_deleted_sort_id_idx`,
+  estimate/actual `1/54` before limit and returned `25`, `0.704 ms`; category
+  item deep page used the same index, estimate/actual `1/54` before offset and
+  returned `4`, `0.440 ms`; global search hit used `Bitmap Heap Scan` with
+  `BitmapAnd` over `menu_items_tenant_branch_load_test_key_idx` and
+  `menu_items_translated_name_trgm_idx`, estimate/actual `1/1`, `1.890 ms`;
+  global search miss count used `Bitmap Heap Scan` with the same bitmap indexes,
+  estimate/actual `1/0`, `1.673 ms`. Dropped the local composite index only for
+  comparison, ran `ANALYZE menu_categories`, then measured panel again:
+  root count used the existing `Index Only Scan using
+  menu_categories_tenant_parent_deleted_active_sort_id_idx`, estimate/actual
+  `98/100`, `0.141 ms`; root page used `Bitmap Heap Scan` plus
+  `Bitmap Index Scan on menu_categories_tenant_parent_deleted_active_sort_id_idx`,
+  estimate/actual `98/100` before limit and returned `25`, `0.674 ms`; child
+  eager-load still used `menu_categories_parent_id_idx`, estimate/actual
+  `1/25`, `0.267 ms`. Recreated the local
+  `menu_categories_tenant_parent_deleted_sort_id_idx` immediately and confirmed
+  it exists before making the branch-level decision.
 - [ ] Stage 1.11C-scale-review2.4: supersede the panel-index decision. Based
   only on the representative same-dataset with/without evidence, either keep
   the composite index or remove the unmerged migration and schema-test
