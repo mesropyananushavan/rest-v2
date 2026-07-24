@@ -67,7 +67,7 @@ forbidden.
   Result: `make fresh` passed on PostgreSQL through
   `2026_07_24_010000_add_menu_category_panel_index`; final load command
   `make artisan ARGS="menu:load-test-data --purge-generated"` generated
-  `menu_categories=400`, `menu_items=40000` in `10.119s`. Row counts per demo
+  `menu_categories=400`, `menu_items=40000` in `9.747s`. Row counts per demo
   tenant were `arat-riverside: 200 categories / 20000 items` and
   `northstar-bistro: 200 categories / 20000 items`. The first category-panel
   measurement used the marker purge index as a tenant-leading index rather
@@ -81,16 +81,27 @@ forbidden.
 
   | Query | Scale | Time | Index evidence |
   |---|---:|---:|---|
-  | Category item first page (`tenant_id=1`, `branch_id=1`, `category_id=48`, `limit 25`) | 400 categories / 40000 items | `Execution Time: 1.336 ms` | `Index Scan using menu_items_tenant_branch_category_deleted_active_sort_id_idx` |
-  | Category item deep page (`offset 50`) | same | `Execution Time: 1.941 ms` | `Index Scan using menu_items_tenant_branch_category_deleted_active_sort_id_idx` |
-  | Global search hit (`LIKE '%1-9999%'`) | same | `Execution Time: 0.959 ms` | `Bitmap Index Scan on menu_items_translated_name_trgm_idx` |
-  | Global search miss (`LIKE '%zz-no-match-zz%'`) | same | `Execution Time: 0.598 ms` | `Bitmap Index Scan on menu_items_translated_name_trgm_idx` |
-  | Category panel roots (`tenant_id=1`, roots, `limit 25`) | same | `Execution Time: 0.480 ms` | `Index Scan using menu_categories_tenant_load_test_key_idx`; no sequential scan |
-- [ ] Stage 1.11C-scale.5: final verification and scoped commit/push. Run
+  | Category item first page (`tenant_id=1`, `branch_id=1`, `category_id=48`, `limit 25`) | 400 categories / 40000 items | `Execution Time: 2.259 ms` | `Index Scan using menu_items_tenant_branch_category_deleted_active_sort_id_idx` |
+  | Category item deep page (`offset 50`) | same | `Execution Time: 0.957 ms` | `Index Scan using menu_items_tenant_branch_category_deleted_active_sort_id_idx` |
+  | Global search hit (`LIKE '%1-9999%'`) | same | `Execution Time: 2.026 ms` | `Bitmap Index Scan on menu_items_translated_name_trgm_idx` |
+  | Global search miss (`LIKE '%zz-no-match-zz%'`) | same | `Execution Time: 0.810 ms` | `Bitmap Index Scan on menu_items_translated_name_trgm_idx` |
+  | Category panel roots (`tenant_id=1`, roots, `limit 25`) | same | `Execution Time: 0.386 ms` | `Index Scan using menu_categories_parent_id_idx`; no sequential scan |
+- [x] Stage 1.11C-scale.5: final verification and scoped commit/push. Run
   `make pint`, `make stan`, `make test`, `make fresh`, any required focused
   PostgreSQL checks, and a full branch diff review; commit each logical step
   with its worklog update and push the feature branch only if all required
-  verification is green. Do not create or merge a PR. Result: pending.
+  verification is green. Do not create or merge a PR. Result: final local
+  gates are green: Pint pass (`213 files`), PHPStan pass (`[OK] No errors`),
+  SQLite Pest pass (`164 passed / 5 skipped / 1265 assertions`), PostgreSQL
+  Tenancy/RLS pass (`21 passed / 73 assertions`), and `make fresh` pass.
+  The final fresh PostgreSQL load command generated `400` categories and
+  `40000` items in `9.747s`; corrected per-tenant row counts were
+  `arat-riverside: 200 categories / 20000 items` and
+  `northstar-bistro: 200 categories / 20000 items`. EXPLAIN checks used
+  indexes for category item pagination, global search hit/miss, and category
+  panel roots with no sequential scans. No asset-affecting files changed, so
+  `npm run build` / `make build` was not required. Full branch diff reviewed;
+  branch push remains pending.
 - [x] Stage 1.16.1: preconditions, branch, and read-only inspection. Verify a
   clean worktree, fetch `origin/main`, confirm Stage 1.14 ancestry and
   `routes/api.php`, fast-forward `main`, create
@@ -1057,6 +1068,12 @@ forbidden.
   name expression index and Livewire + Alpine category combobox decisions on
   2026-07-21. Final load measurements must include write latency for creating
   a menu item and toggling activity on the filled table, not only read paths.
+- During Stage 1.11 Part C backend-scale measurements, PostgreSQL chose the
+  older `menu_categories_parent_id_idx` for the tiny two-tenant root category
+  panel query even after a tenant/parent/deleted/sort index was available.
+  The measured path is still an index scan with no sequential scan; keep the
+  tenant/parent composite index because it gives the planner a tenant-leading
+  path when root categories grow across many tenants.
 - During Stage 1.11.10.3 WIP reconciliation, existing `PaginateMenuCategories`
   covers category panel pagination/search and first-page lookup, but no
   existing Application action fetches one selected category by id without
@@ -1774,6 +1791,8 @@ Decisions awaiting the owner:
   Orders writes, or should it wait until Menu public contracts are added first?
 
 ## Next steps
-Next stage: Table board (Livewire), depending on the merged Tables slice.
-Pending owner decision: approve, revise, or defer the Blueprint section 4
-amendment for Halls & Tables quoted above.
+Next Menu session: UI-only follow-up for the existing Livewire master-detail
+Menu screen; preserve the backend read-model API from this slice, keep no new
+frontend libraries unless a real widget need appears, and focus first on
+context-preserving save/cancel plus moving archive/restore/force-delete
+controls into the row overflow.
