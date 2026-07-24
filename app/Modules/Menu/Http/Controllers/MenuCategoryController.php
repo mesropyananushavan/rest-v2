@@ -5,22 +5,28 @@ declare(strict_types=1);
 namespace App\Modules\Menu\Http\Controllers;
 
 use App\Modules\Menu\Application\ArchiveMenuCategory;
+use App\Modules\Menu\Application\BrowseMenuItems;
 use App\Modules\Menu\Application\CreateMenuCategory;
 use App\Modules\Menu\Application\ForceDeleteMenuCategory;
 use App\Modules\Menu\Application\RestoreMenuCategory;
 use App\Modules\Menu\Application\SearchMenuCategoryOptions;
 use App\Modules\Menu\Application\UpdateMenuCategory;
+use App\Modules\Menu\Http\MenuIndexContext;
 use App\Modules\Menu\Http\Requests\MenuCategoryRequest;
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 final class MenuCategoryController
 {
-    public function create(SearchMenuCategoryOptions $categoryOptions): View
+    public function create(Request $request, SearchMenuCategoryOptions $categoryOptions, BrowseMenuItems $browseItems): View
     {
+        $menuContext = MenuIndexContext::fromRequest($request, $browseItems);
+
         return view('modules.menu.category-form', [
             'category' => null,
+            'menuContext' => $menuContext,
             'parentOptionsEndpoint' => route('admin.menu.category-options.parents'),
             'parentInitialOptions' => $this->initialParentOptions($categoryOptions),
             'selectedParentValue' => $this->selectedParentValue(),
@@ -28,22 +34,24 @@ final class MenuCategoryController
         ]);
     }
 
-    public function store(MenuCategoryRequest $request, CreateMenuCategory $create): RedirectResponse
+    public function store(MenuCategoryRequest $request, CreateMenuCategory $create, BrowseMenuItems $browseItems): RedirectResponse
     {
         $create($request->localizedName(), $request->sortOrder(), $request->active(), $request->parentId());
 
         return redirect()
-            ->route('admin.menu.index')
+            ->to(MenuIndexContext::fromRequest($request, $browseItems)->url())
             ->with('status', __('menu.flash.category_created'));
     }
 
-    public function edit(int $category, SearchMenuCategoryOptions $categoryOptions): View
+    public function edit(int $category, Request $request, SearchMenuCategoryOptions $categoryOptions, BrowseMenuItems $browseItems): View
     {
         $categoryModel = MenuCategory::query()->findOrFail($category);
         $excludedCategoryId = (int) $categoryModel->id;
+        $menuContext = MenuIndexContext::fromRequest($request, $browseItems);
 
         return view('modules.menu.category-form', [
             'category' => $categoryModel,
+            'menuContext' => $menuContext,
             'parentOptionsEndpoint' => route('admin.menu.category-options.parents', ['exclude_id' => $excludedCategoryId]),
             'parentInitialOptions' => $this->initialParentOptions($categoryOptions, $excludedCategoryId),
             'selectedParentValue' => $this->selectedParentValue($categoryModel),
@@ -51,41 +59,41 @@ final class MenuCategoryController
         ]);
     }
 
-    public function update(int $category, MenuCategoryRequest $request, UpdateMenuCategory $update): RedirectResponse
+    public function update(int $category, MenuCategoryRequest $request, UpdateMenuCategory $update, BrowseMenuItems $browseItems): RedirectResponse
     {
         $categoryModel = MenuCategory::query()->findOrFail($category);
 
         $update($category, $request->localizedName(), $request->sortOrder(), $request->active(), $request->parentIdOr($categoryModel->parent_id === null ? null : (int) $categoryModel->parent_id));
 
         return redirect()
-            ->route('admin.menu.index')
+            ->to(MenuIndexContext::fromRequest($request, $browseItems)->url())
             ->with('status', __('menu.flash.category_updated'));
     }
 
-    public function destroy(int $category, ArchiveMenuCategory $archive): RedirectResponse
+    public function destroy(int $category, Request $request, ArchiveMenuCategory $archive, BrowseMenuItems $browseItems): RedirectResponse
     {
         $archive($category);
 
         return redirect()
-            ->route('admin.menu.index')
+            ->to(MenuIndexContext::fromRequest($request, $browseItems)->url())
             ->with('status', __('menu.flash.category_archived'));
     }
 
-    public function restore(int $category, RestoreMenuCategory $restore): RedirectResponse
+    public function restore(int $category, Request $request, RestoreMenuCategory $restore, BrowseMenuItems $browseItems): RedirectResponse
     {
         $restore($category);
 
         return redirect()
-            ->route('admin.menu.index', ['archive_mode' => 'archived'])
+            ->to(MenuIndexContext::fromRequest($request, $browseItems, 'archived')->url())
             ->with('status', __('menu.flash.category_restored'));
     }
 
-    public function forceDelete(int $category, ForceDeleteMenuCategory $forceDelete): RedirectResponse
+    public function forceDelete(int $category, Request $request, ForceDeleteMenuCategory $forceDelete, BrowseMenuItems $browseItems): RedirectResponse
     {
         $forceDelete($category);
 
         return redirect()
-            ->route('admin.menu.index', ['archive_mode' => 'archived'])
+            ->to(MenuIndexContext::fromRequest($request, $browseItems, 'archived')->url())
             ->with('status', __('menu.flash.category_force_deleted'));
     }
 

@@ -18,6 +18,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 /** @var MenuItemImageUrlResolver $imageUrls */
 /** @var bool $isSearching */
 /** @var LengthAwarePaginator<int, MenuItem>|null $items */
+/** @var array{context?: array<string, int|string>} $menuContext */
 /** @var MenuCategory|null $selectedCategory */
 /** @var int|null $selectedCategoryId */
 
@@ -51,12 +52,12 @@ $locale = app()->getLocale();
                 </div>
             @endif
             @if ($canManageCategories)
-                <x-button :href="route('admin.menu.categories.create')" variant="outline-primary">
+                <x-button :href="route('admin.menu.categories.create', $menuContext)" variant="outline-primary">
                     {{ __('menu.actions.create_category') }}
                 </x-button>
             @endif
             @if ($canManageItems && $selectedCategoryId !== null)
-                <x-button :href="route('admin.menu.items.create', array_filter(['category' => $selectedCategoryId]))">
+                <x-button :href="route('admin.menu.items.create', $menuContext)">
                     {{ __('menu.actions.create_item') }}
                 </x-button>
             @endif
@@ -122,6 +123,7 @@ $locale = app()->getLocale();
                                     'canManageCategories' => $canManageCategories,
                                     'canViewArchive' => $canViewArchive,
                                     'category' => $rootCategory,
+                                    'menuContext' => $menuContext,
                                 ])
                             </div>
 
@@ -151,6 +153,7 @@ $locale = app()->getLocale();
                                             'canManageCategories' => $canManageCategories,
                                             'canViewArchive' => $canViewArchive,
                                             'category' => $category,
+                                            'menuContext' => $menuContext,
                                         ])
                                     </div>
                                 @empty
@@ -171,7 +174,7 @@ $locale = app()->getLocale();
                             <div class="text-sm font-black text-smartrest-ink">{{ __('menu.empty.no_categories_title') }}</div>
                             <p class="mt-1 text-sm text-smartrest-muted">{{ __('menu.empty.no_categories_body') }}</p>
                             @if ($canManageCategories)
-                                <x-button :href="route('admin.menu.categories.create')" size="sm" class="mt-3">
+                                <x-button :href="route('admin.menu.categories.create', $menuContext)" size="sm" class="mt-3">
                                     {{ __('menu.actions.create_first_category') }}
                                 </x-button>
                             @endif
@@ -205,6 +208,7 @@ $locale = app()->getLocale();
                             'imageUrls' => $imageUrls,
                             'items' => $globalResults,
                             'locale' => $locale,
+                            'menuContext' => $menuContext,
                             'showCategory' => true,
                         ])
 
@@ -229,7 +233,7 @@ $locale = app()->getLocale();
                         <div class="text-lg font-black text-smartrest-ink">{{ __('menu.empty.no_categories_title') }}</div>
                         <p class="mt-2 text-sm text-smartrest-muted">{{ __('menu.empty.no_categories_body') }}</p>
                         @if ($canManageCategories)
-                            <x-button :href="route('admin.menu.categories.create')" class="mt-4">
+                            <x-button :href="route('admin.menu.categories.create', $menuContext)" class="mt-4">
                                 {{ __('menu.actions.create_first_category') }}
                             </x-button>
                         @endif
@@ -257,7 +261,7 @@ $locale = app()->getLocale();
                                 {{ __('menu.actions.show_inactive') }}
                             </label>
                             @if ($canManageItems)
-                                <x-button :href="route('admin.menu.items.create', ['category' => $selectedCategoryId])" size="sm">
+                                <x-button :href="route('admin.menu.items.create', $menuContext)" size="sm">
                                     {{ __('menu.actions.add_first_item') }}
                                 </x-button>
                             @endif
@@ -271,6 +275,7 @@ $locale = app()->getLocale();
                             'imageUrls' => $imageUrls,
                             'items' => $items,
                             'locale' => $locale,
+                            'menuContext' => $menuContext,
                             'showCategory' => false,
                         ])
 
@@ -284,7 +289,7 @@ $locale = app()->getLocale();
                             <div class="text-lg font-black text-smartrest-ink">{{ __('menu.empty.no_items_title') }}</div>
                             <p class="mt-2 text-sm text-smartrest-muted">{{ __('menu.empty.no_items_body') }}</p>
                             @if ($canManageItems)
-                                <x-button :href="route('admin.menu.items.create', ['category' => $selectedCategoryId])" class="mt-4">
+                                <x-button :href="route('admin.menu.items.create', $menuContext)" class="mt-4">
                                     {{ __('menu.actions.add_first_item') }}
                                 </x-button>
                             @endif

@@ -1,3 +1,10 @@
+<?php
+
+declare(strict_types=1);
+
+/** @var string $menuContextUrl */
+?>
+
 <form wire:submit="save" novalidate>
     <x-form.searchable-select
         name="category_id"
@@ -129,7 +136,7 @@
         <x-button type="submit" wire:loading.attr="disabled">
             {{ $isEdit ? __('menu.actions.save') : __('menu.actions.create') }}
         </x-button>
-        <x-button :href="route('admin.menu.index')" variant="outline-secondary">
+        <x-button :href="$menuContextUrl" variant="outline-secondary">
             {{ __('menu.actions.cancel') }}
         </x-button>
     </div>

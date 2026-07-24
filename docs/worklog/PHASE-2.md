@@ -2300,6 +2300,123 @@ Plan:
   the exact latest pushed-head CI run to avoid an endless loop where recording a
   run id creates a newer run.
 
+## Menu context + overflow follow-up
+
+Status: Stage 1.11D context preservation complete; overflow pending
+Branch: `phase-2-stage-1.11d-menu-context-overflow`
+Base: `origin/main` at `cc46b95`
+
+Scope:
+- UI-only Menu admin follow-up.
+- Preserve Menu screen context across item/category create/edit save and cancel.
+- Move rare destructive row actions into a compact Alpine overflow.
+- No read-action, API, response-shape, schema, migration, npm package,
+  `docs/BLUEPRINT.md`, `template/`, Audit, Halls, Tables, or unrelated module
+  changes.
+
+Read-only inspection result:
+- `git fetch origin` and `git merge --ff-only origin/main` on local `main`
+  reported `Already up to date`; new branch
+  `phase-2-stage-1.11d-menu-context-overflow` was created from fresh
+  `origin/main`.
+- Starting git state was clean. `git log --oneline -5` showed `cc46b95`
+  merge of `phase-2-ci-node24-actions`, then the node24 action commits, then
+  `c3e1f13` merge of Menu read convergence.
+- No root `.smoke-tmp` or related smoke-temp artifact exists; `git ls-files`
+  for those patterns returned no tracked paths.
+- Preconditions are present on this base: `.github/workflows/ci.yml` uses
+  `actions/checkout@v7` and `actions/setup-node@v7`; `MenuIndex` obtains read
+  data through `BrowseMenuItems::forMenuIndex()`, and no longer directly calls
+  `ResolveMenuCategorySelection`, `PaginateMenuCategories`,
+  `PaginateMenuItems`, or `SearchMenuItems` from `render()`.
+- Current Menu index URL/component context contract:
+  `category` -> `MenuIndex::$category`;
+  `q` -> `MenuIndex::$search`;
+  `category_page` -> `MenuIndex::$categoryPage`;
+  `item_page` -> `MenuIndex::$itemPage`;
+  `search_page` -> `MenuIndex::$searchPage`;
+  `show_inactive` -> `MenuIndex::$showInactive`;
+  `archive_mode` -> `MenuIndex::$archiveMode`.
+  `categorySearch` is component-only and is not bookmarkable today.
+- The context requested for this follow-up maps to `category`, `item_page`,
+  `q`, and `archive_mode`; `search_page` remains existing search-pagination
+  state but is not part of the prompt's required return-context set.
+- Current create/edit forms reset to `route('admin.menu.index')` on save and
+  cancel. Category forms are plain Blade/controller forms; item forms are a
+  plain Blade wrapper with a Livewire `MenuItemForm` component.
+- Current destructive controls are visible row buttons/forms in
+  `category-actions.blade.php` and `item-list.blade.php`; archive uses the
+  shared `x-confirm-modal`, restore is a plain POST form button, and
+  force-delete uses `x-confirm-modal` with irreversible copy.
+- Current routes preserve archive authorization correctly: archive routes have
+  normal manage permission; restore and force-delete routes also require
+  `superadmin`.
+- Characterization tests pin default category selection, search ignoring
+  selected category, clearing search returning to category context, empty
+  root/category rendering, superadmin-only archive controls, and Livewire
+  query-count invariance. Query-count tests currently pin
+  `BrowseMenuItems` category `6`, `BrowseMenuItems` search `3`,
+  `MenuIndex` category render `10`, and `MenuIndex` search render `10`.
+
+Plan:
+- [x] Stage 1.11D.1: preconditions, branch, and read-only inspection. Read the
+  required sources; fast-forward local `main`; verify Menu read convergence and
+  node24 actions; confirm no tracked or untracked smoke-temp artifacts; create
+  the feature branch; inspect Menu index/form/controller/shared-component
+  surfaces, routes, translations, and pinned tests; record the current URL
+  contract and plan before code. Result: completed as recorded above.
+- [x] Stage 1.11D.2: context carrier and form return path. Add a small
+  Menu HTTP context helper/request DTO that accepts only bookmarkable Menu
+  context parameters, sanitizes them through `BrowseMenuItems` selection
+  behavior without leaking invalid ids, renders them into create/edit links
+  and form hidden fields, and redirects successful item/category create/edit
+  plus cancel/back to the sanitized Menu URL with flash preserved.
+  Result: added `MenuIndexContext` using a nested `context[...]` carrier on
+  form/action URLs to avoid conflicting with route parameters such as
+  `/categories/{category}` while still returning to the existing `/admin/menu`
+  query keys. Category Blade forms now render hidden context fields and
+  context-aware back/cancel URLs; `MenuItemForm` receives sanitized context,
+  preselects the context category on create, and redirects successful Livewire
+  saves back to the sanitized Menu URL. Raw item/category POST/PUT routes and
+  archive/restore/force-delete redirects also preserve context when supplied.
+  Existing pinned Menu index characterization stayed unchanged; one initial
+  regression on the empty-root create-subcategory URL was fixed by not
+  emitting implicit default category context.
+- [x] Stage 1.11D.3: context preservation tests. Add tests for item/category
+  create and edit save/cancel returning to category, item page, search term,
+  and archive mode; validation failures retaining context; direct/bookmarked
+  form URLs carrying context after reload; and foreign-tenant, archived, and
+  nonexistent context category ids degrading to the default selected category
+  without error or disclosure.
+  Result: added `tests/Feature/Menu/MenuContextReturnTest.php` covering
+  category create/edit save and cancel/back, item create/edit Livewire save and
+  cancel/back, validation failure re-render with context intact, directly
+  loaded/bookmarked form URLs, and foreign-tenant/archived/nonexistent context
+  category degradation to the default category without rendering the invalid
+  id. Focused gates after this slice: `make test` passed (`179 passed /
+  5 skipped / 1443 assertions`), `make pint` passed after fixing two style
+  issues (`217 files`), and `make stan` passed (`123/123`, `[OK] No errors`).
+- [ ] Stage 1.11D.4: shared row overflow. Add a reusable Alpine-only row
+  overflow component for compact per-row rare actions with one-open-at-a-time
+  coordination, focusable keyboard trigger, Escape close with focus return,
+  outside-click close, and tablet-safe positioning. Move archive, restore, and
+  force-delete for Menu items/categories into that overflow while keeping edit
+  visible and keeping destructive actions on shared confirm-modal flow.
+- [ ] Stage 1.11D.5: overflow tests and translations. Add `hy`/`ru`/`en`
+  strings for the overflow trigger/label; prove managers do not see archived
+  rows, archive-mode controls, restore, or force-delete inside overflow
+  content; prove archive/restore/force-delete moved out of visible row actions
+  and force-delete irreversible copy remains rendered only through confirm
+  modal content.
+- [ ] Stage 1.11D.6: verification, smoke, commit, push, and handoff. Run
+  focused tests after each implementation step, then final `make pint`,
+  `make stan`, `make test`, `make fresh`, `make tenant-isolation-pgsql`,
+  `npm run build` or `make build`, HTTP smoke for save/cancel context on
+  `/admin/menu`, `git status`, `git diff --check`, and full diff review
+  versus `origin/main`. Commit logical steps with this worklog updated, push
+  the branch, record CI evidence in the final response only, and stop without
+  PR or merge.
+
 ## Next steps
-Owner review `phase-2-ci-node24-actions`; no PR has been created, and no merge
-is authorized in this session.
+Continue with Stage 1.11D.4: add the shared Alpine row overflow component and
+move Menu item/category archive, restore, and force-delete controls into it.

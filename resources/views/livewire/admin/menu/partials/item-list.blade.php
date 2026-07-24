@@ -13,6 +13,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 /** @var MenuItemImageUrlResolver $imageUrls */
 /** @var LengthAwarePaginator<int, MenuItem> $items */
 /** @var string $locale */
+/** @var array{context?: array<string, int|string>} $menuContext */
 /** @var bool $showCategory */
 ?>
 
@@ -28,7 +29,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
             <div class="min-w-0">
                 <div class="flex flex-wrap items-center gap-2">
                     @if (! $item->trashed())
-                        <a href="{{ route('admin.menu.items.edit', ['item' => (int) $item->id]) }}" class="font-black text-smartrest-ink no-underline hover:text-smartrest-success">
+                        <a href="{{ route('admin.menu.items.edit', array_merge(['item' => (int) $item->id], $menuContext)) }}" class="font-black text-smartrest-ink no-underline hover:text-smartrest-success">
                             {{ $item->translatedName()->forLocale($locale) }}
                         </a>
                     @else
@@ -69,14 +70,14 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
             <div class="flex flex-wrap justify-start gap-2 lg:justify-end">
                 @if (! $item->trashed())
-                    <x-button :href="route('admin.menu.items.edit', ['item' => (int) $item->id])" variant="outline-secondary" size="sm">
+                    <x-button :href="route('admin.menu.items.edit', array_merge(['item' => (int) $item->id], $menuContext))" variant="outline-secondary" size="sm">
                         {{ __('menu.actions.edit') }}
                     </x-button>
                 @endif
                 @if (! $item->trashed() && $canManageItems)
                     <x-confirm-modal
                         id="archive_item_{{ (int) $item->id }}"
-                        :action="route('admin.menu.items.destroy', ['item' => (int) $item->id])"
+                        :action="route('admin.menu.items.destroy', array_merge(['item' => (int) $item->id], $menuContext))"
                         :title="__('menu.confirm.archive_item_title')"
                         :message="__('menu.confirm.archive_item_message')"
                         :trigger-label="__('menu.actions.archive')"
@@ -84,7 +85,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
                     />
                 @endif
                 @if ($item->trashed() && $canManageItems && $canViewArchive && ! $item->category?->trashed())
-                    <form method="post" action="{{ route('admin.menu.items.restore', ['item' => (int) $item->id]) }}">
+                    <form method="post" action="{{ route('admin.menu.items.restore', array_merge(['item' => (int) $item->id], $menuContext)) }}">
                         @csrf
                         <x-button type="submit" variant="outline-primary" size="sm">
                             {{ __('menu.actions.restore') }}
@@ -94,7 +95,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
                 @if ($item->trashed() && $canManageItems && $canViewArchive)
                     <x-confirm-modal
                         id="force_delete_item_{{ (int) $item->id }}"
-                        :action="route('admin.menu.items.force-delete', ['item' => (int) $item->id])"
+                        :action="route('admin.menu.items.force-delete', array_merge(['item' => (int) $item->id], $menuContext))"
                         :title="__('menu.confirm.force_delete_item_title')"
                         :message="__('menu.confirm.force_delete_item_message')"
                         :trigger-label="__('menu.actions.force_delete')"
