@@ -20,7 +20,9 @@ use App\Support\I18n\LocalizedText;
 use App\Support\Money\Money;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
@@ -60,6 +62,139 @@ it('searches globally by localized item name and renders the empty search state'
         ->set('search', 'does-not-exist')
         ->assertSee(__('menu.empty.search_title'), false)
         ->assertSee(__('menu.actions.reset_search'), false);
+});
+
+it('characterizes current search and category context semantics', function (): void {
+    $records = menuIndexLivewireRecords();
+
+    app(TenantResolver::class)->set((int) $records['tenant']->id);
+    app(BranchContext::class)->set((int) $records['branch']->id);
+
+    $dinnerRoot = app(CreateMenuCategory::class)(menuIndexLivewireText('Dinner group'), sortOrder: 30);
+    $dinner = app(CreateMenuCategory::class)(menuIndexLivewireText('Dinner'), sortOrder: 31, parentId: (int) $dinnerRoot->id);
+    app(CreateMenuItem::class)(
+        (int) $dinner->id,
+        menuIndexLivewireText('Selected Trout'),
+        null,
+        new Money(320000, 'AMD'),
+    );
+    $empty = app(CreateMenuCategory::class)(menuIndexLivewireText('Empty category'), sortOrder: 32, parentId: (int) $dinnerRoot->id);
+
+    Livewire::withQueryParams([
+        'category' => (int) $dinner->id,
+        'q' => 'ձվածեղ',
+    ])
+        ->actingAs($records['user'])
+        ->test(MenuIndex::class)
+        ->assertSet('category', (int) $dinner->id)
+        ->assertSee(__('menu.search.results_heading'), false)
+        ->assertSee('Lori Omelette', false)
+        ->assertDontSee('Selected Trout', false)
+        ->call('clearSearch')
+        ->assertSet('category', (int) $dinner->id)
+        ->assertSee('Selected Trout', false)
+        ->assertDontSee(__('menu.search.results_heading'), false);
+
+    Livewire::withQueryParams([])
+        ->actingAs($records['user'])
+        ->test(MenuIndex::class)
+        ->assertSet('category', (int) $records['category']->id)
+        ->assertSee('Breakfast', false)
+        ->assertSee('Lori Omelette', false);
+
+    Livewire::withQueryParams(['category' => (int) $empty->id])
+        ->actingAs($records['user'])
+        ->test(MenuIndex::class)
+        ->assertSet('category', (int) $empty->id)
+        ->assertSee('Empty category', false)
+        ->assertSee(__('menu.empty.no_items_title'), false)
+        ->assertDontSee('Lori Omelette', false);
+});
+
+it('keeps menu index category render query count independent of rendered result size', function (): void {
+    $records = menuIndexLivewireRecords();
+
+    app(TenantResolver::class)->set((int) $records['tenant']->id);
+    app(BranchContext::class)->set((int) $records['branch']->id);
+
+    $bulkRoot = app(CreateMenuCategory::class)(menuIndexLivewireText('Bulk group'), sortOrder: 30);
+    $bulk = app(CreateMenuCategory::class)(menuIndexLivewireText('Bulk category'), sortOrder: 31, parentId: (int) $bulkRoot->id);
+
+    for ($index = 1; $index <= 30; $index++) {
+        app(CreateMenuItem::class)(
+            (int) $bulk->id,
+            menuIndexLivewireText("Bulk Visible Dish {$index}"),
+            null,
+            new Money(120000 + $index, 'AMD'),
+            sortOrder: $index,
+        );
+    }
+
+    $smallQueryCount = menuIndexLivewireRenderQueryCount(
+        $records['user'],
+        ['category' => (int) $records['category']->id],
+        fn (Testable $component): Testable => $component
+            ->assertSee('Lori Omelette', false)
+            ->assertDontSee('Bulk Visible Dish 25', false),
+    );
+    $largeQueryCount = menuIndexLivewireRenderQueryCount(
+        $records['user'],
+        ['category' => (int) $bulk->id],
+        fn (Testable $component): Testable => $component
+            ->assertSee('Bulk Visible Dish 1', false)
+            ->assertSee('Bulk Visible Dish 25', false)
+            ->assertDontSee('Bulk Visible Dish 30', false),
+    );
+
+    expect($smallQueryCount)->toBe($largeQueryCount)
+        ->and($smallQueryCount)->toBe(10);
+});
+
+it('keeps menu index search render query count independent of rendered result size', function (): void {
+    $records = menuIndexLivewireRecords();
+
+    app(TenantResolver::class)->set((int) $records['tenant']->id);
+    app(BranchContext::class)->set((int) $records['branch']->id);
+
+    $bulkRoot = app(CreateMenuCategory::class)(menuIndexLivewireText('Search bulk group'), sortOrder: 30);
+    $bulk = app(CreateMenuCategory::class)(menuIndexLivewireText('Search bulk category'), sortOrder: 31, parentId: (int) $bulkRoot->id);
+    app(CreateMenuItem::class)(
+        (int) $bulk->id,
+        menuIndexLivewireText('Single Needle Dish'),
+        null,
+        new Money(120000, 'AMD'),
+    );
+
+    for ($index = 1; $index <= 30; $index++) {
+        app(CreateMenuItem::class)(
+            (int) $bulk->id,
+            menuIndexLivewireText("Bulk Needle Dish {$index}"),
+            null,
+            new Money(130000 + $index, 'AMD'),
+            sortOrder: $index,
+        );
+    }
+
+    $smallQueryCount = menuIndexLivewireRenderQueryCount(
+        $records['user'],
+        ['q' => 'single needle'],
+        fn (Testable $component): Testable => $component
+            ->assertSee(__('menu.search.results_heading'), false)
+            ->assertSee('Single Needle Dish', false)
+            ->assertDontSee('Bulk Needle Dish 1', false),
+    );
+    $largeQueryCount = menuIndexLivewireRenderQueryCount(
+        $records['user'],
+        ['q' => 'bulk needle'],
+        fn (Testable $component): Testable => $component
+            ->assertSee(__('menu.search.results_heading'), false)
+            ->assertSee('Bulk Needle Dish 1', false)
+            ->assertSee('Bulk Needle Dish 25', false)
+            ->assertDontSee('Bulk Needle Dish 30', false),
+    );
+
+    expect($smallQueryCount)->toBe($largeQueryCount)
+        ->and($smallQueryCount)->toBe(13);
 });
 
 it('uses the category URL state and filters the category panel search', function (): void {
@@ -435,4 +570,29 @@ function menuIndexLivewireText(string $en, ?string $hy = null, ?string $ru = nul
         'ru' => $ru ?? $en,
         'en' => $en,
     ]);
+}
+
+/**
+ * @param  array<string, mixed>  $queryParams
+ * @param  callable(Testable<MenuIndex>): Testable<MenuIndex>  $assertions
+ */
+function menuIndexLivewireRenderQueryCount(User $user, array $queryParams, callable $assertions): int
+{
+    $user->loadMissing('role.permissions');
+
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+
+    try {
+        /** @var Testable<MenuIndex> $component */
+        $component = Livewire::withQueryParams($queryParams)
+            ->actingAs($user)
+            ->test(MenuIndex::class);
+        $assertions($component);
+
+        return count(DB::getQueryLog());
+    } finally {
+        DB::disableQueryLog();
+        DB::flushQueryLog();
+    }
 }

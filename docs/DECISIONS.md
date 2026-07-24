@@ -456,3 +456,23 @@ measurements require it; full-text search alone, because short substrings and
 partial multilingual dish names are a better fit for trigrams; caching the Menu
 list/search paths, because this slice is intended to prove query and index
 shape rather than hide slow scans.
+
+## 2026-07-24 — Menu item read paths temporarily remain split
+Decision: the JSON API item list now goes through `BrowseMenuItems`, while the
+existing Livewire `MenuIndex` screen remains on its current direct calls to
+`ResolveMenuCategorySelection`, `PaginateMenuCategories`, `PaginateMenuItems`,
+and `SearchMenuItems` for this correction session. Convergence is deferred; the
+planned end state is one `BrowseMenuItems` read facade used by both API and
+Livewire adapters.
+Reason: this session is proving that the previous backend-scale refactor did
+not change user-visible behavior. Moving the Livewire adapter to the new facade
+in the same proof session would invalidate that evidence by changing the path
+being characterized. The new tests named `characterizes current search and
+category context semantics`, `keeps menu index category render query count
+independent of rendered result size`, and `keeps menu index search render query
+count independent of rendered result size` pin the current Livewire behavior so
+a later convergence change has a safety net.
+Rejected: migrating Livewire to `BrowseMenuItems` now, because it would combine
+behavior proof with adapter convergence; leaving the divergence undocumented,
+because future reviewers would not know whether the split is intentional or an
+accidental regression.

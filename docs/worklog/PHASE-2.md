@@ -116,7 +116,7 @@ forbidden.
   while `--force` bypasses the top-level environment guard before the
   schema-recreation assertion; marker columns are not currently fillable,
   cast, appended, or returned by `MenuItemResource`, but need explicit tests.
-- [ ] Stage 1.11C-scale-review.2: real read-path query-count proof and
+- [x] Stage 1.11C-scale-review.2: real read-path query-count proof and
   Livewire characterization. Add tests proving query count is identical for
   small and large page sizes on both `BrowseMenuItems` category/search modes
   and full `MenuIndex` Livewire category/search renders. Add behavior
@@ -125,7 +125,19 @@ forbidden.
   returns to selected category context, default category selection, empty
   category empty-list rendering, and superadmin-only archive controls. Record
   the current two-read-path state and deferred convergence decision in
-  `docs/DECISIONS.md`. Result: pending.
+  `docs/DECISIONS.md`. Result: added exact-count invariance tests:
+  `BrowseMenuItems` category mode `5` vs `30` rows both execute `6` queries;
+  `BrowseMenuItems` search mode `5` vs `30` rows both execute `3` queries;
+  `MenuIndex` category render small vs full page both execute `10` queries;
+  `MenuIndex` search render small vs full page both execute `13` queries.
+  Added Livewire characterization coverage for search ignoring selected
+  category, clearing search back to selected category context, default
+  category selection, empty subcategory empty-list rendering, and existing
+  superadmin-only archive behavior coverage. Recorded the split-read-path
+  decision and deferred convergence target in `docs/DECISIONS.md`. Verification:
+  initial `make test` exposed a stale Livewire test query-string setup issue;
+  after clearing query params explicitly, `make test` passed (`169 passed /
+  5 skipped / 1375 assertions`) and `make pint` passed (`213 files`).
 - [ ] Stage 1.11C-scale-review.3: `menu:seed-load` safety and command
   separation. Determine precisely what `--force` bypasses before changing code;
   make environment and local-database guards unconditional if needed; require
