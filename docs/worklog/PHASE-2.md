@@ -158,11 +158,19 @@ forbidden.
   command separation and safety contract. Verification: `make test` passed
   (`172 passed / 5 skipped / 1382 assertions`) and `make pint` passed
   (`214 files`).
-- [ ] Stage 1.11C-scale-review.4: marker-column containment. Add tests proving
+- [x] Stage 1.11C-scale-review.4: marker-column containment. Add tests proving
   `load_test_key` is not fillable, not cast, not appended, not present in API
   resources, not present in serialized model output, and not rendered in Menu
   views. Record the dev/test-tooling-only marker-column decision and exit path
-  in `docs/DECISIONS.md`. Result: pending.
+  in `docs/DECISIONS.md`. Result: added `#[Hidden(['load_test_key'])]` to
+  `MenuCategory` and `MenuItem` so hydrated marker columns do not leak through
+  model serialization. Added marker exposure tests proving marker columns are
+  not fillable, not cast, not appended, absent from serialized model output,
+  absent from `MenuItemResource`/API responses, and not rendered by the Menu
+  screen. Recorded the dev/test-tooling-only marker decision and exit path in
+  `docs/DECISIONS.md`. Verification: `make pint` passed (`215 files`, one
+  style issue fixed in the new test) and `make test` passed (`175 passed /
+  5 skipped / 1400 assertions`).
 - [ ] Stage 1.11C-scale-review.5: realistic panel measurement and index
   decision. Use `menu:seed-load` without schema recreation to create at least
   about 200 local load tenants, run `ANALYZE`, capture the exact SQL generated

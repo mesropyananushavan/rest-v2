@@ -8,6 +8,7 @@ use App\Modules\Tenancy\Contracts\BelongsToTenant;
 use App\Support\I18n\LocalizedText;
 use App\Support\Money\Money;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -27,6 +28,7 @@ use UnexpectedValueException;
     'active',
     'archived_with_category_id',
 ])]
+#[Hidden(['load_test_key'])]
 final class MenuItem extends Model
 {
     use BelongsToTenant;

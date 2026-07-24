@@ -496,3 +496,25 @@ multi-tenant planner evidence; letting `--force` bypass environment or database
 guards, because that could run load tooling against the wrong database; merging
 both commands, because demo-row idempotency and synthetic-tenant generation have
 different cleanup semantics.
+
+## 2026-07-24 — Menu load-test markers are dev/test tooling only
+Decision: `menu_categories.load_test_key` and `menu_items.load_test_key` are
+dev/test-tooling columns used only by `menu:load-test-data` to make generated
+rows idempotent and purgeable without touching DemoSeeder or human data. The
+columns stay on the tenant-owned Menu tables because the purge boundary must
+follow the rows being generated and deleted, but they are hidden from Eloquent
+serialization, excluded from mass assignment, not cast, not appended, and not
+returned by Menu API resources or rendered views.
+Reason: marker columns keep local scale data deterministic and safely removable
+without introducing a second tracking table whose lifecycle could drift from
+tenant-owned Menu rows. Treating the markers as tooling metadata preserves the
+runtime API/UI contract while still giving the load generator an auditable
+cleanup key.
+Exit path: if generated-row metadata becomes broader than local dev/test
+tooling, move it to a dedicated internal metadata table keyed by table name,
+row id, tenant id, and generator name, then backfill/purge the marker columns in
+a separate owner-approved migration.
+Rejected: exposing marker values in resources or model serialization, because
+they are not product data; removing or renaming the columns in this correction
+session, because the review explicitly keeps them and asks only to contain
+their exposure.
