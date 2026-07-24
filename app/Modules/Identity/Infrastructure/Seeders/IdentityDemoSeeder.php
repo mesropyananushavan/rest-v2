@@ -10,6 +10,7 @@ use App\Modules\Identity\Infrastructure\Models\User;
 use App\Modules\Identity\Infrastructure\Models\UserBranchAssignment;
 use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Modules\Tenancy\Contracts\TenantResolver;
+use App\Support\I18n\TenantTranslationOverridePermissions;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -120,6 +121,7 @@ final class IdentityDemoSeeder extends Seeder
     {
         return [
             'tenancy.manage' => 'Manage tenants and branches',
+            TenantTranslationOverridePermissions::MANAGE => 'Manage tenant translation overrides',
             'identity.manage' => 'Manage users and roles',
             'menu.categories.manage' => 'Manage menu categories',
             'menu.items.manage' => 'Manage menu items',
@@ -136,8 +138,8 @@ final class IdentityDemoSeeder extends Seeder
     private function rolePermissions(): array
     {
         return [
-            'owner' => ['tenancy.manage', 'identity.manage', 'menu.categories.manage', 'menu.items.manage', 'tables.halls.manage', 'tables.tables.manage', 'orders.take', 'payments.capture'],
-            'manager' => ['identity.manage', 'menu.categories.manage', 'menu.items.manage', 'tables.halls.manage', 'tables.tables.manage', 'orders.take', 'payments.capture'],
+            'owner' => ['tenancy.manage', TenantTranslationOverridePermissions::MANAGE, 'identity.manage', 'menu.categories.manage', 'menu.items.manage', 'tables.halls.manage', 'tables.tables.manage', 'orders.take', 'payments.capture'],
+            'manager' => [TenantTranslationOverridePermissions::MANAGE, 'identity.manage', 'menu.categories.manage', 'menu.items.manage', 'tables.halls.manage', 'tables.tables.manage', 'orders.take', 'payments.capture'],
             'cashier' => ['orders.take', 'payments.capture'],
             'waiter' => ['orders.take'],
         ];

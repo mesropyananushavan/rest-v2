@@ -2637,12 +2637,18 @@ Tenant translation override write-side plan:
   inspection found reachable title-section translation output in
   `resources/views/layouts/admin.blade.php` that must be escaped in the
   output-safety step.
-- [ ] Stage 1.13.2: permission and demo grants. Add the dedicated tenant
+- [x] Stage 1.13.2: permission and demo grants. Add the dedicated tenant
   translation override manage permission using the existing Identity
   permission/role convention; seed it for demo roles that should remain usable;
   add the settled active-superadmin bypass through the existing authorizer
   rather than a parallel policy path; cover denied, explicit-grant allowed, and
-  superadmin-without-grant allowed behavior.
+  superadmin-without-grant allowed behavior. Result: added
+  `tenancy.translation_overrides.manage` as the central permission code, seeded
+  it for demo owner and manager roles, added the active-superadmin bypass in
+  `EloquentAuthorizer`, and covered deny/grant/superadmin plus demo-manager
+  grants in `TenantTranslationOverridePermissionTest`. Verification: `make
+  test` passed (`197 passed / 6 skipped / 2106 assertions`) and `make pint`
+  passed (`231 files`).
 - [ ] Stage 1.13.3: write actions and validation. Add Application actions for
   setting and resetting tenant translation overrides; validate supported
   locale, language-file key existence, central non-overridable key rejection
@@ -2670,5 +2676,6 @@ Tenant translation override write-side plan:
   and both job statuses, then stop without creating or merging a PR.
 
 ## Next steps
-Start Stage 1.13.2: add the dedicated permission and demo grants through the
-existing Identity permission mechanism, including allow/deny/superadmin tests.
+Start Stage 1.13.3: add set/reset Application actions with write-time
+validation, stable domain error codes, audit records, and the key-existence
+decision update.
