@@ -1,6 +1,6 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.11 Part C Menu read-path convergence in progress
+Status: Stage 1.11 Part C Menu read-path convergence complete
 Branch: phase-2-stage-1.11c-menu-read-convergence
 
 PR state: Codex may create and merge PRs after exact-head green CI; direct
@@ -472,12 +472,45 @@ forbidden.
   no longer calculates the hidden selected-category item page while global
   search results are visible. Verification: `make test` passed (`175 passed /
   5 skipped / 1399 assertions`).
-- [ ] Stage 1.11C-converge.5: decisions, gotchas, and final verification. Add a
+- [x] Stage 1.11C-converge.5: decisions, gotchas, and final verification. Add a
   dated `docs/DECISIONS.md` entry superseding the temporary split-read-path
   entry; add the PostgreSQL measurement caveats to Gotchas; run `make pint`,
   `make stan`, `make test`, `make fresh`, `make tenant-isolation-pgsql`, HTTP
   smoke for `/admin/menu` and `/api/v1/menu-items`, `git diff --check`, and a
-  full branch diff review; push the branch only if green.
+  full branch diff review; push the branch only if green. Result: added the
+  2026-07-24 `Menu adapters use one BrowseMenuItems read path` decision,
+  explicitly superseding the temporary split decision. Added Gotchas for the
+  dev-only marker index appearing in local PostgreSQL search `BitmapAnd` plans
+  and the 200k-row selected-category estimate drift. Final verification:
+  `make pint` passed (`PASS 215 files`), `make stan` passed (`122/122`,
+  `[OK] No errors`), `make test` passed (`175 passed / 5 skipped /
+  1399 assertions`), `make fresh` passed with migrations through
+  `2026_07_24_000000_add_load_test_markers_to_menu_tables` and `DemoSeeder`
+  complete, and `make tenant-isolation-pgsql` passed (`21 passed /
+  73 assertions`). For HTTP smoke, `menu:load-test-data --purge-generated`
+  generated deterministic page-2 data (`400` generated categories,
+  `40000` generated items, `9.885s`; demo totals including seed rows:
+  `arat-riverside 204 categories / 20005 items`, `northstar-bistro
+  203 categories / 20002 items`). Manager smoke: login form `200`, login
+  submit `302`; `/admin/menu?category=48` `200` with page-1 marker
+  `Թարմ ոսպ ուտեստ arat-riverside 1-1` and no page-2 marker; `/admin/menu?
+  category=48&item_page=2` `200` with distinct page-2 marker
+  `Այգու պանիր ուտեստ arat-riverside 1-4861`; `/admin/menu?category=49&
+  q=4861` `200` showed the category-48 search hit, proving search ignores the
+  selected category; `/admin/menu?category=49&q=zz-no-match-zz` `200` showed
+  `Համընկնող դիրքեր չկան։`; `/admin/menu?category=49` `200` showed
+  `Այգու ոսպ ուտեստ arat-riverside 1-2`, proving cleared search returns to
+  category context; manager archive-mode filter marker was absent. API smoke:
+  `/api/v1/menu-items?category_id=48&per_page=25&page=1` `200` contained
+  `id=8` and `current_page=1`; page `2` `200` contained `id=4868` and
+  `current_page=2`; `/api/v1/menu-items?category_id=49&search=4861` `200`
+  contained `id=4868`, proving search ignores `category_id`; miss search
+  returned `data=[]` and `total=0`. Owner smoke: login form `200`, login submit
+  `302`, `/admin/menu?category=48` `200` with archive-mode filter marker
+  present. No asset-affecting files changed, so `make build` / `npm run build`
+  was not required. `git diff --check` passed; full branch diff versus
+  `origin/main` reviewed as 19 files limited to Menu scale tooling/read path,
+  tests, README, Makefile artisan target, and decisions/worklog.
 - [x] Stage 1.16.1: preconditions, branch, and read-only inspection. Verify a
   clean worktree, fetch `origin/main`, confirm Stage 1.14 ancestry and
   `routes/api.php`, fast-forward `main`, create
@@ -2122,6 +2155,14 @@ Prioritized remaining work:
   discarded. The corrected smoke used normal form POST redirect handling, no
   host PHP, and passed with explicit manager/owner/UI/API status and content
   markers.
+- Stage 1.11C local PostgreSQL search measurements include the dev/test-only
+  `menu_items_tenant_branch_load_test_key_idx` marker index in a `BitmapAnd`
+  on the generated load dataset. That marker index is for purge tooling, so it
+  must not be treated as production search-plan evidence.
+- Stage 1.11C representative item-path measurements showed PostgreSQL
+  materially underestimating selected-category item rows at 200k-row scale
+  (`estimate 1` versus `actual 54`). Future Menu item-path index reviews must
+  check estimates as well as whether the chosen node is an index scan.
 - Menu UX carry-over from Stage 1.11 Part D: context-preserving save/cancel,
   and moving archive/restore/force-delete controls into a row overflow menu.
 - No admin UI or API for reading audit logs.
@@ -2174,6 +2215,6 @@ Decisions awaiting the owner:
   Orders writes, or should it wait until Menu public contracts are added first?
 
 ## Next steps
-Next Menu session: converge the Livewire `MenuIndex` read adapter onto the
-single `BrowseMenuItems` read path using the characterization tests from this
-review as the safety net; do not redesign the UI in that convergence step.
+Owner review/merge this read-convergence branch. Next coding session after
+merge: Menu UX carry-over only, starting with context-preserving save/cancel
+and moving archive/restore/force-delete controls into a row overflow menu.

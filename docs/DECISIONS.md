@@ -477,6 +477,23 @@ behavior proof with adapter convergence; leaving the divergence undocumented,
 because future reviewers would not know whether the split is intentional or an
 accidental regression.
 
+## 2026-07-24 — Menu adapters use one BrowseMenuItems read path
+Decision: supersede the temporary split-read-path decision above. The JSON API
+item list and Livewire `MenuIndex` now both obtain Menu read data through
+`BrowseMenuItems`. The facade keeps the API's strict `category_id` item-filter
+contract and the UI's category selection-state normalization as separate
+adapter modes over the same Application query actions.
+Reason: one facade removes duplicated archive-mode gating and read-path
+orchestration while preserving the already-characterized API and UI behavior.
+The Livewire characterization tests from the temporary split session remain the
+safety net: they passed unchanged after convergence, and query-count invariance
+still holds for both adapters.
+Rejected: moving query orchestration back into Livewire, because adapters must
+stay thin; forcing the API and UI to share one category-id semantic, because
+strict API filters and UI selection-state fallback are different public
+contracts; changing API response shape or Menu markup, because this session is
+a behavior-preserving refactor.
+
 ## 2026-07-24 — Menu load commands have separate safety contracts
 Decision: `menu:load-test-data` is the repeatable demo-tenant scale-data command;
 it only targets existing demo tenants and purges rows marked by its own
