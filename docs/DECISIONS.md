@@ -432,3 +432,27 @@ because that violates the Halls-only scope; storing preparation place as free
 text, because it would likely conflict with the future kitchen/printing
 domain; creating a new Reporting/Admin audit module, because audit writes are
 already cross-cutting and Reads remain future Reports & Analytics work.
+
+## 2026-07-24 — Menu scale backend proof keeps JSONB trigram search
+Decision: the Menu backend scale slice keeps `translated_name` JSON/JSONB as
+the source of truth and uses the existing PostgreSQL `pg_trgm` GIN expression
+indexes over the lower-case concatenation of `hy`, `ru`, and `en` localized
+name values for contains-style item/category search. Runtime read paths go
+through paginated Application queries, with `BrowseMenuItems` as the coherent
+item-list facade for category context, global search, active filtering, archive
+mode, stable ordering, and page pagination. Load-test rows are marked with
+nullable `load_test_key` columns and narrow purge indexes so local scale data
+can be regenerated without touching DemoSeeder or human rows.
+Reason: measured Menu search must support multilingual partial operator input
+around tens of thousands of rows per tenant without a denormalized mutable
+search column or in-memory filtering. The current trigram expression strategy
+matches that workflow, stays compatible with the existing localized value
+object model, and lets SQLite tests keep a driver-aware LIKE fallback while
+PostgreSQL proves real index usage.
+Rejected: unindexed JSONB `ILIKE` scans, because they do not scale at the
+target tenant/row counts; a generated or application-maintained `search_text`
+column, because it adds write-path synchronization and backfill risk before
+measurements require it; full-text search alone, because short substrings and
+partial multilingual dish names are a better fit for trigrams; caching the Menu
+list/search paths, because this slice is intended to prove query and index
+shape rather than hide slow scans.

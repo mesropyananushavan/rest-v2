@@ -43,13 +43,21 @@ forbidden.
   command. Verification so far: Pint pass (`211 files`), PHPStan pass
   (`[OK] No errors`), SQLite Pest pass (`163 passed / 5 skipped /
   1235 assertions`).
-- [ ] Stage 1.11C-scale.3: read-model proof and index decision refresh. Keep
+- [x] Stage 1.11C-scale.3: read-model proof and index decision refresh. Keep
   the existing PostgreSQL `pg_trgm` JSONB expression-index strategy unless
   measurement proves a gap; add any needed additive/reversible index migration
   for the measured query shapes; update `docs/DECISIONS.md` with a dated entry
   for the backend-scale slice; strengthen read-model/API tests for tenant and
   branch isolation in search plus bounded query count for the paginated item
-  list. Result: pending.
+  list. Result: added `BrowseMenuItems` as a coherent Application facade for
+  category/default item browsing and global search, switched the API controller
+  to that facade, recorded the 2026-07-24 JSONB trigram/search-index decision,
+  extended search coverage with a matching tenant-B row that must not leak,
+  and added a bounded-query-count assertion for `PaginateMenuItems` while
+  touching each eager-loaded category. No additional search migration was
+  needed before measurement. Verification: Pint pass (`212 files`), PHPStan
+  pass (`[OK] No errors`), SQLite Pest pass (`164 passed / 5 skipped /
+  1264 assertions`).
 - [ ] Stage 1.11C-scale.4: PostgreSQL load run and measurements. Run
   `make fresh`, execute the new load command in the container with purge/load
   options, capture per-tenant row counts, run `EXPLAIN (ANALYZE, BUFFERS)` for
