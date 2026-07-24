@@ -25,7 +25,7 @@ forbidden.
   indexes, and the broad `menu:seed-load` command, but it does not have the
   prompt-compatible per-demo-tenant `menu:load-test-data` command or the
   required fresh backend measurement proof for that exact slice.
-- [ ] Stage 1.11C-scale.2: prompt-compatible load-test command. Add a
+- [x] Stage 1.11C-scale.2: prompt-compatible load-test command. Add a
   standalone `menu:load-test-data` command registered in `bootstrap/app.php`
   that runs only in local/testing, targets the existing two demo tenants,
   deterministically creates about 200 categories and 20000 items per tenant
@@ -33,7 +33,16 @@ forbidden.
   bounded memory, and provides an explicit purge option that removes only rows
   carrying its own generated marker while leaving DemoSeeder and human rows
   intact. Add focused command tests for guard, idempotency, purge safety,
-  tenant/branch/name/money shape, and generated counts. Result: pending.
+  tenant/branch/name/money shape, and generated counts. Result: added
+  nullable `load_test_key` markers and purge indexes to Menu tables; registered
+  `menu:load-test-data`; added `make artisan ARGS="..."`; documented command
+  usage in `README.md`; command defaults to exactly 200 category rows and
+  20000 item rows per demo tenant, splits Arat rows across both demo branches,
+  refuses outside local/testing, fails instead of duplicating generated rows,
+  and `--purge-generated` / `--purge-only` delete only rows marked by this
+  command. Verification so far: Pint pass (`211 files`), PHPStan pass
+  (`[OK] No errors`), SQLite Pest pass (`163 passed / 5 skipped /
+  1235 assertions`).
 - [ ] Stage 1.11C-scale.3: read-model proof and index decision refresh. Keep
   the existing PostgreSQL `pg_trgm` JSONB expression-index strategy unless
   measurement proves a gap; add any needed additive/reversible index migration
