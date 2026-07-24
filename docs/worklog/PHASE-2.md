@@ -2740,10 +2740,15 @@ Tenant translation override editing-screen plan:
   route-level `can:*`, a thin controller, URL-backed Livewire state, shared
   Blade components, flash messages, pagination, and confirm modals, and no
   blueprint conflict was found.
-- [ ] Stage 1.14.2: authorization decision documentation. Add one dated
+- [x] Stage 1.14.2: authorization decision documentation. Add one dated
   `docs/DECISIONS.md` entry for the application-wide active-superadmin
   authorizer bypass: what it does, why it exists, blast radius, and that it
   deliberately does not bypass tenant scoping or branch/data visibility.
+  Result: added the 2026-07-24 active superadmin bypass decision, documenting
+  that the central Identity authorizer allows active `is_superadmin` users for
+  dotted permission checks, while authentication, inactive-user denial,
+  tenant-scoped models, PostgreSQL RLS, branch assignment, route-model
+  isolation, and explicit same-tenant action validation still apply.
 - [ ] Stage 1.14.3: catalogue/read model. Add an Application/read-side service
   that flattens committed language-file string leaves for each supported
   locale, caches the per-locale catalogue with a deployment-aware version key,
@@ -2778,5 +2783,6 @@ Tenant translation override editing-screen plan:
   statuses for the final report, then stop without creating or merging a PR.
 
 ## Next steps
-Start Stage 1.14.2: document the application-wide active-superadmin authorizer
-bypass in `docs/DECISIONS.md`, including the explicit tenant-scope limit.
+Start Stage 1.14.3: implement the cached language-file catalogue/read model for
+the editing screen, excluding non-overridable keys and overlaying existing
+tenant overrides through the current cache layer.

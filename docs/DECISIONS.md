@@ -642,3 +642,27 @@ layers together through the single cache service entry point; invalidating only
 the map can leave a first-ever override hidden until the stale empty presence
 marker expires, and invalidating only the presence marker can leave stale
 override values visible.
+
+## 2026-07-24 — Active superadmin bypass in the Identity authorizer
+Decision: active users with `is_superadmin = true` are allowed by the central
+Identity `Authorizer` for every dotted permission code checked through Laravel
+Gate, even when their tenant role does not carry that explicit permission. The
+bypass lives in the authorizer rather than in individual policies or screens, so
+the same rule applies to admin routes, Livewire actions, controllers, and
+Application actions that call the Identity contract.
+Reason: platform superadmins need break-glass operational access for tenant
+configuration and maintenance without copying every new tenant permission onto a
+role first. A central rule avoids one screen accidentally treating superadmin
+differently from another.
+Blast radius: this changes authorization semantics application-wide for
+permission checks that flow through the Identity authorizer and Gate's dotted
+ability hook. It does not bypass authentication, inactive-user checks,
+tenant-scoped Eloquent models, PostgreSQL RLS, branch assignment checks,
+route-model tenant isolation, or any explicit same-tenant actor validation in
+Application actions. Superadmin can pass the permission check, but it cannot use
+that permission to read or mutate another tenant's scoped records unless the
+tenant context itself has been resolved to that tenant through the normal
+context mechanisms.
+Rejected: adding one-off superadmin allowances to each policy, controller, or
+Livewire component, because that would be inconsistent and easy to miss as new
+permissions are introduced.
