@@ -2302,7 +2302,8 @@ Plan:
 
 ## Menu context + overflow follow-up
 
-Status: Stage 1.11D context preservation complete; overflow pending
+Status: Stage 1.11D context preservation and overflow implementation complete;
+final verification pending
 Branch: `phase-2-stage-1.11d-menu-context-overflow`
 Base: `origin/main` at `cc46b95`
 
@@ -2396,18 +2397,35 @@ Plan:
   id. Focused gates after this slice: `make test` passed (`179 passed /
   5 skipped / 1443 assertions`), `make pint` passed after fixing two style
   issues (`217 files`), and `make stan` passed (`123/123`, `[OK] No errors`).
-- [ ] Stage 1.11D.4: shared row overflow. Add a reusable Alpine-only row
+- [x] Stage 1.11D.4: shared row overflow. Add a reusable Alpine-only row
   overflow component for compact per-row rare actions with one-open-at-a-time
   coordination, focusable keyboard trigger, Escape close with focus return,
   outside-click close, and tablet-safe positioning. Move archive, restore, and
   force-delete for Menu items/categories into that overflow while keeping edit
   visible and keeping destructive actions on shared confirm-modal flow.
-- [ ] Stage 1.11D.5: overflow tests and translations. Add `hy`/`ru`/`en`
+  Result: added reusable `x-row-overflow` with Alpine-only one-open-at-a-time
+  coordination, focusable trigger, Escape close/focus return, outside-click
+  close, and first-item focus on open. Menu item/category archive, restore,
+  and force-delete controls now render inside per-row overflow menus while
+  edit remains visible; destructive archive/force-delete controls continue to
+  use the shared `x-confirm-modal`, now with an optional trigger class for
+  menu placement.
+- [x] Stage 1.11D.5: overflow tests and translations. Add `hy`/`ru`/`en`
   strings for the overflow trigger/label; prove managers do not see archived
   rows, archive-mode controls, restore, or force-delete inside overflow
   content; prove archive/restore/force-delete moved out of visible row actions
   and force-delete irreversible copy remains rendered only through confirm
   modal content.
+  Result: added the `menu.actions.more` translation in all three locales and
+  `tests/Feature/Menu/MenuOverflowTest.php` covering active archive actions
+  inside category/item overflow menus, superadmin archived restore and
+  force-delete content inside overflow menus with irreversible copy preserved,
+  non-superadmin absence of archived row maintenance content inside overflow,
+  and Alpine accessibility hooks for trigger, Escape, outside click, focus
+  return, and one-open-at-a-time dispatch. Verification after this slice:
+  `make test` passed (`182 passed / 5 skipped / 1501 assertions`),
+  `make pint` passed (`218 files`), and `make stan` passed (`123/123`,
+  `[OK] No errors`).
 - [ ] Stage 1.11D.6: verification, smoke, commit, push, and handoff. Run
   focused tests after each implementation step, then final `make pint`,
   `make stan`, `make test`, `make fresh`, `make tenant-isolation-pgsql`,
@@ -2418,5 +2436,7 @@ Plan:
   PR or merge.
 
 ## Next steps
-Continue with Stage 1.11D.4: add the shared Alpine row overflow component and
-move Menu item/category archive, restore, and force-delete controls into it.
+Continue with Stage 1.11D.6: review and commit the overflow slice, then run
+final verification (`make fresh`, `make tenant-isolation-pgsql`, build, HTTP
+smoke, diff checks), push the branch, and report CI evidence without creating a
+PR or merge.
