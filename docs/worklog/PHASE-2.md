@@ -1,7 +1,7 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.11 Part C Menu read-path convergence complete
-Branch: phase-2-stage-1.11c-menu-read-convergence
+Status: Stage 1.12 tenant translation override read side in progress
+Branch: phase-2-stage-1.12-tenant-translation-read
 
 PR state: Codex may create and merge PRs after exact-head green CI; direct
 pushes to `main`, force-push, history rewriting, and branch deletion remain
@@ -2551,6 +2551,70 @@ Owner review-correction plan:
   worklog handoff commit is the remaining commit to push; CI run id and job
   statuses belong in the final response only.
 
+Tenant translation override read-side plan:
+- [x] Stage 1.12.1: documentation and decision update. Amend only the
+  i18n/cross-cutting blueprint wording for tenant-level UI translation
+  overrides; add one dated decision covering DB storage, tenant-only scope,
+  resolution order, translator hook choice, caching, and the non-overridable
+  safety rule. Result: amended only the Cross-Cutting Concerns i18n paragraph
+  in `docs/BLUEPRINT.md`; added the 2026-07-24 decision entry documenting
+  tenant-only DB storage, five-step resolution order, translator-subclass hook
+  choice over loader replacement, tenant/locale cache key shape, and
+  non-overridable safety/auth/destructive keys.
+- [x] Stage 1.12.2: tenant-owned override schema and model. Add the additive
+  reversible `tenant_translation_overrides` migration with tenant/locale/key
+  uniqueness, tenant-leading read indexes, PostgreSQL RLS policy guarded by
+  driver, and an Eloquent model using the established tenant scoping traits.
+  Result: added `tenant_translation_overrides` with `tenant_id`, `locale`,
+  `translation_key`, `override_value`, timestamps, tenant/locale read index,
+  tenant/locale/key uniqueness, PostgreSQL RLS policy, and
+  `TenantTranslationOverride` using `BelongsToTenant`; added SQLite schema and
+  uniqueness tests plus PostgreSQL tenant-isolation coverage. Verification:
+  `make test` passed (`185 passed / 6 skipped / 1579 assertions`) and
+  `make pint` passed after fixing one style issue (`223 files`).
+- [x] Stage 1.12.3: resolution layer and non-overridable registry. Add the
+  central non-overridable key registry plus the tenant override repository,
+  cache key builder, and custom translator integration without changing
+  `LocalizedText` or rewriting translation call sites. Result: added
+  `TenantAwareTranslator` as the application translator binding, central
+  `NonOverridableTranslationKeys`, tenant/locale cache key helpers, cached
+  tenant override reads, lazy tenant-default fallback lookup, request-local
+  caches, and model/tenant hooks that keep override cache keys straightforward
+  for the future write path. `LocalizedText` and menu localized name storage
+  were not changed.
+- [x] Stage 1.12.4: focused read-path tests. Prove the five-step resolution
+  order, non-overridable override rejection, at-most-one override read per
+  tenant/locale request, zero translation DB queries with no tenant context,
+  and tenant A/B isolation across sequential resolutions in one process.
+  Result: added focused i18n read-path tests for all five fallback steps,
+  non-overridable safety/auth keys, replacement parameters, pluralization,
+  cold-cache loading, one override read for many translation calls with
+  overrides, zero override reads for a zero-override tenant, zero DB queries
+  without tenant context, and sequential tenant A/B isolation. Verification:
+  `make pint` passed (`229 files`), `make stan` passed (`[OK] No errors`),
+  and `make test` passed (`193 passed / 6 skipped / 2098 assertions`).
+- [x] Stage 1.12.5: required gates, diff review, commit, push, and CI handoff.
+  Run `make pint`, `make stan`, `make test`, `make fresh`,
+  `make tenant-isolation-pgsql`, `make build`, `git diff --check`, full branch
+  diff review versus `origin/main`, push only this branch, collect CI run id
+  and both job statuses, then stop without PR or merge. Result: final local
+  gates passed. `make pint`: `PASS 229 files`. `make stan`: `130/130`, no
+  errors. `make test`: `193 passed / 6 skipped / 2098 assertions`.
+  `make fresh`: storage link, all PostgreSQL migrations including
+  `2026_07_24_020000_create_tenant_translation_overrides_table`, and
+  `DemoSeeder` completed successfully. `make tenant-isolation-pgsql`:
+  `22 passed / 76 assertions`, including translation override RLS coverage.
+  `make build`: composer install, key generation, storage link, `npm ci`, and
+  Vite build completed; known local warnings were Composer Git dubious
+  ownership and npm major-version notices. `git diff --check` passed. Full
+  branch diff versus `origin/main` reviewed: 15 files limited to the approved
+  i18n blueprint paragraph, one dated decision, tenant translation override
+  migration/model, translator/cache support layer, focused i18n and RLS tests,
+  and this worklog; no `template/`, UI, write action, permission, seeder,
+  Menu/Halls/Tables/Audit feature changes, or unrelated module changes.
+
 ## Next steps
-Owner review is next. Do not create or merge a PR until the owner authorizes the
-release flow for this branch.
+Continue with the next session for the tenant translation override write path:
+add the dedicated permission, permission-gated superadmin/authorized editing
+actions, cache invalidation on write, and any owner-approved UI; do not create
+branch-level overrides.

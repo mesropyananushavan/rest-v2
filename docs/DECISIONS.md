@@ -595,3 +595,34 @@ Rejected: keeping both tenant-leading category indexes, because the measured
 path already has equivalent active-panel coverage through the existing index;
 removing the existing active index, because it predates this branch and also
 covers active-state category paths beyond the narrow panel comparison.
+
+## 2026-07-24 — Tenant UI translation overrides read layer
+Decision: UI translation strings resolve through a tenant-level database table
+layered over the existing Laravel language files. Resolution order is active
+locale tenant override, active locale language file, tenant default locale
+tenant override, tenant default locale language file, then English language
+file. Overrides are stored at tenant level only; there is no branch column.
+Cache keys follow the established tenant-leading convention as
+`tenant:{tenant_id}:translation_overrides:{locale}:v1`, so the future write path
+can invalidate one tenant/locale directly after a change.
+Reason: restaurant operators need tenant-specific wording without redeploying
+code or editing container files. Database storage keeps overrides auditable,
+tenant-scoped, cacheable, and editable by a future permission-gated UI. Tenant
+level matches the settled product decision: branch-specific wording would
+increase operational complexity and cache cardinality without a current need.
+Hook choice: extend Laravel's translator rather than replacing the translation
+loader. A translator subclass can preserve ordinary `__()`/`trans()` call sites,
+replacement parameters, pluralization through the existing message selector, and
+the separate `LocalizedText` JSON value-object behavior while inserting tenant
+override checks into string resolution. Replacing the loader was rejected
+because loaders operate per locale/group, do not naturally know the requested
+flat key or tenant fallback sequence, and would either merge unsafe overrides
+into loaded groups or require more invasive call-site changes for pluralization
+and fallback behavior.
+Non-overridable rule: authentication/login strings, authorization and
+permission-denied messages, destructive confirmation copy and labels for
+archive/restore/force-delete, and safety-warning wording are deliberately not
+overridable. Their wording carries security, permission, or irreversible-action
+meaning; allowing tenants to soften or hide it would weaken safe operation. The
+read resolver centrally ignores database rows for those keys, so a future edit
+UI cannot make them affect rendering.

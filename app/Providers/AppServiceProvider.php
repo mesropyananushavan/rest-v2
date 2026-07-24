@@ -21,9 +21,14 @@ use App\Modules\Tenancy\Infrastructure\Directory\EloquentTenantDirectory;
 use App\Modules\Tenancy\Infrastructure\Settings\EloquentTenantSettingsReader;
 use App\Support\Audit\AuditRecorder;
 use App\Support\Audit\EloquentAuditRecorder;
+use App\Support\I18n\NonOverridableTranslationKeys;
+use App\Support\I18n\TenantAwareTranslator;
+use App\Support\I18n\TenantTranslationLocaleFallbacks;
+use App\Support\I18n\TenantTranslationOverrides;
 use App\Support\Logging\LogContext;
 use App\Support\Logging\Redactor;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Contracts\Translation\Loader;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
@@ -48,6 +53,25 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(UserDirectory::class, EloquentUserDirectory::class);
         $this->app->bind(PermissionCatalog::class, EloquentPermissionCatalog::class);
         $this->app->bind(AuditRecorder::class, EloquentAuditRecorder::class);
+        $this->app->singleton(NonOverridableTranslationKeys::class);
+        $this->app->singleton(TenantTranslationLocaleFallbacks::class);
+        $this->app->singleton(TenantTranslationOverrides::class);
+
+        $this->app->extend('translator', function (mixed $translator): TenantAwareTranslator {
+            /** @var Loader $loader */
+            $loader = $this->app->make('translation.loader');
+
+            $tenantAwareTranslator = new TenantAwareTranslator(
+                $loader,
+                $this->app->getLocale(),
+                $this->app->make(TenantTranslationOverrides::class),
+                $this->app->make(TenantTranslationLocaleFallbacks::class),
+                $this->app->make(NonOverridableTranslationKeys::class),
+            );
+            $tenantAwareTranslator->setFallback($this->app->getFallbackLocale());
+
+            return $tenantAwareTranslator;
+        });
     }
 
     /**

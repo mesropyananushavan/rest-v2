@@ -16,6 +16,7 @@ use App\Modules\Tenancy\Contracts\TenantResolver;
 use App\Modules\Tenancy\Infrastructure\Models\Branch;
 use App\Modules\Tenancy\Infrastructure\Models\Tenant;
 use App\Support\Audit\AuditLog;
+use App\Support\I18n\TenantTranslationOverride;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
@@ -353,6 +354,43 @@ it('enforces PostgreSQL row level security for audit logs', function (): void {
     expect(rawAuditLogIds())->toBe([(int) $auditB->id]);
 });
 
+it('enforces PostgreSQL row level security for tenant translation overrides', function (): void {
+    if (! usesPostgresRowLevelSecurity()) {
+        $this->markTestSkipped('PostgreSQL RLS coverage runs only on pgsql.');
+    }
+
+    $tenantA = tenantWithUser('tenant-a', 'manager-a', ['menu.items.manage']);
+    $tenantB = tenantWithUser('tenant-b', 'manager-b', ['menu.items.manage']);
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+
+    $overrideA = TenantTranslationOverride::query()->create([
+        'locale' => 'hy',
+        'translation_key' => 'admin.dashboard.title',
+        'override_value' => 'Tenant A dashboard',
+    ]);
+
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+
+    $overrideB = TenantTranslationOverride::query()->create([
+        'locale' => 'hy',
+        'translation_key' => 'admin.dashboard.title',
+        'override_value' => 'Tenant B dashboard',
+    ]);
+
+    app(TenantResolver::class)->clear();
+
+    expect(rawTenantTranslationOverrideIds())->toBe([]);
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+
+    expect(rawTenantTranslationOverrideIds())->toBe([(int) $overrideA->id]);
+
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+
+    expect(rawTenantTranslationOverrideIds())->toBe([(int) $overrideB->id]);
+});
+
 it('enforces PostgreSQL row level security for halls', function (): void {
     if (! usesPostgresRowLevelSecurity()) {
         $this->markTestSkipped('PostgreSQL RLS coverage runs only on pgsql.');
@@ -571,6 +609,16 @@ function rawMenuItemIds(): array
 function rawAuditLogIds(): array
 {
     return collect(DB::select('select id from audit_logs order by id'))
+        ->map(fn (object $row): int => (int) $row->id)
+        ->all();
+}
+
+/**
+ * @return list<int>
+ */
+function rawTenantTranslationOverrideIds(): array
+{
+    return collect(DB::select('select id from tenant_translation_overrides order by id'))
         ->map(fn (object $row): int => (int) $row->id)
         ->all();
 }
