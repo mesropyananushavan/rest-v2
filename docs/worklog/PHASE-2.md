@@ -58,13 +58,34 @@ forbidden.
   needed before measurement. Verification: Pint pass (`212 files`), PHPStan
   pass (`[OK] No errors`), SQLite Pest pass (`164 passed / 5 skipped /
   1264 assertions`).
-- [ ] Stage 1.11C-scale.4: PostgreSQL load run and measurements. Run
+- [x] Stage 1.11C-scale.4: PostgreSQL load run and measurements. Run
   `make fresh`, execute the new load command in the container with purge/load
   options, capture per-tenant row counts, run `EXPLAIN (ANALYZE, BUFFERS)` for
   first page, deep page, global search hit, global search miss, and category
   panel/list queries, fix any sequential-scan slow path with query/index shape
   rather than caching, and record timings/index evidence in this worklog.
-  Result: pending.
+  Result: `make fresh` passed on PostgreSQL through
+  `2026_07_24_010000_add_menu_category_panel_index`; final load command
+  `make artisan ARGS="menu:load-test-data --purge-generated"` generated
+  `menu_categories=400`, `menu_items=40000` in `10.119s`. Row counts per demo
+  tenant were `arat-riverside: 200 categories / 20000 items` and
+  `northstar-bistro: 200 categories / 20000 items`. The first category-panel
+  measurement used the marker purge index as a tenant-leading index rather
+  than the parent-panel index; to keep the intended tenant/parent/deleted/sort
+  access path available at larger tenant counts, an additive
+  `menu_categories_tenant_parent_deleted_sort_id_idx` migration was added and
+  covered by `MenuSchemaTest`.
+
+  Stage 1.11C-scale.4 measurements on local PostgreSQL after the final fresh
+  load:
+
+  | Query | Scale | Time | Index evidence |
+  |---|---:|---:|---|
+  | Category item first page (`tenant_id=1`, `branch_id=1`, `category_id=48`, `limit 25`) | 400 categories / 40000 items | `Execution Time: 1.336 ms` | `Index Scan using menu_items_tenant_branch_category_deleted_active_sort_id_idx` |
+  | Category item deep page (`offset 50`) | same | `Execution Time: 1.941 ms` | `Index Scan using menu_items_tenant_branch_category_deleted_active_sort_id_idx` |
+  | Global search hit (`LIKE '%1-9999%'`) | same | `Execution Time: 0.959 ms` | `Bitmap Index Scan on menu_items_translated_name_trgm_idx` |
+  | Global search miss (`LIKE '%zz-no-match-zz%'`) | same | `Execution Time: 0.598 ms` | `Bitmap Index Scan on menu_items_translated_name_trgm_idx` |
+  | Category panel roots (`tenant_id=1`, roots, `limit 25`) | same | `Execution Time: 0.480 ms` | `Index Scan using menu_categories_tenant_load_test_key_idx`; no sequential scan |
 - [ ] Stage 1.11C-scale.5: final verification and scoped commit/push. Run
   `make pint`, `make stan`, `make test`, `make fresh`, any required focused
   PostgreSQL checks, and a full branch diff review; commit each logical step

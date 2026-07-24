@@ -11,6 +11,7 @@ Use Docker through the Makefile; host PHP is not required.
 - `make restart` rebuilds and restarts the stack.
 - `make shell` opens a PHP container shell.
 - `make artisan ARGS="..."` runs an Artisan command inside the PHP container.
+- `make pgsql ARGS="..."` runs `psql` against the local PostgreSQL service.
 - `make test` runs Pest.
 - `make tenant-isolation-pgsql` runs the Tenancy feature suite on PostgreSQL
   against a separate local test database with an unprivileged RLS-enforced role.
