@@ -438,23 +438,40 @@ forbidden.
   category filtering versus UI category selection-state normalization; both are
   already pinned by tests and will be preserved inside the single facade rather
   than resolved as a product behavior change.
-- [ ] Stage 1.11C-converge.2: extend `BrowseMenuItems` for both adapters.
+- [x] Stage 1.11C-converge.2: extend `BrowseMenuItems` for both adapters.
   Add only the data needed for the Livewire screen: category panel paginator,
   resolved selected category, selected-category item paginator, optional global
   search paginator, normalized archive mode, and search-mode flag. Keep the
   facade as a thin Application layer over `ResolveMenuCategorySelection`,
   `ResolveMenuItemListCategory`, `PaginateMenuCategories`, `PaginateMenuItems`,
-  and `SearchMenuItems`; keep API response behavior unchanged.
-- [ ] Stage 1.11C-converge.3: switch `MenuIndex` to the facade. Remove direct
+  and `SearchMenuItems`; keep API response behavior unchanged. Result: added
+  `BrowseMenuItemsResult` plus `BrowseMenuItems::forMenuIndex()` and
+  `BrowseMenuItems::selectedCategoryForMenuIndex()`. The API `__invoke()`
+  path and response paginator remain unchanged; the new UI mode preserves the
+  UI selection-state contract while centralizing archive-mode normalization in
+  the facade.
+- [x] Stage 1.11C-converge.3: switch `MenuIndex` to the facade. Remove direct
   read-action dependencies from `render()` and `selectCategory()`; keep the
   component as state binding, mutation dispatch, and presentation only. Preserve
   current URL state, archive visibility, selected-category behavior, and search
-  clearing without markup or styling changes.
-- [ ] Stage 1.11C-converge.4: prove behavior and query-count invariance. Run
+  clearing without markup or styling changes. Result: `MenuIndex` now obtains
+  category panel data, selected category, item paginator, and global search
+  paginator through `BrowseMenuItems`; `rg` confirms no direct calls to
+  `ResolveMenuCategorySelection`, `PaginateMenuCategories`,
+  `PaginateMenuItems`, or `SearchMenuItems` remain in the component. No Blade,
+  CSS, route, or API-resource markup changed.
+- [x] Stage 1.11C-converge.4: prove behavior and query-count invariance. Run
   the existing characterization tests unmodified, preserve API tests, and keep
   query-count invariance for `BrowseMenuItems` category/search and full
   `MenuIndex` category/search renders. Record before/after absolute counts and
-  justify or reduce any increases.
+  justify or reduce any increases. Result: characterization tests passed
+  unmodified and API tests stayed green. Query-count before -> after:
+  `BrowseMenuItems` category `6 -> 6`, `BrowseMenuItems` search `3 -> 3`,
+  `MenuIndex` category render `10 -> 10`, `MenuIndex` search render
+  `13 -> 10`. The Livewire search count decreased because the converged facade
+  no longer calculates the hidden selected-category item page while global
+  search results are visible. Verification: `make test` passed (`175 passed /
+  5 skipped / 1399 assertions`).
 - [ ] Stage 1.11C-converge.5: decisions, gotchas, and final verification. Add a
   dated `docs/DECISIONS.md` entry superseding the temporary split-read-path
   entry; add the PostgreSQL measurement caveats to Gotchas; run `make pint`,

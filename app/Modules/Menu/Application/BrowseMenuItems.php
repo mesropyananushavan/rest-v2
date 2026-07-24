@@ -10,7 +10,13 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 final class BrowseMenuItems
 {
+    /**
+     * @var list<'active'|'archived'|'all'>
+     */
+    private const ARCHIVE_MODES = ['active', 'archived', 'all'];
+
     public function __construct(
+        private readonly PaginateMenuCategories $paginateCategories,
         private readonly PaginateMenuItems $paginateItems,
         private readonly SearchMenuItems $searchItems,
         private readonly ResolveMenuCategorySelection $categorySelection,
@@ -64,6 +70,72 @@ final class BrowseMenuItems
         );
     }
 
+    /**
+     * @param  'active'|'archived'|'all'|string  $archiveMode
+     */
+    public function forMenuIndex(
+        ?int $categoryId = null,
+        ?string $search = null,
+        ?string $categorySearch = null,
+        bool $includeInactive = false,
+        string $archiveMode = 'active',
+        bool $canViewArchive = false,
+        int $categoryPerPage = 25,
+        int $itemPerPage = 25,
+        int $categoryPage = 1,
+        int $itemPage = 1,
+        int $searchPage = 1,
+    ): BrowseMenuItemsResult {
+        $archiveMode = $this->normalizedArchiveMode($archiveMode, $canViewArchive);
+        $normalizedSearch = $this->normalizedSearch($search);
+        $selectedCategory = ($this->categorySelection)($categoryId, $archiveMode);
+        $selectedCategoryId = $selectedCategory instanceof MenuCategory ? (int) $selectedCategory->id : null;
+        $categories = ($this->paginateCategories)(
+            search: $categorySearch,
+            archiveMode: $archiveMode,
+            perPage: $categoryPerPage,
+            page: $categoryPage,
+        );
+        $items = $selectedCategoryId === null || $normalizedSearch !== null
+            ? null
+            : ($this->paginateItems)(
+                categoryId: $selectedCategoryId,
+                includeInactive: $includeInactive,
+                archiveMode: $archiveMode,
+                perPage: $itemPerPage,
+                page: $itemPage,
+            );
+        $globalResults = $normalizedSearch === null
+            ? null
+            : ($this->searchItems)(
+                search: $normalizedSearch,
+                includeInactive: $includeInactive,
+                archiveMode: $archiveMode,
+                perPage: $itemPerPage,
+                page: $searchPage,
+            );
+
+        return new BrowseMenuItemsResult(
+            archiveMode: $archiveMode,
+            categories: $categories,
+            selectedCategory: $selectedCategory,
+            items: $items,
+            globalResults: $globalResults,
+            isSearching: $normalizedSearch !== null,
+        );
+    }
+
+    /**
+     * @param  'active'|'archived'|'all'|string  $archiveMode
+     */
+    public function selectedCategoryForMenuIndex(int $categoryId, string $archiveMode = 'active', bool $canViewArchive = false): ?MenuCategory
+    {
+        return ($this->categorySelection)(
+            $categoryId,
+            $this->normalizedArchiveMode($archiveMode, $canViewArchive),
+        );
+    }
+
     private function normalizedSearch(?string $search): ?string
     {
         if ($search === null) {
@@ -73,5 +145,23 @@ final class BrowseMenuItems
         $search = trim($search);
 
         return $search === '' ? null : $search;
+    }
+
+    /**
+     * @param  'active'|'archived'|'all'|string  $archiveMode
+     * @return 'active'|'archived'|'all'
+     */
+    private function normalizedArchiveMode(string $archiveMode, bool $canViewArchive): string
+    {
+        if (! in_array($archiveMode, self::ARCHIVE_MODES, true)) {
+            return 'active';
+        }
+
+        if (! $canViewArchive && $archiveMode !== 'active') {
+            return 'active';
+        }
+
+        /** @var 'active'|'archived'|'all' $archiveMode */
+        return $archiveMode;
     }
 }

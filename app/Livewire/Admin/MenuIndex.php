@@ -4,10 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire\Admin;
 
-use App\Modules\Menu\Application\PaginateMenuCategories;
-use App\Modules\Menu\Application\PaginateMenuItems;
-use App\Modules\Menu\Application\ResolveMenuCategorySelection;
-use App\Modules\Menu\Application\SearchMenuItems;
+use App\Modules\Menu\Application\BrowseMenuItems;
 use App\Modules\Menu\Application\ToggleMenuItemActivity;
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use App\Modules\Menu\Infrastructure\Storage\MenuItemImageUrlResolver;
@@ -18,10 +15,6 @@ use Livewire\Component;
 final class MenuIndex extends Component
 {
     private const ARCHIVE_MODE_ACTIVE = 'active';
-
-    private const ARCHIVE_MODE_ARCHIVED = 'archived';
-
-    private const ARCHIVE_MODE_ALL = 'all';
 
     private const CATEGORY_PAGE_SIZE = 25;
 
@@ -58,59 +51,52 @@ final class MenuIndex extends Component
     }
 
     public function render(
-        PaginateMenuCategories $categories,
-        PaginateMenuItems $items,
-        ResolveMenuCategorySelection $selection,
-        SearchMenuItems $searchItems,
+        BrowseMenuItems $browseItems,
         MenuItemImageUrlResolver $imageUrls,
     ): View {
         $this->normalizeState();
-        $selectedCategory = $this->selectedCategory($selection);
-        $selectedCategoryId = $selectedCategory instanceof MenuCategory ? (int) $selectedCategory->id : null;
-        $isSearching = trim($this->search) !== '';
-        $categoryPage = $categories(
-            search: $this->categorySearch,
-            archiveMode: $this->archiveMode(),
-            perPage: self::CATEGORY_PAGE_SIZE,
-            page: $this->categoryPage,
+        $readModel = $browseItems->forMenuIndex(
+            categoryId: $this->category,
+            search: $this->search,
+            categorySearch: $this->categorySearch,
+            includeInactive: $this->showInactive,
+            archiveMode: $this->archiveMode,
+            canViewArchive: $this->canViewArchive(),
+            categoryPerPage: self::CATEGORY_PAGE_SIZE,
+            itemPerPage: self::ITEM_PAGE_SIZE,
+            categoryPage: $this->categoryPage,
+            itemPage: $this->itemPage,
+            searchPage: $this->searchPage,
         );
-        $itemPage = $selectedCategoryId === null
-            ? null
-            : $items(
-                categoryId: $selectedCategoryId,
-                includeInactive: $this->showInactive,
-                archiveMode: $this->archiveMode(),
-                perPage: self::ITEM_PAGE_SIZE,
-                page: $this->itemPage,
-            );
-        $globalResults = $isSearching
-            ? $searchItems(
-                search: $this->search,
-                includeInactive: $this->showInactive,
-                archiveMode: $this->archiveMode(),
-                perPage: self::ITEM_PAGE_SIZE,
-                page: $this->searchPage,
-            )
-            : null;
+        $selectedCategoryId = $readModel->selectedCategoryId();
+        $this->archiveMode = $readModel->archiveMode;
+
+        if ($this->category !== $selectedCategoryId) {
+            $this->category = $selectedCategoryId;
+        }
 
         return view('livewire.admin.menu-index', [
-            'archiveMode' => $this->archiveMode(),
+            'archiveMode' => $readModel->archiveMode,
             'canManageCategories' => auth()->user()?->can('menu.categories.manage') ?? false,
             'canManageItems' => auth()->user()?->can('menu.items.manage') ?? false,
             'canViewArchive' => $this->canViewArchive(),
-            'categories' => $categoryPage,
-            'globalResults' => $globalResults,
+            'categories' => $readModel->categories,
+            'globalResults' => $readModel->globalResults,
             'imageUrls' => $imageUrls,
-            'isSearching' => $isSearching,
-            'items' => $itemPage,
-            'selectedCategory' => $selectedCategory,
+            'isSearching' => $readModel->isSearching,
+            'items' => $readModel->items,
+            'selectedCategory' => $readModel->selectedCategory,
             'selectedCategoryId' => $selectedCategoryId,
         ]);
     }
 
     public function selectCategory(int $categoryId): void
     {
-        $category = app(ResolveMenuCategorySelection::class)($categoryId, $this->archiveMode());
+        $category = app(BrowseMenuItems::class)->selectedCategoryForMenuIndex(
+            $categoryId,
+            $this->archiveMode,
+            $this->canViewArchive(),
+        );
 
         if (! $category instanceof MenuCategory || (int) $category->id !== $categoryId) {
             return;
@@ -185,7 +171,6 @@ final class MenuIndex extends Component
 
     public function updatedArchiveMode(): void
     {
-        $this->normalizeArchiveMode();
         $this->categoryPage = 1;
         $this->itemPage = 1;
         $this->searchPage = 1;
@@ -196,57 +181,6 @@ final class MenuIndex extends Component
         $this->categoryPage = max(1, $this->categoryPage);
         $this->itemPage = max(1, $this->itemPage);
         $this->searchPage = max(1, $this->searchPage);
-
-        $this->normalizeArchiveMode();
-
-    }
-
-    private function selectedCategory(ResolveMenuCategorySelection $selection): ?MenuCategory
-    {
-        $category = $selection($this->category, $this->archiveMode());
-        $categoryId = $category instanceof MenuCategory ? (int) $category->id : null;
-
-        if ($this->category !== $categoryId) {
-            $this->category = $categoryId;
-        }
-
-        return $category;
-    }
-
-    private function normalizeArchiveMode(): void
-    {
-        if (! in_array($this->archiveMode, $this->archiveModes(), true)) {
-            $this->archiveMode = self::ARCHIVE_MODE_ACTIVE;
-        }
-
-        if (! $this->canViewArchive() && $this->archiveMode !== self::ARCHIVE_MODE_ACTIVE) {
-            $this->archiveMode = self::ARCHIVE_MODE_ACTIVE;
-        }
-    }
-
-    /**
-     * @return 'active'|'archived'|'all'
-     */
-    private function archiveMode(): string
-    {
-        $this->normalizeArchiveMode();
-
-        /** @var 'active'|'archived'|'all' $archiveMode */
-        $archiveMode = $this->archiveMode;
-
-        return $archiveMode;
-    }
-
-    /**
-     * @return list<'active'|'archived'|'all'>
-     */
-    private function archiveModes(): array
-    {
-        return [
-            self::ARCHIVE_MODE_ACTIVE,
-            self::ARCHIVE_MODE_ARCHIVED,
-            self::ARCHIVE_MODE_ALL,
-        ];
     }
 
     private function canViewArchive(): bool
