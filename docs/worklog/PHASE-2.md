@@ -196,12 +196,38 @@ forbidden.
   repeat `ANALYZE`, the same plan nodes were used: root count `0.203 ms`, root
   page select `0.100 ms`, child eager-load `0.078 ms`. Recorded the
   panel-index decision in `docs/DECISIONS.md`.
-- [ ] Stage 1.11C-scale-review.6: HTTP smoke, final gates, diff review, and
+- [x] Stage 1.11C-scale-review.6: HTTP smoke, final gates, diff review, and
   push. Run `make pint`, `make stan`, `make test`, `make fresh`, PostgreSQL
   tenant-isolation, the multi-tenant load/counts, `ANALYZE`/EXPLAIN evidence,
   HTTP smoke for `/admin/menu` and `/api/v1/menu-items`, `git diff --check`,
   and full branch diff review. Commit the final worklog handoff and push the
-  feature branch only if green; do not create or merge a PR. Result: pending.
+  feature branch only if green; do not create or merge a PR. Result: final
+  gates passed. `make pint`: `PASS 215 files`. `make stan`: `121/121`, no
+  errors. `make test`: `175 passed / 5 skipped / 1400 assertions`.
+  `make fresh`: migrations and `DemoSeeder` completed successfully, including
+  `2026_07_24_010000_add_menu_category_panel_index`. PostgreSQL tenancy suite:
+  `21 passed / 73 assertions`. Final multi-tenant load after `make fresh`:
+  `menu:seed-load --mode=production-like --restaurants=200 --categories=1
+  --subcategories=1 --items=1 --batch=5000`, no `--fresh`,
+  `copy_load_seconds=53.008`, verified `tenants=200`, `roots=200`,
+  `subcategories=200`, `menu_categories=400`, `menu_items=200`; per-load-tenant
+  min/max roots `1/1`, subcategories `1/1`, items `1/1`. Final `ANALYZE` plus
+  exact category-panel EXPLAIN used `Index Only Scan using
+  menu_categories_tenant_parent_deleted_sort_id_idx` for root count
+  (`0.100 ms`), `Index Scan using
+  menu_categories_tenant_parent_deleted_sort_id_idx` for root page select
+  (`0.250 ms`), and `Index Scan using menu_categories_parent_id_idx` for child
+  eager-load (`0.080 ms`). HTTP smoke against `http://127.0.0.1:8080` passed:
+  manager and owner logins returned final `200`; manager `/admin/menu`,
+  category, page-forward, search-hit, search-miss, and clear-back requests all
+  returned `200` with expected Armenian content markers; manager did not see
+  archive controls, owner did; API category paging, global-search hit ignoring
+  `category_id=3`, search miss, and clear-back category request all returned
+  `200` with expected pagination/data markers. `git diff --check` passed. Full
+  branch diff versus `origin/main` reviewed: 19 files, Menu scale/read actions,
+  command safety, README/docs/worklog, additive migrations, and Menu tests only;
+  no `docs/BLUEPRINT.md`, `template/`, frontend asset, or unrelated module
+  changes.
 - [x] Stage 1.16.1: preconditions, branch, and read-only inspection. Verify a
   clean worktree, fetch `origin/main`, confirm Stage 1.14 ancestry and
   `routes/api.php`, fast-forward `main`, create
@@ -1839,6 +1865,13 @@ Prioritized remaining work:
 - `tests/Feature/Menu/MenuSchemaTest.php` early-returns on non-pgsql drivers,
   so it silently passes without asserting anything, and it is not included in
   the `tenant-isolation-pgsql` job.
+- During the Stage 1.11C review-correction HTTP smoke, the first curl script
+  forced `-X POST` while following redirects, so curl preserved POST across the
+  login redirect and reported a final `405`; it also included a host-PHP helper
+  to format an unused marker, which violated the project workflow and was
+  discarded. The corrected smoke used normal form POST redirect handling, no
+  host PHP, and passed with explicit manager/owner/UI/API status and content
+  markers.
 - Menu UX carry-over from Stage 1.11 Part D: context-preserving save/cancel,
   and moving archive/restore/force-delete controls into a row overflow menu.
 - No admin UI or API for reading audit logs.
@@ -1891,8 +1924,8 @@ Decisions awaiting the owner:
   Orders writes, or should it wait until Menu public contracts are added first?
 
 ## Next steps
-Next Menu session: UI-only follow-up for the existing Livewire master-detail
-Menu screen; preserve the backend read-model API from this slice, keep no new
-frontend libraries unless a real widget need appears, and focus first on
-context-preserving save/cancel plus moving archive/restore/force-delete
+Next Menu session: converge the Livewire `MenuIndex` read adapter onto the
+single `BrowseMenuItems` read path using the characterization tests from this
+review as the safety net; after that, continue the UI-only master-detail follow
+up for context-preserving save/cancel and moving archive/restore/force-delete
 controls into the row overflow.
