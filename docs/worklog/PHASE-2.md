@@ -2804,12 +2804,22 @@ Tenant translation override editing-screen plan:
   page render both used `3` total queries and `3` `tenant_translation_overrides`
   reads under the same cold-cache state. Verification: focused editor test
   passed (`9 passed / 55 assertions`).
-- [ ] Stage 1.14.6: local verification and HTTP smoke. Run focused tests,
+- [x] Stage 1.14.6: local verification and HTTP smoke. Run focused tests,
   `make pint`, `make stan`, `make test`, `make fresh`,
   `make tenant-isolation-pgsql`, `make build`, and a no-host-PHP HTTP smoke
   that searches for a real visible string, edits it, confirms the changed text
   appears where that key is used, resets it, and confirms the language-file
-  text returns.
+  text returns. Result: local gates passed: `make pint` (`PASS 247 files`),
+  `make stan` (`142/142`, `[OK] No errors`), `make test` (`224 passed / 6
+  skipped / 2237 assertions`), `make fresh`, `make tenant-isolation-pgsql`
+  (`22 passed / 76 assertions`), and `make build`. HTTP smoke used
+  `northstar-manager` through real `curl` login, loaded
+  `/admin/translation-overrides?locale=en&q=dashboard`, found
+  `admin.dashboard.title`, saved `Smoke Dashboard Title` through the Livewire
+  update endpoint, confirmed `/admin` rendered
+  `<title>Smoke Dashboard Title</title>`, reset the override through the
+  Livewire update endpoint, confirmed `/admin` rendered
+  `<title>Dashboard</title>`, and removed the temporary smoke directory.
 - [ ] Stage 1.14.7: final diff review, push, and CI handoff. Run `git status`,
   `git diff --check`, full branch diff review versus `origin/main`, confirm no
   `template/` or unapproved `docs/BLUEPRINT.md` changes, push only
@@ -2817,5 +2827,7 @@ Tenant translation override editing-screen plan:
   statuses for the final report, then stop without creating or merging a PR.
 
 ## Next steps
-Start Stage 1.14.6: run focused tests, all required local verification gates,
-and the no-host-PHP HTTP smoke for search/edit/reset against the real admin UI.
+Start Stage 1.14.7: run final `git status`, `git diff --check`, and full
+branch diff review versus `origin/main`, confirm no `template/` or unapproved
+`docs/BLUEPRINT.md` changes, push the branch, collect CI run id and both job
+statuses, and stop without opening a PR.
