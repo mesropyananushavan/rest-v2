@@ -2572,14 +2572,27 @@ Tenant translation override read-side plan:
   uniqueness tests plus PostgreSQL tenant-isolation coverage. Verification:
   `make test` passed (`185 passed / 6 skipped / 1579 assertions`) and
   `make pint` passed after fixing one style issue (`223 files`).
-- [ ] Stage 1.12.3: resolution layer and non-overridable registry. Add the
+- [x] Stage 1.12.3: resolution layer and non-overridable registry. Add the
   central non-overridable key registry plus the tenant override repository,
   cache key builder, and custom translator integration without changing
-  `LocalizedText` or rewriting translation call sites.
-- [ ] Stage 1.12.4: focused read-path tests. Prove the five-step resolution
+  `LocalizedText` or rewriting translation call sites. Result: added
+  `TenantAwareTranslator` as the application translator binding, central
+  `NonOverridableTranslationKeys`, tenant/locale cache key helpers, cached
+  tenant override reads, lazy tenant-default fallback lookup, request-local
+  caches, and model/tenant hooks that keep override cache keys straightforward
+  for the future write path. `LocalizedText` and menu localized name storage
+  were not changed.
+- [x] Stage 1.12.4: focused read-path tests. Prove the five-step resolution
   order, non-overridable override rejection, at-most-one override read per
   tenant/locale request, zero translation DB queries with no tenant context,
   and tenant A/B isolation across sequential resolutions in one process.
+  Result: added focused i18n read-path tests for all five fallback steps,
+  non-overridable safety/auth keys, replacement parameters, pluralization,
+  cold-cache loading, one override read for many translation calls with
+  overrides, zero override reads for a zero-override tenant, zero DB queries
+  without tenant context, and sequential tenant A/B isolation. Verification:
+  `make pint` passed (`229 files`), `make stan` passed (`[OK] No errors`),
+  and `make test` passed (`193 passed / 6 skipped / 2098 assertions`).
 - [ ] Stage 1.12.5: required gates, diff review, commit, push, and CI handoff.
   Run `make pint`, `make stan`, `make test`, `make fresh`,
   `make tenant-isolation-pgsql`, `make build`, `git diff --check`, full branch
@@ -2587,4 +2600,6 @@ Tenant translation override read-side plan:
   and both job statuses, then stop without PR or merge.
 
 ## Next steps
-Continue with Stage 1.12.3: resolution layer and non-overridable registry.
+Continue with Stage 1.12.5: run the required final gates, review the full
+branch diff versus `origin/main`, commit/push the branch, collect CI run id
+and job statuses, and stop without creating a PR.
