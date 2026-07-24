@@ -2221,7 +2221,8 @@ Decisions awaiting the owner:
 
 ## CI maintenance: Node 24 action runtime
 
-Status: pushed run green; final docs-evidence push pending
+Status: complete; final pushed-head CI evidence is reported in the session
+final response
 Branch: `phase-2-ci-node24-actions`
 Base: `origin/main` at `c3e1f13`
 
@@ -2278,7 +2279,7 @@ Plan:
   `.github/workflows/ci.yml` and this worklog changed. The skipped Pest tests
   are the pre-existing SQLite-suite skips for PostgreSQL RLS coverage, not
   caused by this workflow-only change.
-- [ ] CI-node24.3: commit the workflow and worklog update as one CI
+- [x] CI-node24.3: commit the workflow and worklog update as one CI
   maintenance step, push the branch, retrieve the GitHub Actions run, record
   both job statuses and any remaining runner warnings, then stop without PR or
   merge.
@@ -2294,11 +2295,11 @@ Plan:
   `21 warnings`) with `file_get_contents(...)` warning snippets, and the
   PostgreSQL service log line `initdb: warning: enabling "trust"
   authentication for local connections`. This worklog evidence update is
-  docs-only and will trigger one additional push CI run; final report must
-  name the exact latest run.
+  docs-only and triggered one additional push CI run. A final docs-only
+  handoff update marks the worklog complete; the session final response records
+  the exact latest pushed-head CI run to avoid an endless loop where recording a
+  run id creates a newer run.
 
 ## Next steps
-Continue CI-node24.3 on `phase-2-ci-node24-actions`: commit and push this
-docs-only CI evidence update, retrieve the resulting latest GitHub Actions run,
-report both job statuses and any remaining runner warnings, then stop without
-creating a PR or merging.
+Owner review `phase-2-ci-node24-actions`; no PR has been created, and no merge
+is authorized in this session.
