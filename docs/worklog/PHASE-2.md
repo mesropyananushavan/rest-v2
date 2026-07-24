@@ -138,12 +138,26 @@ forbidden.
   initial `make test` exposed a stale Livewire test query-string setup issue;
   after clearing query params explicitly, `make test` passed (`169 passed /
   5 skipped / 1375 assertions`) and `make pint` passed (`213 files`).
-- [ ] Stage 1.11C-scale-review.3: `menu:seed-load` safety and command
+- [x] Stage 1.11C-scale-review.3: `menu:seed-load` safety and command
   separation. Determine precisely what `--force` bypasses before changing code;
   make environment and local-database guards unconditional if needed; require
   confirmation for schema recreation unless explicitly suppressed by `--force`;
   add focused command tests; update README and `docs/DECISIONS.md` to clarify
-  `menu:seed-load` versus `menu:load-test-data`. Result: pending.
+  `menu:seed-load` versus `menu:load-test-data`. Result: before this change,
+  `--force` bypassed the top-level local/testing environment guard for ordinary
+  `menu:seed-load` runs, but did not bypass the schema-recreation
+  local-database assertion; non-interactive `--fresh` schema recreation could
+  skip confirmation because confirmation was only asked for interactive input.
+  After this change, local/testing and local-database guards are unconditional
+  and `--force` only suppresses the schema-recreation confirmation. Added
+  command safety tests proving `--force` cannot run outside local/testing,
+  schema recreation is blocked for non-local database config even with
+  `--force`, and confirmation is required for local schema recreation without
+  `--force`. README now distinguishes `menu:load-test-data` demo-tenant loads
+  from `menu:seed-load` synthetic-tenant loads; `docs/DECISIONS.md` records the
+  command separation and safety contract. Verification: `make test` passed
+  (`172 passed / 5 skipped / 1382 assertions`) and `make pint` passed
+  (`214 files`).
 - [ ] Stage 1.11C-scale-review.4: marker-column containment. Add tests proving
   `load_test_key` is not fillable, not cast, not appended, not present in API
   resources, not present in serialized model output, and not rendered in Menu

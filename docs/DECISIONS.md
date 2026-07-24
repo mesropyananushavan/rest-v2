@@ -476,3 +476,23 @@ Rejected: migrating Livewire to `BrowseMenuItems` now, because it would combine
 behavior proof with adapter convergence; leaving the divergence undocumented,
 because future reviewers would not know whether the split is intentional or an
 accidental regression.
+
+## 2026-07-24 — Menu load commands have separate safety contracts
+Decision: `menu:load-test-data` is the repeatable demo-tenant scale-data command;
+it only targets existing demo tenants and purges rows marked by its own
+`load_test_key`. `menu:seed-load` is the broader local PostgreSQL synthetic-load
+command; it creates load tenants with `seed_source = load` and may recreate only
+the guarded local SmartRest database when `--fresh` is used in
+`production-like` mode. `--force` no longer bypasses the local/testing
+environment guard or local-database assertion; it only suppresses the
+schema-recreation confirmation.
+Reason: the two commands serve different measurement needs. Demo-tenant data is
+for repeatable UI/API scale checks after `make fresh`, while synthetic tenants
+are for planner/cardinality experiments such as 200-tenant category-panel
+measurements. Schema recreation must remain an explicit local-dev operation and
+must never become available through an environment-bypass flag.
+Rejected: deleting `menu:seed-load`, because it remains useful for
+multi-tenant planner evidence; letting `--force` bypass environment or database
+guards, because that could run load tooling against the wrong database; merging
+both commands, because demo-row idempotency and synthetic-tenant generation have
+different cleanup semantics.
