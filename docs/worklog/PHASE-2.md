@@ -1,7 +1,7 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.12 tenant translation override read side in progress
-Branch: phase-2-stage-1.12-tenant-translation-read
+Status: Stage 1.13 tenant translation override write side in progress
+Branch: phase-2-stage-1.13-tenant-translation-write
 
 PR state: Codex may create and merge PRs after exact-head green CI; direct
 pushes to `main`, force-push, history rewriting, and branch deletion remain
@@ -2613,8 +2613,62 @@ Tenant translation override read-side plan:
   and this worklog; no `template/`, UI, write action, permission, seeder,
   Menu/Halls/Tables/Audit feature changes, or unrelated module changes.
 
+Tenant translation override write-side plan:
+- [x] Stage 1.13.1: preconditions, cache-shape inspection, and plan. Read the
+  required sources; fetch and fast-forward local `main`; confirm `origin/main`
+  is at least `175c189` and contains `TenantAwareTranslator`,
+  `NonOverridableTranslationKeys`, and the
+  `tenant_translation_overrides` migration; create/verify
+  `phase-2-stage-1.13-tenant-translation-write` from fresh `origin/main`;
+  inspect translator/cache/model/migration, permission seeding/checking,
+  audit/domain-error patterns, tenant/no-tenant behavior, locale handling, and
+  raw translation rendering sites; write this plan before code. Cache facts
+  recorded for the write path: the override map key is
+  `tenant:{tenant_id}:translation_overrides:{locale}:v1`, the presence marker
+  key is `tenant:{tenant_id}:translation_overrides:locales:v1`, both are
+  stored forever, request cache key is `{tenant_id}:{locale}` for one
+  container/request, reads use the presence marker to skip DB for empty
+  tenants/locales, model `saved` currently marks presence plus forgets the map,
+  and model `deleted` currently forgets presence plus the map. Result:
+  `git fetch origin` succeeded; local `main` fast-forwarded and is exactly
+  `175c189`; branch `phase-2-stage-1.13-tenant-translation-write` is clean and
+  based on `origin/main`; required read-side artifacts are present; blueprint
+  and decision docs do not conflict with the write-side prompt; raw rendering
+  inspection found reachable title-section translation output in
+  `resources/views/layouts/admin.blade.php` that must be escaped in the
+  output-safety step.
+- [ ] Stage 1.13.2: permission and demo grants. Add the dedicated tenant
+  translation override manage permission using the existing Identity
+  permission/role convention; seed it for demo roles that should remain usable;
+  add the settled active-superadmin bypass through the existing authorizer
+  rather than a parallel policy path; cover denied, explicit-grant allowed, and
+  superadmin-without-grant allowed behavior.
+- [ ] Stage 1.13.3: write actions and validation. Add Application actions for
+  setting and resetting tenant translation overrides; validate supported
+  locale, language-file key existence, central non-overridable key rejection
+  with stable domain error code, max value length, and same-tenant actor
+  scope; emit structured success/failure logs and append-only audit records
+  with before/after values; update `docs/DECISIONS.md` for the key-existence
+  write rule.
+- [ ] Stage 1.13.4: centralized cache invalidation. Refactor override cache
+  invalidation into one public tenant/locale write invalidation entry point
+  that always refreshes/invalidates both the map layer and presence marker
+  together; wire set/reset and model-event defence-in-depth through it; update
+  `docs/DECISIONS.md` with the two-layer cache invariant; add immediate
+  translation-helper tests for first-ever override, adding another override,
+  editing an override, resetting to the language file, last-override reset,
+  locale isolation, and tenant isolation.
+- [ ] Stage 1.13.5: output-safety proof. Inspect raw translation rendering
+  paths; make any reachable raw path safe without changing translation
+  resolution semantics; prove a stored override containing markup renders
+  escaped through an ordinary rendering path.
+- [ ] Stage 1.13.6: required gates, diff review, commit, push, and CI handoff.
+  Run `make pint`, `make stan`, `make test`, `make fresh`,
+  `make tenant-isolation-pgsql`, `make build`, `git diff --check`, `git
+  status`, and full branch diff review versus `origin/main`; commit logical
+  steps with matching worklog updates, push this branch only, collect CI run id
+  and both job statuses, then stop without creating or merging a PR.
+
 ## Next steps
-Continue with the next session for the tenant translation override write path:
-add the dedicated permission, permission-gated superadmin/authorized editing
-actions, cache invalidation on write, and any owner-approved UI; do not create
-branch-level overrides.
+Start Stage 1.13.2: add the dedicated permission and demo grants through the
+existing Identity permission mechanism, including allow/deny/superadmin tests.
