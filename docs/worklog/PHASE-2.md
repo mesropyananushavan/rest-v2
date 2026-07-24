@@ -2518,15 +2518,39 @@ Owner review-correction plan:
   Search page 2 `200`, edit page `200`, and save landing `200` used/kept marker
   `Շուկայի սունկ ուտեստ arat-riverside 1-27` and excluded reset/page-1 marker
   `Թարմ ոսպ ուտեստ arat-riverside 1-1`.
-- [ ] Stage 1.11D-review.4: required gates, diff review, commit, push, and CI
+- [x] Stage 1.11D-review.4: required gates, diff review, commit, push, and CI
   handoff. Run `make pint`, `make stan`, `make test`, `make fresh`, the
   load/count command, the new smoke target, `make tenant-isolation-pgsql`,
   `make build`, `git diff --check`, `git status`, and full branch diff review
   versus `origin/main`. Commit scoped logical steps with worklog updates, push
   this branch only, collect CI run id and both job statuses, then stop without
-  creating or merging a PR.
+  creating or merging a PR. Result: final local gates passed from committed
+  code. `make pint`: `PASS 220 files`. `make stan`: `124/124`, `[OK] No
+  errors`. `make test`: `183 passed / 5 skipped / 1572 assertions`. `make
+  fresh`: migrations and `DemoSeeder` completed successfully. Final
+  `menu:load-test-data --purge-generated`: purged `0` generated rows and loaded
+  `menu_categories=400`, `menu_items=40000` in `9.698s`, with each demo tenant
+  at `200` generated categories and `20000` generated items. Final
+  `make smoke-menu-context`: selected category `48` with `53` active rendered
+  items and search term `arat-riverside 1-` with `9474` active results; login
+  form `200`, login submit `302`; category page 1/page 2/edit/save
+  landing/cancel landing all returned `200` and proved page-2 marker
+  `Այգու պանիր ուտեստ arat-riverside 1-4861` present while page-1 marker
+  `Թարմ ոսպ ուտեստ arat-riverside 1-1` was absent after save/cancel; search
+  page 2/edit/save landing all returned `200` and proved marker
+  `Շուկայի սունկ ուտեստ arat-riverside 1-27` present while reset/page-1 marker
+  `Թարմ ոսպ ուտեստ arat-riverside 1-1` was absent. PostgreSQL tenant-isolation:
+  `21 passed / 73 assertions`. `make build`: composer install, key generation,
+  storage link, `npm ci`, and Vite build completed; known local warnings were
+  Composer Git dubious ownership and npm major-version notices. `git diff
+  --check` passed. Full branch diff versus `origin/main` reviewed: 24 files,
+  limited to accepted Menu context/overflow files plus the new smoke target,
+  README/Makefile/bootstrap registration, translations, tests, and this
+  worklog; no `docs/BLUEPRINT.md`, `template/`, schema/migration, API
+  response-shape, npm package, or unrelated product-module changes. This final
+  worklog handoff commit is the remaining commit to push; CI run id and job
+  statuses belong in the final response only.
 
 ## Next steps
-Continue with Stage 1.11D-review.4: run final required gates, review the full
-branch diff versus `origin/main`, commit/push the remaining scoped changes, and
-collect CI evidence without creating or merging a PR.
+Owner review is next. Do not create or merge a PR until the owner authorizes the
+release flow for this branch.
