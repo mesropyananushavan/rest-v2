@@ -337,11 +337,22 @@ forbidden.
   1399 assertions`); the assertion count decreased by one only because the
   owner-approved schema assertion for the removed unmerged index was deleted
   with that migration, while total test count stayed at `175`.
-- [ ] Stage 1.11C-scale-review2.5: corrected paging smoke. Re-run HTTP smoke
+- [x] Stage 1.11C-scale-review2.5: corrected paging smoke. Re-run HTTP smoke
   without host PHP against `/admin/menu` and `/api/v1/menu-items` using a
   category with more than one page of items; prove page 2 is non-empty and
   contains a different item set than page 1, with real status codes and
-  distinguishing rendered/API markers. Result: pending.
+  distinguishing rendered/API markers. Result: used Arat category `56`
+  (`Թարմ ոսպ բաժին arat-riverside 1-9`) with `54` active branch-1 items.
+  Curl smoke against `http://127.0.0.1:8080` used the real login form:
+  `GET /login` returned `200` and manager `POST /login` returned `302`.
+  `/admin/menu?category=56` returned `200`, rendered page-1 marker
+  `Այգու պանիր ուտեստ arat-riverside 1-9`, and did not render page-2 marker
+  `Շուկայի պանիր ուտեստ arat-riverside 1-4689`.
+  `/admin/menu?category=56&item_page=2` returned `200`, rendered the page-2
+  marker, and did not render the page-1 marker. `/api/v1/menu-items?
+  category_id=56&per_page=25&page=1` returned `200` with `25` item ids,
+  including `id=16` and excluding `id=4696`; page `2` returned `200` with
+  `25` item ids, including `id=4696` and excluding `id=16`.
 - [ ] Stage 1.11C-scale-review2.6: final gates, branch diff review, worklog
   handoff, and push. Run `make pint`, `make stan`, `make test`, `make fresh`,
   PostgreSQL tenant-isolation, the combined dataset load/counts, final
