@@ -171,13 +171,31 @@ forbidden.
   `docs/DECISIONS.md`. Verification: `make pint` passed (`215 files`, one
   style issue fixed in the new test) and `make test` passed (`175 passed /
   5 skipped / 1400 assertions`).
-- [ ] Stage 1.11C-scale-review.5: realistic panel measurement and index
+- [x] Stage 1.11C-scale-review.5: realistic panel measurement and index
   decision. Use `menu:seed-load` without schema recreation to create at least
   about 200 local load tenants, run `ANALYZE`, capture the exact SQL generated
   by `PaginateMenuCategories`, measure `EXPLAIN (ANALYZE, BUFFERS)` before and
   after the panel-index decision, and either keep the unmerged composite index
   with plan evidence or remove its migration/test assertion and record why in
-  `docs/DECISIONS.md`. Result: pending.
+  `docs/DECISIONS.md`. Result: `make fresh` succeeded, then
+  `menu:seed-load --mode=production-like --restaurants=200 --categories=1
+  --subcategories=1 --items=1 --batch=5000` ran without `--fresh` and inserted
+  200 load tenants, 200 roots, 200 subcategories, and 200 items
+  (`copy_load_seconds=54.098`). Per-tenant aggregate counts were stable:
+  200 load tenants, min/max roots `1/1`, subcategories `1/1`, items `1/1`.
+  Captured the exact active panel SQL from `PaginateMenuCategories` via
+  interactive Tinker/`DB::listen`: root count, root page select ordered by
+  `sort_order`, localized `hy/ru/en` lower expression, `id`, and child eager
+  load for the selected root ids. After `ANALYZE`, before the decision, root
+  count used `Index Only Scan using
+  menu_categories_tenant_parent_deleted_sort_id_idx` (`0.196 ms`), root page
+  select used `Index Scan using
+  menu_categories_tenant_parent_deleted_sort_id_idx` (`0.195 ms`), and child
+  eager-load used `Index Scan using menu_categories_parent_id_idx`
+  (`0.087 ms`). The composite panel index is kept. After the keep decision and
+  repeat `ANALYZE`, the same plan nodes were used: root count `0.203 ms`, root
+  page select `0.100 ms`, child eager-load `0.078 ms`. Recorded the
+  panel-index decision in `docs/DECISIONS.md`.
 - [ ] Stage 1.11C-scale-review.6: HTTP smoke, final gates, diff review, and
   push. Run `make pint`, `make stan`, `make test`, `make fresh`, PostgreSQL
   tenant-isolation, the multi-tenant load/counts, `ANALYZE`/EXPLAIN evidence,

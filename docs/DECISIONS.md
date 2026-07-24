@@ -518,3 +518,29 @@ Rejected: exposing marker values in resources or model serialization, because
 they are not product data; removing or renaming the columns in this correction
 session, because the review explicitly keeps them and asks only to contain
 their exposure.
+
+## 2026-07-24 — Keep the Menu category panel tenant-leading index
+Decision: keep the unmerged `menu_categories_tenant_parent_deleted_sort_id_idx`
+index from the Menu scale branch. On a local PostgreSQL dataset with 200
+synthetic load tenants, each with one active root category, one subcategory, and
+one item, the exact `PaginateMenuCategories` active panel query used the
+tenant-leading index for the root count and root page select. The eager-loaded
+child query continued to use the existing `menu_categories_parent_id_idx`.
+Evidence before the keep decision, after `ANALYZE`: root count used
+`Index Only Scan using menu_categories_tenant_parent_deleted_sort_id_idx`
+with execution time `0.196 ms`; root page select used
+`Index Scan using menu_categories_tenant_parent_deleted_sort_id_idx` with
+execution time `0.195 ms`; child eager-load used
+`Index Scan using menu_categories_parent_id_idx` with execution time
+`0.087 ms`. Evidence after the keep decision and a repeat `ANALYZE`: root
+count used the same `Index Only Scan` with execution time `0.203 ms`; root
+page select used the same `Index Scan` with execution time `0.100 ms`; child
+eager-load used `menu_categories_parent_id_idx` with execution time `0.078 ms`.
+Reason: the prior two-tenant measurement was too small to validate the
+tenant-leading path. At realistic multi-tenant cardinality, the planner chooses
+the composite index for the root panel access pattern, so removing it would
+discard measured protection against tenant-wide category scans.
+Rejected: removing the migration, because the intended index is chosen by the
+real read-model SQL at 200 tenants; adding another panel index, because the
+current root and child panel statements already use indexes and no sequential
+scan remains on the measured path.
