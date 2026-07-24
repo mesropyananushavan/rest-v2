@@ -21,6 +21,7 @@ use App\Modules\Tenancy\Infrastructure\Directory\EloquentTenantDirectory;
 use App\Modules\Tenancy\Infrastructure\Settings\EloquentTenantSettingsReader;
 use App\Support\Audit\AuditRecorder;
 use App\Support\Audit\EloquentAuditRecorder;
+use App\Support\I18n\LanguageFileTranslationKeys;
 use App\Support\I18n\NonOverridableTranslationKeys;
 use App\Support\I18n\TenantAwareTranslator;
 use App\Support\I18n\TenantTranslationLocaleFallbacks;
@@ -53,6 +54,12 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(UserDirectory::class, EloquentUserDirectory::class);
         $this->app->bind(PermissionCatalog::class, EloquentPermissionCatalog::class);
         $this->app->bind(AuditRecorder::class, EloquentAuditRecorder::class);
+        $this->app->singleton(LanguageFileTranslationKeys::class, function (): LanguageFileTranslationKeys {
+            /** @var Loader $loader */
+            $loader = $this->app->make('translation.loader');
+
+            return new LanguageFileTranslationKeys($loader);
+        });
         $this->app->singleton(NonOverridableTranslationKeys::class);
         $this->app->singleton(TenantTranslationLocaleFallbacks::class);
         $this->app->singleton(TenantTranslationOverrides::class);

@@ -60,6 +60,15 @@ return [
             ],
         ],
     ],
+    'translation_overrides' => [
+        'errors' => [
+            'tenant_context_required' => 'Tenant context is required to manage translation overrides.',
+            'invalid_locale' => 'Choose one of the supported interface languages.',
+            'translation_key_missing' => 'The translation key must exist in the application language files.',
+            'key_not_overridable' => 'This translation key cannot be overridden.',
+            'value_too_long' => 'The override text is too long.',
+        ],
+    ],
     'errors' => [
         'eyebrow' => 'Request status',
         'actions' => [

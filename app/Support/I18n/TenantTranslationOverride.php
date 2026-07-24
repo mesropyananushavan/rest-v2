@@ -20,8 +20,7 @@ final class TenantTranslationOverride extends Model
             $locale = $override->getAttribute('locale');
 
             if (is_int($tenantId) && is_string($locale)) {
-                TenantTranslationOverrides::markTenantLocaleHasOverrides($tenantId, $locale);
-                TenantTranslationOverrides::forgetTenantLocaleCache($tenantId, $locale);
+                app(TenantTranslationOverrides::class)->invalidateTenantLocaleAfterWrite($tenantId, $locale);
             }
         });
 
@@ -30,8 +29,7 @@ final class TenantTranslationOverride extends Model
             $locale = $override->getAttribute('locale');
 
             if (is_int($tenantId) && is_string($locale)) {
-                TenantTranslationOverrides::forgetTenantPresenceCache($tenantId);
-                TenantTranslationOverrides::forgetTenantLocaleCache($tenantId, $locale);
+                app(TenantTranslationOverrides::class)->invalidateTenantLocaleAfterWrite($tenantId, $locale);
             }
         });
     }

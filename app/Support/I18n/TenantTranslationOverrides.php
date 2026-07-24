@@ -67,11 +67,16 @@ final class TenantTranslationOverrides
         return $overrides;
     }
 
-    public function forget(int $tenantId, string $locale): void
+    public function invalidateTenantLocaleAfterWrite(int $tenantId, string $locale): void
     {
         unset($this->requestCache["{$tenantId}:{$locale}"]);
 
-        self::forgetTenantLocaleCache($tenantId, $locale);
+        Cache::forget(TenantTranslationOverrideCacheKey::forTenantLocale($tenantId, $locale));
+
+        Cache::forever(
+            TenantTranslationOverrideCacheKey::localesForTenant($tenantId),
+            $this->localesWithOverrides($tenantId),
+        );
     }
 
     public function clearRequestCache(): void
@@ -84,30 +89,25 @@ final class TenantTranslationOverrides
         Cache::forever(TenantTranslationOverrideCacheKey::localesForTenant($tenantId), []);
     }
 
-    public static function markTenantLocaleHasOverrides(int $tenantId, string $locale): void
+    /**
+     * @return list<string>
+     */
+    private function localesWithOverrides(int $tenantId): array
     {
-        $cacheKey = TenantTranslationOverrideCacheKey::localesForTenant($tenantId);
-        $locales = Cache::get($cacheKey);
+        // Cache maintenance intentionally bypasses the tenant global scope: it
+        // recomputes metadata for the explicit tenant id affected by the write.
+        $locales = TenantTranslationOverride::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->select('locale')
+            ->distinct()
+            ->orderBy('locale')
+            ->pluck('locale')
+            ->map(fn (mixed $locale): ?string => is_string($locale) ? $locale : null)
+            ->filter()
+            ->values()
+            ->all();
 
-        if (! is_array($locales)) {
-            $locales = [];
-        }
-
-        if (! in_array($locale, $locales, true)) {
-            $locales[] = $locale;
-            sort($locales);
-        }
-
-        Cache::forever($cacheKey, array_values($locales));
-    }
-
-    public static function forgetTenantLocaleCache(int $tenantId, string $locale): void
-    {
-        Cache::forget(TenantTranslationOverrideCacheKey::forTenantLocale($tenantId, $locale));
-    }
-
-    public static function forgetTenantPresenceCache(int $tenantId): void
-    {
-        Cache::forget(TenantTranslationOverrideCacheKey::localesForTenant($tenantId));
+        /** @var list<string> $locales */
+        return $locales;
     }
 }

@@ -16,6 +16,10 @@ final class EloquentAuthorizer implements Authorizer
             return false;
         }
 
+        if ($user->is_superadmin) {
+            return true;
+        }
+
         return $user->role()
             ->whereHas('permissions', fn ($query) => $query->where('code', $permission))
             ->exists();
