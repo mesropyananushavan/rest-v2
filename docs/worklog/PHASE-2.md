@@ -1,7 +1,7 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.11 Part C backend scale hardening in progress
-Branch: phase-2-stage-1.11c-menu-scale
+Status: Stage 1.11 Part C Menu read-path convergence in progress
+Branch: phase-2-stage-1.11c-menu-read-convergence
 
 PR state: Codex may create and merge PRs after exact-head green CI; direct
 pushes to `main`, force-push, history rewriting, and branch deletion remain
@@ -410,6 +410,57 @@ forbidden.
   Menu scale/read tooling, command safety, README, decisions/worklog, Makefile
   artisan target, load-marker migration, and Menu tests; no `docs/BLUEPRINT.md`,
   `template/`, assets, or unrelated modules changed.
+- [x] Stage 1.11C-converge.1: baseline, path comparison, and convergence plan.
+  Verify repository state; fetch `origin`; check whether `27f5650` is merged to
+  `origin/main`; create the session branch from the correct base; inspect
+  `BrowseMenuItems`, `MenuIndex`, the API controller, and the read actions it
+  bypasses; read the characterization and query-count tests; write the
+  comparison and plan before implementation. Result: baseline is stacked
+  because `27f5650` is not an ancestor of `origin/main` (`origin/main` is
+  `fb909c0`); branch `phase-2-stage-1.11c-menu-read-convergence` was created
+  from `origin/phase-2-stage-1.11c-menu-scale` at `27f5650`.
+
+  Path comparison before convergence:
+
+  | Aspect | API / `BrowseMenuItems` behavior before | Livewire `MenuIndex` behavior before | Converged target |
+  |---|---|---|---|
+  | Default category when none requested | If no search/category is supplied, `BrowseMenuItems` calls `ResolveMenuCategorySelection(null, active)` and paginates the resolved subcategory; if none exists it returns an empty paginator. | `MenuIndex` calls the same resolver, writes the resolved id back to URL state, and renders the selected-category item page or empty category state. | Facade returns the resolved selected category plus item page so API keeps item pagination and UI keeps URL normalization. |
+  | Search ignores selected category | Non-empty `search` calls `SearchMenuItems`; `category_id` is ignored. | Non-empty `search` renders `SearchMenuItems` results even when `category` is selected; the selected category remains in component state. | Same search path through facade; selected category is retained for UI state but not applied to search. |
+  | Search cleared | Stateless API: a later request without `search` falls back to `category_id` or default selection. | `clearSearch()` empties `search`, keeps `category`, resets `searchPage`, and shows category items. | UI calls facade with retained category and null search; API remains stateless. |
+  | Empty category | Explicit empty subcategory produces an empty paginator with normal metadata. | Empty selected subcategory renders `menu.empty.no_items_title`, not an error. | Same empty paginator returned from facade for both adapters. |
+  | Root/foreign category URL state | API `category_id` is a strict item filter; root, foreign-tenant, or foreign-branch category filters return 404 through `ResolveMenuItemListCategory`. | UI `category` is selection state; a root with selectable children normalizes to the first child, an empty root becomes unselected, and a foreign selected id falls back to the current tenant default. | Preserve both adapter contracts explicitly inside one facade: API strict item filter, UI selection-state mode. |
+  | Archived visibility | API controller always passes `archiveMode='active'`; unsupported `show_archived` input is ignored by validation/request accessors. | `MenuIndex` clamps archive mode to active for non-superadmins; superadmins may use `archived` and `all`. | Archive-mode normalization moves into the facade call so both adapters rely on one read-path gate while keeping API active-only and UI superadmin-only archive visibility. |
+  | Ordering | Category and search item paths order by `sort_order`, localized lower `hy/ru/en` expression, then `id`. | Uses the same underlying `PaginateMenuItems` and `SearchMenuItems` ordering. | Unchanged. |
+  | Page size | API defaults to `25` and clamps `per_page` to `50`; empty facade paginator uses the requested/clamped value. | UI category/items/search pages use fixed `25`. | Unchanged adapter inputs; facade delegates to existing paginated actions. |
+  | Pagination metadata | API serializes `LengthAwarePaginator` metadata through `ApiResponse::pagination`. | UI renders paginator totals/current pages through the Blade partials. | Paginator instances remain the source of metadata; API response shape stays unchanged. |
+
+  Go/no-go: proceed. The only adapter-contract difference is strict API
+  category filtering versus UI category selection-state normalization; both are
+  already pinned by tests and will be preserved inside the single facade rather
+  than resolved as a product behavior change.
+- [ ] Stage 1.11C-converge.2: extend `BrowseMenuItems` for both adapters.
+  Add only the data needed for the Livewire screen: category panel paginator,
+  resolved selected category, selected-category item paginator, optional global
+  search paginator, normalized archive mode, and search-mode flag. Keep the
+  facade as a thin Application layer over `ResolveMenuCategorySelection`,
+  `ResolveMenuItemListCategory`, `PaginateMenuCategories`, `PaginateMenuItems`,
+  and `SearchMenuItems`; keep API response behavior unchanged.
+- [ ] Stage 1.11C-converge.3: switch `MenuIndex` to the facade. Remove direct
+  read-action dependencies from `render()` and `selectCategory()`; keep the
+  component as state binding, mutation dispatch, and presentation only. Preserve
+  current URL state, archive visibility, selected-category behavior, and search
+  clearing without markup or styling changes.
+- [ ] Stage 1.11C-converge.4: prove behavior and query-count invariance. Run
+  the existing characterization tests unmodified, preserve API tests, and keep
+  query-count invariance for `BrowseMenuItems` category/search and full
+  `MenuIndex` category/search renders. Record before/after absolute counts and
+  justify or reduce any increases.
+- [ ] Stage 1.11C-converge.5: decisions, gotchas, and final verification. Add a
+  dated `docs/DECISIONS.md` entry superseding the temporary split-read-path
+  entry; add the PostgreSQL measurement caveats to Gotchas; run `make pint`,
+  `make stan`, `make test`, `make fresh`, `make tenant-isolation-pgsql`, HTTP
+  smoke for `/admin/menu` and `/api/v1/menu-items`, `git diff --check`, and a
+  full branch diff review; push the branch only if green.
 - [x] Stage 1.16.1: preconditions, branch, and read-only inspection. Verify a
   clean worktree, fetch `origin/main`, confirm Stage 1.14 ancestry and
   `routes/api.php`, fast-forward `main`, create
