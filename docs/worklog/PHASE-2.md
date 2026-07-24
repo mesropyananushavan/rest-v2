@@ -228,6 +228,57 @@ forbidden.
   command safety, README/docs/worklog, additive migrations, and Menu tests only;
   no `docs/BLUEPRINT.md`, `template/`, frontend asset, or unrelated module
   changes.
+- [x] Stage 1.11C-scale-review2.1: representative combined-dataset plan and
+  loader choice. Re-read the source docs, verify the clean pushed branch at
+  `9f65491`, inspect `PaginateMenuCategories`, `PaginateMenuItems`,
+  `SearchMenuItems`, `menu:load-test-data`, and `menu:seed-load`, then decide
+  the cheapest safe local-only dataset build that contains both high tenant
+  cardinality and high item-table scale in one database state. Result: branch
+  `phase-2-stage-1.11c-menu-scale` was clean and tracking origin at
+  `9f65491`. No blueprint/source conflict found. The earlier 2026-07-24
+  panel-index decision is accepted as needing supersession because it measured
+  high item counts and high tenant cardinality on separate or undersized
+  database states. Chosen build: after one `make fresh`, run
+  `menu:load-test-data --purge-generated` for the two demo tenants to keep two
+  tenants at about 20000 items each, then run `menu:seed-load` without
+  `--fresh` for 100 synthetic load tenants with 100 roots each, one subcategory
+  per root, and enough items per subcategory to make the single local database
+  state reach at least 100 tenants, 10000 roots, and 200000 total menu items.
+- [ ] Stage 1.11C-scale-review2.2: build and count the combined local dataset.
+  After one `make fresh`, run `menu:load-test-data --purge-generated` for the
+  two demo tenants and run `menu:seed-load` without `--fresh` for 100 synthetic
+  load tenants with at least 100 roots each and enough generated items to make
+  total `menu_items >= 200000`. Record exact wall clock time, per-table counts,
+  per-tenant min/max counts, and any scale ceiling or bottleneck if the target
+  cannot be reached. Result: pending.
+- [ ] Stage 1.11C-scale-review2.3: capture real SQL and re-measure with/without
+  the panel index. Use `DB::listen` around the actual Application actions on
+  the combined dataset to capture panel, item pagination, and global search SQL.
+  Run `ANALYZE`, then `EXPLAIN (ANALYZE, BUFFERS)` for panel root count, panel
+  root page select, panel child eager-load, category item first page, category
+  item deep page, global search hit, and global search miss. Drop the local
+  `menu_categories_tenant_parent_deleted_sort_id_idx` only for the comparison
+  measurement, recreate it immediately, and record plan nodes, estimates,
+  actual rows, timings, and restored index state. Result: pending.
+- [ ] Stage 1.11C-scale-review2.4: supersede the panel-index decision. Based
+  only on the representative same-dataset with/without evidence, either keep
+  the composite index or remove the unmerged migration and schema-test
+  assertion. Add a dated `docs/DECISIONS.md` entry that explicitly supersedes
+  the 2026-07-24 keep decision, explains why the earlier evidence was
+  inadequate, and records the deciding plan evidence. Keep earlier worklog
+  numbers but mark them as unrepresentative and superseded. Result: pending.
+- [ ] Stage 1.11C-scale-review2.5: corrected paging smoke. Re-run HTTP smoke
+  without host PHP against `/admin/menu` and `/api/v1/menu-items` using a
+  category with more than one page of items; prove page 2 is non-empty and
+  contains a different item set than page 1, with real status codes and
+  distinguishing rendered/API markers. Result: pending.
+- [ ] Stage 1.11C-scale-review2.6: final gates, branch diff review, worklog
+  handoff, and push. Run `make pint`, `make stan`, `make test`, `make fresh`,
+  PostgreSQL tenant-isolation, the combined dataset load/counts, final
+  `ANALYZE`/EXPLAIN evidence, corrected paging smoke, `git diff --check`, and
+  full branch diff review versus `origin/main`. Commit each logical step with
+  its worklog update and push the feature branch only if green; do not create
+  or merge a PR. Result: pending.
 - [x] Stage 1.16.1: preconditions, branch, and read-only inspection. Verify a
   clean worktree, fetch `origin/main`, confirm Stage 1.14 ancestry and
   `routes/api.php`, fast-forward `main`, create
