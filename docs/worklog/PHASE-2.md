@@ -1,7 +1,7 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.13 tenant translation override write side in progress
-Branch: phase-2-stage-1.13-tenant-translation-write
+Status: Stage 1.14 tenant translation override editing screen in progress
+Branch: phase-2-stage-1.14-tenant-translation-ui
 
 PR state: Codex may create and merge PRs after exact-head green CI; direct
 pushes to `main`, force-push, history rewriting, and branch deletion remain
@@ -2717,9 +2717,66 @@ Tenant translation override write-side plan:
   changes. Push and CI run id/job statuses are intentionally kept in the final
   report, not the worklog.
 
+Tenant translation override editing-screen plan:
+- [x] Stage 1.14.1: preconditions, inspection, and plan. Fetch/prune origin,
+  fast-forward `main`, confirm `origin/main` is at least `9ed704e` and
+  contains the read/write-side translation override services and permission,
+  create `phase-2-stage-1.14-tenant-translation-ui` from fresh `origin/main`,
+  inspect write actions/error codes, language-file key resolution, Menu admin
+  route/Livewire/view conventions, permission gates, pagination, flash
+  messages, and confirm modal usage, then write this plan before code. Blocked
+  key presentation choice: hide non-overridable keys entirely because the
+  operator is here to edit copy; showing safety/auth/destructive strings as
+  read-only would add noise and imply they are candidates for change. Result:
+  `git fetch origin --prune` succeeded; local `main` is exactly
+  `9ed704e`; branch `phase-2-stage-1.14-tenant-translation-ui` was created
+  from `origin/main`; required artifacts are present:
+  `TenantAwareTranslator`, `NonOverridableTranslationKeys`,
+  `LanguageFileTranslationKeys`, `TenantTranslationOverrides`,
+  `tenancy.translation_overrides.manage`, `SetTenantTranslationOverride`, and
+  `ResetTenantTranslationOverride`. Inspection confirmed the screen must call
+  the existing set/reset actions, `LanguageFileTranslationKeys` currently only
+  exposes existence checks through Laravel's loader/resolver, Menu admin uses
+  route-level `can:*`, a thin controller, URL-backed Livewire state, shared
+  Blade components, flash messages, pagination, and confirm modals, and no
+  blueprint conflict was found.
+- [ ] Stage 1.14.2: authorization decision documentation. Add one dated
+  `docs/DECISIONS.md` entry for the application-wide active-superadmin
+  authorizer bypass: what it does, why it exists, blast radius, and that it
+  deliberately does not bypass tenant scoping or branch/data visibility.
+- [ ] Stage 1.14.3: catalogue/read model. Add an Application/read-side service
+  that flattens committed language-file string leaves for each supported
+  locale, caches the per-locale catalogue with a deployment-aware version key,
+  excludes `NonOverridableTranslationKeys`, overlays current tenant overrides
+  through `TenantTranslationOverrides`, matches search case-insensitively by
+  effective visible value plus key fragment, and returns a paginator/read model
+  with effective value, key, overridden state, and all supported locale values.
+- [ ] Stage 1.14.4: admin route, navigation, Livewire adapter, and Blade UI.
+  Add a permission-gated admin route and navigation link, a thin controller,
+  URL-backed Livewire state for search/locale/page/editing row/value, shared
+  `x-` components and confirm modal reset, translated flash messages, readable
+  action validation errors, and redirects/state preservation after set/reset.
+  The component must call `SetTenantTranslationOverride` and
+  `ResetTenantTranslationOverride`; it must not write to
+  `tenant_translation_overrides` directly.
+- [ ] Stage 1.14.5: safety and behavior tests. Cover permission-gated view and
+  write operations, visible-text search in Armenian/Russian/English, secondary
+  key-fragment search, row content, edit/reset state preservation, crafted
+  blocked-key write rejection, crafted cross-tenant write rejection, this
+  screen's own strings being non-overridable, escaped output retention, and a
+  bounded query-count render test independent of page result count.
+- [ ] Stage 1.14.6: local verification and HTTP smoke. Run focused tests,
+  `make pint`, `make stan`, `make test`, `make fresh`,
+  `make tenant-isolation-pgsql`, `make build`, and a no-host-PHP HTTP smoke
+  that searches for a real visible string, edits it, confirms the changed text
+  appears where that key is used, resets it, and confirms the language-file
+  text returns.
+- [ ] Stage 1.14.7: final diff review, push, and CI handoff. Run `git status`,
+  `git diff --check`, full branch diff review versus `origin/main`, confirm no
+  `template/` or unapproved `docs/BLUEPRINT.md` changes, push only
+  `phase-2-stage-1.14-tenant-translation-ui`, collect CI run id and both job
+  statuses for the final report, then stop without creating or merging a PR.
+
 ## Next steps
-Start the next session with the tenant translation override editing screen:
-admin-facing search/list UI for overridable language-file keys, wired to the
-existing permission and `SetTenantTranslationOverride` /
-`ResetTenantTranslationOverride` actions without changing read-side fallback
-order or `LocalizedText`.
+Start Stage 1.14.2: document the application-wide active-superadmin authorizer
+bypass in `docs/DECISIONS.md`, including the explicit tenant-scope limit.
