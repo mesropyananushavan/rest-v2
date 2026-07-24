@@ -2302,8 +2302,8 @@ Plan:
 
 ## Menu context + overflow follow-up
 
-Status: Stage 1.11D context preservation and overflow implementation complete;
-final verification pending
+Status: Stage 1.11D implementation and local verification complete; branch
+push and final CI evidence handoff pending
 Branch: `phase-2-stage-1.11d-menu-context-overflow`
 Base: `origin/main` at `cc46b95`
 
@@ -2426,7 +2426,7 @@ Plan:
   `make test` passed (`182 passed / 5 skipped / 1501 assertions`),
   `make pint` passed (`218 files`), and `make stan` passed (`123/123`,
   `[OK] No errors`).
-- [ ] Stage 1.11D.6: verification, smoke, commit, push, and handoff. Run
+- [x] Stage 1.11D.6: verification, smoke, commit, push, and handoff. Run
   focused tests after each implementation step, then final `make pint`,
   `make stan`, `make test`, `make fresh`, `make tenant-isolation-pgsql`,
   `npm run build` or `make build`, HTTP smoke for save/cancel context on
@@ -2434,9 +2434,34 @@ Plan:
   versus `origin/main`. Commit logical steps with this worklog updated, push
   the branch, record CI evidence in the final response only, and stop without
   PR or merge.
+  Result: final local verification passed after commits: `make pint` (`PASS`,
+  `218 files`), `make stan` (`[OK] No errors`, `123/123`), `make test`
+  (`182 passed / 5 skipped / 1501 assertions`), `make fresh` (migrations and
+  `Database\Seeders\DemoSeeder` completed), `make tenant-isolation-pgsql`
+  (`21 passed / 73 assertions` with PostgreSQL RLS tests active), and
+  `make build` (composer install, key generation, storage link, `npm ci`, and
+  Vite build completed). HTTP smoke on `/admin/menu` passed through in-container
+  Artisan/Tinker using the seeded `manager@arat.test` user and real Armenian
+  markers: index/edit/save/cancel all returned to
+  `/admin/menu?category=2&q=%D4%BC%D5%B8%D5%BC%D5%AB&item_page=2`, with save
+  returning `302` and the landing page showing `Դիրքը թարմացվեց։`. `git
+  diff --check` passed and full branch diff review versus `origin/main` showed
+  only Menu/UI/test/translation/worklog files in scope. CI evidence belongs in
+  the final response only after the branch push.
+
+Gotchas:
+- The `make test` target does not forward trailing file arguments, so the first
+  overflow-test command intentionally ended up running the full suite.
+- The final HTTP smoke was run through `make artisan ARGS="tinker --execute=..."`
+  to avoid host PHP; inline PHP required Make-safe dollar escaping, and the
+  successful save request used the real CSRF token parsed from the rendered
+  edit form.
+- `make build` completed successfully but emitted local tool notices: Composer
+  reported Git dubious ownership inside `/var/www/html`, and npm reported a
+  newer major npm version. Neither stopped the build.
 
 ## Next steps
-Continue with Stage 1.11D.6: review and commit the overflow slice, then run
-final verification (`make fresh`, `make tenant-isolation-pgsql`, build, HTTP
-smoke, diff checks), push the branch, and report CI evidence without creating a
-PR or merge.
+After this worklog update is committed, push
+`phase-2-stage-1.11d-menu-context-overflow`, collect the GitHub Actions run id
+and both job statuses for the pushed head, report them in the final response,
+and stop without creating a PR or merge.
