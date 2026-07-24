@@ -544,3 +544,37 @@ Rejected: removing the migration, because the intended index is chosen by the
 real read-model SQL at 200 tenants; adding another panel index, because the
 current root and child panel statements already use indexes and no sequential
 scan remains on the measured path.
+
+## 2026-07-24 — Supersede and remove the Menu category panel tenant-leading index
+Decision: supersede the earlier 2026-07-24 keep decision and remove the
+unmerged `menu_categories_tenant_parent_deleted_sort_id_idx` migration from
+this branch. The representative combined dataset reached `102` tenants,
+`10042` root categories, `20407` category rows, and `200007` item rows in one
+local PostgreSQL database state. On that data, dropping the new index did not
+hurt the real `PaginateMenuCategories` panel path because the existing
+`menu_categories_tenant_parent_deleted_active_sort_id_idx` served the same
+active root predicates.
+Evidence: with the new index present, panel root count used
+`Index Only Scan using menu_categories_tenant_parent_deleted_sort_id_idx`,
+estimate/actual `98/100`, execution `0.261 ms`; root page used a
+`Bitmap Heap Scan` with `Bitmap Index Scan on
+menu_categories_tenant_parent_deleted_sort_id_idx`, estimate/actual `98/100`
+before limit, execution `0.753 ms`; child eager-load used
+`menu_categories_parent_id_idx`, estimate/actual `1/25`, execution `0.319 ms`.
+With only existing indexes, root count used `Index Only Scan using
+menu_categories_tenant_parent_deleted_active_sort_id_idx`, estimate/actual
+`98/100`, execution `0.141 ms`; root page used a `Bitmap Heap Scan` with
+`Bitmap Index Scan on menu_categories_tenant_parent_deleted_active_sort_id_idx`,
+estimate/actual `98/100` before limit, execution `0.674 ms`; child eager-load
+again used `menu_categories_parent_id_idx`, estimate/actual `1/25`, execution
+`0.267 ms`.
+Reason: the earlier keep decision was based on two unrepresentative states:
+one state had high per-tenant item rows but only two tenants, while the later
+state had 200 tenants but only 400 category rows and 200 item rows. Those
+measurements did not prove the panel path under many tenants, many roots per
+tenant, and a large item table at the same time. The representative same-data
+comparison shows the new index is redundant and no material improvement exists.
+Rejected: keeping both tenant-leading category indexes, because the measured
+path already has equivalent active-panel coverage through the existing index;
+removing the existing active index, because it predates this branch and also
+covers active-state category paths beyond the narrow panel comparison.

@@ -229,7 +229,6 @@ it('stores menu search and pagination indexes', function (): void {
     $itemIndexes = collect(Schema::getIndexes('menu_items'))->pluck('columns')->all();
 
     expect($categoryIndexes)->toContain(['tenant_id', 'deleted_at', 'sort_order', 'id'])
-        ->and($categoryIndexes)->toContain(['tenant_id', 'parent_id', 'deleted_at', 'sort_order', 'id'])
         ->and($itemIndexes)->toContain(['tenant_id', 'branch_id', 'category_id', 'deleted_at', 'active', 'sort_order', 'id'])
         ->and($itemIndexes)->toContain(['tenant_id', 'branch_id', 'category_id', 'deleted_at', 'sort_order', 'id'])
         ->and($itemIndexes)->toContain(['tenant_id', 'branch_id', 'deleted_at', 'active', 'sort_order', 'id']);

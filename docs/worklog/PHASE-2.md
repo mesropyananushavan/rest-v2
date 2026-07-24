@@ -86,6 +86,10 @@ forbidden.
   | Global search hit (`LIKE '%1-9999%'`) | same | `Execution Time: 2.026 ms` | `Bitmap Index Scan on menu_items_translated_name_trgm_idx` |
   | Global search miss (`LIKE '%zz-no-match-zz%'`) | same | `Execution Time: 0.810 ms` | `Bitmap Index Scan on menu_items_translated_name_trgm_idx` |
   | Category panel roots (`tenant_id=1`, roots, `limit 25`) | same | `Execution Time: 0.386 ms` | `Index Scan using menu_categories_parent_id_idx`; no sequential scan |
+  Superseded on 2026-07-24: the category-panel measurement above used only
+  the two demo tenants and is unrepresentative for the panel-index decision.
+  The representative combined-dataset measurements in
+  Stage 1.11C-scale-review2 supersede it.
 - [x] Stage 1.11C-scale.5: final verification and scoped commit/push. Run
   `make pint`, `make stan`, `make test`, `make fresh`, any required focused
   PostgreSQL checks, and a full branch diff review; commit each logical step
@@ -195,7 +199,10 @@ forbidden.
   (`0.087 ms`). The composite panel index is kept. After the keep decision and
   repeat `ANALYZE`, the same plan nodes were used: root count `0.203 ms`, root
   page select `0.100 ms`, child eager-load `0.078 ms`. Recorded the
-  panel-index decision in `docs/DECISIONS.md`.
+  panel-index decision in `docs/DECISIONS.md`. Superseded on 2026-07-24: this
+  dataset had high tenant cardinality but only 400 category rows and 200 item
+  rows, so it did not validate the panel path under many tenants, many roots
+  per tenant, and a large item table simultaneously.
 - [x] Stage 1.11C-scale-review.6: HTTP smoke, final gates, diff review, and
   push. Run `make pint`, `make stan`, `make test`, `make fresh`, PostgreSQL
   tenant-isolation, the multi-tenant load/counts, `ANALYZE`/EXPLAIN evidence,
@@ -217,7 +224,10 @@ forbidden.
   (`0.100 ms`), `Index Scan using
   menu_categories_tenant_parent_deleted_sort_id_idx` for root page select
   (`0.250 ms`), and `Index Scan using menu_categories_parent_id_idx` for child
-  eager-load (`0.080 ms`). HTTP smoke against `http://127.0.0.1:8080` passed:
+  eager-load (`0.080 ms`). Superseded on 2026-07-24: these final panel numbers
+  were measured on the same undersized 400-category/200-item synthetic state
+  and are not the deciding evidence for the index. HTTP smoke against
+  `http://127.0.0.1:8080` passed:
   manager and owner logins returned final `200`; manager `/admin/menu`,
   category, page-forward, search-hit, search-miss, and clear-back requests all
   returned `200` with expected Armenian content markers; manager did not see
@@ -308,13 +318,25 @@ forbidden.
   `1/25`, `0.267 ms`. Recreated the local
   `menu_categories_tenant_parent_deleted_sort_id_idx` immediately and confirmed
   it exists before making the branch-level decision.
-- [ ] Stage 1.11C-scale-review2.4: supersede the panel-index decision. Based
+- [x] Stage 1.11C-scale-review2.4: supersede the panel-index decision. Based
   only on the representative same-dataset with/without evidence, either keep
   the composite index or remove the unmerged migration and schema-test
   assertion. Add a dated `docs/DECISIONS.md` entry that explicitly supersedes
   the 2026-07-24 keep decision, explains why the earlier evidence was
   inadequate, and records the deciding plan evidence. Keep earlier worklog
-  numbers but mark them as unrepresentative and superseded. Result: pending.
+  numbers but mark them as unrepresentative and superseded. Result: removed
+  the unmerged `2026_07_24_010000_add_menu_category_panel_index` migration and
+  the schema assertion for `menu_categories_tenant_parent_deleted_sort_id_idx`.
+  Added a superseding `docs/DECISIONS.md` entry: on the representative
+  single-state dataset, the new index used `0.261 ms` root count and
+  `0.753 ms` root page plans, while existing
+  `menu_categories_tenant_parent_deleted_active_sort_id_idx` used `0.141 ms`
+  and `0.674 ms` for the same statements after dropping the new index locally.
+  The new index is therefore redundant and removed from this branch.
+  Verification: `make test` passed (`175 passed / 5 skipped /
+  1399 assertions`); the assertion count decreased by one only because the
+  owner-approved schema assertion for the removed unmerged index was deleted
+  with that migration, while total test count stayed at `175`.
 - [ ] Stage 1.11C-scale-review2.5: corrected paging smoke. Re-run HTTP smoke
   without host PHP against `/admin/menu` and `/api/v1/menu-items` using a
   category with more than one page of items; prove page 2 is non-empty and
