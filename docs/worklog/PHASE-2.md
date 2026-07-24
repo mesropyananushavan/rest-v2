@@ -1,7 +1,7 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.13 tenant translation override write side in progress
-Branch: phase-2-stage-1.13-tenant-translation-write
+Status: Stage 1.14 tenant translation override editing screen in progress
+Branch: phase-2-stage-1.14-tenant-translation-ui
 
 PR state: Codex may create and merge PRs after exact-head green CI; direct
 pushes to `main`, force-push, history rewriting, and branch deletion remain
@@ -2463,6 +2463,11 @@ Gotchas:
   proves URL round-trip, not the operator's search landing. The durable smoke
   target checks the HTML-escaped cancel URL because Blade renders `&` as
   `&amp;` inside href attributes.
+- Server-side Blade/Livewire tests and curl smokes that post directly to the
+  Livewire endpoint cannot detect broken client-side expressions. Translation
+  strings, user-entered text, and other PHP values must never be interpolated
+  raw into Alpine directives, inline handlers, or `wire:click` expressions;
+  pass encoded identifiers or resolve values server-side.
 
 Owner review-correction plan:
 - [x] Stage 1.11D-review.1: hostile context redirect proof. Re-read the
@@ -2717,9 +2722,154 @@ Tenant translation override write-side plan:
   changes. Push and CI run id/job statuses are intentionally kept in the final
   report, not the worklog.
 
+Tenant translation override editing-screen plan:
+- [x] Stage 1.14.1: preconditions, inspection, and plan. Fetch/prune origin,
+  fast-forward `main`, confirm `origin/main` is at least `9ed704e` and
+  contains the read/write-side translation override services and permission,
+  create `phase-2-stage-1.14-tenant-translation-ui` from fresh `origin/main`,
+  inspect write actions/error codes, language-file key resolution, Menu admin
+  route/Livewire/view conventions, permission gates, pagination, flash
+  messages, and confirm modal usage, then write this plan before code. Blocked
+  key presentation choice: hide non-overridable keys entirely because the
+  operator is here to edit copy; showing safety/auth/destructive strings as
+  read-only would add noise and imply they are candidates for change. Result:
+  `git fetch origin --prune` succeeded; local `main` is exactly
+  `9ed704e`; branch `phase-2-stage-1.14-tenant-translation-ui` was created
+  from `origin/main`; required artifacts are present:
+  `TenantAwareTranslator`, `NonOverridableTranslationKeys`,
+  `LanguageFileTranslationKeys`, `TenantTranslationOverrides`,
+  `tenancy.translation_overrides.manage`, `SetTenantTranslationOverride`, and
+  `ResetTenantTranslationOverride`. Inspection confirmed the screen must call
+  the existing set/reset actions, `LanguageFileTranslationKeys` currently only
+  exposes existence checks through Laravel's loader/resolver, Menu admin uses
+  route-level `can:*`, a thin controller, URL-backed Livewire state, shared
+  Blade components, flash messages, pagination, and confirm modals, and no
+  blueprint conflict was found.
+- [x] Stage 1.14.2: authorization decision documentation. Add one dated
+  `docs/DECISIONS.md` entry for the application-wide active-superadmin
+  authorizer bypass: what it does, why it exists, blast radius, and that it
+  deliberately does not bypass tenant scoping or branch/data visibility.
+  Result: added the 2026-07-24 active superadmin bypass decision, documenting
+  that the central Identity authorizer allows active `is_superadmin` users for
+  dotted permission checks, while authentication, inactive-user denial,
+  tenant-scoped models, PostgreSQL RLS, branch assignment, route-model
+  isolation, and explicit same-tenant action validation still apply.
+- [x] Stage 1.14.3: catalogue/read model. Add an Application/read-side service
+  that flattens committed language-file string leaves for each supported
+  locale, caches the per-locale catalogue with a deployment-aware version key,
+  excludes `NonOverridableTranslationKeys`, overlays current tenant overrides
+  through `TenantTranslationOverrides`, matches search case-insensitively by
+  effective visible value plus key fragment, and returns a paginator/read model
+  with effective value, key, overridden state, and all supported locale values.
+  Result: added `LanguageFileTranslationCatalogue` with per-locale cache keys
+  shaped as
+  `app:language_file_translation_catalogue:{locale}:{fingerprint}:v1`, where
+  the fingerprint uses locale language-file names, mtimes, and sizes so a
+  deployment changing language files moves to a fresh cache key. Added
+  `SearchTenantTranslationOverrides` and `TenantTranslationOverrideRow` to
+  build editable rows from cached language catalogues plus the existing
+  tenant/locale override cache layer, excluding non-overridable keys and
+  matching the edited locale's effective value or the key fragment with
+  Unicode-aware lowercase comparisons. Verification: focused catalogue test
+  passed (`3 passed / 11 assertions`) and `make pint` passed (`244 files`, one
+  provider style issue fixed).
+- [x] Stage 1.14.4: admin route, navigation, Livewire adapter, and Blade UI.
+  Add a permission-gated admin route and navigation link, a thin controller,
+  URL-backed Livewire state for search/locale/page/editing row/value, shared
+  `x-` components and confirm modal reset, translated flash messages, readable
+  action validation errors, and redirects/state preservation after set/reset.
+  The component must call `SetTenantTranslationOverride` and
+  `ResetTenantTranslationOverride`; it must not write to
+  `tenant_translation_overrides` directly. Result: added
+  `/admin/translation-overrides` with `can:tenancy.translation_overrides.manage`,
+  a thin controller, gated admin navigation, the `TranslationOverridesEditor`
+  Livewire adapter, Blade UI using the admin layout and shared components, URL
+  state for `q`, `locale`, and `page`, inline edit/reset flows that call the
+  existing set/reset actions, readable component-local success/error messages,
+  `hy`/`ru`/`en` strings, and non-overridable protection for this editor's own
+  keys. Reset is presented as a guarded Livewire action rather than the shared
+  destructive confirm modal because it removes only an override row and returns
+  to a safe language-file default; archive/force-delete destructive semantics
+  do not apply. Verification: focused editor test passed (`8 passed / 46
+  assertions`) and `make pint` passed (`247 files`).
+- [x] Stage 1.14.5: safety and behavior tests. Cover permission-gated view and
+  write operations, visible-text search in Armenian/Russian/English, secondary
+  key-fragment search, row content, edit/reset state preservation, crafted
+  blocked-key write rejection, crafted cross-tenant write rejection, this
+  screen's own strings being non-overridable, escaped output retention, and a
+  bounded query-count render test independent of page result count. Result:
+  extended `TenantTranslationOverrideEditorTest` to cover the permission-gated
+  route/navigation, visible-text search in `hy`/`ru`/`en`, key-fragment search,
+  effective value/key/overridden/all-locale row content, edit/reset through the
+  existing actions while preserving `q`/`locale`/`page`, crafted blocked-key
+  write rejection, crafted self-editor string write rejection, crafted
+  cross-tenant write rejection through the action's same-tenant check,
+  missing-permission route and write denial, and bounded render query count.
+  Query evidence from the measured test path: narrow result render and full
+  page render both used `3` total queries and `3` `tenant_translation_overrides`
+  reads under the same cold-cache state. Verification: focused editor test
+  passed (`9 passed / 55 assertions`).
+- [x] Stage 1.14.6: local verification and HTTP smoke. Run focused tests,
+  `make pint`, `make stan`, `make test`, `make fresh`,
+  `make tenant-isolation-pgsql`, `make build`, and a no-host-PHP HTTP smoke
+  that searches for a real visible string, edits it, confirms the changed text
+  appears where that key is used, resets it, and confirms the language-file
+  text returns. Result: local gates passed: `make pint` (`PASS 247 files`),
+  `make stan` (`142/142`, `[OK] No errors`), `make test` (`224 passed / 6
+  skipped / 2237 assertions`), `make fresh`, `make tenant-isolation-pgsql`
+  (`22 passed / 76 assertions`), and `make build`. HTTP smoke used
+  `northstar-manager` through real `curl` login, loaded
+  `/admin/translation-overrides?locale=en&q=dashboard`, found
+  `admin.dashboard.title`, saved `Smoke Dashboard Title` through the Livewire
+  update endpoint, confirmed `/admin` rendered
+  `<title>Smoke Dashboard Title</title>`, reset the override through the
+  Livewire update endpoint, confirmed `/admin` rendered
+  `<title>Dashboard</title>`, and removed the temporary smoke directory.
+- [x] Stage 1.14.7: final diff review, push, and CI handoff. Run `git status`,
+  `git diff --check`, full branch diff review versus `origin/main`, confirm no
+  `template/` or unapproved `docs/BLUEPRINT.md` changes, push only
+  `phase-2-stage-1.14-tenant-translation-ui`, collect CI run id and both job
+  statuses for the final report, then stop without creating or merging a PR.
+  Result: final pre-push review passed: `git status` clean, `git diff --check`
+  clean, branch diff versus `origin/main` is `18 files changed, 1435
+  insertions(+), 12 deletions(-)`, and no `docs/BLUEPRINT.md` or `template/`
+  changes are present. Push and CI details are intentionally kept in the final
+  report, not the worklog.
+- [x] Stage 1.14.8: Alpine/Livewire expression escaping correction. Reproduce
+  the owner-reported translation editor click failure by inspecting rendered
+  JavaScript-evaluated attributes; identify the exact unsafe expression and a
+  concrete key/value that break it; change the editor so click handlers carry
+  only framework-encoded identifiers and resolve human-readable values
+  server-side; audit the same defect class across Alpine, inline, and
+  `wire:click` attributes including `x-row-overflow` and Menu; add regression
+  coverage for apostrophe, quote, backslash, newline, non-ASCII, and
+  HTML-looking values; record the client-expression gotcha in this worklog and
+  AGENTS UI DoD; rerun required gates, rebuild the bundle, smoke the editor,
+  push this branch only, and stop for owner browser re-check. Result: fixed
+  the unsafe editor expression
+  `wire:click='startEditing(@json($row->key), @json($row->effectiveValue))'`
+  by passing only `Js::from($row->key)` and resolving the effective value
+  server-side through `SearchTenantTranslationOverrides::rowForKey()`. A
+  rendered value such as `admin.brand.tagline` = `Chef's dashboard` broke the
+  old single-quoted JavaScript expression because the apostrophe terminated
+  the HTML attribute; regression coverage now renders apostrophe, double
+  quote, backslash, newline, non-ASCII, and HTML-looking values and asserts
+  they are escaped in markup but absent from JavaScript-evaluated attributes.
+  The same defect class was audited across `x-row-overflow`, searchable
+  select, Menu archive mode, Menu integer handlers, and pagination handlers;
+  searchable-select field ids and Menu archive-mode values now use `@js`,
+  while integer IDs and fixed method-name variables were verified safe. Local
+  verification passed: `make pint` (`PASS 247 files`), `make stan`
+  (`142/142`, `[OK] No errors`), `make test` (`225 passed / 6 skipped /
+  2269 assertions`), `make fresh`, `make tenant-isolation-pgsql` (`22 passed
+  / 76 assertions`), and `make build` with bundles
+  `public/build/assets/app-B3tq4fLr.css` and
+  `public/build/assets/app-Blopmbua.js`. HTTP smoke passed through real curl
+  login and Livewire update calls: found `admin.dashboard.title`, saved
+  `<title>Smoke Dashboard Title</title>`, reset, and confirmed
+  `<title>Dashboard</title>`.
+
 ## Next steps
-Start the next session with the tenant translation override editing screen:
-admin-facing search/list UI for overridable language-file keys, wired to the
-existing permission and `SetTenantTranslationOverride` /
-`ResetTenantTranslationOverride` actions without changing read-side fallback
-order or `LocalizedText`.
+Owner manual browser re-check of the translation editor edit click is the next
+gate before merge authorization. Do not open a PR or merge until explicitly
+authorized.

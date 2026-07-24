@@ -43,7 +43,7 @@ $locale = app()->getLocale();
                     @foreach (['active', 'archived', 'all'] as $mode)
                         <button
                             type="button"
-                            wire:click="$set('archiveMode', '{{ $mode }}')"
+                            wire:click="$set('archiveMode', @js($mode))"
                             class="min-h-9 rounded-[0.7rem] px-3 py-1.5 transition {{ $archiveMode === $mode ? 'bg-smartrest-success text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-smartrest-ink' }}"
                         >
                             {{ __('menu.archive_modes.'.$mode) }}

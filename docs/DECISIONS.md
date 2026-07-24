@@ -621,11 +621,14 @@ into loaded groups or require more invasive call-site changes for pluralization
 and fallback behavior.
 Non-overridable rule: authentication/login strings, authorization and
 permission-denied messages, destructive confirmation copy and labels for
-archive/restore/force-delete, and safety-warning wording are deliberately not
-overridable. Their wording carries security, permission, or irreversible-action
-meaning; allowing tenants to soften or hide it would weaken safe operation. The
-read resolver centrally ignores database rows for those keys, so a future edit
-UI cannot make them affect rendering.
+archive/restore/force-delete, safety-warning wording, and the tenant
+translation override editor's own labels/actions/help text are deliberately not
+overridable. Their wording carries security, permission, irreversible-action, or
+self-recovery meaning; allowing tenants to soften or hide it would weaken safe
+operation, and allowing the editor to override itself could make the reset path
+unreadable. The read resolver centrally ignores database rows for those keys,
+and write actions reject them, so the edit UI cannot make them affect
+rendering.
 Write rule: set/reset actions reject any translation key that does not resolve
 to a string in the committed `hy`/`ru`/`en` language files. Junk keys are not
 stored "for later" because they cannot be reviewed in context, cannot be safely
@@ -642,3 +645,27 @@ layers together through the single cache service entry point; invalidating only
 the map can leave a first-ever override hidden until the stale empty presence
 marker expires, and invalidating only the presence marker can leave stale
 override values visible.
+
+## 2026-07-24 — Active superadmin bypass in the Identity authorizer
+Decision: active users with `is_superadmin = true` are allowed by the central
+Identity `Authorizer` for every dotted permission code checked through Laravel
+Gate, even when their tenant role does not carry that explicit permission. The
+bypass lives in the authorizer rather than in individual policies or screens, so
+the same rule applies to admin routes, Livewire actions, controllers, and
+Application actions that call the Identity contract.
+Reason: platform superadmins need break-glass operational access for tenant
+configuration and maintenance without copying every new tenant permission onto a
+role first. A central rule avoids one screen accidentally treating superadmin
+differently from another.
+Blast radius: this changes authorization semantics application-wide for
+permission checks that flow through the Identity authorizer and Gate's dotted
+ability hook. It does not bypass authentication, inactive-user checks,
+tenant-scoped Eloquent models, PostgreSQL RLS, branch assignment checks,
+route-model tenant isolation, or any explicit same-tenant actor validation in
+Application actions. Superadmin can pass the permission check, but it cannot use
+that permission to read or mutate another tenant's scoped records unless the
+tenant context itself has been resolved to that tenant through the normal
+context mechanisms.
+Rejected: adding one-off superadmin allowances to each policy, controller, or
+Livewire component, because that would be inconsistent and easy to miss as new
+permissions are introduced.

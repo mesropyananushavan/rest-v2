@@ -13,6 +13,7 @@ final class NonOverridableTranslationKeys
         'auth.',
         'api.errors.',
         'admin.errors.',
+        'admin.translation_overrides.',
         'admin.components.confirm_delete.',
         'menu.confirm.',
         'tables.halls.confirm.',
@@ -47,6 +48,7 @@ final class NonOverridableTranslationKeys
         'tables.tables.flash.archived',
         'tables.tables.flash.force_deleted',
         'tables.tables.flash.restored',
+        'admin.nav.translation_overrides',
     ];
 
     public function contains(string $key): bool

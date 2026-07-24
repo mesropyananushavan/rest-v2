@@ -56,7 +56,7 @@ $selectedValue = old($name, $value ?? $selected['id'] ?? $staticOption['id'] ?? 
             aria-autocomplete="list"
             aria-controls="{{ $listboxId }}"
             :aria-expanded="open.toString()"
-            :aria-activedescendant="activeDescendantId('{{ $fieldId }}')"
+            :aria-activedescendant="activeDescendantId(@js($fieldId))"
             autocomplete="off"
             class="block w-full rounded-sr-control border bg-white px-3 py-2 pr-16 text-sm text-smartrest-text shadow-sm outline-none transition placeholder:text-slate-400 focus:border-smartrest-success focus:ring-4 focus:ring-smartrest-success/10 @error($errorKey) border-smartrest-danger focus:border-smartrest-danger focus:ring-smartrest-danger/10 @else border-slate-200 @enderror"
             :placeholder="placeholder"
@@ -96,7 +96,7 @@ $selectedValue = old($name, $value ?? $selected['id'] ?? $staticOption['id'] ?? 
             <ul id="{{ $listboxId }}" role="listbox">
                 <template x-for="(option, index) in options" :key="option.id">
                     <li
-                        :id="'{{ $fieldId }}_option_' + index"
+                        :id="@js($fieldId.'_option_') + index"
                         role="option"
                         :aria-selected="index === highlightedIndex"
                     >

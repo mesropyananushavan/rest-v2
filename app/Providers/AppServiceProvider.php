@@ -21,6 +21,7 @@ use App\Modules\Tenancy\Infrastructure\Directory\EloquentTenantDirectory;
 use App\Modules\Tenancy\Infrastructure\Settings\EloquentTenantSettingsReader;
 use App\Support\Audit\AuditRecorder;
 use App\Support\Audit\EloquentAuditRecorder;
+use App\Support\I18n\LanguageFileTranslationCatalogue;
 use App\Support\I18n\LanguageFileTranslationKeys;
 use App\Support\I18n\NonOverridableTranslationKeys;
 use App\Support\I18n\TenantAwareTranslator;
@@ -30,6 +31,7 @@ use App\Support\Logging\LogContext;
 use App\Support\Logging\Redactor;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Translation\Loader;
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
@@ -59,6 +61,16 @@ class AppServiceProvider extends ServiceProvider
             $loader = $this->app->make('translation.loader');
 
             return new LanguageFileTranslationKeys($loader);
+        });
+        $this->app->singleton(LanguageFileTranslationCatalogue::class, function (): LanguageFileTranslationCatalogue {
+            /** @var Loader $loader */
+            $loader = $this->app->make('translation.loader');
+
+            return new LanguageFileTranslationCatalogue(
+                $loader,
+                $this->app->make(Filesystem::class),
+                lang_path(),
+            );
         });
         $this->app->singleton(NonOverridableTranslationKeys::class);
         $this->app->singleton(TenantTranslationLocaleFallbacks::class);
