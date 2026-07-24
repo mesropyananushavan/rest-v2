@@ -1,13 +1,58 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.18 Tables vertical slice in progress
-Branch: phase-2-stage-1.18-tables
+Status: Stage 1.11 Part C backend scale hardening in progress
+Branch: phase-2-stage-1.11c-menu-scale
 
 PR state: Codex may create and merge PRs after exact-head green CI; direct
 pushes to `main`, force-push, history rewriting, and branch deletion remain
 forbidden.
 
 ## Plan
+- [x] Stage 1.11C-scale.1: baseline reconciliation and backend-only plan.
+  Read `AGENTS.md`, `docs/BLUEPRINT.md`, `docs/DECISIONS.md`, and this
+  worklog; run `git status`, `git log --oneline -8`, and `git fetch origin`;
+  verify Part B head `d0065ae` ancestry; create
+  `phase-2-stage-1.11c-menu-scale` from fresh `origin/main`; inspect the real
+  Menu module, migrations, command registration, and Make targets; record that
+  the prompt's "Part C not started" note is stale against current `main`, which
+  already contains Stage 1.11 Part C UI/read-model work plus later
+  Audit/Halls/Tables merges. Result: `git status` was clean on
+  `main...origin/main`; `git fetch origin`
+  succeeded; `d0065ae` is an ancestor of `origin/main`; branch
+  `phase-2-stage-1.11c-menu-scale` was created from `origin/main` at
+  `fb909c0`. Actual current Menu code already has `PaginateMenuCategories`,
+  `PaginateMenuItems`, `SearchMenuItems`, PostgreSQL trigram JSONB expression
+  indexes, and the broad `menu:seed-load` command, but it does not have the
+  prompt-compatible per-demo-tenant `menu:load-test-data` command or the
+  required fresh backend measurement proof for that exact slice.
+- [ ] Stage 1.11C-scale.2: prompt-compatible load-test command. Add a
+  standalone `menu:load-test-data` command registered in `bootstrap/app.php`
+  that runs only in local/testing, targets the existing two demo tenants,
+  deterministically creates about 200 categories and 20000 items per tenant
+  without running from `DemoSeeder` or `make fresh`, batches raw inserts with
+  bounded memory, and provides an explicit purge option that removes only rows
+  carrying its own generated marker while leaving DemoSeeder and human rows
+  intact. Add focused command tests for guard, idempotency, purge safety,
+  tenant/branch/name/money shape, and generated counts. Result: pending.
+- [ ] Stage 1.11C-scale.3: read-model proof and index decision refresh. Keep
+  the existing PostgreSQL `pg_trgm` JSONB expression-index strategy unless
+  measurement proves a gap; add any needed additive/reversible index migration
+  for the measured query shapes; update `docs/DECISIONS.md` with a dated entry
+  for the backend-scale slice; strengthen read-model/API tests for tenant and
+  branch isolation in search plus bounded query count for the paginated item
+  list. Result: pending.
+- [ ] Stage 1.11C-scale.4: PostgreSQL load run and measurements. Run
+  `make fresh`, execute the new load command in the container with purge/load
+  options, capture per-tenant row counts, run `EXPLAIN (ANALYZE, BUFFERS)` for
+  first page, deep page, global search hit, global search miss, and category
+  panel/list queries, fix any sequential-scan slow path with query/index shape
+  rather than caching, and record timings/index evidence in this worklog.
+  Result: pending.
+- [ ] Stage 1.11C-scale.5: final verification and scoped commit/push. Run
+  `make pint`, `make stan`, `make test`, `make fresh`, any required focused
+  PostgreSQL checks, and a full branch diff review; commit each logical step
+  with its worklog update and push the feature branch only if all required
+  verification is green. Do not create or merge a PR. Result: pending.
 - [x] Stage 1.16.1: preconditions, branch, and read-only inspection. Verify a
   clean worktree, fetch `origin/main`, confirm Stage 1.14 ancestry and
   `routes/api.php`, fast-forward `main`, create
