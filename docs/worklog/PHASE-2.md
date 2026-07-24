@@ -1444,8 +1444,10 @@ forbidden.
 - Stage 1.9 intentionally treats delete as an additional superadmin gate on
   top of normal permissions, not as a replacement for existing
   create/read/update permission checks.
-- GitHub Actions emitted non-blocking Node.js 20 deprecation annotations for
-  `actions/checkout@v4` / `actions/setup-node@v4` while the jobs still passed.
+- Resolved by CI maintenance: GitHub Actions previously emitted non-blocking
+  Node.js 20 deprecation annotations for `actions/checkout@v4` /
+  `actions/setup-node@v4`; `phase-2-ci-node24-actions` bumps both GitHub
+  JavaScript actions to `@v7` with `node24` manifests.
 - `docs/BLUEPRINT.md` ADR-004 still names Bootstrap 5 in the original v1.0
   frontend decision. Stage 1.10 is intentionally superseding that via
   `docs/DECISIONS.md`; do not edit `docs/BLUEPRINT.md` without explicit owner
@@ -1757,9 +1759,10 @@ forbidden.
   `CREATE EXTENSION IF NOT EXISTS pg_trgm` during optional trgm index rebuild
   and will fail if that command is later run under an unprivileged role. This
   was intentionally not changed in the Stage 1.12 follow-up.
-- Stage 1.12 follow-up backlog only: GitHub Actions still emits the Node.js 20
-  deprecation warning for `actions/checkout@v4`; this was intentionally
-  recorded only and not fixed in the Stage 1.12 follow-up.
+- Stage 1.12 follow-up historical note: GitHub Actions still emitted the
+  Node.js 20 deprecation warning for `actions/checkout@v4`; this was
+  intentionally recorded only and not fixed in the Stage 1.12 follow-up.
+  `phase-2-ci-node24-actions` resolves it with a later workflow-only bump.
 - Stage 1.14 API gotcha: the API route uses the session guard, so the route
   must include session-compatible middleware. `AttachLogContext` must also run
   before auth failures; otherwise unauthenticated API 401 responses generate a
@@ -2166,7 +2169,9 @@ Prioritized remaining work:
 - Menu UX carry-over from Stage 1.11 Part D: context-preserving save/cancel,
   and moving archive/restore/force-delete controls into a row overflow menu.
 - No admin UI or API for reading audit logs.
-- `actions/checkout@v4` emits a Node.js 20 deprecation warning in CI.
+- CI Node.js 20 action-runtime deprecation is being handled by the
+  `phase-2-ci-node24-actions` maintenance branch; final status is recorded in
+  the CI maintenance section below.
 - Every branch push triggers duplicate CI runs (`push` and `pull_request`),
   doubling CI minutes.
 - Branch protection on `main` requiring `quality` and
@@ -2214,7 +2219,87 @@ Decisions awaiting the owner:
 - Should the next Table Board stage remain a read/interaction board without
   Orders writes, or should it wait until Menu public contracts are added first?
 
+## CI maintenance: Node 24 action runtime
+
+Status: complete; final pushed-head CI evidence is reported in the session
+final response
+Branch: `phase-2-ci-node24-actions`
+Base: `origin/main` at `c3e1f13`
+
+Read-only inspection:
+- Required sources read: `AGENTS.md`, `docs/DECISIONS.md`, and this worklog.
+- Starting git state: `main...origin/main` clean at `c3e1f13`; latest log
+  entries were `c3e1f13`, `b60a195`, `ad16570`, `6a3c333`, and `8695c35`.
+- `git fetch origin` succeeded; local `main` fast-forward check reported
+  `Already up to date`; branch `phase-2-ci-node24-actions` was created from
+  fresh `origin/main`.
+- Workflow files: `.github/workflows/ci.yml` only.
+- Pinning style: major tags (`@v4`, `@v2`); this task keeps major-tag pinning.
+
+Action inventory:
+
+| Workflow | Job | Action | Version before | Runtime before | Newest major verified | Runtime at newest major | Version after |
+|---|---|---|---|---|---|---|---|
+| `.github/workflows/ci.yml` | `quality` | `actions/checkout` | `v4` | `node20` | `v7` | `node24` | `v7` |
+| `.github/workflows/ci.yml` | `quality` | `shivammathur/setup-php` | `v2` | `node24` | `v2` | `node24` | `v2` |
+| `.github/workflows/ci.yml` | `quality` | `actions/setup-node` | `v4` | `node20` | `v7` | `node24` | `v7` |
+| `.github/workflows/ci.yml` | `tenant-isolation-pgsql` | `actions/checkout` | `v4` | `node20` | `v7` | `node24` | `v7` |
+| `.github/workflows/ci.yml` | `tenant-isolation-pgsql` | `shivammathur/setup-php` | `v2` | `node24` | `v2` | `node24` | `v2` |
+
+Verification sources:
+- `git ls-remote --tags` against the upstream action repositories verified the
+  newest major tags available on 2026-07-24: `actions/checkout` `v7`,
+  `actions/setup-node` `v7`, and `shivammathur/setup-php` `v2`.
+- `action.yml` from `https://raw.githubusercontent.com/actions/checkout/v4/`
+  declares `runs.using: node20`; `v7` declares `runs.using: node24`.
+- `action.yml` from `https://raw.githubusercontent.com/actions/setup-node/v4/`
+  declares `runs.using: node20`; `v7` declares `runs.using: node24`.
+- `action.yml` from `https://raw.githubusercontent.com/shivammathur/setup-php/v2/`
+  declares `runs.using: node24`; no newer major tag exists, so it remains
+  unchanged.
+- Breaking-input review: the workflow uses no `actions/checkout` inputs and
+  uses only `node-version` plus explicit `cache: npm` for `actions/setup-node`;
+  those inputs exist at the verified `v7` manifests, so no step adaptation is
+  planned.
+
+Plan:
+- [x] CI-node24.1: bump only `actions/checkout@v4` to `@v7` in both jobs and
+  `actions/setup-node@v4` to `@v7` in `quality`; leave
+  `shivammathur/setup-php@v2` unchanged because it already declares `node24`.
+  Result: `.github/workflows/ci.yml` changed only those three `uses:` lines;
+  no inputs, jobs, runner images, verification commands, or suppression
+  variables were added.
+- [x] CI-node24.2: run local verification exactly as required:
+  `make pint`, `make stan`, `make test`, `git diff --check`, and a full diff
+  review versus `origin/main`.
+  Result: `make pint` passed (`PASS 215 files`); `make stan` analyzed
+  `122/122` files and reported `[OK] No errors`; `make test` passed
+  (`175 passed / 5 skipped / 1399 assertions`); `git diff --check` passed;
+  full diff review versus `origin/main` showed only
+  `.github/workflows/ci.yml` and this worklog changed. The skipped Pest tests
+  are the pre-existing SQLite-suite skips for PostgreSQL RLS coverage, not
+  caused by this workflow-only change.
+- [x] CI-node24.3: commit the workflow and worklog update as one CI
+  maintenance step, push the branch, retrieve the GitHub Actions run, record
+  both job statuses and any remaining runner warnings, then stop without PR or
+  merge.
+  Result so far: committed `b44cb82` (`ci: move actions to node24 runtime`) and
+  pushed `phase-2-ci-node24-actions`. GitHub Actions run `30079876185` on head
+  `b44cb823b2daca092e31efca9b196daa702d876b` passed: `quality` succeeded in
+  `47s` and `tenant-isolation-pgsql` succeeded in `38s`. Check-run API
+  reported `annotations_count=0` for both jobs. Log searches found no
+  `Node.js 20 is deprecated`, `forced to run on Node.js 24`, `node20`, or
+  forbidden suppression-variable text. Remaining non-Node warning-like output
+  is pre-existing: Git's default initial branch hint during checkout, Pest
+  warning summaries (`quality`: `176 warnings`; `tenant-isolation-pgsql`:
+  `21 warnings`) with `file_get_contents(...)` warning snippets, and the
+  PostgreSQL service log line `initdb: warning: enabling "trust"
+  authentication for local connections`. This worklog evidence update is
+  docs-only and triggered one additional push CI run. A final docs-only
+  handoff update marks the worklog complete; the session final response records
+  the exact latest pushed-head CI run to avoid an endless loop where recording a
+  run id creates a newer run.
+
 ## Next steps
-Owner review/merge this read-convergence branch. Next coding session after
-merge: Menu UX carry-over only, starting with context-preserving save/cancel
-and moving archive/restore/force-delete controls into a row overflow menu.
+Owner review `phase-2-ci-node24-actions`; no PR has been created, and no merge
+is authorized in this session.
