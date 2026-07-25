@@ -6,6 +6,7 @@ namespace App\Modules\Orders\Application;
 
 use App\Modules\Orders\Domain\OrdersDomainException;
 use App\Modules\Orders\Infrastructure\Models\Order;
+use App\Modules\Orders\Infrastructure\Models\OrderItem;
 use App\Modules\Orders\Infrastructure\Models\OrderSubtable;
 use App\Support\Audit\AuditRecorder;
 use App\Support\Logging\LogContext;
@@ -89,6 +90,27 @@ trait RecordsOrderAction
             'order_id' => (int) $subtable->order_id,
             'name' => (string) $subtable->name,
             'status' => (string) $subtable->status,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function orderItemAuditPayload(OrderItem $item): array
+    {
+        return [
+            'id' => (int) $item->id,
+            'branch_id' => (int) $item->branch_id,
+            'order_id' => (int) $item->order_id,
+            'subtable_id' => $this->nullableInt($item->subtable_id),
+            'menu_item_id' => (int) $item->menu_item_id,
+            'qty' => (int) $item->qty,
+            'unit_price_minor' => (int) $item->unit_price_minor,
+            'discount_minor' => (int) $item->discount_minor,
+            'total_minor' => (int) $item->total_minor,
+            'currency' => (string) $item->currency,
+            'seller_id' => $this->nullableInt($item->seller_id),
+            'preparation_status' => (string) $item->preparation_status,
         ];
     }
 

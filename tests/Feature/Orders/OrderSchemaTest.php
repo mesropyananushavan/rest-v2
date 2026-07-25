@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Orders\Infrastructure\Models\Order;
+use App\Modules\Orders\Infrastructure\Models\OrderItem;
 use App\Modules\Orders\Infrastructure\Models\OrderSubtable;
 use App\Modules\Tenancy\Contracts\BelongsToTenant;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -46,15 +47,38 @@ it('creates orders and order subtables schema with tenant branch and lifecycle i
             'created_at',
             'updated_at',
         ]))->toBeTrue()
+        ->and(Schema::hasTable('order_items'))->toBeTrue()
+        ->and(Schema::hasColumns('order_items', [
+            'id',
+            'tenant_id',
+            'branch_id',
+            'order_id',
+            'subtable_id',
+            'menu_item_id',
+            'qty',
+            'unit_price_minor',
+            'discount_minor',
+            'total_minor',
+            'currency',
+            'seller_id',
+            'preparation_status',
+            'created_at',
+            'updated_at',
+        ]))->toBeTrue()
         ->and(class_uses_recursive(Order::class))->toContain(BelongsToTenant::class)
         ->and(class_uses_recursive(OrderSubtable::class))->toContain(BelongsToTenant::class)
+        ->and(class_uses_recursive(OrderItem::class))->toContain(BelongsToTenant::class)
         ->and(class_uses_recursive(Order::class))->not->toContain(SoftDeletes::class)
-        ->and(class_uses_recursive(OrderSubtable::class))->not->toContain(SoftDeletes::class);
+        ->and(class_uses_recursive(OrderSubtable::class))->not->toContain(SoftDeletes::class)
+        ->and(class_uses_recursive(OrderItem::class))->not->toContain(SoftDeletes::class);
 
     $orderIndexNames = collect(Schema::getIndexes('orders'))
         ->pluck('name')
         ->all();
     $subtableIndexNames = collect(Schema::getIndexes('order_subtables'))
+        ->pluck('name')
+        ->all();
+    $itemIndexNames = collect(Schema::getIndexes('order_items'))
         ->pluck('name')
         ->all();
 
@@ -69,10 +93,19 @@ it('creates orders and order subtables schema with tenant branch and lifecycle i
         ->and($subtableIndexNames)->toContain('order_subtables_tenant_id_index')
         ->and($subtableIndexNames)->toContain('order_subtables_branch_id_index')
         ->and($subtableIndexNames)->toContain('order_subtables_order_id_index')
-        ->and($subtableIndexNames)->toContain('order_subtables_tenant_branch_order_status_idx');
+        ->and($subtableIndexNames)->toContain('order_subtables_tenant_branch_order_status_idx')
+        ->and($itemIndexNames)->toContain('order_items_tenant_id_index')
+        ->and($itemIndexNames)->toContain('order_items_branch_id_index')
+        ->and($itemIndexNames)->toContain('order_items_order_id_index')
+        ->and($itemIndexNames)->toContain('order_items_subtable_id_index')
+        ->and($itemIndexNames)->toContain('order_items_menu_item_id_index')
+        ->and($itemIndexNames)->toContain('order_items_seller_id_index')
+        ->and($itemIndexNames)->toContain('order_items_tenant_branch_order_status_item_idx')
+        ->and($itemIndexNames)->toContain('order_items_tenant_branch_menu_item_idx')
+        ->and($itemIndexNames)->toContain('order_items_order_subtable_menu_price_idx');
 });
 
-it('creates PostgreSQL check constraints and the open dine-in partial unique index', function (): void {
+it('creates PostgreSQL check constraints and order indexes', function (): void {
     if (Schema::getConnection()->getDriverName() !== 'pgsql') {
         expect(true)->toBeTrue();
 
@@ -82,7 +115,7 @@ it('creates PostgreSQL check constraints and the open dine-in partial unique ind
     $constraints = collect(DB::select(<<<'SQL'
         select conname, contype, pg_get_constraintdef(oid) as definition
         from pg_constraint
-        where conrelid in ('orders'::regclass, 'order_subtables'::regclass)
+        where conrelid in ('orders'::regclass, 'order_subtables'::regclass, 'order_items'::regclass)
         SQL))
         ->mapWithKeys(fn (stdClass $constraint): array => [
             (string) $constraint->conname => [
@@ -100,6 +133,8 @@ it('creates PostgreSQL check constraints and the open dine-in partial unique ind
         ->and($constraints->get('orders_table_type_chk')['definition'] ?? '')->toContain('table_id IS NOT NULL')
         ->and($constraints->get('orders_table_type_chk')['definition'] ?? '')->toContain('table_id IS NULL')
         ->and($constraints->get('order_subtables_status_chk')['definition'] ?? '')->toContain('closed')
+        ->and($constraints->get('order_items_qty_chk')['definition'] ?? '')->toContain('qty >= 1')
+        ->and($constraints->get('order_items_preparation_status_chk')['definition'] ?? '')->toContain('pending')
         ->and($indexes->get('orders_one_open_dine_in_per_table_idx'))
         ->toContain('UNIQUE')
         ->toContain("WHERE (((status)::text = 'open'::text) AND ((type)::text = 'dine_in'::text))");
