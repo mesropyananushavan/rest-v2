@@ -13,6 +13,7 @@ return [
     'item_not_in_order' => 'The selected order item is not available in this order.',
     'invalid_quantity' => 'Order item quantity must be at least one.',
     'subtable_not_in_order' => 'The selected subtable does not belong to this order.',
+    'invalid_order_type' => 'Unsupported order type.',
     'types' => [
         'dine_in' => 'Dine in',
         'fast_food' => 'Fast food',

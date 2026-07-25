@@ -2981,5 +2981,37 @@ Order line-items plan:
   Menu/Tables/Identity/Tenancy internals, and `MenuItemSummary` has no Eloquent
   model reference. `git diff --check` passed.
 
-Next exact action: owner review of the local `phase-2-order-items` commit.
+Tableless Orders slice is active. Work on branch
+`phase-2-tableless-orders`; do not push or merge.
+
+Tableless Orders plan:
+- [x] Stage 2.3-tableless.1: Application/domain implementation. Add
+  `OpenTablelessOrder`, mirroring `OpenOrder`'s tenant/branch/currency,
+  transaction, audit, and logging conventions while validating only
+  `fast_food`, `takeaway`, and `delivery`; add the stable
+  `orders.invalid_order_type` domain error and matching translations. Result:
+  added the standalone tableless open action with no Tables dependency, no
+  table lookup, no one-open-per-table check, `table_id = null`, Money zero
+  totals, acting-user waiter default, and reused `orders.order.opened` audit
+  payloads; added `orders.invalid_order_type` in the domain and all three
+  locale files.
+- [x] Stage 2.3-tableless.2: tests, verification, and local commit. Add
+  focused Orders feature tests proving all tableless types open with
+  `table_id = null`, invalid types write nothing, tenant/branch context guards
+  remain stable, and existing `AddItem` works on a tableless order with exact
+  totals; run required gates plus boundary/no-migration proof, update this
+  worklog with real results, and commit locally only. Result: added
+  `OpenTablelessOrderTest` covering all three tableless types, multiple open
+  tableless orders, audit rows, invalid `dine_in`/unknown type rejection before
+  writes, tenant/branch context errors, and `AddItem` total recomputation on a
+  tableless order. Required gates passed: `make pint` (`PASS 279 files`),
+  `make stan` (`164/164`, `[OK] No errors`), `make test` (`239 passed /
+  7 skipped / 2518 assertions`), and `make tenant-isolation-pgsql`
+  (`23 passed / 88 assertions`). An earlier full `make test` attempt had one
+  transient unrelated `TablesDemoSeederTest` assertion failure, but a clean
+  rerun passed without changes to Tables. Boundary grep found no forbidden
+  imports in `OpenTablelessOrder`; migration diff was empty; `git diff --check`
+  passed.
+
+Next exact action: owner review of the local `phase-2-tableless-orders` commit.
 Do not push or merge until separately authorized.
