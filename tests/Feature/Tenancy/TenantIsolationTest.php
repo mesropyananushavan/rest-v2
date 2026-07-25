@@ -19,6 +19,7 @@ use App\Modules\Tenancy\Infrastructure\Models\Branch;
 use App\Modules\Tenancy\Infrastructure\Models\Tenant;
 use App\Support\Audit\AuditLog;
 use App\Support\I18n\TenantTranslationOverride;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
@@ -611,6 +612,39 @@ it('enforces PostgreSQL row level security for orders and order subtables', func
 
     expect(rawOrderIds())->toBe([(int) $orderB->id])
         ->and(rawOrderSubtableIds())->toBe([(int) $subtableB->id]);
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+
+    expect(fn () => DB::transaction(fn (): bool => DB::insert(
+        'insert into orders (tenant_id, branch_id, type, status, opened_at, client_count, subtotal_minor, discount_minor, total_minor, currency, created_at, updated_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+            (int) $tenantB['tenant']->id,
+            (int) $tenantB['branch']->id,
+            'fast_food',
+            'open',
+            now(),
+            1,
+            0,
+            0,
+            0,
+            'AMD',
+            now(),
+            now(),
+        ],
+    )))->toThrow(QueryException::class);
+
+    expect(fn () => DB::transaction(fn (): bool => DB::insert(
+        'insert into order_subtables (tenant_id, branch_id, order_id, name, status, created_at, updated_at) values (?, ?, ?, ?, ?, ?, ?)',
+        [
+            (int) $tenantB['tenant']->id,
+            (int) $tenantB['branch']->id,
+            (int) $orderB->id,
+            'Blocked Subtable',
+            'open',
+            now(),
+            now(),
+        ],
+    )))->toThrow(QueryException::class);
 });
 
 it('checks action permissions through the identity authorizer contract', function (): void {

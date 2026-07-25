@@ -2922,6 +2922,17 @@ Orders foundation plan:
   the Orders tables, `make artisan ARGS="migrate:rollback --step=2"` rolled
   both Orders migrations back, and `make artisan ARGS="migrate"` re-applied
   them.
+- [x] Stage 2.1-orders.6: publish feature branch proof artifacts. Commit and
+  push only `phase-2-orders-foundation`, verify the reopen-after-cancel test
+  coverage, add no features, and close any remaining proof gap with at most one
+  small test-only assertion. Result: `OrderActionsTest` already covered
+  reopening a table after cancellation; added raw PostgreSQL RLS write-block
+  assertions for `orders` and `order_subtables` in the existing Tenancy RLS
+  test. Fresh gates passed: `make pint` (`PASS 267 files`), `make stan`
+  (`155/155`, `[OK] No errors`), `make test` (`231 passed / 7 skipped / 2399
+  assertions`), and `make tenant-isolation-pgsql` (`23 passed / 84
+  assertions`). The feature branch was pushed for review; no main push, merge,
+  PR creation, deploy, release, or force-push was performed.
 
 Next exact action: owner review of the pushed Orders foundation diff. Do not
 merge to `main`.
