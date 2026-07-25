@@ -65,6 +65,11 @@ final class OrdersDomainException extends RuntimeException
         return new self('orders.subtable_not_in_order', 'The selected subtable does not belong to this order.');
     }
 
+    public static function invalidOrderType(): self
+    {
+        return new self('orders.invalid_order_type', 'Unsupported order type.');
+    }
+
     public function errorCode(): string
     {
         return $this->errorCode;
