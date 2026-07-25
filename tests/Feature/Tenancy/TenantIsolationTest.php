@@ -11,6 +11,7 @@ use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use App\Modules\Orders\Infrastructure\Models\Order;
 use App\Modules\Orders\Infrastructure\Models\OrderItem;
+use App\Modules\Orders\Infrastructure\Models\OrderItemMove;
 use App\Modules\Orders\Infrastructure\Models\OrderSubtable;
 use App\Modules\Tables\Infrastructure\Models\Hall;
 use App\Modules\Tables\Infrastructure\Models\Table;
@@ -570,6 +571,17 @@ it('enforces PostgreSQL row level security for orders and order subtables', func
         'preparation_status' => 'pending',
     ]);
 
+    $moveA = OrderItemMove::query()->create([
+        'branch_id' => (int) $tenantA['branch']->id,
+        'order_item_id' => (int) $itemA->id,
+        'source_order_id' => (int) $orderA->id,
+        'target_order_id' => (int) $orderA->id,
+        'source_subtable_id' => (int) $subtableA->id,
+        'target_subtable_id' => null,
+        'actor_id' => (int) $tenantA['user']->id,
+        'reason' => 'Tenant A move',
+    ]);
+
     app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
     app(BranchContext::class)->set((int) $tenantB['branch']->id);
 
@@ -627,23 +639,37 @@ it('enforces PostgreSQL row level security for orders and order subtables', func
         'preparation_status' => 'pending',
     ]);
 
+    $moveB = OrderItemMove::query()->create([
+        'branch_id' => (int) $tenantB['branch']->id,
+        'order_item_id' => (int) $itemB->id,
+        'source_order_id' => (int) $orderB->id,
+        'target_order_id' => (int) $orderB->id,
+        'source_subtable_id' => (int) $subtableB->id,
+        'target_subtable_id' => null,
+        'actor_id' => (int) $tenantB['user']->id,
+        'reason' => 'Tenant B move',
+    ]);
+
     app(TenantResolver::class)->clear();
 
     expect(rawOrderIds())->toBe([])
         ->and(rawOrderSubtableIds())->toBe([])
-        ->and(rawOrderItemIds())->toBe([]);
+        ->and(rawOrderItemIds())->toBe([])
+        ->and(rawOrderItemMoveIds())->toBe([]);
 
     app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
 
     expect(rawOrderIds())->toBe([(int) $orderA->id])
         ->and(rawOrderSubtableIds())->toBe([(int) $subtableA->id])
-        ->and(rawOrderItemIds())->toBe([(int) $itemA->id]);
+        ->and(rawOrderItemIds())->toBe([(int) $itemA->id])
+        ->and(rawOrderItemMoveIds())->toBe([(int) $moveA->id]);
 
     app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
 
     expect(rawOrderIds())->toBe([(int) $orderB->id])
         ->and(rawOrderSubtableIds())->toBe([(int) $subtableB->id])
-        ->and(rawOrderItemIds())->toBe([(int) $itemB->id]);
+        ->and(rawOrderItemIds())->toBe([(int) $itemB->id])
+        ->and(rawOrderItemMoveIds())->toBe([(int) $moveB->id]);
 
     app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
 
@@ -692,6 +718,23 @@ it('enforces PostgreSQL row level security for orders and order subtables', func
             'AMD',
             (int) $tenantB['user']->id,
             'pending',
+            now(),
+            now(),
+        ],
+    )))->toThrow(QueryException::class);
+
+    expect(fn () => DB::transaction(fn (): bool => DB::insert(
+        'insert into order_item_moves (tenant_id, branch_id, order_item_id, source_order_id, target_order_id, source_subtable_id, target_subtable_id, actor_id, reason, created_at, updated_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+            (int) $tenantB['tenant']->id,
+            (int) $tenantB['branch']->id,
+            (int) $itemB->id,
+            (int) $orderB->id,
+            (int) $orderB->id,
+            (int) $subtableB->id,
+            null,
+            (int) $tenantB['user']->id,
+            'Blocked Move',
             now(),
             now(),
         ],
@@ -866,6 +909,16 @@ function rawOrderSubtableIds(): array
 function rawOrderItemIds(): array
 {
     return collect(DB::select('select id from order_items order by id'))
+        ->map(fn (object $row): int => (int) $row->id)
+        ->all();
+}
+
+/**
+ * @return list<int>
+ */
+function rawOrderItemMoveIds(): array
+{
+    return collect(DB::select('select id from order_item_moves order by id'))
         ->map(fn (object $row): int => (int) $row->id)
         ->all();
 }

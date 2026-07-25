@@ -70,6 +70,16 @@ final class OrdersDomainException extends RuntimeException
         return new self('orders.invalid_order_type', 'Unsupported order type.');
     }
 
+    public static function itemMoveNoop(): self
+    {
+        return new self('orders.item_move_noop', 'The order item is already in the requested location.');
+    }
+
+    public static function orderBranchMismatch(): self
+    {
+        return new self('orders.order_branch_mismatch', 'Order items cannot be moved across branches.');
+    }
+
     public function errorCode(): string
     {
         return $this->errorCode;

@@ -13,11 +13,13 @@ use App\Modules\Orders\Application\AddItem;
 use App\Modules\Orders\Application\AddSubtable;
 use App\Modules\Orders\Application\CancelOrder;
 use App\Modules\Orders\Application\ChangeItemQty;
+use App\Modules\Orders\Application\MoveItem;
 use App\Modules\Orders\Application\OpenOrder;
 use App\Modules\Orders\Application\RemoveItem;
 use App\Modules\Orders\Domain\OrdersDomainException;
 use App\Modules\Orders\Infrastructure\Models\Order;
 use App\Modules\Orders\Infrastructure\Models\OrderItem;
+use App\Modules\Orders\Infrastructure\Models\OrderItemMove;
 use App\Modules\Tables\Infrastructure\Models\Hall;
 use App\Modules\Tables\Infrastructure\Models\Table;
 use App\Modules\Tenancy\Contracts\BranchContext;
@@ -202,6 +204,149 @@ it('keeps order items tenant scoped', function (): void {
     expect(OrderItem::query()->count())->toBe(0);
 });
 
+it('moves an order item between subtables and root within the same order', function (): void {
+    $record = orderItemsUser('tenant-a', 'manager-a');
+    $table = orderItemsTable($record, 0, 'Table 1');
+    $dolma = orderItemsMenuItem($record, 0, 'Dolma', 1000);
+
+    orderItemsActingIn($record, 0, 'orders-items-move-subtables');
+
+    $order = app(OpenOrder::class)((int) $table->id);
+    $sourceSubtable = app(AddSubtable::class)((int) $order->id, 'Guest 1');
+    $targetSubtable = app(AddSubtable::class)((int) $order->id, 'Guest 2');
+    $line = app(AddItem::class)((int) $order->id, (int) $dolma->id, 2, (int) $sourceSubtable->id);
+
+    $movedToSubtable = app(MoveItem::class)(
+        (int) $line->id,
+        targetSubtableId: (int) $targetSubtable->id,
+        reason: 'guest moved',
+    );
+    $freshOrder = Order::query()->findOrFail((int) $order->id);
+
+    expect((int) $movedToSubtable->order_id)->toBe((int) $order->id)
+        ->and((int) $movedToSubtable->subtable_id)->toBe((int) $targetSubtable->id)
+        ->and((int) $freshOrder->subtotal_minor)->toBe(2000)
+        ->and((int) $freshOrder->total_minor)->toBe(2000)
+        ->and((int) OrderItem::query()->where('order_id', (int) $order->id)->sum('total_minor'))->toBe(2000);
+
+    $detached = app(MoveItem::class)((int) $line->id);
+    $freshOrder = Order::query()->findOrFail((int) $order->id);
+
+    expect($detached->subtable_id)->toBeNull()
+        ->and((int) $freshOrder->subtotal_minor)->toBe(2000)
+        ->and((int) $freshOrder->total_minor)->toBe(2000)
+        ->and((int) OrderItem::query()->where('order_id', (int) $order->id)->sum('total_minor'))->toBe(2000);
+
+    $moves = OrderItemMove::query()->orderBy('id')->get();
+
+    expect($moves)->toHaveCount(2)
+        ->and((int) $moves[0]->source_order_id)->toBe((int) $order->id)
+        ->and((int) $moves[0]->target_order_id)->toBe((int) $order->id)
+        ->and((int) $moves[0]->source_subtable_id)->toBe((int) $sourceSubtable->id)
+        ->and((int) $moves[0]->target_subtable_id)->toBe((int) $targetSubtable->id)
+        ->and((int) $moves[0]->actor_id)->toBe((int) $record['user']->id)
+        ->and($moves[0]->reason)->toBe('guest moved')
+        ->and((int) $moves[1]->source_subtable_id)->toBe((int) $targetSubtable->id)
+        ->and($moves[1]->target_subtable_id)->toBeNull();
+
+    expect(AuditLog::query()->where('target_type', 'orders_item')->where('action', 'orders.item.moved')->count())->toBe(2);
+});
+
+it('moves an order item to another open order and recomputes both order totals exactly', function (): void {
+    $record = orderItemsUser('tenant-a', 'manager-a');
+    $sourceTable = orderItemsTable($record, 0, 'Source Table');
+    $targetTable = orderItemsTable($record, 0, 'Target Table');
+    $dolma = orderItemsMenuItem($record, 0, 'Dolma', 1000);
+    $tan = orderItemsMenuItem($record, 0, 'Tan', 500);
+    $gata = orderItemsMenuItem($record, 0, 'Gata', 1500);
+
+    orderItemsActingIn($record, 0, 'orders-items-move-orders');
+
+    $sourceOrder = app(OpenOrder::class)((int) $sourceTable->id);
+    $targetOrder = app(OpenOrder::class)((int) $targetTable->id);
+    $targetSubtable = app(AddSubtable::class)((int) $targetOrder->id, 'Target Guest');
+
+    $movedLine = app(AddItem::class)((int) $sourceOrder->id, (int) $dolma->id, 2);
+    app(AddItem::class)((int) $sourceOrder->id, (int) $tan->id, 1);
+    app(AddItem::class)((int) $targetOrder->id, (int) $gata->id, 1);
+
+    $moved = app(MoveItem::class)((int) $movedLine->id, (int) $targetOrder->id, (int) $targetSubtable->id);
+    $freshSource = Order::query()->findOrFail((int) $sourceOrder->id);
+    $freshTarget = Order::query()->findOrFail((int) $targetOrder->id);
+
+    expect((int) $moved->order_id)->toBe((int) $targetOrder->id)
+        ->and((int) $moved->subtable_id)->toBe((int) $targetSubtable->id)
+        ->and((int) $freshSource->subtotal_minor)->toBe(500)
+        ->and((int) $freshSource->total_minor)->toBe(500)
+        ->and((int) $freshTarget->subtotal_minor)->toBe(3500)
+        ->and((int) $freshTarget->total_minor)->toBe(3500)
+        ->and((int) OrderItem::query()->where('order_id', (int) $sourceOrder->id)->sum('total_minor'))->toBe(500)
+        ->and((int) OrderItem::query()->where('order_id', (int) $targetOrder->id)->sum('total_minor'))->toBe(3500);
+});
+
+it('rejects invalid item moves without recording moves or changing totals', function (): void {
+    $record = orderItemsUser('tenant-a', 'manager-a', branchCount: 2);
+    $sourceTable = orderItemsTable($record, 0, 'Source Table');
+    $targetTable = orderItemsTable($record, 0, 'Target Table');
+    $closedTargetTable = orderItemsTable($record, 0, 'Closed Target Table');
+    $foreignBranchTable = orderItemsTable($record, 1, 'Foreign Branch Table');
+    $dolma = orderItemsMenuItem($record, 0, 'Dolma', 1000);
+
+    orderItemsActingIn($record, 0, 'orders-items-move-guards');
+
+    $sourceOrder = app(OpenOrder::class)((int) $sourceTable->id);
+    $targetOrder = app(OpenOrder::class)((int) $targetTable->id);
+    $line = app(AddItem::class)((int) $sourceOrder->id, (int) $dolma->id, 1);
+    $sourceSubtable = app(AddSubtable::class)((int) $sourceOrder->id, 'Source Guest');
+
+    $usdTarget = Order::query()->create([
+        'branch_id' => (int) $record['branches'][0]->id,
+        'type' => 'fast_food',
+        'status' => 'open',
+        'table_id' => null,
+        'opened_at' => now(),
+        'client_count' => 1,
+        'subtotal_minor' => 0,
+        'discount_minor' => 0,
+        'total_minor' => 0,
+        'currency' => 'USD',
+    ]);
+
+    $closedTarget = app(OpenOrder::class)((int) $closedTargetTable->id);
+    app(CancelOrder::class)((int) $closedTarget->id);
+
+    orderItemsActingIn($record, 1, 'orders-items-move-foreign');
+    $foreignOrder = app(OpenOrder::class)((int) $foreignBranchTable->id);
+
+    orderItemsActingIn($record, 0, 'orders-items-move-guards');
+
+    foreach ([
+        [fn () => app(MoveItem::class)((int) $line->id), 'orders.item_move_noop'],
+        [fn () => app(MoveItem::class)((int) $line->id, (int) $usdTarget->id), 'orders.currency_mismatch'],
+        [fn () => app(MoveItem::class)((int) $line->id, (int) $closedTarget->id), 'orders.order_not_open'],
+        [fn () => app(MoveItem::class)((int) $line->id, (int) $targetOrder->id, (int) $sourceSubtable->id), 'orders.subtable_not_in_order'],
+        [fn () => app(MoveItem::class)((int) $line->id, (int) $foreignOrder->id), 'orders.order_branch_mismatch'],
+    ] as [$callback, $code]) {
+        orderItemsExpectDomainCode($callback, $code);
+
+        expect(OrderItemMove::query()->count())->toBe(0)
+            ->and((int) OrderItem::query()->findOrFail((int) $line->id)->order_id)->toBe((int) $sourceOrder->id)
+            ->and(OrderItem::query()->findOrFail((int) $line->id)->subtable_id)->toBeNull()
+            ->and((int) Order::query()->findOrFail((int) $sourceOrder->id)->subtotal_minor)->toBe(1000)
+            ->and((int) Order::query()->findOrFail((int) $targetOrder->id)->subtotal_minor)->toBe(0);
+    }
+
+    app(CancelOrder::class)((int) $sourceOrder->id);
+
+    orderItemsExpectDomainCode(
+        fn () => app(MoveItem::class)((int) $line->id, (int) $targetOrder->id),
+        'orders.order_not_open',
+    );
+
+    expect(OrderItemMove::query()->count())->toBe(0)
+        ->and((int) OrderItem::query()->findOrFail((int) $line->id)->order_id)->toBe((int) $sourceOrder->id);
+});
+
 /**
  * @return array{tenant: Tenant, branches: list<Branch>, user: User}
  */
@@ -341,4 +486,17 @@ function orderItemsActingIn(array $record, int $branchIndex, string $requestId):
     app(BranchContext::class)->set((int) $record['branches'][$branchIndex]->id);
     auth()->login($record['user']);
     LogContext::start($requestId, 'orders');
+}
+
+function orderItemsExpectDomainCode(Closure $callback, string $errorCode): void
+{
+    try {
+        $callback();
+    } catch (OrdersDomainException $exception) {
+        expect($exception->errorCode())->toBe($errorCode);
+
+        return;
+    }
+
+    throw new RuntimeException("Expected {$errorCode}.");
 }
