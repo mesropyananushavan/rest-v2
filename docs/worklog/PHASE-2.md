@@ -3013,5 +3013,51 @@ Tableless Orders plan:
   imports in `OpenTablelessOrder`; migration diff was empty; `git diff --check`
   passed.
 
-Next exact action: owner review of the local `phase-2-tableless-orders` commit.
+Order item moves slice is active. Work on branch
+`phase-2-order-item-moves`; do not push or merge.
+
+Order item moves plan:
+- [x] Stage 2.4-item-moves.1: schema/model foundation. Add the reversible
+  `order_item_moves` migration after `2026_07_25_002000` with tenant/branch,
+  source/target order ids, source/target subtable ids, actor/reason, audit
+  indexes, PostgreSQL RLS, no soft deletes, and add the tenant-scoped
+  `OrderItemMove` model. Result: added
+  `2026_07_25_003000_create_order_item_moves_table` and `OrderItemMove`.
+  `order_item_id` and source/target subtable ids are plain indexed integers
+  for durable move history; source/target orders have FKs; the table has no
+  soft deletes and has the same PostgreSQL RLS policy shape as the other
+  Orders tables.
+- [x] Stage 2.4-item-moves.2: MoveItem application/domain behavior. Add
+  `MoveItem` with transaction-wrapped item/source/target order locks, open
+  status guards, same-branch/currency/subtable ownership validation,
+  no-op rejection, move-history append, exact recomputation for each affected
+  order, and `orders.item.moved` audit/logging. Result: implemented
+  `MoveItem` with tenant/branch guards, item and order `lockForUpdate()`,
+  same-branch and currency checks, target-subtable ownership validation,
+  no-op rejection, `OrderItemMove` append, source/target totals recompute, and
+  `orders.item.moved` audit plus structured logs.
+- [x] Stage 2.4-item-moves.3: tests, verification, and local commit. Add
+  Orders feature tests for same-order subtable/root moves, cross-order moves
+  with exact totals, guard rollback/no-mutation behavior, audit rows, schema
+  indexes, and PostgreSQL RLS read/write isolation for `order_item_moves`;
+  run all required gates plus migration rollback/migrate smoke and boundary
+  grep, update this worklog with real results, and commit locally only.
+  Result: added Orders tests for subtable/root moves, cross-order moves with
+  exact sums, guard no-mutation behavior, and schema/model coverage; extended
+  PostgreSQL Tenancy RLS coverage for `order_item_moves` read visibility and
+  WITH CHECK write-block. Required gates passed after fixing one introduced
+  test setup issue: `make pint` (`PASS 282 files`), `make stan` (`166/166`,
+  `[OK] No errors`), `make test` (`242 passed / 7 skipped / 2592 assertions`),
+  and `make tenant-isolation-pgsql` (`23 passed / 92 assertions`). The
+  initial `make test` failed in the new guard test because a helper cleared
+  tenant context before `OpenOrder`; the setup was corrected before the green
+  rerun. `TablesDemoSeederTest` passed on the final full test run. Migration
+  smoke passed: `make artisan ARGS="migrate:fresh --seed"` created
+  `2026_07_25_003000_create_order_item_moves_table`, `make artisan
+  ARGS="migrate:rollback --step=1"` rolled it back, and `make artisan
+  ARGS="migrate"` re-applied it. Boundary grep found no forbidden cross-module
+  imports in `MoveItem`; existing Orders item/open actions were unchanged;
+  `git diff --check` passed.
+
+Next exact action: owner review of the local `phase-2-order-item-moves` commit.
 Do not push or merge until separately authorized.

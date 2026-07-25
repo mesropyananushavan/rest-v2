@@ -14,6 +14,8 @@ return [
     'invalid_quantity' => 'Order item quantity must be at least one.',
     'subtable_not_in_order' => 'The selected subtable does not belong to this order.',
     'invalid_order_type' => 'Unsupported order type.',
+    'item_move_noop' => 'The order item is already in the requested location.',
+    'order_branch_mismatch' => 'Order items cannot be moved across branches.',
     'types' => [
         'dine_in' => 'Dine in',
         'fast_food' => 'Fast food',
@@ -44,5 +46,6 @@ return [
         'item_added' => 'Item added.',
         'item_qty_changed' => 'Item quantity changed.',
         'item_removed' => 'Item removed.',
+        'item_moved' => 'Item moved.',
     ],
 ];

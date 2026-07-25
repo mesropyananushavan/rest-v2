@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Orders\Infrastructure\Models\Order;
 use App\Modules\Orders\Infrastructure\Models\OrderItem;
+use App\Modules\Orders\Infrastructure\Models\OrderItemMove;
 use App\Modules\Orders\Infrastructure\Models\OrderSubtable;
 use App\Modules\Tenancy\Contracts\BelongsToTenant;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -65,12 +66,29 @@ it('creates orders and order subtables schema with tenant branch and lifecycle i
             'created_at',
             'updated_at',
         ]))->toBeTrue()
+        ->and(Schema::hasTable('order_item_moves'))->toBeTrue()
+        ->and(Schema::hasColumns('order_item_moves', [
+            'id',
+            'tenant_id',
+            'branch_id',
+            'order_item_id',
+            'source_order_id',
+            'target_order_id',
+            'source_subtable_id',
+            'target_subtable_id',
+            'actor_id',
+            'reason',
+            'created_at',
+            'updated_at',
+        ]))->toBeTrue()
         ->and(class_uses_recursive(Order::class))->toContain(BelongsToTenant::class)
         ->and(class_uses_recursive(OrderSubtable::class))->toContain(BelongsToTenant::class)
         ->and(class_uses_recursive(OrderItem::class))->toContain(BelongsToTenant::class)
+        ->and(class_uses_recursive(OrderItemMove::class))->toContain(BelongsToTenant::class)
         ->and(class_uses_recursive(Order::class))->not->toContain(SoftDeletes::class)
         ->and(class_uses_recursive(OrderSubtable::class))->not->toContain(SoftDeletes::class)
-        ->and(class_uses_recursive(OrderItem::class))->not->toContain(SoftDeletes::class);
+        ->and(class_uses_recursive(OrderItem::class))->not->toContain(SoftDeletes::class)
+        ->and(class_uses_recursive(OrderItemMove::class))->not->toContain(SoftDeletes::class);
 
     $orderIndexNames = collect(Schema::getIndexes('orders'))
         ->pluck('name')
@@ -79,6 +97,9 @@ it('creates orders and order subtables schema with tenant branch and lifecycle i
         ->pluck('name')
         ->all();
     $itemIndexNames = collect(Schema::getIndexes('order_items'))
+        ->pluck('name')
+        ->all();
+    $itemMoveIndexNames = collect(Schema::getIndexes('order_item_moves'))
         ->pluck('name')
         ->all();
 
@@ -102,7 +123,17 @@ it('creates orders and order subtables schema with tenant branch and lifecycle i
         ->and($itemIndexNames)->toContain('order_items_seller_id_index')
         ->and($itemIndexNames)->toContain('order_items_tenant_branch_order_status_item_idx')
         ->and($itemIndexNames)->toContain('order_items_tenant_branch_menu_item_idx')
-        ->and($itemIndexNames)->toContain('order_items_order_subtable_menu_price_idx');
+        ->and($itemIndexNames)->toContain('order_items_order_subtable_menu_price_idx')
+        ->and($itemMoveIndexNames)->toContain('order_item_moves_tenant_id_index')
+        ->and($itemMoveIndexNames)->toContain('order_item_moves_branch_id_index')
+        ->and($itemMoveIndexNames)->toContain('order_item_moves_order_item_id_index')
+        ->and($itemMoveIndexNames)->toContain('order_item_moves_source_order_id_index')
+        ->and($itemMoveIndexNames)->toContain('order_item_moves_target_order_id_index')
+        ->and($itemMoveIndexNames)->toContain('order_item_moves_source_subtable_id_index')
+        ->and($itemMoveIndexNames)->toContain('order_item_moves_target_subtable_id_index')
+        ->and($itemMoveIndexNames)->toContain('order_item_moves_actor_id_index')
+        ->and($itemMoveIndexNames)->toContain('order_item_moves_tenant_branch_item_idx')
+        ->and($itemMoveIndexNames)->toContain('order_item_moves_tenant_branch_source_target_idx');
 });
 
 it('creates PostgreSQL check constraints and order indexes', function (): void {
