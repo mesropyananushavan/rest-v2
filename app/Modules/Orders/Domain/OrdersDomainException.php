@@ -40,6 +40,31 @@ final class OrdersDomainException extends RuntimeException
         return new self('orders.order_not_open', 'Only open orders can be changed.');
     }
 
+    public static function menuItemNotFound(): self
+    {
+        return new self('orders.menu_item_not_found', 'The selected menu item is not available for sale in this branch.');
+    }
+
+    public static function currencyMismatch(): self
+    {
+        return new self('orders.currency_mismatch', 'The menu item currency does not match the order currency.');
+    }
+
+    public static function itemNotInOrder(): self
+    {
+        return new self('orders.item_not_in_order', 'The selected order item is not available in this order.');
+    }
+
+    public static function invalidQuantity(): self
+    {
+        return new self('orders.invalid_quantity', 'Order item quantity must be at least one.');
+    }
+
+    public static function subtableNotInOrder(): self
+    {
+        return new self('orders.subtable_not_in_order', 'The selected subtable does not belong to this order.');
+    }
+
     public function errorCode(): string
     {
         return $this->errorCode;

@@ -10,6 +10,7 @@ use App\Modules\Identity\Infrastructure\Models\UserBranchAssignment;
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use App\Modules\Orders\Infrastructure\Models\Order;
+use App\Modules\Orders\Infrastructure\Models\OrderItem;
 use App\Modules\Orders\Infrastructure\Models\OrderSubtable;
 use App\Modules\Tables\Infrastructure\Models\Hall;
 use App\Modules\Tables\Infrastructure\Models\Table;
@@ -555,6 +556,20 @@ it('enforces PostgreSQL row level security for orders and order subtables', func
         'status' => 'open',
     ]);
 
+    $itemA = OrderItem::query()->create([
+        'branch_id' => (int) $tenantA['branch']->id,
+        'order_id' => (int) $orderA->id,
+        'subtable_id' => (int) $subtableA->id,
+        'menu_item_id' => 1001,
+        'qty' => 1,
+        'unit_price_minor' => 1000,
+        'discount_minor' => 0,
+        'total_minor' => 1000,
+        'currency' => 'AMD',
+        'seller_id' => (int) $tenantA['user']->id,
+        'preparation_status' => 'pending',
+    ]);
+
     app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
     app(BranchContext::class)->set((int) $tenantB['branch']->id);
 
@@ -598,20 +613,37 @@ it('enforces PostgreSQL row level security for orders and order subtables', func
         'status' => 'open',
     ]);
 
+    $itemB = OrderItem::query()->create([
+        'branch_id' => (int) $tenantB['branch']->id,
+        'order_id' => (int) $orderB->id,
+        'subtable_id' => (int) $subtableB->id,
+        'menu_item_id' => 2001,
+        'qty' => 1,
+        'unit_price_minor' => 2000,
+        'discount_minor' => 0,
+        'total_minor' => 2000,
+        'currency' => 'AMD',
+        'seller_id' => (int) $tenantB['user']->id,
+        'preparation_status' => 'pending',
+    ]);
+
     app(TenantResolver::class)->clear();
 
     expect(rawOrderIds())->toBe([])
-        ->and(rawOrderSubtableIds())->toBe([]);
+        ->and(rawOrderSubtableIds())->toBe([])
+        ->and(rawOrderItemIds())->toBe([]);
 
     app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
 
     expect(rawOrderIds())->toBe([(int) $orderA->id])
-        ->and(rawOrderSubtableIds())->toBe([(int) $subtableA->id]);
+        ->and(rawOrderSubtableIds())->toBe([(int) $subtableA->id])
+        ->and(rawOrderItemIds())->toBe([(int) $itemA->id]);
 
     app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
 
     expect(rawOrderIds())->toBe([(int) $orderB->id])
-        ->and(rawOrderSubtableIds())->toBe([(int) $subtableB->id]);
+        ->and(rawOrderSubtableIds())->toBe([(int) $subtableB->id])
+        ->and(rawOrderItemIds())->toBe([(int) $itemB->id]);
 
     app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
 
@@ -641,6 +673,25 @@ it('enforces PostgreSQL row level security for orders and order subtables', func
             (int) $orderB->id,
             'Blocked Subtable',
             'open',
+            now(),
+            now(),
+        ],
+    )))->toThrow(QueryException::class);
+
+    expect(fn () => DB::transaction(fn (): bool => DB::insert(
+        'insert into order_items (tenant_id, branch_id, order_id, menu_item_id, qty, unit_price_minor, discount_minor, total_minor, currency, seller_id, preparation_status, created_at, updated_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+            (int) $tenantB['tenant']->id,
+            (int) $tenantB['branch']->id,
+            (int) $orderB->id,
+            2002,
+            1,
+            2000,
+            0,
+            2000,
+            'AMD',
+            (int) $tenantB['user']->id,
+            'pending',
             now(),
             now(),
         ],
@@ -805,6 +856,16 @@ function rawOrderIds(): array
 function rawOrderSubtableIds(): array
 {
     return collect(DB::select('select id from order_subtables order by id'))
+        ->map(fn (object $row): int => (int) $row->id)
+        ->all();
+}
+
+/**
+ * @return list<int>
+ */
+function rawOrderItemIds(): array
+{
+    return collect(DB::select('select id from order_items order by id'))
         ->map(fn (object $row): int => (int) $row->id)
         ->all();
 }

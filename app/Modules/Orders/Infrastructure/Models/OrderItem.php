@@ -8,50 +8,46 @@ use App\Modules\Tenancy\Contracts\BelongsToTenant;
 use App\Support\Money\Money;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use UnexpectedValueException;
 
 #[Fillable([
     'tenant_id',
     'branch_id',
-    'type',
-    'status',
-    'table_id',
-    'customer_id',
-    'waiter_id',
-    'cashier_id',
-    'opened_at',
-    'closed_at',
-    'client_count',
-    'comment',
-    'subtotal_minor',
+    'order_id',
+    'subtable_id',
+    'menu_item_id',
+    'qty',
+    'unit_price_minor',
     'discount_minor',
     'total_minor',
     'currency',
+    'seller_id',
+    'preparation_status',
 ])]
-final class Order extends Model
+final class OrderItem extends Model
 {
     use BelongsToTenant;
 
     /**
-     * @return HasMany<OrderSubtable, $this>
+     * @return BelongsTo<Order, $this>
      */
-    public function subtables(): HasMany
+    public function order(): BelongsTo
     {
-        return $this->hasMany(OrderSubtable::class, 'order_id')->orderBy('id');
+        return $this->belongsTo(Order::class, 'order_id');
     }
 
     /**
-     * @return HasMany<OrderItem, $this>
+     * @return BelongsTo<OrderSubtable, $this>
      */
-    public function items(): HasMany
+    public function subtable(): BelongsTo
     {
-        return $this->hasMany(OrderItem::class, 'order_id')->orderBy('id');
+        return $this->belongsTo(OrderSubtable::class, 'subtable_id');
     }
 
-    public function subtotal(): Money
+    public function unitPrice(): Money
     {
-        return $this->moneyFrom('subtotal_minor');
+        return $this->moneyFrom('unit_price_minor');
     }
 
     public function discount(): Money
@@ -68,16 +64,14 @@ final class Order extends Model
     {
         return [
             'branch_id' => 'integer',
-            'table_id' => 'integer',
-            'customer_id' => 'integer',
-            'waiter_id' => 'integer',
-            'cashier_id' => 'integer',
-            'opened_at' => 'datetime',
-            'closed_at' => 'datetime',
-            'client_count' => 'integer',
-            'subtotal_minor' => 'integer',
+            'order_id' => 'integer',
+            'subtable_id' => 'integer',
+            'menu_item_id' => 'integer',
+            'qty' => 'integer',
+            'unit_price_minor' => 'integer',
             'discount_minor' => 'integer',
             'total_minor' => 'integer',
+            'seller_id' => 'integer',
         ];
     }
 
@@ -87,7 +81,7 @@ final class Order extends Model
         $currency = $this->getAttribute('currency');
 
         if (! is_int($minor) || ! is_string($currency)) {
-            throw new UnexpectedValueException('Order money attributes are not hydrated.');
+            throw new UnexpectedValueException('Order item money attributes are not hydrated.');
         }
 
         return new Money($minor, $currency);

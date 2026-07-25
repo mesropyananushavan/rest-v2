@@ -2934,5 +2934,52 @@ Orders foundation plan:
   assertions`). The feature branch was pushed for review; no main push, merge,
   PR creation, deploy, release, or force-push was performed.
 
-Next exact action: owner review of the pushed Orders foundation diff. Do not
-merge to `main`.
+Order line-items slice is active. Work on branch `phase-2-order-items`; do not
+push or merge.
+
+Order line-items plan:
+- [x] Stage 2.2-items.1: Menu read boundary. Add the minimal
+  `Menu\Contracts\MenuCatalog` plus readonly `MenuItemSummary`, implement the
+  Eloquent adapter inside Menu infrastructure, and bind it in
+  `AppServiceProvider` without exposing Menu Eloquent models to Orders. Result:
+  added `MenuCatalog::findSellableInBranch()`, `MenuItemSummary` with
+  `LocalizedText` and `Money`, `EloquentMenuCatalog`, and the provider binding.
+- [x] Stage 2.2-items.2: `order_items` schema/model. Add one reversible
+  migration after `2026_07_25_001000` with tenant/branch/order/subtable/item
+  indexes, PostgreSQL preparation-status and quantity CHECK constraints, no
+  menu FK, and RLS policy; add tenant-scoped `OrderItem` with no soft deletes.
+  Result: added `2026_07_25_002000_create_order_items_table` with no
+  `menu_items` FK, RLS, `qty >= 1`, `preparation_status IN ('pending')`, FK
+  indexes, and item lookup indexes; added `OrderItem` and `Order::items()`.
+- [x] Stage 2.2-items.3: item mutation actions and totals. Add `AddItem`,
+  `ChangeItemQty`, `RemoveItem`, shared totals recompute, item audit payloads,
+  new domain errors/translations, and ensure all mutations lock the parent
+  open order, snapshot MenuCatalog price, validate subtable/order ownership,
+  and keep totals equal to line sums. Result: implemented all three item
+  actions with transaction-wrapped writes, parent order `lockForUpdate()`,
+  price snapshotting from `MenuCatalog`, exact integer totals through `Money`,
+  and audit actions `orders.item.added`, `orders.item.qty_changed`, and
+  `orders.item.removed`.
+- [x] Stage 2.2-items.4: tests and RLS coverage. Add Orders feature tests for
+  schema, MenuCatalog behavior, add/increment/change/remove, currency and
+  quantity guards, non-open guard, subtable guard, audits, tenant isolation,
+  and extend PostgreSQL Tenancy RLS coverage for `order_items` read visibility
+  and WITH CHECK write-block. Result: added `OrderItemActionsTest`, extended
+  `OrderSchemaTest`, and extended the existing PostgreSQL Tenancy RLS test to
+  prove `order_items` read visibility and raw WITH CHECK write blocking.
+- [x] Stage 2.2-items.5: verification and handoff. Run `make pint`,
+  `make stan`, `make test`, `make tenant-isolation-pgsql`, migration
+  fresh/rollback/migrate smoke, grep module-boundary proof, commit locally, and
+  stop before any push. Result: required gates passed: `make pint` (`PASS 277
+  files`; initial run fixed three style issues), `make stan` (`163/163`, `[OK]
+  No errors`), `make test` (`235 passed / 7 skipped / 2457 assertions`), and
+  `make tenant-isolation-pgsql` (`23 passed / 88 assertions`). Migration smoke
+  passed: `make artisan ARGS="migrate:fresh --seed"` created
+  `2026_07_25_002000_create_order_items_table`, `make artisan
+  ARGS="migrate:rollback --step=1"` rolled it back, and `make artisan
+  ARGS="migrate"` re-applied it. Boundary grep found no Orders imports from
+  Menu/Tables/Identity/Tenancy internals, and `MenuItemSummary` has no Eloquent
+  model reference. `git diff --check` passed.
+
+Next exact action: owner review of the local `phase-2-order-items` commit.
+Do not push or merge until separately authorized.
