@@ -9,6 +9,8 @@ use App\Modules\Identity\Infrastructure\Models\User;
 use App\Modules\Identity\Infrastructure\Models\UserBranchAssignment;
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
+use App\Modules\Orders\Infrastructure\Models\Order;
+use App\Modules\Orders\Infrastructure\Models\OrderSubtable;
 use App\Modules\Tables\Infrastructure\Models\Hall;
 use App\Modules\Tables\Infrastructure\Models\Table;
 use App\Modules\Tenancy\Contracts\BranchContext;
@@ -501,6 +503,116 @@ it('enforces PostgreSQL row level security for tables', function (): void {
     expect(rawTableIds())->toBe([(int) $tableB->id]);
 });
 
+it('enforces PostgreSQL row level security for orders and order subtables', function (): void {
+    if (! usesPostgresRowLevelSecurity()) {
+        $this->markTestSkipped('PostgreSQL RLS coverage runs only on pgsql.');
+    }
+
+    $tenantA = tenantWithUser('tenant-a', 'manager-a', ['orders.take']);
+    $tenantB = tenantWithUser('tenant-b', 'manager-b', ['orders.take']);
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+    app(BranchContext::class)->set((int) $tenantA['branch']->id);
+
+    $hallA = Hall::query()->create([
+        'branch_id' => (int) $tenantA['branch']->id,
+        'translated_name' => ['hy' => 'Tenant A Hall', 'ru' => 'Tenant A Hall', 'en' => 'Tenant A Hall'],
+        'color' => '#5FA8D3',
+        'sort_order' => 10,
+        'active' => true,
+    ]);
+
+    $tableA = Table::query()->create([
+        'branch_id' => (int) $tenantA['branch']->id,
+        'hall_id' => (int) $hallA->id,
+        'translated_name' => ['hy' => 'Tenant A Table', 'ru' => 'Tenant A Table', 'en' => 'Tenant A Table'],
+        'type' => 'standard',
+        'shape' => 'square',
+        'hdm_department' => 1,
+        'is_delivery' => false,
+        'sort_order' => 10,
+        'active' => true,
+    ]);
+
+    $orderA = Order::query()->create([
+        'branch_id' => (int) $tenantA['branch']->id,
+        'type' => 'dine_in',
+        'status' => 'open',
+        'table_id' => (int) $tableA->id,
+        'opened_at' => now(),
+        'client_count' => 1,
+        'subtotal_minor' => 0,
+        'discount_minor' => 0,
+        'total_minor' => 0,
+        'currency' => 'AMD',
+    ]);
+
+    $subtableA = OrderSubtable::query()->create([
+        'branch_id' => (int) $tenantA['branch']->id,
+        'order_id' => (int) $orderA->id,
+        'name' => 'Tenant A Subtable',
+        'status' => 'open',
+    ]);
+
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+    app(BranchContext::class)->set((int) $tenantB['branch']->id);
+
+    $hallB = Hall::query()->create([
+        'branch_id' => (int) $tenantB['branch']->id,
+        'translated_name' => ['hy' => 'Tenant B Hall', 'ru' => 'Tenant B Hall', 'en' => 'Tenant B Hall'],
+        'color' => '#D36B5F',
+        'sort_order' => 10,
+        'active' => true,
+    ]);
+
+    $tableB = Table::query()->create([
+        'branch_id' => (int) $tenantB['branch']->id,
+        'hall_id' => (int) $hallB->id,
+        'translated_name' => ['hy' => 'Tenant B Table', 'ru' => 'Tenant B Table', 'en' => 'Tenant B Table'],
+        'type' => 'standard',
+        'shape' => 'square',
+        'hdm_department' => 1,
+        'is_delivery' => false,
+        'sort_order' => 10,
+        'active' => true,
+    ]);
+
+    $orderB = Order::query()->create([
+        'branch_id' => (int) $tenantB['branch']->id,
+        'type' => 'dine_in',
+        'status' => 'open',
+        'table_id' => (int) $tableB->id,
+        'opened_at' => now(),
+        'client_count' => 1,
+        'subtotal_minor' => 0,
+        'discount_minor' => 0,
+        'total_minor' => 0,
+        'currency' => 'AMD',
+    ]);
+
+    $subtableB = OrderSubtable::query()->create([
+        'branch_id' => (int) $tenantB['branch']->id,
+        'order_id' => (int) $orderB->id,
+        'name' => 'Tenant B Subtable',
+        'status' => 'open',
+    ]);
+
+    app(TenantResolver::class)->clear();
+
+    expect(rawOrderIds())->toBe([])
+        ->and(rawOrderSubtableIds())->toBe([]);
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+
+    expect(rawOrderIds())->toBe([(int) $orderA->id])
+        ->and(rawOrderSubtableIds())->toBe([(int) $subtableA->id]);
+
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+
+    expect(rawOrderIds())->toBe([(int) $orderB->id])
+        ->and(rawOrderSubtableIds())->toBe([(int) $subtableB->id]);
+});
+
 it('checks action permissions through the identity authorizer contract', function (): void {
     $tenant = tenantWithUser('tenant-a', 'manager-a', ['menu.items.manage']);
 
@@ -639,6 +751,26 @@ function rawHallIds(): array
 function rawTableIds(): array
 {
     return collect(DB::select('select id from tables order by id'))
+        ->map(fn (object $row): int => (int) $row->id)
+        ->all();
+}
+
+/**
+ * @return list<int>
+ */
+function rawOrderIds(): array
+{
+    return collect(DB::select('select id from orders order by id'))
+        ->map(fn (object $row): int => (int) $row->id)
+        ->all();
+}
+
+/**
+ * @return list<int>
+ */
+function rawOrderSubtableIds(): array
+{
+    return collect(DB::select('select id from order_subtables order by id'))
         ->map(fn (object $row): int => (int) $row->id)
         ->all();
 }

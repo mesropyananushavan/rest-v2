@@ -13,11 +13,11 @@ it('contains only the current module directories', function (): void {
         ->values()
         ->all();
 
-    expect($modules)->toBe(['Identity', 'Menu', 'Tables', 'Tenancy']);
+    expect($modules)->toBe(['Identity', 'Menu', 'Orders', 'Tables', 'Tenancy']);
 });
 
-foreach (['Tenancy', 'Identity', 'Menu', 'Tables'] as $module) {
-    $otherModules = collect(['Tenancy', 'Identity', 'Menu', 'Tables'])
+foreach (['Tenancy', 'Identity', 'Menu', 'Orders', 'Tables'] as $module) {
+    $otherModules = collect(['Tenancy', 'Identity', 'Menu', 'Orders', 'Tables'])
         ->reject(fn (string $candidate): bool => $candidate === $module);
 
     $forbiddenNamespaces = $otherModules
