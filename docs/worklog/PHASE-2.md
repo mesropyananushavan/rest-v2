@@ -2870,6 +2870,69 @@ Tenant translation override editing-screen plan:
   `<title>Dashboard</title>`.
 
 ## Next steps
-Owner manual browser re-check of the translation editor edit click is the next
-gate before merge authorization. Do not open a PR or merge until explicitly
-authorized.
+Orders write-model foundation is approved as the active slice. Work on branch
+`phase-2-orders-foundation`; do not push or merge.
+
+Orders foundation plan:
+- [x] Stage 2.1-orders.1: Tables contract boundary and architecture coverage.
+  Add the minimal `Tables\Contracts\TableDirectory` plus readonly DTO needed by
+  Orders, implement/bind it inside Tables infrastructure, and extend the
+  module-boundary architecture test to include Orders without weakening any
+  assertion. Result: added `TableDirectory::findActiveInBranch()` and
+  `TableSummary`, implemented `EloquentTableDirectory`, bound it in
+  `AppServiceProvider`, and extended `ModuleBoundariesTest` to include
+  `Orders` in the directory assertion and in every module-boundary rule.
+- [x] Stage 2.1-orders.2: Orders schema and tenant isolation. Add reversible
+  `orders` and `order_subtables` migrations after the current latest migration
+  with tenant/branch/FK indexes, PostgreSQL enum-like CHECK constraints, RLS
+  policies, and the PostgreSQL partial unique index enforcing one open dine-in
+  order per table. Result: added `2026_07_25_000000_create_orders_table` and
+  `2026_07_25_001000_create_order_subtables_table`, including RLS policies,
+  type/status CHECK constraints, `orders_table_type_chk` for dine-in table
+  ownership and tableless non-dine-in rows, branch/open lookup indexes, FK
+  indexes, and `orders_one_open_dine_in_per_table_idx`.
+- [x] Stage 2.1-orders.3: Orders models and domain/application foundation.
+  Add tenant-scoped `Order` and `OrderSubtable` models, `OrdersDomainException`,
+  `RecordsOrderAction`, and the actions `OpenOrder`, `AssignWaiter`,
+  `AddSubtable`, `CancelOrder`, `FindOrder`, and `ListOpenOrders`, with
+  transaction-wrapped mutations, audit rows, structured logs, Money zero
+  totals, tenant-settings currency fallback, branch scoping, and database-race
+  handling for `orders.table_already_open`. Result: implemented the Orders
+  container aggregate only; `OpenOrder` uses `Tables\Contracts\TableDirectory`,
+  initializes totals through `Money(0, currency)`, defaults waiter to the
+  authenticated actor, and converts the PostgreSQL partial-unique race into the
+  `orders.table_already_open` domain exception.
+- [x] Stage 2.1-orders.4: translations and tests. Add matching
+  `lang/{hy,ru,en}/orders.php` keys and Pest coverage for schema/indexes,
+  model tenant scope, RLS, open-order uniqueness, waiter assignment, subtable
+  creation, cancel guards, branch/tenant isolation, audit rows, and read
+  queries. Result: added matching `orders.php` language files, Orders schema
+  and action tests, and extended PostgreSQL Tenancy RLS coverage for `orders`
+  and `order_subtables`.
+- [x] Stage 2.1-orders.5: verification and handoff. Run `make pint`,
+  `make stan`, `make test`, and `make tenant-isolation-pgsql`; update this
+  worklog with real results and leave the next exact action for a future
+  session. Result: required gates passed: `make pint` (`PASS 267 files`),
+  `make stan` (`155/155`, `[OK] No errors`), `make test` (`231 passed /
+  7 skipped / 2399 assertions`), and `make tenant-isolation-pgsql`
+  (`23 passed / 82 assertions`). `git diff --check` passed. No Orders
+  references to Tables/Menu/Identity internals were found by grep; Orders uses
+  `Tables\Contracts` and Tenancy contracts for cross-module access. PostgreSQL
+  migration smoke passed: `make artisan ARGS="migrate:fresh --seed"` created
+  the Orders tables, `make artisan ARGS="migrate:rollback --step=2"` rolled
+  both Orders migrations back, and `make artisan ARGS="migrate"` re-applied
+  them.
+- [x] Stage 2.1-orders.6: publish feature branch proof artifacts. Commit and
+  push only `phase-2-orders-foundation`, verify the reopen-after-cancel test
+  coverage, add no features, and close any remaining proof gap with at most one
+  small test-only assertion. Result: `OrderActionsTest` already covered
+  reopening a table after cancellation; added raw PostgreSQL RLS write-block
+  assertions for `orders` and `order_subtables` in the existing Tenancy RLS
+  test. Fresh gates passed: `make pint` (`PASS 267 files`), `make stan`
+  (`155/155`, `[OK] No errors`), `make test` (`231 passed / 7 skipped / 2399
+  assertions`), and `make tenant-isolation-pgsql` (`23 passed / 84
+  assertions`). The feature branch was pushed for review; no main push, merge,
+  PR creation, deploy, release, or force-push was performed.
+
+Next exact action: owner review of the pushed Orders foundation diff. Do not
+merge to `main`.
