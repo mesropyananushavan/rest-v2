@@ -3166,3 +3166,45 @@ Orders concurrency plan:
 Next exact action: owner review of pushed branch
 `feature/phase-2-orders-concurrency`; do not merge or push to `main` without
 separate authorization.
+
+Tables hall-layout reader slice is active. Work on branch
+`feature/tables-hall-layout-reader`; push only this feature branch, do not
+merge, force-push, tag, deploy, or push to `main`.
+
+Repo reconciliation: the prior `Next exact action` for owner review of
+`feature/phase-2-orders-concurrency` is stale. `main` currently includes merge
+commit `ffe3742` for the Orders concurrency branch and merge commit `65d0f87`
+for blueprint reconciliation. The worktree was clean before creating
+`feature/tables-hall-layout-reader` from `origin/main`.
+
+Tables hall-layout reader plan:
+- [x] Stage 2.7-hall-layout-reader.1: contract and implementation. Add the
+  public `HallLayoutReader` contract, readonly hall/table layout DTOs, an
+  Eloquent reader that returns active non-trashed halls and active non-trashed
+  tables for one branch ordered by `sort_order`, `id`, and bind it in
+  `AppServiceProvider` beside `TableDirectory`. Result: added
+  `HallLayoutReader::layoutForBranch(int $branchId): array`, `HallLayout` and
+  `TableLayout` DTOs carrying `LocalizedText` names, and
+  `EloquentHallLayoutReader` using tenant-scoped `Hall`/`Table` models with
+  deterministic ordering and eager-loaded tables. Bound the contract in
+  `AppServiceProvider` beside `TableDirectory`.
+- [x] Stage 2.7-hall-layout-reader.2: feature coverage. Add focused reader
+  tests for grouping/order, inactive/soft-deleted/other-branch exclusion,
+  tenant scoping through the tenant global scope, DTO-only boundary output, and
+  bounded query count proving eager loading avoids N+1. Result: added
+  `HallLayoutReaderTest` covering sorted hall/table grouping, DTO-only output,
+  inactive/trashed/other-branch exclusions, cross-tenant branch isolation, and
+  a strict two-query assertion while traversing all nested names.
+- [x] Stage 2.7-hall-layout-reader.3: gates, commit, and push. Run Pint,
+  PHPStan, full SQLite Pest, PostgreSQL tenant-isolation, the Tables module
+  boundary grep, review the diff, commit the slice with this worklog update,
+  and push only `feature/tables-hall-layout-reader`. Result so far: `make pint`
+  passed (`PASS 296 files`), `make stan` passed (`174/174`, `[OK] No errors`)
+  after tightening Eloquent eager-load/list typing, `make test` passed
+  (`250 passed / 13 skipped / 2683 assertions`), and
+  `make tenant-isolation-pgsql` passed (`23 passed / 96 assertions`). Tables
+  module boundary grep exited `1` with no matches and `git diff --check`
+  passed. Commit and branch push are next.
+
+Next exact action: commit the hall-layout reader slice and push
+`feature/tables-hall-layout-reader` for owner review.
