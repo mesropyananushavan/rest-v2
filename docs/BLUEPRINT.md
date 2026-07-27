@@ -53,7 +53,7 @@ ADR-002 Modular monolith. Context: the product has tightly related restaurant wo
 
 ADR-003 Shared database tenancy. Context: SaaS must support many restaurant companies and branches from day one. Decision: shared DB, `tenant_id` on every tenant-owned row, branch-owned rows also carry `branch_id`; middleware resolves tenant and branch; Eloquent global scopes enforce tenant isolation. PostgreSQL Row-Level Security will be evaluated in Stage 2 as a second enforcement layer for tenant isolation and implemented if straightforward. Consequences: all queries, indexes, jobs, events, and cache keys include tenant context.
 
-ADR-004 Server-rendered frontend. Context: legacy screens are operational, dense, and server-form oriented. Decision: Blade + Bootstrap 5 + extracted custom CSS tokens via Vite; Alpine for local UI; Livewire for POS, waiter calls, kitchen, displays. No SPA. Consequences: simpler auth/session/i18n, lower frontend complexity, Livewire components must be kept thin and call Application actions.
+ADR-004 Server-rendered frontend. Context: legacy screens are operational, dense, and server-form oriented. Decision: Blade + Tailwind CSS 4 through Vite, with SmartRest theme tokens in Tailwind configuration and app CSS; Alpine for local UI; Livewire 4 for POS, waiter calls, kitchen, displays. No SPA. Consequences: simpler auth/session/i18n, lower frontend complexity, Livewire components must be kept thin and call Application actions.
 
 ADR-005 API-first logic placement. Context: admin Blade, guest QR pages, TV displays, future apps, and future integrations need same business behavior. Decision: all business logic lives in module Application actions/services. Blade and JSON API controllers are adapters. Consequences: every use case gets action tests, controllers mostly validate/authorize/serialize.
 
@@ -66,6 +66,8 @@ ADR-008 Domain events and outbox. Context: orders create stock movements, print 
 ADR-009 Audit logging. Context: legacy has operation history and super-admin actions. Decision: auditable commands create structured audit records with actor, tenant, branch, target, before/after, IP/device, correlation id. Consequences: regulatory/debug visibility and safe admin operations.
 
 ADR-010 External integrations boundary only. Context: third-party booking/payment/partner APIs are out of scope. Decision: create an Integration Extension Point module exposing webhook/API contracts and event subscriptions, but no vendor-specific implementation. Consequences: v2 is integration-ready without designing external systems now.
+
+ADR-011 Tenant-aware authentication and tenant-scoped password reset. Context: shared-DB tenancy with tenant-scoped unique emails; the prior approach iterated every active tenant per login attempt (up to N queries plus multiple Hash::check), did not scale to ~1000 tenants, and was ambiguous when the same email existed in two tenants. Decision: resolve the tenant BEFORE credential verification via tenant slug/domain (host/subdomain/path mapping); after tenant resolution, look up the user ONLY within that tenant (one query per attempt, unambiguous account). No global login-identity table is introduced now (explicitly deferred). Password reset is tenant-scoped: password_reset_tokens keyed by (tenant_id, email) instead of global-unique email, with tenant-scoped token lookup. Consequences: login requests carry tenant context; password_reset_tokens schema must change from global-unique email to tenant-scoped before password reset is built; a future global-identity design remains possible. Status: agreed design; NOT yet implemented; sequenced before Phase 3 / before any password-reset work.
 
 ## 3. Module Map
 
@@ -175,6 +177,13 @@ currently active items. Independently archived descendants remain archived
 during parent restore. Permanent force-delete is superadmin-only maintenance.
 
 Menu scaffold context: `menu-day` becomes daily availability scheduling; `menu-suspend` becomes temporary kitchen/branch out-of-stock; `menu-frozen` becomes frozen/archived sale state for items retained for historical receipts and possible reactivation. This differs from legacy scaffold tables because v2 models three separate availability concepts instead of one generic status list.
+
+Halls & Tables:
+
+| Entity | Key fields | Relationships/indexes |
+|---|---|---|
+| `halls` | tenant_id, branch_id, translated_name, color, sort_order, active, deleted_at | branch-owned; tenant and branch indexes; tenant+branch+deleted+active+sort+id and tenant+branch+deleted+sort+id indexes; PostgreSQL RLS policy `halls_tenant_isolation` |
+| `tables` | tenant_id, branch_id, hall_id, archived_with_hall_id nullable, translated_name, type, shape, hdm_department nullable, is_delivery, sort_order, active, deleted_at | belongs to hall; optional archive marker hall; tenant, branch, hall, archive-marker indexes; tenant+branch+hall+deleted+active+sort+id, tenant+branch+hall+deleted+sort+id, and tenant+archive-marker+deleted indexes; PostgreSQL checks for type (`standard`, `vip`) and shape (`circle`, `square`, `rectangle`); PostgreSQL RLS policy `tables_tenant_isolation` |
 
 Orders/Payments/Fiscal:
 
@@ -360,7 +369,7 @@ resources/views/components/
 resources/views/modules/{module}/{screen}.blade.php
 ```
 
-Template-derived visual system: extract colors, spacing, cards, dense tables, badges, sidebar/header, modals, and status states from `template/assets/template.css` and legacy CSS into Bootstrap-compatible CSS variables. Keep operational density where useful, but replace inline styles and duplicated modal markup with components.
+Template-derived visual system: extract colors, spacing, cards, dense tables, badges, sidebar/header, modals, and status states from `template/assets/template.css` and legacy CSS into the SmartRest Tailwind theme and app CSS. Keep operational density where useful, but replace inline styles and duplicated modal markup with components.
 
 Design tokens:
 
@@ -377,7 +386,7 @@ Alpine usage: dropdowns, local filters, modal toggles, small calculators, keyboa
 
 Livewire usage: POS, table board, table order page, add order item, kitchen screen, waiter call board, print/fiscal monitoring, waiting/TV displays. Livewire components call Application actions and subscribe to events/read models; they do not contain pricing/payment/stock rules.
 
-Vite setup: compile Bootstrap 5, extracted SmartRest CSS tokens, module-specific JS/CSS entrypoints, and static assets. Legacy custom CSS is migrated incrementally into `resources/css/smartrest/*.css`.
+Vite setup: compile Tailwind CSS 4 through the Tailwind Vite plugin, the SmartRest app CSS, Livewire/Alpine JavaScript entrypoint, module-specific JS/CSS entrypoints as needed, and static assets. Legacy custom CSS is migrated incrementally into the Tailwind theme and `resources/css`.
 
 i18n in views: all labels use `__('orders.close')`; validation messages localized; enum labels exposed by modules as translation keys. User locale selected in header; tenant fallback applied automatically.
 
