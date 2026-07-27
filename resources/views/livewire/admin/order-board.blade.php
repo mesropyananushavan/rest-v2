@@ -34,6 +34,18 @@ declare(strict_types=1);
         :subtitle="__('orders.board.subtitle')"
     />
 
+    @if ($statusMessage)
+        <div class="mb-5 rounded-sr-card border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900">
+            {{ $statusMessage }}
+        </div>
+    @endif
+
+    @if ($errorMessage)
+        <div class="mb-5 rounded-sr-card border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-900">
+            {{ $errorMessage }}
+        </div>
+    @endif
+
     @if ($halls === [])
         <x-card>
             <div class="rounded-sr-brand border border-dashed border-slate-200 bg-slate-50 px-5 py-10 text-center">
@@ -64,7 +76,18 @@ declare(strict_types=1);
                     @else
                         <div class="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                             @foreach ($hall['tables'] as $table)
-                                <article class="rounded-[1.35rem] border p-4 shadow-sm transition {{ $table['occupied'] ? 'border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-50' : 'border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-slate-50' }}">
+                                @php
+                                    $tileClass = 'rounded-[1.35rem] border p-4 shadow-sm transition ';
+                                    $tileClass .= $table['occupied']
+                                        ? 'border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-50'
+                                        : 'border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-slate-50 hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-emerald-100';
+                                @endphp
+
+                                @if ($table['occupied'])
+                                    <article class="{{ $tileClass }}">
+                                @else
+                                    <button type="button" wire:click="selectTable({{ $table['id'] }})" class="{{ $tileClass }} text-left">
+                                @endif
                                     <div class="flex items-start justify-between gap-3">
                                         <div class="min-w-0">
                                             <h3 class="truncate text-xl font-black text-smartrest-ink">{{ $table['name'] }}</h3>
@@ -95,15 +118,80 @@ declare(strict_types=1);
                                         </dl>
                                     @else
                                         <div class="mt-4 rounded-2xl border border-dashed border-emerald-200 bg-white/70 px-3 py-4 text-sm font-semibold text-emerald-900">
-                                            {{ __('orders.board.free') }}
+                                            {{ __('orders.board.action_open') }}
                                         </div>
                                     @endif
-                                </article>
+
+                                @if ($table['occupied'])
+                                    </article>
+                                @else
+                                    </button>
+                                @endif
                             @endforeach
                         </div>
                     @endif
                 </section>
             @endforeach
+        </div>
+    @endif
+
+    @if ($openModalVisible)
+        <div class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/40 px-4 py-6 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="open-order-title">
+            <div class="w-full max-w-lg rounded-[1.5rem] bg-white p-5 shadow-2xl ring-1 ring-black/5 sm:p-6">
+                <div>
+                    <p class="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">{{ __('orders.board.form.eyebrow') }}</p>
+                    <h2 id="open-order-title" class="mt-2 text-2xl font-black text-smartrest-ink">{{ __('orders.board.modal_title') }}</h2>
+                    <p class="mt-1 text-sm font-medium text-smartrest-muted">{{ __('orders.board.modal_subtitle') }}</p>
+                </div>
+
+                <div class="mt-5 space-y-4">
+                    <div>
+                        <label for="order-board-guest-count" class="text-sm font-bold text-smartrest-ink">{{ __('orders.board.form.guests') }}</label>
+                        <input
+                            id="order-board-guest-count"
+                            type="number"
+                            min="1"
+                            wire:model="guestCount"
+                            class="mt-2 w-full rounded-sr-card border border-slate-200 px-4 py-3 text-base font-semibold text-smartrest-ink shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100"
+                        >
+                        @error('guestCount')
+                            <p class="mt-1 text-sm font-semibold text-rose-700">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label for="order-board-comment" class="text-sm font-bold text-smartrest-ink">{{ __('orders.board.form.comment') }}</label>
+                        <textarea
+                            id="order-board-comment"
+                            wire:model="comment"
+                            rows="3"
+                            maxlength="1000"
+                            placeholder="{{ __('orders.board.form.comment_placeholder') }}"
+                            class="mt-2 w-full rounded-sr-card border border-slate-200 px-4 py-3 text-base font-medium text-smartrest-ink shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100"
+                        ></textarea>
+                        @error('comment')
+                            <p class="mt-1 text-sm font-semibold text-rose-700">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+
+                <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                    <button
+                        type="button"
+                        wire:click="cancelOpen"
+                        class="rounded-sr-card border border-slate-200 px-5 py-3 text-sm font-black text-smartrest-ink transition hover:bg-slate-50"
+                    >
+                        {{ __('orders.board.buttons.cancel') }}
+                    </button>
+                    <button
+                        type="button"
+                        wire:click="openOrder"
+                        class="rounded-sr-card bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-100"
+                    >
+                        {{ __('orders.board.buttons.open') }}
+                    </button>
+                </div>
+            </div>
         </div>
     @endif
 </div>

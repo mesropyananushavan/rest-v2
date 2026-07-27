@@ -3302,3 +3302,51 @@ Read-only table board plan:
 Next exact action: owner review of pushed branch
 `feature/orders-table-board-readonly`; do not merge or push to `main` without
 separate authorization.
+
+Open-from-board slice is active. Work on branch
+`feature/orders-open-from-board`; push only this feature branch, do not merge,
+force-push, tag, deploy, or push to `main`.
+
+Repo reconciliation: the prior `Next exact action` for owner review of
+`feature/orders-table-board-readonly` is stale. `main` currently includes merge
+commit `17b462e` for the read-only table board. The worktree was clean on
+`main...origin/main` before creating `feature/orders-open-from-board` from
+`origin/main`.
+
+Open-from-board plan:
+- [x] Stage 2.10-open-from-board.1: Livewire open-order interaction. Extend
+  `OrderBoard` with only scalar public modal state, explicit `orders.take`
+  authorization inside mutating methods, validation for guest count/comment,
+  free-table re-checks using the existing board reads, and `OpenOrder` calls
+  with waiter defaulting to the authenticated user. Result: `OrderBoard` now
+  keeps only scalar modal state (`selectedTableId`, `guestCount`, `comment`,
+  modal/status/error flags), authorizes `orders.take` inside `selectTable()`
+  and `openOrder()`, validates guest count/comment, re-checks active-branch
+  table existence and current occupancy before opening, and calls `OpenOrder`
+  without passing a waiter so the action defaults to the acting user.
+- [x] Stage 2.10-open-from-board.2: Blade modal and localization. Make only
+  free tiles clickable with integer `wire:click`, keep occupied tiles
+  non-interactive, add a small Tailwind modal with `wire:model` guest/comment
+  fields and localized status/error messages, and extend `orders.board.*` in
+  `hy`, `ru`, and `en`. Result: free table tiles render as buttons with only
+  integer `selectTable(<id>)` Livewire calls, occupied tiles remain plain
+  articles, the modal uses server-rendered labels and `wire:model` inputs, and
+  `orders.board` translations were extended in Armenian, Russian, and English.
+- [x] Stage 2.10-open-from-board.3: server-side tests, gates, commit, and
+  push. Extend `OrderBoardTest` for open success and occupied re-render,
+  Livewire action-level authorization failure, already-occupied race handling,
+  guest-count validation, active-branch scoping, and no occupied-tile action;
+  run Pint, PHPStan, full SQLite Pest, PostgreSQL tenant-isolation, Orders
+  boundary grep, diff review, commit, and push only
+  `feature/orders-open-from-board`. Result so far: `OrderBoardTest` now covers
+  open success with occupied re-render, direct Livewire `orders.take` 403,
+  concurrent already-occupied handling, guest-count validation, active-branch
+  rejection, and occupied-tile non-interactivity. Gates passed so far:
+  `make pint` (`PASS 302 files`), `make stan` (`178/178`, `[OK] No errors`),
+  `make test` (`264 passed / 13 skipped / 2761 assertions`), and
+  `make tenant-isolation-pgsql` (`23 passed / 96 assertions`). The correctly
+  escaped Orders boundary grep exited `1` with no matches. Commit and branch
+  push are next.
+
+Next exact action: commit the open-from-board slice and push
+`feature/orders-open-from-board` for owner review.
