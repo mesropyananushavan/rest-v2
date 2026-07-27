@@ -3348,5 +3348,64 @@ Open-from-board plan:
   escaped Orders boundary grep exited `1` with no matches. Commit and branch
   push are next.
 
-Next exact action: commit the open-from-board slice and push
-`feature/orders-open-from-board` for owner review.
+Repo reconciliation: the prior `Next exact action` for commit/push of
+`feature/orders-open-from-board` is stale. `main` now includes merge commit
+`b0b54a3` for open-from-board, with feature commit `0584139` merged. The
+worktree was clean on `main...origin/main` before creating
+`feature/orders-item-name-snapshot` from `origin/main`.
+
+Order item localized name snapshot slice is active. Work on branch
+`feature/orders-item-name-snapshot`; do not commit, push, merge, force-push,
+tag, deploy, create a PR, or start the order workspace/menu picker/Payments
+slices in this task.
+
+Order item localized name snapshot plan:
+- [x] Stage 2.11-item-name-snapshot.1: schema/model/docs. Add an additive
+  nullable `order_items.menu_item_name_snapshot` JSON column with no backfill,
+  update `OrderItem` fillable/casts, update the Orders data-model row in
+  `docs/BLUEPRINT.md` to state that localized item name and price are captured
+  at add-time, and keep this worklog reconciled. Result: added additive
+  migration `2026_07_25_005000_add_menu_item_name_snapshot_to_order_items_table`
+  with nullable JSON and reversible drop; no backfill is performed. Updated
+  `OrderItem` fillable/casts and `docs/BLUEPRINT.md` to document add-time
+  localized name snapshot plus price capture.
+- [x] Stage 2.11-item-name-snapshot.2: AddItem merge and audit semantics. Make
+  `AddItem` write snapshots only from `MenuCatalog`/`MenuItemSummary`, preserve
+  canonical order locking and transaction retry, compare candidate line
+  snapshots as normalized `LocalizedText::toArray()` arrays in application
+  code rather than JSON SQL string comparison, keep same-snapshot merge
+  behavior, prevent post-rename new snapshots from merging into older lines,
+  leave existing null-snapshot rows untouched, and include the snapshot in
+  order-item audit payloads. Result: `AddItem` still locks the order first via
+  `LocksOrdersForUpdate`, then locks candidate `order_items` rows with the
+  existing line identity fields and compares normalized localized snapshot
+  arrays in PHP. Same snapshot lines merge; renamed items create a separate
+  line; legacy null-snapshot rows are left untouched and do not merge with new
+  snapshot lines. Order item audit payloads now include the snapshot.
+- [x] Stage 2.11-item-name-snapshot.3: tests and verification. Extend Orders
+  schema/item tests for snapshot storage, rename/archive/hard-delete behavior,
+  merge semantics, null-snapshot safety, audit payload, tenant/branch
+  protections, and run Pint, PHPStan, full SQLite Pest, PostgreSQL
+  tenant-isolation, PostgreSQL orders-concurrency, npm build, module-boundary
+  grep, `git diff --check`, and `git status --short`. Result: added
+  `OrderItemActionsTest` coverage for complete localized snapshot storage,
+  rename/archive/hard-delete stability, same-snapshot merge, post-rename line
+  split, legacy null-snapshot non-merge/non-overwrite, and audit payload;
+  `OrderSchemaTest` now asserts the new column. Verified current schema has no
+  FK on `order_items.menu_item_id`, so hard delete is DB-allowed in this slice.
+  Review correction: rename, archive, and permanent-delete snapshot behavior
+  coverage now exercises the production `UpdateMenuItem`, `ArchiveMenuItem`,
+  and `ForceDeleteMenuItem` application actions instead of direct model
+  mutation; direct raw row construction remains only for the intentional legacy
+  null-snapshot case.
+  Gates passed: `make pint` (`PASS 303 files`), `make stan` (`178/178`,
+  `[OK] No errors`), `make test` (`270 passed / 13 skipped / 2784 assertions`),
+  `make tenant-isolation-pgsql` (`23 passed / 96 assertions`),
+  `make orders-concurrency-pgsql` (`6 passed / 43 assertions`),
+  `npm run build` (Vite built successfully), Orders module-boundary grep exited
+  `1` with no matches, `git diff --check` passed, and `git status --short`
+  shows only the intended uncommitted slice files.
+
+Next exact action: owner review of uncommitted branch
+`feature/orders-item-name-snapshot`; do not commit, push, merge, or start the
+read-only order workspace until explicitly authorized.

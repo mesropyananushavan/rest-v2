@@ -191,7 +191,7 @@ Orders/Payments/Fiscal:
 |---|---|---|
 | `orders` | branch_id, type, status, table_id, customer_id, waiter_id, cashier_id, opened_at, closed_at, client_count, comment, subtotal_minor, discount_minor, total_minor | tenant+branch+status/opened |
 | `order_subtables` | order_id, name, status | order+status |
-| `order_items` | order_id, subtable_id, menu_item_id, qty, unit_price_minor, discount_minor, total_minor, seller_id, preparation_status | order/status/item |
+| `order_items` | order_id, subtable_id, menu_item_id, menu_item_name_snapshot, qty, unit_price_minor, discount_minor, total_minor, seller_id, preparation_status | order/status/item; localized item name snapshot and unit price are captured at add-time for commercial history |
 | `order_item_moves`, `order_moves` | source/target order/table, actor, reason | audit indexes |
 | `payments` | order_id nullable, reservation_id nullable, cashbox_id, method, status, amount_minor, idempotency_key | unique idempotency, order/status |
 | `payment_allocations` | payment_id, payable_type/id, amount_minor | split/partial payments |

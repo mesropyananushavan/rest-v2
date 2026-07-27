@@ -5,6 +5,9 @@ declare(strict_types=1);
 use App\Modules\Identity\Infrastructure\Models\Role;
 use App\Modules\Identity\Infrastructure\Models\User;
 use App\Modules\Identity\Infrastructure\Models\UserBranchAssignment;
+use App\Modules\Menu\Application\ArchiveMenuItem;
+use App\Modules\Menu\Application\ForceDeleteMenuItem;
+use App\Modules\Menu\Application\UpdateMenuItem;
 use App\Modules\Menu\Contracts\MenuCatalog;
 use App\Modules\Menu\Contracts\MenuItemSummary;
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
@@ -120,6 +123,149 @@ it('adds increments changes and removes order items while keeping totals exact',
         'orders.item.qty_changed',
         'orders.item.removed',
     ]);
+});
+
+it('stores the complete localized menu item name snapshot when adding an item', function (): void {
+    $record = orderItemsUser('tenant-a', 'manager-a');
+    $table = orderItemsTable($record, 0, 'Table 1');
+    $dolma = orderItemsMenuItem($record, 0, 'Dolma', 1000);
+    $snapshot = ['hy' => 'Տոլմա', 'ru' => 'Долма', 'en' => 'Dolma'];
+
+    orderItemsActingIn($record, 0, 'orders-items-snapshot-store');
+    orderItemsRenameMenuItem($dolma, $snapshot);
+    $order = app(OpenOrder::class)((int) $table->id);
+
+    $line = app(AddItem::class)((int) $order->id, (int) $dolma->id, 1);
+
+    expect($line->menu_item_name_snapshot)->toBe($snapshot)
+        ->and(OrderItem::query()->findOrFail((int) $line->id)->menu_item_name_snapshot)->toBe($snapshot);
+});
+
+it('keeps stored snapshots stable when a menu item is renamed archived or hard deleted', function (): void {
+    $record = orderItemsUser('tenant-a', 'manager-a');
+    $table = orderItemsTable($record, 0, 'Table 1');
+    $dolma = orderItemsMenuItem($record, 0, 'Dolma', 1000);
+    $snapshot = ['hy' => 'Տոլմա', 'ru' => 'Долма', 'en' => 'Dolma'];
+
+    orderItemsActingIn($record, 0, 'orders-items-snapshot-stability');
+    orderItemsRenameMenuItem($dolma, $snapshot);
+    $order = app(OpenOrder::class)((int) $table->id);
+    $line = app(AddItem::class)((int) $order->id, (int) $dolma->id, 1);
+
+    orderItemsRenameMenuItem($dolma, ['hy' => 'Նոր Տոլմա', 'ru' => 'Новая Долма', 'en' => 'New Dolma']);
+
+    expect(OrderItem::query()->findOrFail((int) $line->id)->menu_item_name_snapshot)->toBe($snapshot);
+
+    app(ArchiveMenuItem::class)((int) $dolma->id);
+
+    $storedAfterArchive = OrderItem::query()->findOrFail((int) $line->id);
+    $archivedMenuItem = MenuItem::withTrashed()->findOrFail((int) $dolma->id);
+
+    expect($storedAfterArchive->menu_item_name_snapshot)->toBe($snapshot)
+        ->and($archivedMenuItem->trashed())->toBeTrue();
+
+    app(ForceDeleteMenuItem::class)((int) $dolma->id);
+
+    $storedAfterPermanentDelete = OrderItem::query()->findOrFail((int) $line->id);
+
+    expect(MenuItem::withTrashed()->whereKey((int) $dolma->id)->exists())->toBeFalse()
+        ->and($storedAfterPermanentDelete->menu_item_name_snapshot)->toBe($snapshot);
+});
+
+it('merges only matching item lines with the same normalized name snapshot', function (): void {
+    $record = orderItemsUser('tenant-a', 'manager-a');
+    $table = orderItemsTable($record, 0, 'Table 1');
+    $dolma = orderItemsMenuItem($record, 0, 'Dolma', 1000);
+    $snapshot = ['hy' => 'Տոլմա', 'ru' => 'Долма', 'en' => 'Dolma'];
+
+    orderItemsActingIn($record, 0, 'orders-items-snapshot-merge');
+    orderItemsRenameMenuItem($dolma, $snapshot);
+    $order = app(OpenOrder::class)((int) $table->id);
+    $first = app(AddItem::class)((int) $order->id, (int) $dolma->id, 1);
+    $second = app(AddItem::class)((int) $order->id, (int) $dolma->id, 2);
+
+    expect((int) $second->id)->toBe((int) $first->id)
+        ->and((int) $second->qty)->toBe(3)
+        ->and((int) OrderItem::query()->where('order_id', (int) $order->id)->count())->toBe(1)
+        ->and(OrderItem::query()->findOrFail((int) $first->id)->menu_item_name_snapshot)->toBe($snapshot);
+});
+
+it('creates a separate line when the same item is renamed before adding again', function (): void {
+    $record = orderItemsUser('tenant-a', 'manager-a');
+    $table = orderItemsTable($record, 0, 'Table 1');
+    $dolma = orderItemsMenuItem($record, 0, 'Dolma', 1000);
+    $firstSnapshot = ['hy' => 'Տոլմա', 'ru' => 'Долма', 'en' => 'Dolma'];
+    $secondSnapshot = ['hy' => 'Նոր Տոլմա', 'ru' => 'Новая Долма', 'en' => 'New Dolma'];
+
+    orderItemsActingIn($record, 0, 'orders-items-snapshot-rename-split');
+    orderItemsRenameMenuItem($dolma, $firstSnapshot);
+    $order = app(OpenOrder::class)((int) $table->id);
+    $first = app(AddItem::class)((int) $order->id, (int) $dolma->id, 1);
+
+    orderItemsRenameMenuItem($dolma, $secondSnapshot);
+
+    $second = app(AddItem::class)((int) $order->id, (int) $dolma->id, 1);
+    $lines = OrderItem::query()->where('order_id', (int) $order->id)->orderBy('id')->get();
+
+    expect((int) $second->id)->not->toBe((int) $first->id)
+        ->and($lines)->toHaveCount(2)
+        ->and($lines[0]->menu_item_name_snapshot)->toBe($firstSnapshot)
+        ->and($lines[1]->menu_item_name_snapshot)->toBe($secondSnapshot)
+        ->and((int) Order::query()->findOrFail((int) $order->id)->total_minor)->toBe(2000);
+});
+
+it('does not overwrite or silently merge legacy null-snapshot rows', function (): void {
+    $record = orderItemsUser('tenant-a', 'manager-a');
+    $table = orderItemsTable($record, 0, 'Table 1');
+    $dolma = orderItemsMenuItem($record, 0, 'Dolma', 1000);
+    $snapshot = ['hy' => 'Տոլմա', 'ru' => 'Долма', 'en' => 'Dolma'];
+
+    orderItemsActingIn($record, 0, 'orders-items-snapshot-null-legacy');
+    orderItemsRenameMenuItem($dolma, $snapshot);
+    $order = app(OpenOrder::class)((int) $table->id);
+    $legacy = OrderItem::query()->create([
+        'branch_id' => (int) $record['branches'][0]->id,
+        'order_id' => (int) $order->id,
+        'subtable_id' => null,
+        'menu_item_id' => (int) $dolma->id,
+        'qty' => 1,
+        'unit_price_minor' => 1000,
+        'discount_minor' => 0,
+        'total_minor' => 1000,
+        'currency' => 'AMD',
+        'seller_id' => (int) $record['user']->id,
+        'preparation_status' => 'pending',
+    ]);
+
+    $newLine = app(AddItem::class)((int) $order->id, (int) $dolma->id, 1);
+    $lines = OrderItem::query()->where('order_id', (int) $order->id)->orderBy('id')->get();
+
+    expect((int) $newLine->id)->not->toBe((int) $legacy->id)
+        ->and($lines)->toHaveCount(2)
+        ->and($lines[0]->menu_item_name_snapshot)->toBeNull()
+        ->and($lines[1]->menu_item_name_snapshot)->toBe($snapshot)
+        ->and((int) $lines[0]->qty)->toBe(1);
+});
+
+it('records the menu item name snapshot in order item audit payloads', function (): void {
+    $record = orderItemsUser('tenant-a', 'manager-a');
+    $table = orderItemsTable($record, 0, 'Table 1');
+    $dolma = orderItemsMenuItem($record, 0, 'Dolma', 1000);
+    $snapshot = ['hy' => 'Տոլմա', 'ru' => 'Долма', 'en' => 'Dolma'];
+
+    orderItemsActingIn($record, 0, 'orders-items-snapshot-audit');
+    orderItemsRenameMenuItem($dolma, $snapshot);
+    $order = app(OpenOrder::class)((int) $table->id);
+    $line = app(AddItem::class)((int) $order->id, (int) $dolma->id, 1);
+
+    $audit = AuditLog::query()
+        ->where('action', 'orders.item.added')
+        ->where('target_type', 'orders_item')
+        ->where('target_id', (int) $line->id)
+        ->firstOrFail();
+
+    expect($audit->before_json)->toBeNull()
+        ->and($audit->after_json['menu_item_name_snapshot'])->toBe($snapshot);
 });
 
 it('rejects invalid item mutations with stable domain codes', function (): void {
@@ -486,6 +632,24 @@ function orderItemsActingIn(array $record, int $branchIndex, string $requestId):
     app(BranchContext::class)->set((int) $record['branches'][$branchIndex]->id);
     auth()->login($record['user']);
     LogContext::start($requestId, 'orders');
+}
+
+/**
+ * @param  array{hy: string, ru: string, en: string}  $name
+ */
+function orderItemsRenameMenuItem(MenuItem $item, array $name): MenuItem
+{
+    $item->refresh();
+
+    return app(UpdateMenuItem::class)(
+        (int) $item->id,
+        (int) $item->category_id,
+        LocalizedText::fromArray($name),
+        $item->translatedDescription(),
+        $item->price(),
+        (int) ($item->sort_order ?? 0),
+        (bool) $item->active,
+    );
 }
 
 function orderItemsExpectDomainCode(Closure $callback, string $errorCode): void

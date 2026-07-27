@@ -9,10 +9,12 @@ use App\Modules\Orders\Infrastructure\Models\Order;
 use App\Modules\Orders\Infrastructure\Models\OrderItem;
 use App\Modules\Orders\Infrastructure\Models\OrderSubtable;
 use App\Support\Audit\AuditRecorder;
+use App\Support\I18n\LocalizedText;
 use App\Support\Logging\LogContext;
 use App\Support\Logging\Redactor;
 use DateTimeInterface;
 use Illuminate\Support\Facades\Log;
+use InvalidArgumentException;
 
 trait RecordsOrderAction
 {
@@ -104,6 +106,7 @@ trait RecordsOrderAction
             'order_id' => (int) $item->order_id,
             'subtable_id' => $this->nullableInt($item->subtable_id),
             'menu_item_id' => (int) $item->menu_item_id,
+            'menu_item_name_snapshot' => $this->orderItemNameSnapshotAuditValue($item->menu_item_name_snapshot),
             'qty' => (int) $item->qty,
             'unit_price_minor' => (int) $item->unit_price_minor,
             'discount_minor' => (int) $item->discount_minor,
@@ -131,5 +134,24 @@ trait RecordsOrderAction
         }
 
         return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    /**
+     * @return array{hy: string, ru: string, en: string}|null
+     */
+    private function orderItemNameSnapshotAuditValue(mixed $value): ?array
+    {
+        if (! is_array($value)) {
+            return null;
+        }
+
+        try {
+            /** @var array<string, mixed> $translations */
+            $translations = $value;
+
+            return LocalizedText::fromArray($translations)->toArray();
+        } catch (InvalidArgumentException) {
+            return null;
+        }
     }
 }
