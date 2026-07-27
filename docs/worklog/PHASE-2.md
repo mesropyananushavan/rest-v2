@@ -3414,10 +3414,13 @@ Repo reconciliation: the prior `Next exact action` for owner review of
 `feature/orders-item-name-snapshot` is stale. Slice A PR #27 was merged into
 `main` as `c142cce`, including the item-name snapshot commit `2fbd6ea`.
 
-Read-only order workspace slice is active. Work on branch
-`feature/orders-readonly-workspace`; do not commit, push, merge, force-push,
-tag, deploy, create a PR, or start the menu picker/Payments/mutation slices in
-this task.
+Read-only order workspace slice was implemented on branch
+`feature/orders-readonly-workspace` and published normally without force-push.
+Implementation commit:
+`c55d3924df18fc1db60d55b4278fdd35bafbd70f`. Draft PR:
+[#28](https://github.com/mesropyananushavan/rest-v2/pull/28). GitHub CI passed
+for the published branch. The PR remains draft; no merge, deployment,
+force-push, or production verification occurred.
 
 Read-only order workspace plan:
 - [x] Stage 2.12-order-workspace-readonly.1: Application read model. Add
@@ -3458,6 +3461,7 @@ Read-only order workspace plan:
   `Unknown env config "min-release-age"` warning). Orders module-boundary grep
   exited `1` with no matches, and `git diff --check` passed.
 
-Next exact action: owner review of uncommitted branch
-`feature/orders-readonly-workspace`; do not commit, push, merge, or start the
-menu picker/order mutations until explicitly authorized.
+Next exact action: final owner review of draft PR
+[#28](https://github.com/mesropyananushavan/rest-v2/pull/28). Do not start the
+menu picker, order mutations, Payments, merge, or deployment without separate
+approval.
