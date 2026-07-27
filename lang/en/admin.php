@@ -10,6 +10,7 @@ return [
     'nav' => [
         'dashboard' => 'Dashboard',
         'menu' => 'Menu',
+        'orders_board' => 'Table board',
         'translation_overrides' => 'Translations',
         'tables' => 'Halls & Tables',
     ],

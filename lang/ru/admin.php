@@ -10,6 +10,7 @@ return [
     'nav' => [
         'dashboard' => 'Панель',
         'menu' => 'Меню',
+        'orders_board' => 'План столов',
         'translation_overrides' => 'Переводы',
         'tables' => 'Залы и столы',
     ],
