@@ -3144,14 +3144,25 @@ Orders concurrency plan:
   probe, concurrent OpenOrder/MoveOrder occupancy races, deterministic
   order-before-item lock interleaving, and status-under-lock TOCTOU coverage.
   `make orders-concurrency-pgsql` passed with `6 passed / 43 assertions`.
-  Fail-first proof against unfixed action code remains to be captured before
-  final verification.
-- [ ] Stage 2.6-orders-concurrency.3: gates, CI wiring, commit, and push.
+  ADD-1 fail-first proof was captured by temporarily restoring the Orders
+  action files from `origin/main` while keeping the new tests: the suite failed
+  with a real PostgreSQL `40P01` deadlock in the order/item lock-order test and
+  the status-under-lock test failed because the unfixed code allowed a stale
+  post-cancel mutation. The fixed action files were restored from `HEAD`
+  immediately after the failing run.
+- [x] Stage 2.6-orders-concurrency.3: gates, CI wiring, commit, and push.
   Add the `orders-concurrency-pgsql` Make target and CI job, run Pint,
   PHPStan, full SQLite Pest, tenant-isolation PostgreSQL, Orders concurrency
   PostgreSQL, module-boundary grep, diff review, commit incrementally, and
-  push only `feature/phase-2-orders-concurrency`.
+  push only `feature/phase-2-orders-concurrency`. Result: added the Make
+  target and CI job. Final gates passed on the fixed branch state: `make pint`
+  (`PASS 291 files`), `make stan` (`170/170`, `[OK] No errors` after removing
+  one redundant `array_values()`), `make test` (`246 passed / 13 skipped /
+  2654 assertions`, with Orders concurrency tests skipped under SQLite as a
+  regression guard only), `make tenant-isolation-pgsql` (`23 passed /
+  96 assertions`), and `make orders-concurrency-pgsql` (`6 passed /
+  43 assertions`).
 
-Next exact action: capture ADD-1 fail-first output by temporarily running the
-new PostgreSQL concurrency suite against unfixed Orders action code, then
-restore the fixed branch state and run final gates.
+Next exact action: owner review of pushed branch
+`feature/phase-2-orders-concurrency`; do not merge or push to `main` without
+separate authorization.

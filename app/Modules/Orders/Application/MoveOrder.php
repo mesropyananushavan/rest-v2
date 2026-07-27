@@ -54,10 +54,10 @@ final class MoveOrder
 
                 $targetOccupantOrderId = $this->targetOccupantOrderId($targetTableId, $branchId, $orderId);
                 $orders = $this->lockOrdersForUpdate(
-                    array_values(array_filter(
+                    array_filter(
                         [$orderId, $targetOccupantOrderId],
                         static fn (?int $id): bool => $id !== null,
-                    )),
+                    ),
                     $branchId,
                 );
                 $order = $orders[$orderId];
