@@ -3409,3 +3409,63 @@ Order item localized name snapshot plan:
 Next exact action: owner review of uncommitted branch
 `feature/orders-item-name-snapshot`; do not commit, push, merge, or start the
 read-only order workspace until explicitly authorized.
+
+Repo reconciliation: the prior `Next exact action` for owner review of
+`feature/orders-item-name-snapshot` is stale. Slice A PR #27 was merged into
+`main` as `c142cce`, including the item-name snapshot commit `2fbd6ea`.
+
+Read-only order workspace slice was implemented on branch
+`feature/orders-readonly-workspace` and published normally without force-push.
+Implementation commit:
+`c55d3924df18fc1db60d55b4278fdd35bafbd70f`. PR
+[#28](https://github.com/mesropyananushavan/rest-v2/pull/28) is open and ready
+for review. Published head before the docs-only ready-state correction:
+`b3f20292b94a6d33313796b9dc2260a9ba144d7b`. The implementation and required CI
+checks passed before that documentation correction. No merge, deployment,
+force-push, or production verification occurred; the docs-only push will trigger
+exact-head CI again.
+
+Read-only order workspace plan:
+- [x] Stage 2.12-order-workspace-readonly.1: Application read model. Add
+  `FindOrderWorkspace` plus readonly DTOs that read only open dine-in orders in
+  the active branch, use exactly three fixed queries for order/subtables/items,
+  normalize `menu_item_name_snapshot` defensively, and never query Menu, Tables,
+  or Identity infrastructure. Result: added `FindOrderWorkspace` and
+  `OrderWorkspace*` readonly DTOs. The read filters to open dine-in orders with
+  a table in the active branch, relies on tenant scope, performs the fixed
+  order/subtables/items query sequence, and normalizes malformed/non-array
+  snapshots to `null`.
+- [x] Stage 2.12-order-workspace-readonly.2: Route and read-only UI. Add the
+  `admin.orders.workspace` route/controller/full-page Blade and nested
+  read-only Livewire component with scalar public `orderId` state only; make
+  occupied board tiles link to the workspace using scalar `workspace_url` while
+  leaving free-table modal behavior unchanged. Result: added the route
+  `/admin/orders/{order}/workspace`, thin controller, full-page Blade, and
+  read-only Livewire adapter. Occupied board tiles now link to the workspace;
+  free tiles still open the existing modal. No polling, forms, menu picker, or
+  mutating workspace controls were added.
+- [x] Stage 2.12-order-workspace-readonly.3: tests and verification. Add
+  focused route/Livewire/read tests for auth, permission, tenant/branch 404s,
+  open dine-in visibility, snapshot fallback/history, no Menu reads, fixed query
+  count, money formatting, and absence of mutation affordances; run Pint,
+  PHPStan, SQLite Pest, PostgreSQL tenant-isolation, PostgreSQL Orders
+  concurrency, npm build, Orders boundary grep, `git diff --check`, and
+  `git status --short`. Result: added `OrderWorkspaceTest` coverage for route
+  auth/permission, direct Livewire authorization, tenant/branch/non-open
+  404s, board occupied links and free modal preservation, workspace rendering,
+  locale/fallback/null/malformed snapshots, HTML escaping, historical snapshot
+  rendering after Menu rename/archive/hard delete without Menu reads, fixed
+  query count, and absence of mutation affordances. Verification passed:
+  `make pint` (`PASS 310 files`), `make stan` (`184/184`, `[OK] No errors`),
+  `make test` (`278 passed / 13 skipped / 2841 assertions`),
+  `make tenant-isolation-pgsql` (`23 passed / 96 assertions`),
+  `make orders-concurrency-pgsql` (`6 passed / 43 assertions`),
+  and `npm run build` (Vite built successfully; npm printed the existing
+  `Unknown env config "min-release-age"` warning). Orders module-boundary grep
+  exited `1` with no matches, and `git diff --check` passed.
+
+Next exact action: wait for exact-head CI on PR
+[#28](https://github.com/mesropyananushavan/rest-v2/pull/28), perform a final
+read-only merge-readiness audit, and obtain explicit owner merge approval. Do
+not start the menu picker, order mutations, Payments, merge, or deployment
+without separate approval.

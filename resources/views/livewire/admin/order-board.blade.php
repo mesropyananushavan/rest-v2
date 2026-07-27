@@ -17,6 +17,7 @@ declare(strict_types=1);
  *         occupied: bool,
  *         occupancy: array{
  *             order_id: int,
+ *             workspace_url: string,
  *             client_count: int,
  *             opened_at: string,
  *             duration_minutes: int,
@@ -84,7 +85,7 @@ declare(strict_types=1);
                                 @endphp
 
                                 @if ($table['occupied'])
-                                    <article class="{{ $tileClass }}">
+                                    <a href="{{ $table['occupancy']['workspace_url'] }}" class="{{ $tileClass }} block text-left no-underline hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-amber-100">
                                 @else
                                     <button type="button" wire:click="selectTable({{ $table['id'] }})" class="{{ $tileClass }} text-left">
                                 @endif
@@ -123,7 +124,7 @@ declare(strict_types=1);
                                     @endif
 
                                 @if ($table['occupied'])
-                                    </article>
+                                    </a>
                                 @else
                                     </button>
                                 @endif
