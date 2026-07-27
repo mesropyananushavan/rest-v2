@@ -69,6 +69,7 @@ it('creates orders and order subtables schema with tenant branch and lifecycle i
             'order_id',
             'subtable_id',
             'menu_item_id',
+            'menu_item_name_snapshot',
             'qty',
             'unit_price_minor',
             'discount_minor',

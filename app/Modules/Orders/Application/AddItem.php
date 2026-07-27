@@ -11,8 +11,11 @@ use App\Modules\Orders\Infrastructure\Models\OrderItem;
 use App\Modules\Orders\Infrastructure\Models\OrderSubtable;
 use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Modules\Tenancy\Contracts\TenantResolver;
+use App\Support\I18n\LocalizedText;
 use App\Support\Money\Money;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
+use InvalidArgumentException;
 
 final class AddItem
 {
@@ -91,7 +94,10 @@ final class AddItem
                 throw $exception;
             }
 
-            $line = OrderItem::query()
+            $menuItemNameSnapshot = $menuItem->name->toArray();
+
+            /** @var Collection<int, OrderItem> $candidateLines */
+            $candidateLines = OrderItem::query()
                 ->where('branch_id', $branchId)
                 ->where('order_id', (int) $order->id)
                 ->where('menu_item_id', $menuItem->id)
@@ -100,7 +106,9 @@ final class AddItem
                 ->where('discount_minor', 0)
                 ->where('subtable_id', $subtableId)
                 ->lockForUpdate()
-                ->first();
+                ->get();
+
+            $line = $this->matchingLineForSnapshot($candidateLines, $menuItemNameSnapshot);
 
             if ($line instanceof OrderItem) {
                 $before = $this->orderItemAuditPayload($line);
@@ -116,6 +124,7 @@ final class AddItem
                     'order_id' => (int) $order->id,
                     'subtable_id' => $subtableId,
                     'menu_item_id' => $menuItem->id,
+                    'menu_item_name_snapshot' => $menuItemNameSnapshot,
                     'qty' => $qty,
                     'unit_price_minor' => $menuItem->price->minor,
                     'discount_minor' => 0,
@@ -174,6 +183,40 @@ final class AddItem
         ] + $context);
 
         throw $exception;
+    }
+
+    /**
+     * @param  Collection<int, OrderItem>  $candidateLines
+     * @param  array{hy: string, ru: string, en: string}  $snapshot
+     */
+    private function matchingLineForSnapshot(Collection $candidateLines, array $snapshot): ?OrderItem
+    {
+        foreach ($candidateLines as $candidateLine) {
+            if ($this->normalizedMenuItemNameSnapshot($candidateLine->menu_item_name_snapshot) === $snapshot) {
+                return $candidateLine;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{hy: string, ru: string, en: string}|null
+     */
+    private function normalizedMenuItemNameSnapshot(mixed $snapshot): ?array
+    {
+        if (! is_array($snapshot)) {
+            return null;
+        }
+
+        try {
+            /** @var array<string, mixed> $translations */
+            $translations = $snapshot;
+
+            return LocalizedText::fromArray($translations)->toArray();
+        } catch (InvalidArgumentException) {
+            return null;
+        }
     }
 
     private function lineTotal(int $unitPriceMinor, int $qty, int $discountMinor, string $currency): Money
