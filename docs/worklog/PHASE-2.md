@@ -3651,7 +3651,40 @@ Workspace item writes correction plan:
   for that head reported `SUCCESS` for `quality`, `tenant-isolation-pgsql`,
   and `orders-concurrency-pgsql` on both push and pull-request workflow runs.
 
-Next exact action: owner review of draft PR
-[#30](https://github.com/mesropyananushavan/rest-v2/pull/30); do not
-force-push, merge, deploy, mark ready for review, create a migration, modify
-`FindOrderWorkspace`, `template/`, or `docs/BLUEPRINT.md`.
+Stage 2.14 workspace item writes is complete. PR
+[#30](https://github.com/mesropyananushavan/rest-v2/pull/30) was marked ready
+for review and merged into `main` as true merge commit
+`c98b0088c828201710324ac7b4b7094ee7a679ba`. Merge parents:
+first parent `93a5e706c870fbfd4830eda66e8c9c79436017f5`, second parent
+`830c434a0233452f30d0883ec0aea39d0b507d02`. The feature branch was retained.
+Post-merge verification on merged `main` passed: `make pint` (`PASS 317
+files`), `make stan` (`188/188`, `[OK] No errors`), `make test`
+(`304 passed / 13 skipped / 3102 assertions`), `make tenant-isolation-pgsql`
+after sequential rerun (`23 passed / 96 assertions`),
+`make orders-concurrency-pgsql` after sequential rerun (`6 passed / 43
+assertions`), and `npm run build` succeeded with the known `Unknown env config
+"min-release-age"` warning. Merge-commit GitHub CI also reported success for
+`quality`, `tenant-isolation-pgsql`, and `orders-concurrency-pgsql`.
+
+New Phase 2 baselines of record for the next slice: Pint `PASS 317 files`;
+PHPStan `188/188`, `[OK] No errors`; SQLite Pest `304 passed / 13 skipped /
+3102 assertions`; PostgreSQL tenant isolation `23 passed / 96 assertions`;
+PostgreSQL orders concurrency `6 passed / 43 assertions`.
+
+Gotchas to carry forward: the local test container has no loaded `php.ini` and
+defaults to `memory_limit=128M`, now handled in `phpunit.xml` so `make test`
+and direct `vendor/bin/pest` agree; `x-confirm-modal` now has a Livewire mode
+that emits no `<form>`, and the workspace negative assertions depend on that
+staying true; the workspace route still 404s for closed and cancelled orders by
+design. Also, the PostgreSQL make targets share `smartrest_test_local`, so run
+`make tenant-isolation-pgsql` and `make orders-concurrency-pgsql` sequentially,
+not in parallel.
+
+Deferred after Stage 2.14: MoveOrder UI, waiter assignment UI, cancel-order UI,
+discounts, modifiers, JSON API for order mutations, and all of Phase 3.
+
+Next exact action: implement the Phase 2 closing slice, subtable creation UI
+(`AddSubtable`) plus move-item-between-subtables UI (`MoveItem`) inside the
+order workspace, matching the docs/BLUEPRINT.md section 9 Phase 2 demo of
+"open table, add items, move item to subtable"; no payments, no closing, no
+fiscal, no printing.
