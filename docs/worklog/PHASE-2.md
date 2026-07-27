@@ -3208,3 +3208,46 @@ Tables hall-layout reader plan:
 
 Next exact action: commit the hall-layout reader slice and push
 `feature/tables-hall-layout-reader` for owner review.
+
+Orders table-occupancy read slice is active. Work on branch
+`feature/orders-table-occupancy-read`; push only this feature branch, do not
+merge, force-push, tag, deploy, or push to `main`.
+
+Repo reconciliation: the prior `Next exact action` for owner review of
+`feature/tables-hall-layout-reader` is stale. `main` currently includes merge
+commit `2dbaae1` for the Tables hall-layout reader. The worktree was clean on
+`main...origin/main` before creating `feature/orders-table-occupancy-read` from
+`origin/main`.
+
+Orders table-occupancy read plan:
+- [x] Stage 2.8-table-occupancy-read.1: read action and DTO. Add a final
+  `ListTableOccupancy` Application read and readonly `TableOccupancy` DTO that
+  mirror `ListOpenOrders` branch-context guard and `RecordsOrderAction`
+  logging, but return all active-branch open `dine_in` orders with non-null
+  `table_id` keyed by table id and without loading relations. Result: added
+  `ListTableOccupancy` with `orders.occupancy.list` success/domain-failure
+  logging, the same branch-context guard shape as `ListOpenOrders`, a
+  single-query `orders` read filtered to open `dine_in` rows with non-null
+  `table_id`, and `TableOccupancy` readonly DTOs keyed by table id.
+- [x] Stage 2.8-table-occupancy-read.2: feature coverage. Add focused Orders
+  tests proving the read is complete/unpaginated, keyed by table id, excludes
+  closed/cancelled/tableless/other-branch rows, respects tenant scoping, throws
+  the same branch-context domain failure as `ListOpenOrders`, and executes
+  exactly one query while traversing DTO fields. Result: added
+  `OrderTableOccupancyTest` covering 55 open dine-in rows to prove no
+  pagination cap, table-id keyed DTO output and log context, exclusion of
+  closed/cancelled/tableless/other-branch rows, cross-tenant branch isolation,
+  branch-context domain failure logging, and an exact one-query traversal.
+- [x] Stage 2.8-table-occupancy-read.3: gates, commit, and push. Run Pint,
+  PHPStan, full SQLite Pest, PostgreSQL tenant-isolation, the Orders module
+  boundary grep, review the branch diff, commit the slice with this worklog
+  update, and push only `feature/orders-table-occupancy-read`. Result so far:
+  `make pint` passed (`PASS 299 files`), `make stan` passed (`176/176`,
+  `[OK] No errors` after making `opened_at` conversion explicit), `make test`
+  passed (`255 passed / 13 skipped / 2707 assertions`), and
+  `make tenant-isolation-pgsql` passed (`23 passed / 96 assertions`). Orders
+  module boundary grep exited `1` with no matches and `git diff --check`
+  passed. Commit and branch push are next.
+
+Next exact action: commit the Orders table-occupancy read slice and push
+`feature/orders-table-occupancy-read` for owner review.
