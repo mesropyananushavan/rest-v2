@@ -125,6 +125,7 @@ final class OrderBoard extends Component
      *         occupied: bool,
      *         occupancy: array{
      *             order_id: int,
+     *             workspace_url: string,
      *             client_count: int,
      *             opened_at: string,
      *             duration_minutes: int,
@@ -170,6 +171,7 @@ final class OrderBoard extends Component
      *     occupied: bool,
      *     occupancy: array{
      *         order_id: int,
+     *         workspace_url: string,
      *         client_count: int,
      *         opened_at: string,
      *         duration_minutes: int,
@@ -188,6 +190,7 @@ final class OrderBoard extends Component
             'occupied' => $occupancy !== null,
             'occupancy' => $occupancy === null ? null : [
                 'order_id' => $occupancy->orderId,
+                'workspace_url' => route('admin.orders.workspace', ['order' => $occupancy->orderId]),
                 'client_count' => $occupancy->clientCount,
                 'opened_at' => $occupancy->openedAt->format('H:i'),
                 'duration_minutes' => $this->durationMinutes($occupancy),
