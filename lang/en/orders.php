@@ -83,6 +83,8 @@ return [
         'eyebrow' => 'Open table order',
         'heading' => 'Order #:id',
         'subtitle' => 'Table #:table',
+        'unavailable_title' => 'Order no longer available',
+        'unavailable_message' => 'Refresh the table board to continue with an open order.',
         'back_to_board' => 'Back to table board',
         'summary_title' => 'Order summary',
         'items_title' => 'Ordered items',

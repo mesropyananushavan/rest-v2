@@ -3595,6 +3595,60 @@ Workspace item writes plan:
   `128M` limit before architecture parsing; verified the suite passes with
   `256M` and made `make test` use `php -d memory_limit=256M vendor/bin/pest`.
 
-Next exact action: owner review of local commit for task
-`2.14-workspace-item-writes`; do not push, merge, deploy, create a migration,
-modify `FindOrderWorkspace`, `template/`, or `docs/BLUEPRINT.md`.
+Correction round for task `2.14-workspace-item-writes` is active on the same
+branch `feature/orders-workspace-item-writes`. Initial branch head
+`4d59ecc713fbb3249d03b666be19c06e19f333c1` was pushed normally and draft PR
+[#30](https://github.com/mesropyananushavan/rest-v2/pull/30) was opened against
+`main`; no ready-for-review transition, merge, force-push, or deployment was
+performed. GitHub CI for that pushed SHA reported success for `quality`,
+`tenant-isolation-pgsql`, and `orders-concurrency-pgsql`.
+
+Workspace item writes correction plan:
+- [x] Stage 2.14-workspace-item-writes-correction.1: CI and memory-limit
+  alignment. Verify the pushed PR CI uses direct `vendor/bin/pest`, record the
+  local/CI memory-limit gotcha in `docs/DECISIONS.md`, move the local-only
+  Makefile memory override to `phpunit.xml` so both `make test` and direct Pest
+  honour it, and revert the Makefile back to the main branch command. Result:
+  initial pushed CI passed direct Pest at SHA `4d59ecc713fbb3249d03b666be19c06e19f333c1`.
+  The feature branch now sets `memory_limit=256M` in `phpunit.xml`; the
+  previous Makefile-only `php -d memory_limit=256M` change has been reverted.
+- [x] Stage 2.14-workspace-item-writes-correction.2: query-count proof. Measure
+  full workspace render on unmodified `main` with the same fixture shape as the
+  branch, remove temporary measurement code, categorize the add round-trip
+  queries, and prove add does not grow per order line or per picked menu item.
+  Result: main full render is `7` queries and branch full render is `7`
+  queries. Add round trip categorization is `22` queries total: `2`
+  auth/permission, `6` initial workspace/menu render, `8` AddItem action, `3`
+  post-mutation workspace re-read, and `3` post-mutation menu picker re-render.
+  N+1 proof is stable: `1` order line vs `10` order lines both `24` queries;
+  `1` picked menu item vs `10` picked menu items both `24` queries. Temporary
+  measurement code was removed.
+- [x] Stage 2.14-workspace-item-writes-correction.3: subtable target and stale
+  fallback hardening. Stop normalizing client-supplied subtable ids to `null`,
+  pass every non-empty submitted id to `AddItem`, add rejection coverage for
+  same-branch different-order, different-branch, different-tenant, and
+  non-existent subtable ids, and bound the stale mounted-component fallback so
+  closed/cancelled concurrent status changes render only a translated
+  unavailable state with no cached order lines, totals, or menu mutation UI.
+  Result: subtable mismatch cases surface the translated
+  `orders.subtable_not_in_order` domain error with zero data change.
+  `FindOrderWorkspace` remains unchanged and the route still 404s for closed
+  and cancelled orders.
+- [x] Stage 2.14-workspace-item-writes-correction.4: final correction gates and
+  normal push. Run the required local gates, update this worklog, commit the
+  correction, push normally to the existing feature branch, and wait for
+  exact-head draft PR CI before reporting. Local gate results before the
+  correction commit: `make pint` passed (`PASS 317 files`), `make stan` passed
+  (`188/188`, `[OK] No errors`), `make test` passed (`304 passed / 13 skipped /
+  3102 assertions`), direct container `vendor/bin/pest` passed (`304 passed /
+  13 skipped / 3102 assertions`), `make tenant-isolation-pgsql` passed
+  (`23 passed / 96 assertions`), `make orders-concurrency-pgsql` passed
+  (`6 passed / 43 assertions`), `npm run build` succeeded with the known
+  `Unknown env config "min-release-age"` warning, `git diff --check` had no
+  output, and the Orders workspace boundary grep exited `1` with no matches.
+
+Next exact action: push the correction commit to draft PR
+[#30](https://github.com/mesropyananushavan/rest-v2/pull/30), wait for
+exact-head CI, then report the correction round; do not force-push, merge,
+deploy, create a migration, modify `FindOrderWorkspace`, `template/`, or
+`docs/BLUEPRINT.md`.

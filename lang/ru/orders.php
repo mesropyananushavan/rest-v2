@@ -83,6 +83,8 @@ return [
         'eyebrow' => 'Открытый заказ стола',
         'heading' => 'Заказ #:id',
         'subtitle' => 'Стол #:table',
+        'unavailable_title' => 'Заказ больше недоступен',
+        'unavailable_message' => 'Обновите план столов, чтобы продолжить с открытым заказом.',
         'back_to_board' => 'Назад к плану столов',
         'summary_title' => 'Сводка заказа',
         'items_title' => 'Позиции заказа',

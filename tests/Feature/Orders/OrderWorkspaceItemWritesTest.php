@@ -188,6 +188,55 @@ it('returns translated errors for unauthorized or out of scope mutation attempts
         ->and($visibleItem)->toBeInstanceOf(MenuItem::class);
 });
 
+it('rejects client supplied target subtable ids that do not belong to the order', function (): void {
+    $tenantA = orderWorkspaceWritesUser('tenant-a', 'waiter-a', ['orders.take'], branchCount: 2);
+    $tenantB = orderWorkspaceWritesUser('tenant-b', 'waiter-b', ['orders.take']);
+
+    app()->setLocale('en');
+    orderWorkspaceWritesActingIn($tenantA, 0, 'workspace-writes-subtable-main');
+    $order = orderWorkspaceWritesOrder($tenantA, 0);
+    $category = orderWorkspaceWritesCategory('Dining Menu', 'Hot Dishes')['category'];
+    $item = orderWorkspaceWritesItem($category, $tenantA['branches'][0], 'Ghapama', priceMinor: 1000);
+
+    $sameBranchOtherOrder = orderWorkspaceWritesOrder($tenantA, 0);
+    $sameBranchSubtable = orderWorkspaceWritesSubtable($sameBranchOtherOrder, 'Other order guest');
+
+    orderWorkspaceWritesActingIn($tenantA, 1, 'workspace-writes-subtable-other-branch');
+    $otherBranchOrder = orderWorkspaceWritesOrder($tenantA, 1);
+    $otherBranchSubtable = orderWorkspaceWritesSubtable($otherBranchOrder, 'Other branch guest');
+
+    orderWorkspaceWritesActingIn($tenantB, 0, 'workspace-writes-subtable-other-tenant');
+    $otherTenantOrder = orderWorkspaceWritesOrder($tenantB, 0);
+    $otherTenantSubtable = orderWorkspaceWritesSubtable($otherTenantOrder, 'Other tenant guest');
+
+    $missingSubtableId = ((int) max([
+        $sameBranchSubtable->id,
+        $otherBranchSubtable->id,
+        $otherTenantSubtable->id,
+    ])) + 10_000;
+
+    orderWorkspaceWritesActingIn($tenantA, 0, 'workspace-writes-subtable-render');
+
+    foreach ([
+        'different order in same branch' => (int) $sameBranchSubtable->id,
+        'different branch' => (int) $otherBranchSubtable->id,
+        'different tenant' => (int) $otherTenantSubtable->id,
+        'non-existent subtable' => $missingSubtableId,
+    ] as $case => $subtableId) {
+        Livewire::actingAs($tenantA['user'])
+            ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $order->id])
+            ->set('targetSubtableId', (string) $subtableId)
+            ->call('addMenuItem', (int) $item->id)
+            ->assertSet('errorMessage', __('orders.subtable_not_in_order'));
+
+        $freshOrder = Order::query()->findOrFail((int) $order->id);
+
+        expect(OrderItem::query()->where('order_id', (int) $order->id)->count(), $case)->toBe(0)
+            ->and((int) $freshOrder->subtotal_minor, $case)->toBe(0)
+            ->and((int) $freshOrder->total_minor, $case)->toBe(0);
+    }
+});
+
 it('keeps mounted component mutations safe after the order is closed or cancelled elsewhere', function (string $status): void {
     $record = orderWorkspaceWritesUser('tenant-a', 'waiter-a', ['orders.take']);
 
@@ -216,8 +265,14 @@ it('keeps mounted component mutations safe after the order is closed or cancelle
         ->assertSet('errorMessage', __('orders.order_not_open'))
         ->call('confirmRemoveItem', (int) $line->id)
         ->assertSet('errorMessage', __('orders.order_not_open'))
+        ->assertSee(__('orders.workspace.unavailable_title'), false)
         ->assertDontSee('addMenuItem', false)
-        ->assertDontSee('confirmRemoveItem', false);
+        ->assertDontSee('confirmRemoveItem', false)
+        ->assertDontSee(__('orders.workspace.menu_picker.title'), false)
+        ->assertDontSee(__('orders.workspace.summary_title'), false)
+        ->assertDontSee('Spas', false)
+        ->assertDontSee('Gata', false)
+        ->assertDontSee(MoneyFormatter::format(new Money(2000, 'AMD'), 'en'), false);
 
     $freshLine = OrderItem::query()->findOrFail((int) $line->id);
     $freshOrder = Order::query()->findOrFail((int) $order->id);
@@ -393,6 +448,18 @@ it('keeps workspace render and mutation round trip query counts bounded', functi
         ->and($increaseQueries)->toBeLessThanOrEqual(35)
         ->and($decreaseQueries)->toBeLessThanOrEqual(35)
         ->and($removeQueries)->toBeLessThanOrEqual(35);
+});
+
+it('keeps add item query count stable as order lines and picked menu items grow', function (): void {
+    $oneLineQueries = orderWorkspaceWritesAddRoundTripQueryCount(lineCount: 1, pickedItemCount: 10, label: 'one-line');
+    $tenLineQueries = orderWorkspaceWritesAddRoundTripQueryCount(lineCount: 10, pickedItemCount: 10, label: 'ten-lines');
+    $onePickedItemQueries = orderWorkspaceWritesAddRoundTripQueryCount(lineCount: 1, pickedItemCount: 1, label: 'one-picked-item');
+    $tenPickedItemQueries = orderWorkspaceWritesAddRoundTripQueryCount(lineCount: 1, pickedItemCount: 10, label: 'ten-picked-items');
+
+    expect($tenLineQueries)->toBe($oneLineQueries)
+        ->and($onePickedItemQueries)->toBe($tenPickedItemQueries)
+        ->and($tenLineQueries)->toBeLessThanOrEqual(45)
+        ->and($tenPickedItemQueries)->toBeLessThanOrEqual(45);
 });
 
 /**
@@ -632,4 +699,52 @@ function orderWorkspaceWritesQueryCount(callable $callback): array
         DB::disableQueryLog();
         DB::flushQueryLog();
     }
+}
+
+function orderWorkspaceWritesAddRoundTripQueryCount(int $lineCount, int $pickedItemCount, string $label): int
+{
+    $record = orderWorkspaceWritesUser("tenant-query-{$label}", "waiter-query-{$label}", ['orders.take']);
+
+    app()->setLocale('en');
+    orderWorkspaceWritesActingIn($record, 0, "workspace-writes-query-{$label}");
+    $order = orderWorkspaceWritesOrder($record, 0);
+    $pickedCategory = orderWorkspaceWritesCategory("Picked Menu {$label}", "Picked Category {$label}")['category'];
+    $lineCategory = orderWorkspaceWritesCategory("Line Menu {$label}", "Line Category {$label}")['category'];
+    $addItem = null;
+
+    for ($index = 1; $index <= $pickedItemCount; $index++) {
+        $item = orderWorkspaceWritesItem(
+            $pickedCategory,
+            $record['branches'][0],
+            "Picked Dish {$label} {$index}",
+            priceMinor: 1000,
+            sortOrder: $index,
+        );
+
+        if ($addItem === null) {
+            $addItem = $item;
+        }
+    }
+
+    for ($index = 1; $index <= $lineCount; $index++) {
+        $lineItem = orderWorkspaceWritesItem(
+            $lineCategory,
+            $record['branches'][0],
+            "Line Dish {$label} {$index}",
+            priceMinor: 1000 + $index,
+            sortOrder: $index,
+        );
+        app(AddItem::class)((int) $order->id, (int) $lineItem->id, 1);
+    }
+
+    expect($addItem)->toBeInstanceOf(MenuItem::class);
+
+    [, $queries] = orderWorkspaceWritesQueryCount(
+        fn () => Livewire::withQueryParams(['menu_category' => (int) $pickedCategory->id])
+            ->actingAs($record['user'])
+            ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $order->id])
+            ->call('addMenuItem', (int) $addItem->id),
+    );
+
+    return $queries;
 }

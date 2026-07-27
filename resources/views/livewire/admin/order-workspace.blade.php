@@ -15,6 +15,7 @@ declare(strict_types=1);
  *     discount: string,
  *     total: string,
  *     can_mutate: bool,
+ *     stale_unavailable: bool,
  *     subtables: list<array{id: int, name: string}>,
  *     groups: list<array{id: int|null, name: string, items: list<array{id: int, name: string, qty: int, unit_price: string, discount: string, total: string}>}>
  * } $order
@@ -36,8 +37,8 @@ declare(strict_types=1);
 <div>
     <x-page-header
         :eyebrow="__('orders.workspace.eyebrow')"
-        :title="__('orders.workspace.heading', ['id' => $order['id']])"
-        :subtitle="__('orders.workspace.subtitle', ['table' => $order['table_id']])"
+        :title="$order['stale_unavailable'] ? __('orders.workspace.unavailable_title') : __('orders.workspace.heading', ['id' => $order['id']])"
+        :subtitle="$order['stale_unavailable'] ? __('orders.workspace.unavailable_message') : __('orders.workspace.subtitle', ['table' => $order['table_id']])"
     >
         <x-slot:actions>
             <x-button :href="route('admin.orders.board')" variant="outline-secondary" size="sm">
@@ -58,6 +59,11 @@ declare(strict_types=1);
         </div>
     @endif
 
+    @if ($order['stale_unavailable'])
+        <x-card :title="__('orders.workspace.unavailable_title')">
+            <p class="text-sm font-semibold text-slate-600">{{ __('orders.workspace.unavailable_message') }}</p>
+        </x-card>
+    @else
     <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <div class="space-y-5">
             <x-card :title="__('orders.workspace.items_title')">
@@ -344,4 +350,5 @@ declare(strict_types=1);
             </x-card>
         </aside>
     </div>
+    @endif
 </div>

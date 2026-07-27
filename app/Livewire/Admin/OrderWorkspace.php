@@ -81,12 +81,9 @@ final class OrderWorkspace extends Component
                 throw $exception;
             }
 
-            $order = $this->lastOrder;
-            $order['can_mutate'] = false;
-
             return view('livewire.admin.order-workspace', [
-                'menu' => $this->lastMenu,
-                'order' => $order,
+                'menu' => $this->emptyMenu(),
+                'order' => $this->staleUnavailableOrder(),
             ]);
         }
 
@@ -102,7 +99,6 @@ final class OrderWorkspace extends Component
         $this->menuCategoryId = $menu->selectedCategoryId;
         $this->menuPage = $menu->itemPage;
         $this->menuCategoryPage = $menu->categoryPage;
-        $this->normalizeTargetSubtable($workspace);
         $menuData = $this->menu($menu);
         $orderData = $this->order($workspace);
         $this->lastMenu = $menuData;
@@ -231,6 +227,7 @@ final class OrderWorkspace extends Component
      *     discount: string,
      *     total: string,
      *     can_mutate: bool,
+     *     stale_unavailable: bool,
      *     subtables: list<array{id: int, name: string}>,
      *     groups: list<array{id: int|null, name: string, items: list<array{id: int, name: string, qty: int, unit_price: string, discount: string, total: string}>}>
      * }
@@ -251,6 +248,7 @@ final class OrderWorkspace extends Component
             'discount' => $this->money($workspace->discountMinor, $workspace->currency, $locale),
             'total' => $this->money($workspace->totalMinor, $workspace->currency, $locale),
             'can_mutate' => $workspace->status === 'open',
+            'stale_unavailable' => false,
             'subtables' => array_map(
                 fn (OrderWorkspaceSubtable $subtable): array => [
                     'id' => $subtable->id,
@@ -259,6 +257,44 @@ final class OrderWorkspace extends Component
                 $workspace->subtables,
             ),
             'groups' => $this->groups($workspace->subtables, $workspace->items, $locale),
+        ];
+    }
+
+    /**
+     * @return array{
+     *     id: int,
+     *     type: string,
+     *     status: string,
+     *     table_id: int,
+     *     opened_at: string,
+     *     client_count: int,
+     *     comment: string|null,
+     *     subtotal: string,
+     *     discount: string,
+     *     total: string,
+     *     can_mutate: bool,
+     *     stale_unavailable: bool,
+     *     subtables: list<array{id: int, name: string}>,
+     *     groups: list<array{id: int|null, name: string, items: list<array{id: int, name: string, qty: int, unit_price: string, discount: string, total: string}>}>
+     * }
+     */
+    private function staleUnavailableOrder(): array
+    {
+        return [
+            'id' => $this->orderId,
+            'type' => '',
+            'status' => '',
+            'table_id' => 0,
+            'opened_at' => '',
+            'client_count' => 0,
+            'comment' => null,
+            'subtotal' => '',
+            'discount' => '',
+            'total' => '',
+            'can_mutate' => false,
+            'stale_unavailable' => true,
+            'subtables' => [],
+            'groups' => [],
         ];
     }
 
@@ -379,6 +415,36 @@ final class OrderWorkspace extends Component
         ];
     }
 
+    /**
+     * @return array{
+     *     search: string,
+     *     selected_category_id: int|null,
+     *     category_page: int,
+     *     has_previous_category_page: bool,
+     *     has_more_category_pages: bool,
+     *     item_page: int,
+     *     has_previous_item_page: bool,
+     *     has_more_item_pages: bool,
+     *     category_groups: list<array{id: int, name: string, categories: list<array{id: int, name: string, selected: bool}>}>,
+     *     items: list<array{id: int, category_id: int, name: string, price: string}>
+     * }
+     */
+    private function emptyMenu(): array
+    {
+        return [
+            'search' => $this->menuSearch,
+            'selected_category_id' => $this->menuCategoryId,
+            'category_page' => $this->menuCategoryPage,
+            'has_previous_category_page' => false,
+            'has_more_category_pages' => false,
+            'item_page' => $this->menuPage,
+            'has_previous_item_page' => false,
+            'has_more_item_pages' => false,
+            'category_groups' => [],
+            'items' => [],
+        ];
+    }
+
     private function branchId(): int
     {
         $branchId = app(BranchContext::class)->id();
@@ -450,36 +516,7 @@ final class OrderWorkspace extends Component
             return null;
         }
 
-        if (! ctype_digit($this->targetSubtableId)) {
-            return null;
-        }
-
-        $subtableId = (int) $this->targetSubtableId;
-
-        return $subtableId > 0 ? $subtableId : null;
-    }
-
-    private function normalizeTargetSubtable(OrderWorkspaceData $workspace): void
-    {
-        if ($workspace->subtables === []) {
-            $this->targetSubtableId = null;
-
-            return;
-        }
-
-        if ($this->targetSubtableId === null || $this->targetSubtableId === '') {
-            return;
-        }
-
-        $selected = $this->selectedTargetSubtableId();
-
-        foreach ($workspace->subtables as $subtable) {
-            if ($subtable->id === $selected) {
-                return;
-            }
-        }
-
-        $this->targetSubtableId = null;
+        return (int) trim($this->targetSubtableId);
     }
 
     private function resetFeedback(): void

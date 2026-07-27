@@ -669,3 +669,15 @@ context mechanisms.
 Rejected: adding one-off superadmin allowances to each policy, controller, or
 Livewire component, because that would be inconsistent and easy to miss as new
 permissions are introduced.
+
+## 2026-07-27 — Pest memory limit lives in phpunit.xml
+Decision: the Pest/PHPUnit test process sets `memory_limit=256M` in
+`phpunit.xml`.
+Reason: the local PHP-FPM test container has no loaded `php.ini` and defaults
+to PHP's `128M` memory limit. After the workspace item-write coverage was added,
+the full one-process Pest suite exceeded that limit while parsing architecture
+tests. CI invokes `vendor/bin/pest` directly rather than `make test`, so the
+limit must live in project-level PHPUnit configuration that both local make
+targets and CI honour.
+Rejected: setting the limit only in `Makefile` — CI would not use it; reducing
+required coverage — would weaken the regression proof for this slice.
