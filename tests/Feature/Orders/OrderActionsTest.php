@@ -10,9 +10,12 @@ use App\Modules\Orders\Application\AssignWaiter;
 use App\Modules\Orders\Application\CancelOrder;
 use App\Modules\Orders\Application\FindOrder;
 use App\Modules\Orders\Application\ListOpenOrders;
+use App\Modules\Orders\Application\MoveOrder;
 use App\Modules\Orders\Application\OpenOrder;
+use App\Modules\Orders\Application\OpenTablelessOrder;
 use App\Modules\Orders\Domain\OrdersDomainException;
 use App\Modules\Orders\Infrastructure\Models\Order;
+use App\Modules\Orders\Infrastructure\Models\OrderMove;
 use App\Modules\Orders\Infrastructure\Models\OrderSubtable;
 use App\Modules\Tables\Infrastructure\Models\Hall;
 use App\Modules\Tables\Infrastructure\Models\Table;
@@ -24,6 +27,7 @@ use App\Support\Audit\AuditLog;
 use App\Support\Logging\LogContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 uses(RefreshDatabase::class);
 
@@ -161,6 +165,104 @@ it('guards mutations to open orders only', function (): void {
     }
 });
 
+it('moves an open dine-in order to a free table and records audit history', function (): void {
+    $record = ordersActionsUser('tenant-a', 'manager-a');
+    $sourceTable = ordersActionsTable($record, 0, 'Source Table');
+    $targetTable = ordersActionsTable($record, 0, 'Target Table');
+
+    ordersActionsActingIn($record, 0, 'orders-move-happy');
+
+    $order = app(OpenOrder::class)((int) $sourceTable->id);
+    $order->update([
+        'subtotal_minor' => 3200,
+        'discount_minor' => 200,
+        'total_minor' => 3000,
+    ]);
+    $order->refresh();
+
+    $moved = app(MoveOrder::class)((int) $order->id, (int) $targetTable->id, 'guest requested a quieter table');
+    $fresh = Order::query()->findOrFail((int) $order->id);
+    $move = OrderMove::query()->sole();
+    $audit = AuditLog::query()
+        ->where('action', 'orders.order.moved')
+        ->where('target_type', 'orders_order')
+        ->sole();
+
+    expect((int) $moved->table_id)->toBe((int) $targetTable->id)
+        ->and((int) $fresh->table_id)->toBe((int) $targetTable->id)
+        ->and((int) $fresh->subtotal_minor)->toBe(3200)
+        ->and((int) $fresh->discount_minor)->toBe(200)
+        ->and((int) $fresh->total_minor)->toBe(3000)
+        ->and((int) $move->branch_id)->toBe((int) $record['branches'][0]->id)
+        ->and((int) $move->order_id)->toBe((int) $order->id)
+        ->and((int) $move->source_table_id)->toBe((int) $sourceTable->id)
+        ->and((int) $move->target_table_id)->toBe((int) $targetTable->id)
+        ->and((int) $move->actor_id)->toBe((int) $record['user']->id)
+        ->and($move->reason)->toBe('guest requested a quieter table')
+        ->and((int) $audit->target_id)->toBe((int) $order->id)
+        ->and($audit->before_json['table_id'])->toBe((int) $sourceTable->id)
+        ->and($audit->after_json['table_id'])->toBe((int) $targetTable->id)
+        ->and($audit->after_json['total_minor'])->toBe(3000);
+});
+
+it('rejects invalid whole-order moves without recording move history', function (): void {
+    $record = ordersActionsUser('tenant-a', 'manager-a', branchCount: 2);
+    $sourceTable = ordersActionsTable($record, 0, 'Source Table');
+    $targetTable = ordersActionsTable($record, 0, 'Target Table');
+    $occupiedTable = ordersActionsTable($record, 0, 'Occupied Table');
+    $closedTable = ordersActionsTable($record, 0, 'Closed Table');
+    $foreignBranchTable = ordersActionsTable($record, 1, 'Foreign Branch Table');
+
+    ordersActionsActingIn($record, 0, 'orders-move-guards');
+
+    $sourceOrder = app(OpenOrder::class)((int) $sourceTable->id);
+    $occupiedOrder = app(OpenOrder::class)((int) $occupiedTable->id);
+    $closedOrder = app(OpenOrder::class)((int) $closedTable->id);
+    app(CancelOrder::class)((int) $closedOrder->id);
+    $tablelessOrder = app(OpenTablelessOrder::class)('fast_food');
+
+    foreach ([
+        [fn () => app(MoveOrder::class)((int) $closedOrder->id, (int) $targetTable->id), 'orders.order_not_open'],
+        [fn () => app(MoveOrder::class)((int) $tablelessOrder->id, (int) $targetTable->id), 'orders.invalid_order_type'],
+        [fn () => app(MoveOrder::class)((int) $sourceOrder->id, 999999), 'orders.table_not_found'],
+        [fn () => app(MoveOrder::class)((int) $sourceOrder->id, (int) $foreignBranchTable->id), 'orders.table_not_found'],
+        [fn () => app(MoveOrder::class)((int) $sourceOrder->id, (int) $occupiedTable->id), 'orders.table_already_open'],
+        [fn () => app(MoveOrder::class)((int) $sourceOrder->id, (int) $sourceTable->id), 'orders.order_move_noop'],
+    ] as [$callback, $code]) {
+        ordersActionsExpectMoveDomainCode($callback, $code);
+
+        expect(OrderMove::query()->count())->toBe(0)
+            ->and((int) Order::query()->findOrFail((int) $sourceOrder->id)->table_id)->toBe((int) $sourceTable->id)
+            ->and((int) Order::query()->findOrFail((int) $occupiedOrder->id)->table_id)->toBe((int) $occupiedTable->id);
+    }
+});
+
+it('requires tenant and branch context when moving whole orders', function (): void {
+    $record = ordersActionsUser('tenant-a', 'manager-a');
+    $sourceTable = ordersActionsTable($record, 0, 'Source Table');
+    $targetTable = ordersActionsTable($record, 0, 'Target Table');
+
+    ordersActionsActingIn($record, 0, 'orders-move-context-source');
+    $order = app(OpenOrder::class)((int) $sourceTable->id);
+
+    app(BranchContext::class)->clear();
+    app(TenantResolver::class)->clear();
+
+    ordersActionsExpectMoveDomainCode(
+        fn () => app(MoveOrder::class)((int) $order->id, (int) $targetTable->id),
+        'orders.tenant_context_required',
+    );
+
+    app(TenantResolver::class)->set((int) $record['tenant']->id);
+
+    ordersActionsExpectMoveDomainCode(
+        fn () => app(MoveOrder::class)((int) $order->id, (int) $targetTable->id),
+        'orders.branch_context_required',
+    );
+
+    expect(OrderMove::query()->count())->toBe(0);
+});
+
 /**
  * @return array{tenant: Tenant, branches: list<Branch>, user: User}
  */
@@ -263,4 +365,25 @@ function ordersActionsActingIn(array $record, int $branchIndex, string $requestI
     app(BranchContext::class)->set((int) $record['branches'][$branchIndex]->id);
     auth()->login($record['user']);
     LogContext::start($requestId, 'orders');
+}
+
+function ordersActionsExpectMoveDomainCode(Closure $callback, string $errorCode): void
+{
+    Log::spy();
+
+    try {
+        $callback();
+    } catch (OrdersDomainException $exception) {
+        expect($exception->errorCode())->toBe($errorCode);
+
+        Log::shouldHaveReceived('warning')
+            ->with('action failed', Mockery::on(fn (array $context): bool => ($context['action'] ?? null) === 'orders.order.move'
+                && ($context['error_code'] ?? null) === $errorCode))
+            ->atLeast()
+            ->once();
+
+        return;
+    }
+
+    throw new RuntimeException("Expected {$errorCode}.");
 }

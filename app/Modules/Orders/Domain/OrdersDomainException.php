@@ -75,6 +75,11 @@ final class OrdersDomainException extends RuntimeException
         return new self('orders.item_move_noop', 'The order item is already in the requested location.');
     }
 
+    public static function orderMoveNoop(): self
+    {
+        return new self('orders.order_move_noop', 'The order is already assigned to the requested table.');
+    }
+
     public static function orderBranchMismatch(): self
     {
         return new self('orders.order_branch_mismatch', 'Order items cannot be moved across branches.');
