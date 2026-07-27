@@ -5,17 +5,17 @@ declare(strict_types=1);
 namespace App\Modules\Orders\Application;
 
 use App\Modules\Orders\Domain\OrdersDomainException;
-use App\Modules\Orders\Infrastructure\Models\Order;
 use App\Modules\Orders\Infrastructure\Models\OrderItem;
 use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Modules\Tenancy\Contracts\TenantResolver;
 use App\Support\Money\Money;
-use Illuminate\Support\Facades\DB;
 
 final class ChangeItemQty
 {
+    use LocksOrdersForUpdate;
     use RecomputesOrderTotals;
     use RecordsOrderAction;
+    use RunsOrderTransactions;
 
     public function __construct(
         private readonly TenantResolver $tenants,
@@ -43,16 +43,21 @@ final class ChangeItemQty
             throw $exception;
         }
 
-        $item = DB::transaction(function () use ($branchId, $orderItemId, $qty, $startedAt): OrderItem {
+        $item = $this->runOrderTransaction(function () use ($branchId, $orderItemId, $qty, $startedAt): OrderItem {
+            $itemLookup = OrderItem::query()
+                ->where('branch_id', $branchId)
+                ->select(['id', 'order_id'])
+                ->findOrFail($orderItemId);
+
+            $order = $this->lockOpenOrderForUpdate((int) $itemLookup->order_id, $branchId, 'orders.items.qty.change', $startedAt, [
+                'order_item_id' => $orderItemId,
+                'qty' => $qty,
+            ]);
+
             $item = OrderItem::query()
                 ->where('branch_id', $branchId)
                 ->lockForUpdate()
                 ->findOrFail($orderItemId);
-
-            $order = $this->openOrderForUpdate((int) $item->order_id, $branchId, 'orders.items.qty.change', $startedAt, [
-                'order_item_id' => $orderItemId,
-                'qty' => $qty,
-            ]);
 
             if ((int) $item->order_id !== (int) $order->id) {
                 $exception = OrdersDomainException::itemNotInOrder();
@@ -93,30 +98,6 @@ final class ChangeItemQty
         ]);
 
         return $item;
-    }
-
-    /**
-     * @param  array<string, mixed>  $context
-     */
-    private function openOrderForUpdate(int $orderId, int $branchId, string $action, float $startedAt, array $context): Order
-    {
-        $order = Order::query()
-            ->where('branch_id', $branchId)
-            ->lockForUpdate()
-            ->findOrFail($orderId);
-
-        if ($order->status === 'open') {
-            return $order;
-        }
-
-        $exception = OrdersDomainException::orderNotOpen();
-        $this->logDomainFailure($action, $exception, $startedAt, [
-            'branch_id' => $branchId,
-            'order_id' => $orderId,
-            'status' => (string) $order->status,
-        ] + $context);
-
-        throw $exception;
     }
 
     private function lineTotal(int $unitPriceMinor, int $qty, int $discountMinor, string $currency): Money

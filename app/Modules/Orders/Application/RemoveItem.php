@@ -9,12 +9,13 @@ use App\Modules\Orders\Infrastructure\Models\Order;
 use App\Modules\Orders\Infrastructure\Models\OrderItem;
 use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Modules\Tenancy\Contracts\TenantResolver;
-use Illuminate\Support\Facades\DB;
 
 final class RemoveItem
 {
+    use LocksOrdersForUpdate;
     use RecomputesOrderTotals;
     use RecordsOrderAction;
+    use RunsOrderTransactions;
 
     public function __construct(
         private readonly TenantResolver $tenants,
@@ -31,15 +32,20 @@ final class RemoveItem
             'order_item_id' => $orderItemId,
         ]);
 
-        $order = DB::transaction(function () use ($branchId, $orderItemId, $startedAt): Order {
+        $order = $this->runOrderTransaction(function () use ($branchId, $orderItemId, $startedAt): Order {
+            $itemLookup = OrderItem::query()
+                ->where('branch_id', $branchId)
+                ->select(['id', 'order_id'])
+                ->findOrFail($orderItemId);
+
+            $order = $this->lockOpenOrderForUpdate((int) $itemLookup->order_id, $branchId, 'orders.items.remove', $startedAt, [
+                'order_item_id' => $orderItemId,
+            ]);
+
             $item = OrderItem::query()
                 ->where('branch_id', $branchId)
                 ->lockForUpdate()
                 ->findOrFail($orderItemId);
-
-            $order = $this->openOrderForUpdate((int) $item->order_id, $branchId, 'orders.items.remove', $startedAt, [
-                'order_item_id' => $orderItemId,
-            ]);
 
             if ((int) $item->order_id !== (int) $order->id) {
                 $exception = OrdersDomainException::itemNotInOrder();
@@ -75,30 +81,6 @@ final class RemoveItem
         ]);
 
         return $order;
-    }
-
-    /**
-     * @param  array<string, mixed>  $context
-     */
-    private function openOrderForUpdate(int $orderId, int $branchId, string $action, float $startedAt, array $context): Order
-    {
-        $order = Order::query()
-            ->where('branch_id', $branchId)
-            ->lockForUpdate()
-            ->findOrFail($orderId);
-
-        if ($order->status === 'open') {
-            return $order;
-        }
-
-        $exception = OrdersDomainException::orderNotOpen();
-        $this->logDomainFailure($action, $exception, $startedAt, [
-            'branch_id' => $branchId,
-            'order_id' => $orderId,
-            'status' => (string) $order->status,
-        ] + $context);
-
-        throw $exception;
     }
 
     /**

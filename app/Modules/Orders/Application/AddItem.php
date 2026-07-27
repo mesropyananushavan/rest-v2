@@ -13,12 +13,13 @@ use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Modules\Tenancy\Contracts\TenantResolver;
 use App\Support\Money\Money;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 final class AddItem
 {
+    use LocksOrdersForUpdate;
     use RecomputesOrderTotals;
     use RecordsOrderAction;
+    use RunsOrderTransactions;
 
     public function __construct(
         private readonly TenantResolver $tenants,
@@ -50,8 +51,8 @@ final class AddItem
             throw $exception;
         }
 
-        $item = DB::transaction(function () use ($branchId, $menuItemId, $orderId, $qty, $startedAt, $subtableId): OrderItem {
-            $order = $this->openOrderForUpdate($orderId, $branchId, 'orders.items.add', $startedAt, [
+        $item = $this->runOrderTransaction(function () use ($branchId, $menuItemId, $orderId, $qty, $startedAt, $subtableId): OrderItem {
+            $order = $this->lockOpenOrderForUpdate($orderId, $branchId, 'orders.items.add', $startedAt, [
                 'menu_item_id' => $menuItemId,
                 'qty' => $qty,
                 'subtable_id' => $subtableId,
@@ -152,39 +153,16 @@ final class AddItem
     /**
      * @param  array<string, mixed>  $context
      */
-    private function openOrderForUpdate(int $orderId, int $branchId, string $action, float $startedAt, array $context): Order
-    {
-        $order = Order::query()
-            ->where('branch_id', $branchId)
-            ->lockForUpdate()
-            ->findOrFail($orderId);
-
-        if ($order->status === 'open') {
-            return $order;
-        }
-
-        $exception = OrdersDomainException::orderNotOpen();
-        $this->logDomainFailure($action, $exception, $startedAt, [
-            'branch_id' => $branchId,
-            'order_id' => $orderId,
-            'status' => (string) $order->status,
-        ] + $context);
-
-        throw $exception;
-    }
-
-    /**
-     * @param  array<string, mixed>  $context
-     */
     private function ensureSubtableBelongsToOrder(int $subtableId, Order $order, string $action, float $startedAt, array $context): void
     {
-        $exists = OrderSubtable::query()
+        $subtable = OrderSubtable::query()
             ->where('branch_id', (int) $order->branch_id)
             ->where('order_id', (int) $order->id)
             ->whereKey($subtableId)
-            ->exists();
+            ->lockForUpdate()
+            ->first();
 
-        if ($exists) {
+        if ($subtable instanceof OrderSubtable) {
             return;
         }
 

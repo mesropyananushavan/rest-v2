@@ -7,11 +7,12 @@ namespace App\Modules\Orders\Application;
 use App\Modules\Orders\Domain\OrdersDomainException;
 use App\Modules\Orders\Infrastructure\Models\Order;
 use App\Modules\Tenancy\Contracts\BranchContext;
-use Illuminate\Support\Facades\DB;
 
 final class AssignWaiter
 {
+    use LocksOrdersForUpdate;
     use RecordsOrderAction;
+    use RunsOrderTransactions;
 
     public function __construct(
         private readonly BranchContext $branches,
@@ -25,24 +26,12 @@ final class AssignWaiter
             'waiter_id' => $waiterId,
         ]);
 
-        $order = Order::query()
-            ->where('branch_id', $branchId)
-            ->findOrFail($orderId);
-
-        if ($order->status !== 'open') {
-            $exception = OrdersDomainException::orderNotOpen();
-            $this->logDomainFailure('orders.assign_waiter', $exception, $startedAt, [
-                'branch_id' => $branchId,
-                'order_id' => $orderId,
-                'status' => (string) $order->status,
+        $order = $this->runOrderTransaction(function () use ($branchId, $orderId, $startedAt, $waiterId): Order {
+            $order = $this->lockOpenOrderForUpdate($orderId, $branchId, 'orders.assign_waiter', $startedAt, [
+                'waiter_id' => $waiterId,
             ]);
+            $before = $this->orderAuditPayload($order);
 
-            throw $exception;
-        }
-
-        $before = $this->orderAuditPayload($order);
-
-        DB::transaction(function () use ($before, $order, $waiterId): void {
             $order->update(['waiter_id' => $waiterId]);
 
             $this->auditOrderMutation(
@@ -52,6 +41,8 @@ final class AssignWaiter
                 $before,
                 $this->orderAuditPayload($order->refresh()),
             );
+
+            return $order;
         });
 
         $this->logSuccess('orders.assign_waiter', $startedAt, [

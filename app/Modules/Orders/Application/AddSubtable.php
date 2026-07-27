@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace App\Modules\Orders\Application;
 
 use App\Modules\Orders\Domain\OrdersDomainException;
-use App\Modules\Orders\Infrastructure\Models\Order;
 use App\Modules\Orders\Infrastructure\Models\OrderSubtable;
 use App\Modules\Tenancy\Contracts\BranchContext;
-use Illuminate\Support\Facades\DB;
 
 final class AddSubtable
 {
+    use LocksOrdersForUpdate;
     use RecordsOrderAction;
+    use RunsOrderTransactions;
 
     public function __construct(
         private readonly BranchContext $branches,
@@ -25,22 +25,9 @@ final class AddSubtable
             'order_id' => $orderId,
         ]);
 
-        $order = Order::query()
-            ->where('branch_id', $branchId)
-            ->findOrFail($orderId);
+        $subtable = $this->runOrderTransaction(function () use ($branchId, $name, $orderId, $startedAt): OrderSubtable {
+            $order = $this->lockOpenOrderForUpdate($orderId, $branchId, 'orders.subtables.add', $startedAt, []);
 
-        if ($order->status !== 'open') {
-            $exception = OrdersDomainException::orderNotOpen();
-            $this->logDomainFailure('orders.subtables.add', $exception, $startedAt, [
-                'branch_id' => $branchId,
-                'order_id' => $orderId,
-                'status' => (string) $order->status,
-            ]);
-
-            throw $exception;
-        }
-
-        $subtable = DB::transaction(function () use ($branchId, $name, $order): OrderSubtable {
             $subtable = OrderSubtable::query()->create([
                 'branch_id' => $branchId,
                 'order_id' => (int) $order->id,

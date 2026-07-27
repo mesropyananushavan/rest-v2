@@ -28,7 +28,7 @@ APP_TEST_PGSQL := $(COMPOSE) run --rm --no-deps \
 	php-fpm
 NODE := docker run --rm -u $$(id -u):$$(id -g) -v "$$(pwd)":/app -w /app node:24-alpine
 
-.PHONY: up down restart shell artisan pgsql test tenant-isolation-pgsql prepare-pgsql-test-db stan pint fresh build smoke-menu-context tools logs logs-queue
+.PHONY: up down restart shell artisan pgsql test tenant-isolation-pgsql orders-concurrency-pgsql prepare-pgsql-test-db stan pint fresh build smoke-menu-context tools logs logs-queue
 
 up:
 	$(COMPOSE) up -d --build
@@ -54,6 +54,9 @@ test:
 
 tenant-isolation-pgsql: prepare-pgsql-test-db
 	$(APP_TEST_PGSQL) vendor/bin/pest tests/Feature/Tenancy
+
+orders-concurrency-pgsql: prepare-pgsql-test-db
+	$(APP_TEST_PGSQL) vendor/bin/pest tests/Feature/Orders/OrderConcurrencyTest.php
 
 prepare-pgsql-test-db:
 	$(COMPOSE) up -d postgres
