@@ -3469,13 +3469,18 @@ Repo reconciliation: the prior `Next exact action` for PR #28 is stale. PR
 `main` as merge commit `3a7dae6a4b023468b500bedc2fba8ab503376160`.
 
 Read-only order workspace Menu picker slice is active locally on branch
-`feature/orders-workspace-menu-picker-readonly`. The implementation passed the
-local read-only owner audit and is being prepared in this local feature commit;
-it remains unpushed and unpublished for PR review. No PR, review, merge,
-deployment, force-push, or production verification has occurred. Scope is limited
-to a read-only sellable Menu picker inside the existing order workspace. Add-item
-UI, quantity controls, order mutations, Payments, printing, closing, merge, and
-deployment remain outside this approved scope.
+`feature/orders-workspace-menu-picker-readonly`. The implementation commit is
+`e2bc67a6e964469a643880dadcff7cb312a567e8`; the feature branch was pushed
+normally, and draft PR
+[#29](https://github.com/mesropyananushavan/rest-v2/pull/29) was opened for
+review. The PR remains draft and has not been marked ready for review. The
+local owner audit passed before publication; exact-head GitHub CI may be
+pending or running for the final published docs-only head until GitHub reports a
+final result. No review approval, merge, deployment, force-push, or production
+verification has occurred. Scope is limited to a read-only sellable Menu picker
+inside the existing order workspace. Add-item UI, quantity controls, order
+mutations, Payments, printing, closing, merge, and deployment remain outside
+this approved scope.
 
 Read-only Menu picker plan:
 - [x] Stage 2.13-workspace-menu-picker-readonly.1: Menu public contract read.
@@ -3516,6 +3521,8 @@ Read-only Menu picker plan:
   cross-module grep both exited clean with no forbidden matches, and
   `git diff --check` passed.
 
-Next exact action: publish branch `feature/orders-workspace-menu-picker-readonly`
-only after separate owner approval; do not push, create a PR, merge, deploy,
-start add-item UI, or begin Payments without explicit approval.
+Next exact action: wait for exact-head CI on draft PR
+[#29](https://github.com/mesropyananushavan/rest-v2/pull/29), then perform the
+final owner review/readiness checks before marking it ready or merging; do not
+start add-item UI, order mutations, Payments, printing, closing, merge, or
+deployment without explicit approval.
