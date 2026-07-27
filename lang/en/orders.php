@@ -45,6 +45,7 @@ return [
         'subtitle' => 'Read-only occupancy for the active branch.',
         'free' => 'Free',
         'occupied' => 'Occupied',
+        'action_open' => 'Open dine-in order',
         'guests' => ':count guests',
         'opened' => 'Opened :time',
         'duration' => ':minutes min',
@@ -53,6 +54,29 @@ return [
         'empty_title' => 'No active halls or tables',
         'empty_body' => 'Create active halls and tables for this branch to show the board.',
         'hall_empty' => 'No active tables in this hall.',
+        'modal_title' => 'Open table order',
+        'modal_subtitle' => 'Enter the guest count and an optional note for the new dine-in order.',
+        'form' => [
+            'eyebrow' => 'Free table',
+            'table' => 'Table',
+            'guests' => 'Guests',
+            'comment' => 'Comment',
+            'comment_placeholder' => 'Optional service note',
+        ],
+        'buttons' => [
+            'open' => 'Open order',
+            'cancel' => 'Cancel',
+        ],
+        'flash' => [
+            'opened' => 'Order opened for this table.',
+            'already_occupied' => 'This table is already occupied. The board has been refreshed.',
+            'table_not_found' => 'This table is not available in the active branch.',
+        ],
+        'validation' => [
+            'guest_count_min' => 'Guest count must be at least one.',
+            'table_required' => 'Select a table before opening an order.',
+            'comment_max' => 'Comment may not be longer than 1000 characters.',
+        ],
     ],
     'flash' => [
         'opened' => 'Order opened.',

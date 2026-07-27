@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Livewire\Admin;
 
 use App\Modules\Orders\Application\ListTableOccupancy;
+use App\Modules\Orders\Application\OpenOrder;
 use App\Modules\Orders\Application\TableOccupancy;
+use App\Modules\Orders\Domain\OrdersDomainException;
 use App\Modules\Tables\Contracts\HallLayout;
 use App\Modules\Tables\Contracts\HallLayoutReader;
 use App\Modules\Tables\Contracts\TableLayout;
@@ -17,11 +19,95 @@ use Livewire\Component;
 
 final class OrderBoard extends Component
 {
+    public ?int $selectedTableId = null;
+
+    public int $guestCount = 1;
+
+    public string $comment = '';
+
+    public bool $openModalVisible = false;
+
+    public ?string $statusMessage = null;
+
+    public ?string $errorMessage = null;
+
     public function render(): View
     {
         return view('livewire.admin.order-board', [
             'halls' => $this->halls(),
         ]);
+    }
+
+    public function selectTable(int $tableId): void
+    {
+        $this->authorizeTakingOrders();
+        $this->statusMessage = null;
+        $this->errorMessage = null;
+
+        if (! $this->tableExistsInActiveBranch($tableId)) {
+            $this->resetOpenModal();
+            $this->errorMessage = __('orders.board.flash.table_not_found');
+
+            return;
+        }
+
+        if ($this->tableIsOccupied($tableId)) {
+            $this->resetOpenModal();
+            $this->errorMessage = __('orders.board.flash.already_occupied');
+
+            return;
+        }
+
+        $this->selectedTableId = $tableId;
+        $this->guestCount = 1;
+        $this->comment = '';
+        $this->openModalVisible = true;
+        $this->resetValidation();
+    }
+
+    public function openOrder(): void
+    {
+        $this->authorizeTakingOrders();
+        $this->statusMessage = null;
+        $this->errorMessage = null;
+
+        $this->validate($this->rules(), $this->validationMessages(), $this->validationAttributes());
+
+        $tableId = $this->selectedTableId();
+
+        try {
+            app(OpenOrder::class)(
+                $tableId,
+                clientCount: $this->guestCount,
+                comment: $this->normalizedComment(),
+            );
+        } catch (OrdersDomainException $exception) {
+            if ($exception->errorCode() === 'orders.table_already_open') {
+                $this->resetOpenModal();
+                $this->errorMessage = __('orders.board.flash.already_occupied');
+
+                return;
+            }
+
+            if ($exception->errorCode() === 'orders.table_not_found') {
+                $this->resetOpenModal();
+                $this->errorMessage = __('orders.board.flash.table_not_found');
+
+                return;
+            }
+
+            throw $exception;
+        }
+
+        $this->resetOpenModal();
+        $this->statusMessage = __('orders.board.flash.opened');
+    }
+
+    public function cancelOpen(): void
+    {
+        $this->resetOpenModal();
+        $this->statusMessage = null;
+        $this->errorMessage = null;
     }
 
     /**
@@ -113,5 +199,95 @@ final class OrderBoard extends Component
     private function durationMinutes(TableOccupancy $occupancy): int
     {
         return max(0, intdiv(time() - $occupancy->openedAt->getTimestamp(), 60));
+    }
+
+    /**
+     * @return array<string, list<string>>
+     */
+    protected function rules(): array
+    {
+        return [
+            'selectedTableId' => ['required', 'integer', 'min:1'],
+            'guestCount' => ['required', 'integer', 'min:1'],
+            'comment' => ['nullable', 'string', 'max:1000'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function validationMessages(): array
+    {
+        return [
+            'guestCount.min' => __('orders.board.validation.guest_count_min'),
+            'selectedTableId.required' => __('orders.board.validation.table_required'),
+            'comment.max' => __('orders.board.validation.comment_max'),
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function validationAttributes(): array
+    {
+        return [
+            'guestCount' => __('orders.board.form.guests'),
+            'comment' => __('orders.board.form.comment'),
+            'selectedTableId' => __('orders.board.form.table'),
+        ];
+    }
+
+    private function selectedTableId(): int
+    {
+        if ($this->selectedTableId === null) {
+            abort(404);
+        }
+
+        return $this->selectedTableId;
+    }
+
+    private function normalizedComment(): ?string
+    {
+        $comment = trim($this->comment);
+
+        return $comment === '' ? null : $comment;
+    }
+
+    private function tableExistsInActiveBranch(int $tableId): bool
+    {
+        $branchId = app(BranchContext::class)->id();
+
+        if ($branchId === null) {
+            return false;
+        }
+
+        foreach (app(HallLayoutReader::class)->layoutForBranch($branchId) as $hall) {
+            foreach ($hall->tables as $table) {
+                if ($table->id === $tableId) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private function tableIsOccupied(int $tableId): bool
+    {
+        return isset(app(ListTableOccupancy::class)()[$tableId]);
+    }
+
+    private function resetOpenModal(): void
+    {
+        $this->selectedTableId = null;
+        $this->guestCount = 1;
+        $this->comment = '';
+        $this->openModalVisible = false;
+        $this->resetValidation();
+    }
+
+    private function authorizeTakingOrders(): void
+    {
+        abort_unless(auth()->user()?->can('orders.take') ?? false, 403);
     }
 }

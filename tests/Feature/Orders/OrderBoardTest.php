@@ -48,7 +48,7 @@ it('requires authentication and the orders take permission for the board route',
         ->assertSee(__('orders.board.heading'), false);
 });
 
-it('renders occupied and free active branch tables as read only tiles', function (): void {
+it('renders occupied active branch tables as read only tiles and free tables as open targets', function (): void {
     $record = orderBoardUser('tenant-a', 'waiter-a', ['orders.take']);
 
     orderBoardContext($record, 0);
@@ -69,9 +69,130 @@ it('renders occupied and free active branch tables as read only tiles', function
         ->assertSee(__('orders.board.guests', ['count' => 4]), false)
         ->assertSee(__('orders.board.total'), false)
         ->assertSee('123 ֏', false)
-        ->assertDontSee('wire:click', false);
+        ->assertSee('selectTable('.((int) $freeTable->id).')', false)
+        ->assertDontSee('selectTable('.((int) $occupiedTable->id).')', false);
 
     expect($freeTable)->toBeInstanceOf(Table::class);
+});
+
+it('opens a dine-in order from a free table and re-renders the table as occupied', function (): void {
+    $record = orderBoardUser('tenant-a', 'waiter-a', ['orders.take']);
+
+    orderBoardContext($record, 0);
+
+    $hall = orderBoardHall($record['branches'][0], 'Main Hall');
+    $table = orderBoardTable($hall, 'Garden 4');
+
+    Livewire::actingAs($record['user'])
+        ->test(OrderBoard::class)
+        ->assertSee('Garden 4', false)
+        ->assertSee('selectTable('.((int) $table->id).')', false)
+        ->call('selectTable', (int) $table->id)
+        ->assertSet('openModalVisible', true)
+        ->set('guestCount', 3)
+        ->set('comment', 'Near the window')
+        ->call('openOrder')
+        ->assertSet('openModalVisible', false)
+        ->assertSee(__('orders.board.flash.opened'), false)
+        ->assertSee(__('orders.board.occupied'), false)
+        ->assertSee(__('orders.board.guests', ['count' => 3]), false)
+        ->assertDontSee('selectTable('.((int) $table->id).')', false);
+
+    $order = Order::query()
+        ->where('table_id', (int) $table->id)
+        ->where('status', 'open')
+        ->where('type', 'dine_in')
+        ->sole();
+
+    expect((int) $order->waiter_id)->toBe((int) $record['user']->id)
+        ->and((int) $order->client_count)->toBe(3)
+        ->and($order->comment)->toBe('Near the window');
+});
+
+it('forbids opening from the board without the orders take permission', function (): void {
+    $record = orderBoardUser('tenant-a', 'viewer-a', []);
+
+    orderBoardContext($record, 0);
+
+    $hall = orderBoardHall($record['branches'][0], 'Main Hall');
+    $table = orderBoardTable($hall, 'Garden 4');
+
+    Livewire::actingAs($record['user'])
+        ->test(OrderBoard::class)
+        ->set('selectedTableId', (int) $table->id)
+        ->set('guestCount', 1)
+        ->call('openOrder')
+        ->assertStatus(403);
+
+    expect(Order::query()->where('table_id', (int) $table->id)->exists())->toBeFalse();
+});
+
+it('refreshes with an occupied message when a selected table is no longer free', function (): void {
+    $record = orderBoardUser('tenant-a', 'waiter-a', ['orders.take']);
+
+    orderBoardContext($record, 0);
+
+    $hall = orderBoardHall($record['branches'][0], 'Main Hall');
+    $table = orderBoardTable($hall, 'Garden 4');
+
+    $component = Livewire::actingAs($record['user'])
+        ->test(OrderBoard::class)
+        ->call('selectTable', (int) $table->id)
+        ->assertSet('openModalVisible', true);
+
+    orderBoardDineInOrder($table, $record['user'], clientCount: 2);
+
+    $component
+        ->set('guestCount', 4)
+        ->call('openOrder')
+        ->assertSet('openModalVisible', false)
+        ->assertSee(__('orders.board.flash.already_occupied'), false)
+        ->assertSee(__('orders.board.occupied'), false);
+
+    expect(Order::query()->where('table_id', (int) $table->id)->count())->toBe(1);
+});
+
+it('rejects opening with fewer than one guest', function (): void {
+    $record = orderBoardUser('tenant-a', 'waiter-a', ['orders.take']);
+
+    orderBoardContext($record, 0);
+
+    $hall = orderBoardHall($record['branches'][0], 'Main Hall');
+    $table = orderBoardTable($hall, 'Garden 4');
+
+    Livewire::actingAs($record['user'])
+        ->test(OrderBoard::class)
+        ->call('selectTable', (int) $table->id)
+        ->set('guestCount', 0)
+        ->call('openOrder')
+        ->assertHasErrors(['guestCount' => 'min']);
+
+    expect(Order::query()->where('table_id', (int) $table->id)->exists())->toBeFalse();
+});
+
+it('does not open a table outside the active branch', function (): void {
+    $record = orderBoardUser('tenant-a', 'waiter-a', ['orders.take'], branchCount: 2);
+
+    orderBoardContext($record, 1);
+    $otherBranchHall = orderBoardHall($record['branches'][1], 'Other Branch Hall');
+    $otherBranchTable = orderBoardTable($otherBranchHall, 'Other Branch Table');
+
+    orderBoardContext($record, 0);
+    $visibleHall = orderBoardHall($record['branches'][0], 'Main Hall');
+    orderBoardTable($visibleHall, 'Visible Table');
+
+    Livewire::actingAs($record['user'])
+        ->test(OrderBoard::class)
+        ->call('selectTable', (int) $otherBranchTable->id)
+        ->assertSet('openModalVisible', false)
+        ->assertSee(__('orders.board.flash.table_not_found'), false)
+        ->set('selectedTableId', (int) $otherBranchTable->id)
+        ->set('guestCount', 2)
+        ->call('openOrder')
+        ->assertSet('openModalVisible', false)
+        ->assertSee(__('orders.board.flash.table_not_found'), false);
+
+    expect(Order::query()->where('table_id', (int) $otherBranchTable->id)->exists())->toBeFalse();
 });
 
 it('shows only the active branch layout and occupancy', function (): void {
