@@ -13,7 +13,9 @@ use App\Modules\Identity\Infrastructure\Authorization\EloquentPermissionCatalog;
 use App\Modules\Identity\Infrastructure\Directory\EloquentUserDirectory;
 use App\Modules\Menu\Contracts\MenuCatalog;
 use App\Modules\Menu\Infrastructure\Catalog\EloquentMenuCatalog;
+use App\Modules\Tables\Contracts\HallLayoutReader;
 use App\Modules\Tables\Contracts\TableDirectory;
+use App\Modules\Tables\Infrastructure\Directory\EloquentHallLayoutReader;
 use App\Modules\Tables\Infrastructure\Directory\EloquentTableDirectory;
 use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Modules\Tenancy\Contracts\TenantDirectory;
@@ -60,6 +62,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(UserDirectory::class, EloquentUserDirectory::class);
         $this->app->bind(PermissionCatalog::class, EloquentPermissionCatalog::class);
         $this->app->bind(MenuCatalog::class, EloquentMenuCatalog::class);
+        $this->app->bind(HallLayoutReader::class, EloquentHallLayoutReader::class);
         $this->app->bind(TableDirectory::class, EloquentTableDirectory::class);
         $this->app->bind(AuditRecorder::class, EloquentAuditRecorder::class);
         $this->app->singleton(LanguageFileTranslationKeys::class, function (): LanguageFileTranslationKeys {
