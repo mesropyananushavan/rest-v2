@@ -3526,3 +3526,75 @@ Next exact action: wait for exact-head CI on draft PR
 final owner review/readiness checks before marking it ready or merging; do not
 start add-item UI, order mutations, Payments, printing, closing, merge, or
 deployment without explicit approval.
+
+Repo reconciliation: the prior `Next exact action` for PR #29 is stale.
+`main` now includes merge commit `93a5e70` for the read-only workspace Menu
+picker. Task `2.14-workspace-item-writes` is approved as the active slice on
+branch `feature/orders-workspace-item-writes`, based on
+`93a5e706c870fbfd4830eda66e8c9c79436017f5`. Baseline gates on unmodified
+`main` passed: `make pint` (`PASS 316 files`), `make stan` (`188/188`,
+`[OK] No errors`), `make test` (`290 passed / 13 skipped / 2941 assertions`),
+`make tenant-isolation-pgsql` (`23 passed / 96 assertions`),
+`make orders-concurrency-pgsql` (`6 passed / 43 assertions`), `npm run build`
+passed with the known `Unknown env config "min-release-age"` warning,
+`git diff --check` had no output, and the Orders workspace boundary grep exited
+`1` with no matches. Baseline `FindOrderWorkspace` read count is `3` queries.
+
+Workspace item writes plan:
+- [x] Stage 2.14-workspace-item-writes.1: Livewire mutation adapter and modal
+  support. Keep `FindOrderWorkspace` unchanged; add scalar-only Livewire state
+  for subtable target and feedback, route add/increase/decrease/remove through
+  `AddItem`, `ChangeItemQty`, and `RemoveItem`, re-check `orders.take` inside
+  every mutating method, map every `OrdersDomainException` to translated safe
+  messages, and extend `x-confirm-modal` with a backward-compatible Livewire
+  confirm mode that emits no form and passes identifiers only through `@js`.
+  Result: `OrderWorkspace` now calls the existing Orders application actions
+  for add/increase/decrease/remove, re-checks `orders.take`, maps known domain
+  codes to translations with a generic fallback, and keeps a stale mounted
+  read model only to render safe errors if an open order is closed/cancelled in
+  another tab. `FindOrderWorkspace` was not modified. `x-confirm-modal` keeps
+  HTTP form mode as the default and adds a Livewire button mode with encoded
+  identifier arguments and no `<form>`/`wire:submit`.
+- [x] Stage 2.14-workspace-item-writes.2: Blade UI and translations. Render
+  add buttons in the existing picker, quantity controls and confirmed remove in
+  order lines only when the workspace status is open, disable decrease at
+  quantity `1`, render the target-subtable selector only when existing
+  subtables exist, add no picker quantity stepper, and keep no subtable/move/
+  waiter/cancel/discount/payment/close UI. Add matching `hy`/`ru`/`en`
+  translation keys. Result: open workspaces expose only add, plus/minus, and
+  confirmed remove affordances. Decrease at quantity `1` is disabled, not
+  destructive. The target selector appears only when the order already has
+  subtables and includes the existing unassigned target. New workspace keys
+  were added with identical `hy`/`ru`/`en` key sets.
+- [x] Stage 2.14-workspace-item-writes.3: tests and query proof. Keep the
+  conservative negative assertions where possible, add tests for add/merge,
+  quantity changes, confirmed remove, permission and tenant/branch isolation,
+  mounted-component open-order guard after concurrent closed/cancelled status
+  changes, domain error rendering, menu picker state survival after successful
+  and failed adds, `x-confirm-modal` Livewire mode, translation key parity, JS
+  expression safety, and after query counts. Result: added
+  `OrderWorkspaceItemWritesTest` and focused confirm-modal Livewire coverage.
+  Existing `OrderWorkspaceTest` and `OrderWorkspaceMenuPickerTest` negative
+  assertions stayed green unchanged. After query counts: workspace render `7`
+  queries, add mutation round trip `22`, increase `17`, decrease `17`, remove
+  `15`.
+- [x] Stage 2.14-workspace-item-writes.4: verification, worklog results, and
+  local commit. Run `make pint`, `make stan`, `make test`,
+  `make tenant-isolation-pgsql`, `make orders-concurrency-pgsql`,
+  `npm run build`, `git diff --check`, and the required Orders workspace
+  boundary grep; update this worklog with exact results, review the scoped diff,
+  and commit locally only. Result: `make pint` passed (`PASS 317 files`),
+  `make stan` passed (`188/188`, `[OK] No errors`), `make test` passed
+  (`302 passed / 13 skipped / 3064 assertions`),
+  `make tenant-isolation-pgsql` passed (`23 passed / 96 assertions`),
+  `make orders-concurrency-pgsql` passed (`6 passed / 43 assertions`),
+  `npm run build` succeeded with the known `Unknown env config
+  "min-release-age"` warning, `git diff --check` had no output, and the Orders
+  module-boundary grep exited `1` with no matches. Gotcha: the expanded
+  required Pest coverage pushed the one-process full suite past PHP's default
+  `128M` limit before architecture parsing; verified the suite passes with
+  `256M` and made `make test` use `php -d memory_limit=256M vendor/bin/pest`.
+
+Next exact action: owner review of local commit for task
+`2.14-workspace-item-writes`; do not push, merge, deploy, create a migration,
+modify `FindOrderWorkspace`, `template/`, or `docs/BLUEPRINT.md`.

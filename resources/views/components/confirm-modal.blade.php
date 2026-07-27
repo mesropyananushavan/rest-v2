@@ -11,11 +11,13 @@ declare(strict_types=1);
 /** @var string $triggerLabel */
 /** @var string $method */
 /** @var string|null $triggerClass */
+/** @var string|null $livewireMethod */
+/** @var list<int|string|null> $livewireArguments */
 ?>
 
 @props([
     'id',
-    'action',
+    'action' => null,
     'title' => __('admin.components.confirm_delete.title'),
     'message' => __('admin.components.confirm_delete.message'),
     'confirmLabel' => __('admin.actions.delete'),
@@ -23,10 +25,27 @@ declare(strict_types=1);
     'triggerLabel' => __('admin.actions.delete'),
     'method' => 'delete',
     'triggerClass' => null,
+    'livewireMethod' => null,
+    'livewireArguments' => [],
 ])
 
 @php
     $triggerClasses = $triggerClass ?? 'inline-flex items-center justify-center rounded-sr-brand border border-smartrest-danger/30 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-smartrest-danger';
+    $isLivewireMode = is_string($livewireMethod) && $livewireMethod !== '';
+
+    if (! $isLivewireMode && (! is_string($action) || $action === '')) {
+        throw new \InvalidArgumentException('The confirm modal action prop is required outside Livewire mode.');
+    }
+
+    $livewireExpression = null;
+
+    if ($isLivewireMode) {
+        $encodedArguments = array_map(
+            static fn (int|string|null $argument): string => (string) \Illuminate\Support\Js::from($argument),
+            $livewireArguments,
+        );
+        $livewireExpression = $livewireMethod.'('.implode(', ', $encodedArguments).')';
+    }
 @endphp
 
 <div x-data="{ open: false }" class="inline-flex" @keydown.escape.window="open = false">
@@ -68,13 +87,19 @@ declare(strict_types=1);
                 <button type="button" class="inline-flex items-center justify-center rounded-sr-brand border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" @click="open = false">
                     {{ $cancelLabel }}
                 </button>
-                <form method="post" action="{{ $action }}">
-                    @csrf
-                    @method($method)
-                    <button type="submit" class="inline-flex w-full items-center justify-center rounded-sr-brand bg-smartrest-danger px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 sm:w-auto">
+                @if ($isLivewireMode)
+                    <button type="button" wire:click="{{ $livewireExpression }}" class="inline-flex w-full items-center justify-center rounded-sr-brand bg-smartrest-danger px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 sm:w-auto" @click="open = false">
                         {{ $confirmLabel }}
                     </button>
-                </form>
+                @else
+                    <form method="post" action="{{ $action }}">
+                        @csrf
+                        @method($method)
+                        <button type="submit" class="inline-flex w-full items-center justify-center rounded-sr-brand bg-smartrest-danger px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 sm:w-auto">
+                            {{ $confirmLabel }}
+                        </button>
+                    </form>
+                @endif
             </div>
         </div>
     </div>
