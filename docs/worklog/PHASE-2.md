@@ -3296,7 +3296,9 @@ Read-only table board plan:
   (`259 passed / 13 skipped / 2733 assertions`), and
   `make tenant-isolation-pgsql` (`23 passed / 96 assertions`). The requested
   Orders boundary grep exited `1` with no matches and `git diff --check`
-  passed. Commit and branch push are next.
+  passed. Committed as `9ba2b28` and pushed
+  `feature/orders-table-board-readonly` with upstream tracking.
 
-Next exact action: commit the read-only Orders table board slice and push
-`feature/orders-table-board-readonly` for owner review.
+Next exact action: owner review of pushed branch
+`feature/orders-table-board-readonly`; do not merge or push to `main` without
+separate authorization.
