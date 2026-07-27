@@ -9,15 +9,21 @@ use App\Modules\Menu\Contracts\SellableMenuBrowseResult;
 use App\Modules\Menu\Contracts\SellableMenuCategory;
 use App\Modules\Menu\Contracts\SellableMenuCategoryGroup;
 use App\Modules\Menu\Contracts\SellableMenuItem;
+use App\Modules\Orders\Application\AddItem;
+use App\Modules\Orders\Application\ChangeItemQty;
 use App\Modules\Orders\Application\FindOrderWorkspace;
 use App\Modules\Orders\Application\OrderWorkspace as OrderWorkspaceData;
 use App\Modules\Orders\Application\OrderWorkspaceItem;
 use App\Modules\Orders\Application\OrderWorkspaceSubtable;
+use App\Modules\Orders\Application\RemoveItem;
+use App\Modules\Orders\Domain\OrdersDomainException;
+use App\Modules\Orders\Infrastructure\Models\OrderItem;
 use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Support\I18n\LocalizedText;
 use App\Support\Money\Money;
 use App\Support\Money\MoneyFormatter;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
@@ -41,16 +47,46 @@ final class OrderWorkspace extends Component
     #[Url(as: 'menu_category_page', history: true, except: 1)]
     public int $menuCategoryPage = 1;
 
+    public ?string $targetSubtableId = null;
+
+    public ?string $statusMessage = null;
+
+    public ?string $errorMessage = null;
+
+    public bool $workspaceLoaded = false;
+
+    /**
+     * @var array<string, mixed>
+     */
+    public array $lastOrder = [];
+
+    /**
+     * @var array<string, mixed>
+     */
+    public array $lastMenu = [];
+
     public function mount(int $orderId): void
     {
-        abort_unless(auth()->user()?->can('orders.take') ?? false, 403);
+        $this->authorizeTakingOrders();
 
         $this->orderId = $orderId;
     }
 
     public function render(): View
     {
-        $workspace = app(FindOrderWorkspace::class)($this->orderId);
+        try {
+            $workspace = app(FindOrderWorkspace::class)($this->orderId);
+        } catch (ModelNotFoundException $exception) {
+            if (! $this->workspaceLoaded || $this->lastOrder === [] || $this->lastMenu === []) {
+                throw $exception;
+            }
+
+            return view('livewire.admin.order-workspace', [
+                'menu' => $this->emptyMenu(),
+                'order' => $this->staleUnavailableOrder(),
+            ]);
+        }
+
         $menu = app(MenuCatalog::class)->browseSellableInBranch(
             branchId: $this->branchId(),
             categoryId: $this->menuCategoryId,
@@ -63,10 +99,15 @@ final class OrderWorkspace extends Component
         $this->menuCategoryId = $menu->selectedCategoryId;
         $this->menuPage = $menu->itemPage;
         $this->menuCategoryPage = $menu->categoryPage;
+        $menuData = $this->menu($menu);
+        $orderData = $this->order($workspace);
+        $this->lastMenu = $menuData;
+        $this->lastOrder = $orderData;
+        $this->workspaceLoaded = true;
 
         return view('livewire.admin.order-workspace', [
-            'menu' => $this->menu($menu),
-            'order' => $this->order($workspace),
+            'menu' => $menuData,
+            'order' => $orderData,
         ]);
     }
 
@@ -118,6 +159,61 @@ final class OrderWorkspace extends Component
         $this->menuPage = 1;
     }
 
+    public function addMenuItem(int $menuItemId): void
+    {
+        $this->authorizeTakingOrders();
+        $this->resetFeedback();
+
+        try {
+            app(AddItem::class)(
+                orderId: $this->orderId,
+                menuItemId: $menuItemId,
+                qty: 1,
+                subtableId: $this->selectedTargetSubtableId(),
+            );
+        } catch (OrdersDomainException $exception) {
+            $this->errorMessage = $this->domainErrorMessage($exception);
+
+            return;
+        } catch (ModelNotFoundException) {
+            $this->errorMessage = __('orders.workspace.errors.generic');
+
+            return;
+        }
+
+        $this->statusMessage = __('orders.flash.item_added');
+    }
+
+    public function increaseItemQty(int $orderItemId): void
+    {
+        $this->changeItemQtyBy($orderItemId, 1);
+    }
+
+    public function decreaseItemQty(int $orderItemId): void
+    {
+        $this->changeItemQtyBy($orderItemId, -1);
+    }
+
+    public function confirmRemoveItem(int $orderItemId): void
+    {
+        $this->authorizeTakingOrders();
+        $this->resetFeedback();
+
+        try {
+            app(RemoveItem::class)($orderItemId);
+        } catch (OrdersDomainException $exception) {
+            $this->errorMessage = $this->domainErrorMessage($exception);
+
+            return;
+        } catch (ModelNotFoundException) {
+            $this->errorMessage = __('orders.item_not_in_order');
+
+            return;
+        }
+
+        $this->statusMessage = __('orders.flash.item_removed');
+    }
+
     /**
      * @return array{
      *     id: int,
@@ -130,6 +226,9 @@ final class OrderWorkspace extends Component
      *     subtotal: string,
      *     discount: string,
      *     total: string,
+     *     can_mutate: bool,
+     *     stale_unavailable: bool,
+     *     subtables: list<array{id: int, name: string}>,
      *     groups: list<array{id: int|null, name: string, items: list<array{id: int, name: string, qty: int, unit_price: string, discount: string, total: string}>}>
      * }
      */
@@ -148,7 +247,54 @@ final class OrderWorkspace extends Component
             'subtotal' => $this->money($workspace->subtotalMinor, $workspace->currency, $locale),
             'discount' => $this->money($workspace->discountMinor, $workspace->currency, $locale),
             'total' => $this->money($workspace->totalMinor, $workspace->currency, $locale),
+            'can_mutate' => $workspace->status === 'open',
+            'stale_unavailable' => false,
+            'subtables' => array_map(
+                fn (OrderWorkspaceSubtable $subtable): array => [
+                    'id' => $subtable->id,
+                    'name' => $subtable->name,
+                ],
+                $workspace->subtables,
+            ),
             'groups' => $this->groups($workspace->subtables, $workspace->items, $locale),
+        ];
+    }
+
+    /**
+     * @return array{
+     *     id: int,
+     *     type: string,
+     *     status: string,
+     *     table_id: int,
+     *     opened_at: string,
+     *     client_count: int,
+     *     comment: string|null,
+     *     subtotal: string,
+     *     discount: string,
+     *     total: string,
+     *     can_mutate: bool,
+     *     stale_unavailable: bool,
+     *     subtables: list<array{id: int, name: string}>,
+     *     groups: list<array{id: int|null, name: string, items: list<array{id: int, name: string, qty: int, unit_price: string, discount: string, total: string}>}>
+     * }
+     */
+    private function staleUnavailableOrder(): array
+    {
+        return [
+            'id' => $this->orderId,
+            'type' => '',
+            'status' => '',
+            'table_id' => 0,
+            'opened_at' => '',
+            'client_count' => 0,
+            'comment' => null,
+            'subtotal' => '',
+            'discount' => '',
+            'total' => '',
+            'can_mutate' => false,
+            'stale_unavailable' => true,
+            'subtables' => [],
+            'groups' => [],
         ];
     }
 
@@ -269,6 +415,36 @@ final class OrderWorkspace extends Component
         ];
     }
 
+    /**
+     * @return array{
+     *     search: string,
+     *     selected_category_id: int|null,
+     *     category_page: int,
+     *     has_previous_category_page: bool,
+     *     has_more_category_pages: bool,
+     *     item_page: int,
+     *     has_previous_item_page: bool,
+     *     has_more_item_pages: bool,
+     *     category_groups: list<array{id: int, name: string, categories: list<array{id: int, name: string, selected: bool}>}>,
+     *     items: list<array{id: int, category_id: int, name: string, price: string}>
+     * }
+     */
+    private function emptyMenu(): array
+    {
+        return [
+            'search' => $this->menuSearch,
+            'selected_category_id' => $this->menuCategoryId,
+            'category_page' => $this->menuCategoryPage,
+            'has_previous_category_page' => false,
+            'has_more_category_pages' => false,
+            'item_page' => $this->menuPage,
+            'has_previous_item_page' => false,
+            'has_more_item_pages' => false,
+            'category_groups' => [],
+            'items' => [],
+        ];
+    }
+
     private function branchId(): int
     {
         $branchId = app(BranchContext::class)->id();
@@ -276,5 +452,96 @@ final class OrderWorkspace extends Component
         abort_if($branchId === null, 404);
 
         return $branchId;
+    }
+
+    private function changeItemQtyBy(int $orderItemId, int $delta): void
+    {
+        $this->authorizeTakingOrders();
+        $this->resetFeedback();
+
+        $currentQty = $this->currentItemQty($orderItemId);
+
+        if ($currentQty === null) {
+            return;
+        }
+
+        $nextQty = $currentQty + $delta;
+
+        if ($nextQty < 1 || $nextQty > 999) {
+            $this->errorMessage = __('orders.invalid_quantity');
+
+            return;
+        }
+
+        try {
+            app(ChangeItemQty::class)($orderItemId, $nextQty);
+        } catch (OrdersDomainException $exception) {
+            $this->errorMessage = $this->domainErrorMessage($exception);
+
+            return;
+        } catch (ModelNotFoundException) {
+            $this->errorMessage = __('orders.item_not_in_order');
+
+            return;
+        }
+
+        $this->statusMessage = __('orders.flash.item_qty_changed');
+    }
+
+    private function currentItemQty(int $orderItemId): ?int
+    {
+        try {
+            $item = OrderItem::query()
+                ->where('branch_id', $this->branchId())
+                ->where('order_id', $this->orderId)
+                ->find($orderItemId, ['id', 'qty']);
+        } catch (ModelNotFoundException) {
+            $this->errorMessage = __('orders.item_not_in_order');
+
+            return null;
+        }
+
+        if (! $item instanceof OrderItem) {
+            $this->errorMessage = __('orders.item_not_in_order');
+
+            return null;
+        }
+
+        return (int) $item->qty;
+    }
+
+    private function selectedTargetSubtableId(): ?int
+    {
+        if ($this->targetSubtableId === null || trim($this->targetSubtableId) === '') {
+            return null;
+        }
+
+        return (int) trim($this->targetSubtableId);
+    }
+
+    private function resetFeedback(): void
+    {
+        $this->statusMessage = null;
+        $this->errorMessage = null;
+    }
+
+    private function authorizeTakingOrders(): void
+    {
+        abort_unless(auth()->user()?->can('orders.take') ?? false, 403);
+    }
+
+    private function domainErrorMessage(OrdersDomainException $exception): string
+    {
+        return match ($exception->errorCode()) {
+            'orders.tenant_context_required',
+            'orders.branch_context_required',
+            'orders.order_not_open',
+            'orders.menu_item_not_found',
+            'orders.currency_mismatch',
+            'orders.item_not_in_order',
+            'orders.invalid_quantity',
+            'orders.subtable_not_in_order' => __($exception->errorCode()),
+            default => __('orders.workspace.errors.generic'),
+        };
     }
 }

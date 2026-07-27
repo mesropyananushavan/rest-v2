@@ -14,6 +14,9 @@ declare(strict_types=1);
  *     subtotal: string,
  *     discount: string,
  *     total: string,
+ *     can_mutate: bool,
+ *     stale_unavailable: bool,
+ *     subtables: list<array{id: int, name: string}>,
  *     groups: list<array{id: int|null, name: string, items: list<array{id: int, name: string, qty: int, unit_price: string, discount: string, total: string}>}>
  * } $order
  * @var array{
@@ -34,8 +37,8 @@ declare(strict_types=1);
 <div>
     <x-page-header
         :eyebrow="__('orders.workspace.eyebrow')"
-        :title="__('orders.workspace.heading', ['id' => $order['id']])"
-        :subtitle="__('orders.workspace.subtitle', ['table' => $order['table_id']])"
+        :title="$order['stale_unavailable'] ? __('orders.workspace.unavailable_title') : __('orders.workspace.heading', ['id' => $order['id']])"
+        :subtitle="$order['stale_unavailable'] ? __('orders.workspace.unavailable_message') : __('orders.workspace.subtitle', ['table' => $order['table_id']])"
     >
         <x-slot:actions>
             <x-button :href="route('admin.orders.board')" variant="outline-secondary" size="sm">
@@ -44,6 +47,23 @@ declare(strict_types=1);
         </x-slot:actions>
     </x-page-header>
 
+    @if ($statusMessage)
+        <div class="mb-5 rounded-sr-card border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900">
+            {{ $statusMessage }}
+        </div>
+    @endif
+
+    @if ($errorMessage)
+        <div class="mb-5 rounded-sr-card border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-900">
+            {{ $errorMessage }}
+        </div>
+    @endif
+
+    @if ($order['stale_unavailable'])
+        <x-card :title="__('orders.workspace.unavailable_title')">
+            <p class="text-sm font-semibold text-slate-600">{{ __('orders.workspace.unavailable_message') }}</p>
+        </x-card>
+    @else
     <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <div class="space-y-5">
             <x-card :title="__('orders.workspace.items_title')">
@@ -75,16 +95,52 @@ declare(strict_types=1);
                                                 <th>{{ __('orders.workspace.fields.unit_price') }}</th>
                                                 <th>{{ __('orders.workspace.fields.line_discount') }}</th>
                                                 <th>{{ __('orders.workspace.fields.line_total') }}</th>
+                                                @if ($order['can_mutate'])
+                                                    <th class="text-right">{{ __('orders.workspace.fields.actions') }}</th>
+                                                @endif
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-slate-100">
                                             @foreach ($group['items'] as $item)
                                                 <tr>
                                                     <td class="font-bold text-smartrest-ink">{{ $item['name'] }}</td>
-                                                    <td>{{ $item['qty'] }}</td>
+                                                    <td>
+                                                        @if ($order['can_mutate'])
+                                                            <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-1">
+                                                                @if ($item['qty'] > 1)
+                                                                    <button type="button" wire:click="decreaseItemQty(@js($item['id']))" class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-sm font-black text-smartrest-ink transition hover:bg-slate-200" aria-label="{{ __('orders.workspace.actions.decrease_qty') }}">
+                                                                        -
+                                                                    </button>
+                                                                @else
+                                                                    <button type="button" class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-50 text-sm font-black text-slate-300" aria-label="{{ __('orders.workspace.actions.decrease_qty') }}" disabled>
+                                                                        -
+                                                                    </button>
+                                                                @endif
+                                                                <span class="min-w-6 text-center font-black text-smartrest-ink">{{ $item['qty'] }}</span>
+                                                                <button type="button" wire:click="increaseItemQty(@js($item['id']))" class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-sm font-black text-emerald-900 transition hover:bg-emerald-200" aria-label="{{ __('orders.workspace.actions.increase_qty') }}">
+                                                                    +
+                                                                </button>
+                                                            </div>
+                                                        @else
+                                                            {{ $item['qty'] }}
+                                                        @endif
+                                                    </td>
                                                     <td>{{ $item['unit_price'] }}</td>
                                                     <td>{{ $item['discount'] }}</td>
                                                     <td class="font-black text-smartrest-ink">{{ $item['total'] }}</td>
+                                                    @if ($order['can_mutate'])
+                                                        <td class="text-right">
+                                                            <x-confirm-modal
+                                                                id="remove_order_item_{{ (int) $item['id'] }}"
+                                                                livewire-method="confirmRemoveItem"
+                                                                :livewire-arguments="[(int) $item['id']]"
+                                                                :title="__('orders.workspace.confirm.remove_item_title')"
+                                                                :message="__('orders.workspace.confirm.remove_item_message')"
+                                                                :trigger-label="__('orders.workspace.actions.remove_item')"
+                                                                :confirm-label="__('orders.workspace.actions.remove_item')"
+                                                            />
+                                                        </td>
+                                                    @endif
                                                 </tr>
                                             @endforeach
                                         </tbody>
@@ -118,6 +174,24 @@ declare(strict_types=1);
                     <p class="mt-2 text-sm text-green-900/70">{{ __('orders.workspace.menu_picker.help') }}</p>
                 </div>
 
+                @if ($order['can_mutate'] && $order['subtables'] !== [])
+                    <div class="border-b border-slate-100 bg-emerald-50/40 p-4">
+                        <label for="order-workspace-target-subtable" class="mb-2 block text-sm font-black uppercase tracking-[0.16em] text-green-800">
+                            {{ __('orders.workspace.menu_picker.target_subtable_label') }}
+                        </label>
+                        <select
+                            id="order-workspace-target-subtable"
+                            wire:model="targetSubtableId"
+                            class="min-h-12 w-full rounded-2xl border border-emerald-200 bg-white px-4 text-base font-semibold text-smartrest-ink shadow-sm outline-none transition focus:border-smartrest-success focus:ring-4 focus:ring-smartrest-success/15"
+                        >
+                            <option value="">{{ __('orders.workspace.unassigned_items') }}</option>
+                            @foreach ($order['subtables'] as $subtable)
+                                <option value="{{ $subtable['id'] }}">{{ $subtable['name'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endif
+
                 <div class="grid gap-0 lg:grid-cols-[18rem_minmax(0,1fr)]">
                     <aside class="border-b border-slate-100 p-4 lg:border-b-0 lg:border-r">
                         <div class="mb-3 flex items-center justify-between gap-3">
@@ -143,7 +217,7 @@ declare(strict_types=1);
                                             @foreach ($group['categories'] as $category)
                                                 <button
                                                     type="button"
-                                                    wire:click="selectMenuCategory({{ $category['id'] }})"
+                                                    wire:click="selectMenuCategory(@js($category['id']))"
                                                     class="rounded-xl border px-3 py-2 text-left text-sm font-bold transition {{ $category['selected'] ? 'border-smartrest-success bg-emerald-50 text-green-900' : 'border-transparent text-smartrest-ink hover:border-slate-200 hover:bg-slate-50' }}"
                                                 >
                                                     {{ $category['name'] }}
@@ -190,6 +264,11 @@ declare(strict_types=1);
                                                 {{ $item['price'] }}
                                             </span>
                                         </div>
+                                        @if ($order['can_mutate'])
+                                            <button type="button" wire:click="addMenuItem(@js($item['id']))" class="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-smartrest-success px-4 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-smartrest-success/20">
+                                                {{ __('orders.workspace.actions.add_menu_item') }}
+                                            </button>
+                                        @endif
                                     </article>
                                 @endforeach
                             </div>
@@ -271,4 +350,5 @@ declare(strict_types=1);
             </x-card>
         </aside>
     </div>
+    @endif
 </div>

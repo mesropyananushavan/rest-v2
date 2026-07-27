@@ -35,3 +35,32 @@ it('renders the reusable admin Blade components', function (): void {
         ->toContain('Breakfast')
         ->toContain('checked');
 });
+
+it('renders the confirm modal Livewire mode without changing the default HTTP mode', function (): void {
+    View::share('errors', new ViewErrorBag);
+
+    $httpHtml = Blade::render(<<<'BLADE'
+        <x-confirm-modal id="delete_test" action="/delete" />
+    BLADE);
+
+    $livewireHtml = Blade::render(<<<'BLADE'
+        <x-confirm-modal
+            id="remove_line_test"
+            livewire-method="confirmRemoveItem"
+            :livewire-arguments="[123]"
+            trigger-label="Remove"
+            confirm-label="Remove"
+        />
+    BLADE);
+
+    expect($httpHtml)
+        ->toContain('delete_test')
+        ->toContain('<form method="post" action="/delete">')
+        ->toContain('name="_method"')
+        ->toContain('value="delete"')
+        ->and($livewireHtml)
+        ->toContain('remove_line_test')
+        ->toContain('wire:click="confirmRemoveItem(123)"')
+        ->not->toContain('<form')
+        ->not->toContain('wire:submit');
+});
