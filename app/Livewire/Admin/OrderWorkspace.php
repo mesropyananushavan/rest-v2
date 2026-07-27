@@ -4,19 +4,42 @@ declare(strict_types=1);
 
 namespace App\Livewire\Admin;
 
+use App\Modules\Menu\Contracts\MenuCatalog;
+use App\Modules\Menu\Contracts\SellableMenuBrowseResult;
+use App\Modules\Menu\Contracts\SellableMenuCategory;
+use App\Modules\Menu\Contracts\SellableMenuCategoryGroup;
+use App\Modules\Menu\Contracts\SellableMenuItem;
 use App\Modules\Orders\Application\FindOrderWorkspace;
 use App\Modules\Orders\Application\OrderWorkspace as OrderWorkspaceData;
 use App\Modules\Orders\Application\OrderWorkspaceItem;
 use App\Modules\Orders\Application\OrderWorkspaceSubtable;
+use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Support\I18n\LocalizedText;
 use App\Support\Money\Money;
 use App\Support\Money\MoneyFormatter;
 use Illuminate\Contracts\View\View;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 final class OrderWorkspace extends Component
 {
+    private const int MENU_ITEM_PAGE_SIZE = 12;
+
+    private const int MENU_CATEGORY_PAGE_SIZE = 6;
+
     public int $orderId;
+
+    #[Url(as: 'menu_q', history: true, except: '')]
+    public string $menuSearch = '';
+
+    #[Url(as: 'menu_category', history: true, nullable: true)]
+    public ?int $menuCategoryId = null;
+
+    #[Url(as: 'menu_page', history: true, except: 1)]
+    public int $menuPage = 1;
+
+    #[Url(as: 'menu_category_page', history: true, except: 1)]
+    public int $menuCategoryPage = 1;
 
     public function mount(int $orderId): void
     {
@@ -28,10 +51,71 @@ final class OrderWorkspace extends Component
     public function render(): View
     {
         $workspace = app(FindOrderWorkspace::class)($this->orderId);
+        $menu = app(MenuCatalog::class)->browseSellableInBranch(
+            branchId: $this->branchId(),
+            categoryId: $this->menuCategoryId,
+            search: $this->menuSearch,
+            perPage: self::MENU_ITEM_PAGE_SIZE,
+            page: $this->menuPage,
+            categoryPerPage: self::MENU_CATEGORY_PAGE_SIZE,
+            categoryPage: $this->menuCategoryPage,
+        );
+        $this->menuCategoryId = $menu->selectedCategoryId;
+        $this->menuPage = $menu->itemPage;
+        $this->menuCategoryPage = $menu->categoryPage;
 
         return view('livewire.admin.order-workspace', [
+            'menu' => $this->menu($menu),
             'order' => $this->order($workspace),
         ]);
+    }
+
+    public function selectMenuCategory(int $categoryId): void
+    {
+        $this->menuCategoryId = $categoryId > 0 ? $categoryId : null;
+        $this->menuPage = 1;
+    }
+
+    public function clearMenuCategory(): void
+    {
+        $this->menuCategoryId = null;
+        $this->menuPage = 1;
+    }
+
+    public function clearMenuSearch(): void
+    {
+        $this->menuSearch = '';
+        $this->menuPage = 1;
+    }
+
+    public function previousMenuPage(): void
+    {
+        $this->menuPage = max(1, $this->menuPage - 1);
+    }
+
+    public function nextMenuPage(): void
+    {
+        $this->menuPage++;
+    }
+
+    public function previousMenuCategoryPage(): void
+    {
+        $this->menuCategoryPage = max(1, $this->menuCategoryPage - 1);
+    }
+
+    public function nextMenuCategoryPage(): void
+    {
+        $this->menuCategoryPage++;
+    }
+
+    public function updatedMenuSearch(): void
+    {
+        $this->menuPage = 1;
+    }
+
+    public function updatedMenuCategoryId(): void
+    {
+        $this->menuPage = 1;
     }
 
     /**
@@ -129,5 +213,68 @@ final class OrderWorkspace extends Component
     private function money(int $minor, string $currency, string $locale): string
     {
         return MoneyFormatter::format(new Money($minor, $currency), $locale);
+    }
+
+    /**
+     * @return array{
+     *     search: string,
+     *     selected_category_id: int|null,
+     *     category_page: int,
+     *     has_previous_category_page: bool,
+     *     has_more_category_pages: bool,
+     *     item_page: int,
+     *     has_previous_item_page: bool,
+     *     has_more_item_pages: bool,
+     *     category_groups: list<array{id: int, name: string, categories: list<array{id: int, name: string, selected: bool}>}>,
+     *     items: list<array{id: int, category_id: int, name: string, price: string}>
+     * }
+     */
+    private function menu(SellableMenuBrowseResult $menu): array
+    {
+        $locale = app()->getLocale();
+
+        return [
+            'search' => $this->menuSearch,
+            'selected_category_id' => $menu->selectedCategoryId,
+            'category_page' => $menu->categoryPage,
+            'has_previous_category_page' => $menu->categoryPage > 1,
+            'has_more_category_pages' => $menu->hasMoreCategoryPages,
+            'item_page' => $menu->itemPage,
+            'has_previous_item_page' => $menu->itemPage > 1,
+            'has_more_item_pages' => $menu->hasMoreItemPages,
+            'category_groups' => array_map(
+                fn (SellableMenuCategoryGroup $group): array => [
+                    'id' => $group->id,
+                    'name' => $group->name->forLocale($locale, 'en'),
+                    'categories' => array_map(
+                        fn (SellableMenuCategory $category): array => [
+                            'id' => $category->id,
+                            'name' => $category->name->forLocale($locale, 'en'),
+                            'selected' => $menu->selectedCategoryId === $category->id,
+                        ],
+                        $group->categories,
+                    ),
+                ],
+                $menu->categoryGroups,
+            ),
+            'items' => array_map(
+                fn (SellableMenuItem $item): array => [
+                    'id' => $item->id,
+                    'category_id' => $item->categoryId,
+                    'name' => $item->name->forLocale($locale, 'en'),
+                    'price' => MoneyFormatter::format($item->price, $locale),
+                ],
+                $menu->items,
+            ),
+        ];
+    }
+
+    private function branchId(): int
+    {
+        $branchId = app(BranchContext::class)->id();
+
+        abort_if($branchId === null, 404);
+
+        return $branchId;
     }
 }

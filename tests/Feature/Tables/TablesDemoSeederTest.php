@@ -8,6 +8,7 @@ use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Modules\Tenancy\Contracts\TenantResolver;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
@@ -38,11 +39,44 @@ it('seeds deterministic halls and tables visible to demo managers by tenant bran
         ->whereJsonContains('translated_name->en', 'Main Hall')
         ->firstOrFail();
 
+    $northstarPatioTable = Table::withoutGlobalScopes()
+        ->whereJsonContains('translated_name->en', 'P1')
+        ->firstOrFail();
+    $expectedAratTableRecords = tablesDemoTableRecords(
+        Table::withoutGlobalScopes()
+            ->where('tenant_id', (int) $aratHall->tenant_id)
+            ->where('branch_id', (int) $aratHall->branch_id)
+            ->where('hall_id', (int) $aratHall->id)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get(),
+    );
+
     $this->get(route('admin.tables.tables.index', ['hall' => (int) $aratHall->id]))
         ->assertOk()
         ->assertSee('VIP', false)
         ->assertSee('Քառակուսի', false)
-        ->assertDontSee('P1', false);
+        ->assertViewHas('tables', function (
+            LengthAwarePaginator $tables,
+        ) use ($aratHall, $expectedAratTableRecords, $northstarPatioTable): bool {
+            $renderedTableRecords = tablesDemoTableRecords($tables->getCollection());
+
+            if ($renderedTableRecords !== $expectedAratTableRecords) {
+                return false;
+            }
+
+            foreach ($renderedTableRecords as $table) {
+                if ($table['id'] === (int) $northstarPatioTable->id
+                    || $table['tenant_id'] !== (int) $aratHall->tenant_id
+                    || $table['branch_id'] !== (int) $aratHall->branch_id
+                    || $table['hall_id'] !== (int) $aratHall->id
+                    || in_array('P1', $table['name'], true)) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
 
     $this->withSession(['_token' => tablesDemoCsrfToken()])
         ->post(route('logout'), ['_token' => tablesDemoCsrfToken()])
@@ -74,6 +108,34 @@ it('seeds deterministic halls and tables visible to demo managers by tenant bran
 function tablesDemoCsrfToken(): string
 {
     return 'tables-demo-test-token';
+}
+
+/**
+ * @param  iterable<int, Table>  $tables
+ * @return list<array{
+ *     id: int,
+ *     tenant_id: int,
+ *     branch_id: int,
+ *     hall_id: int,
+ *     name: array{hy: string, ru: string, en: string}
+ * }>
+ */
+function tablesDemoTableRecords(iterable $tables): array
+{
+    return collect($tables)
+        ->map(fn (Table $table): array => [
+            'id' => (int) $table->id,
+            'tenant_id' => (int) $table->tenant_id,
+            'branch_id' => (int) $table->branch_id,
+            'hall_id' => (int) $table->hall_id,
+            'name' => [
+                'hy' => $table->translatedName()->forLocale('hy', 'en'),
+                'ru' => $table->translatedName()->forLocale('ru', 'en'),
+                'en' => $table->translatedName()->forLocale('en', 'en'),
+            ],
+        ])
+        ->values()
+        ->all();
 }
 
 /**

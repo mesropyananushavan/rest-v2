@@ -175,7 +175,9 @@ it('renders header subtables assigned and unassigned items and totals read only'
         ->assertSee(MoneyFormatter::format(new Money(450, 'AMD'), app()->getLocale()), false)
         ->assertSee(MoneyFormatter::format(new Money(6900, 'AMD'), app()->getLocale()), false)
         ->assertDontSee('<form', false)
-        ->assertDontSee('wire:click', false)
+        ->assertDontSee('wire:submit', false)
+        ->assertDontSee('openOrder', false)
+        ->assertDontSee('AddItem', false)
         ->assertDontSee(__('orders.board.action_open'), false);
 });
 
