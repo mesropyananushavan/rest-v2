@@ -12,12 +12,13 @@ use App\Modules\Orders\Infrastructure\Models\OrderSubtable;
 use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Modules\Tenancy\Contracts\TenantResolver;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 final class MoveItem
 {
+    use LocksOrdersForUpdate;
     use RecomputesOrderTotals;
     use RecordsOrderAction;
+    use RunsOrderTransactions;
 
     public function __construct(
         private readonly TenantResolver $tenants,
@@ -42,22 +43,64 @@ final class MoveItem
             'target_subtable_id' => $targetSubtableId,
         ]);
 
-        $item = DB::transaction(function () use ($branchId, $orderItemId, $reason, $startedAt, $targetOrderId, $targetSubtableId): OrderItem {
+        $item = $this->runOrderTransaction(function () use ($branchId, $orderItemId, $reason, $startedAt, $targetOrderId, $targetSubtableId): OrderItem {
+            $itemLookup = OrderItem::query()
+                ->where('branch_id', $branchId)
+                ->select(['id', 'order_id'])
+                ->findOrFail($orderItemId);
+            $sourceOrderId = (int) $itemLookup->order_id;
+            $effectiveTargetOrderId = $targetOrderId ?? $sourceOrderId;
+
+            if ($targetOrderId !== null && $targetOrderId !== $sourceOrderId) {
+                $targetOrderLookup = Order::query()->findOrFail($targetOrderId);
+
+                if ((int) $targetOrderLookup->branch_id !== $branchId) {
+                    $exception = OrdersDomainException::orderBranchMismatch();
+                    $this->logDomainFailure('orders.items.move', $exception, $startedAt, [
+                        'branch_id' => $branchId,
+                        'source_order_id' => $sourceOrderId,
+                        'target_order_id' => $targetOrderId,
+                        'target_branch_id' => (int) $targetOrderLookup->branch_id,
+                        'order_item_id' => $orderItemId,
+                        'target_subtable_id' => $targetSubtableId,
+                    ]);
+
+                    throw $exception;
+                }
+
+                $effectiveTargetOrderId = (int) $targetOrderLookup->id;
+            }
+
+            $orders = $this->lockOpenOrdersForUpdate(
+                [$sourceOrderId, $effectiveTargetOrderId],
+                $branchId,
+                'orders.items.move',
+                $startedAt,
+                [
+                    'order_item_id' => $orderItemId,
+                    'target_order_id' => $targetOrderId,
+                    'target_subtable_id' => $targetSubtableId,
+                ],
+            );
+            $sourceOrder = $orders[$sourceOrderId];
+            $targetOrder = $orders[$effectiveTargetOrderId];
+
             $item = OrderItem::query()
                 ->where('branch_id', $branchId)
                 ->lockForUpdate()
                 ->findOrFail($orderItemId);
 
-            $sourceOrder = $this->openOrderForUpdate((int) $item->order_id, $branchId, 'orders.items.move', $startedAt, [
-                'order_item_id' => $orderItemId,
-                'target_order_id' => $targetOrderId,
-                'target_subtable_id' => $targetSubtableId,
-            ]);
+            if ((int) $item->order_id !== (int) $sourceOrder->id) {
+                $exception = OrdersDomainException::itemNotInOrder();
+                $this->logDomainFailure('orders.items.move', $exception, $startedAt, [
+                    'branch_id' => $branchId,
+                    'order_id' => (int) $sourceOrder->id,
+                    'order_item_id' => $orderItemId,
+                    'actual_order_id' => (int) $item->order_id,
+                ]);
 
-            $targetOrder = $this->targetOrderForUpdate($targetOrderId, $sourceOrder, $branchId, 'orders.items.move', $startedAt, [
-                'order_item_id' => $orderItemId,
-                'target_subtable_id' => $targetSubtableId,
-            ]);
+                throw $exception;
+            }
 
             if ((string) $item->currency !== (string) $targetOrder->currency) {
                 $exception = OrdersDomainException::currencyMismatch();
@@ -144,78 +187,16 @@ final class MoveItem
     /**
      * @param  array<string, mixed>  $context
      */
-    private function openOrderForUpdate(int $orderId, int $branchId, string $action, float $startedAt, array $context): Order
-    {
-        $order = Order::query()
-            ->where('branch_id', $branchId)
-            ->lockForUpdate()
-            ->findOrFail($orderId);
-
-        if ($order->status === 'open') {
-            return $order;
-        }
-
-        $exception = OrdersDomainException::orderNotOpen();
-        $this->logDomainFailure($action, $exception, $startedAt, [
-            'branch_id' => $branchId,
-            'order_id' => $orderId,
-            'status' => (string) $order->status,
-        ] + $context);
-
-        throw $exception;
-    }
-
-    /**
-     * @param  array<string, mixed>  $context
-     */
-    private function targetOrderForUpdate(?int $targetOrderId, Order $sourceOrder, int $branchId, string $action, float $startedAt, array $context): Order
-    {
-        if ($targetOrderId === null || $targetOrderId === (int) $sourceOrder->id) {
-            return $sourceOrder;
-        }
-
-        $targetOrder = Order::query()
-            ->lockForUpdate()
-            ->findOrFail($targetOrderId);
-
-        if ((int) $targetOrder->branch_id !== $branchId) {
-            $exception = OrdersDomainException::orderBranchMismatch();
-            $this->logDomainFailure($action, $exception, $startedAt, [
-                'branch_id' => $branchId,
-                'source_order_id' => (int) $sourceOrder->id,
-                'target_order_id' => $targetOrderId,
-                'target_branch_id' => (int) $targetOrder->branch_id,
-            ] + $context);
-
-            throw $exception;
-        }
-
-        if ($targetOrder->status === 'open') {
-            return $targetOrder;
-        }
-
-        $exception = OrdersDomainException::orderNotOpen();
-        $this->logDomainFailure($action, $exception, $startedAt, [
-            'branch_id' => $branchId,
-            'order_id' => $targetOrderId,
-            'status' => (string) $targetOrder->status,
-        ] + $context);
-
-        throw $exception;
-    }
-
-    /**
-     * @param  array<string, mixed>  $context
-     */
     private function ensureSubtableBelongsToOrder(int $subtableId, Order $order, string $action, float $startedAt, array $context): void
     {
-        $exists = OrderSubtable::query()
+        $subtable = OrderSubtable::query()
             ->where('branch_id', (int) $order->branch_id)
             ->where('order_id', (int) $order->id)
             ->whereKey($subtableId)
-            ->exists();
+            ->lockForUpdate()
+            ->first();
 
-        if ($exists) {
+        if ($subtable instanceof OrderSubtable) {
             return;
         }
 

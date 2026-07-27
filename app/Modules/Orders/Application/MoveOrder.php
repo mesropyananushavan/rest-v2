@@ -12,11 +12,12 @@ use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Modules\Tenancy\Contracts\TenantResolver;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 final class MoveOrder
 {
+    use LocksOrdersForUpdate;
     use RecordsOrderAction;
+    use RunsOrderTransactions;
 
     public function __construct(
         private readonly TenantResolver $tenants,
@@ -37,36 +38,7 @@ final class MoveOrder
         ]);
 
         try {
-            $order = DB::transaction(function () use ($branchId, $orderId, $reason, $startedAt, $targetTableId): Order {
-                $order = Order::query()
-                    ->where('branch_id', $branchId)
-                    ->lockForUpdate()
-                    ->findOrFail($orderId);
-
-                if ($order->status !== 'open') {
-                    $exception = OrdersDomainException::orderNotOpen();
-                    $this->logDomainFailure('orders.order.move', $exception, $startedAt, [
-                        'branch_id' => $branchId,
-                        'order_id' => $orderId,
-                        'status' => (string) $order->status,
-                        'target_table_id' => $targetTableId,
-                    ]);
-
-                    throw $exception;
-                }
-
-                if ($order->type !== 'dine_in') {
-                    $exception = OrdersDomainException::invalidOrderType();
-                    $this->logDomainFailure('orders.order.move', $exception, $startedAt, [
-                        'branch_id' => $branchId,
-                        'order_id' => $orderId,
-                        'type' => (string) $order->type,
-                        'target_table_id' => $targetTableId,
-                    ]);
-
-                    throw $exception;
-                }
-
+            $order = $this->runOrderTransaction(function () use ($branchId, $orderId, $reason, $startedAt, $targetTableId): Order {
                 $table = $this->tables->findActiveInBranch($targetTableId, $branchId);
 
                 if ($table === null) {
@@ -74,6 +46,32 @@ final class MoveOrder
                     $this->logDomainFailure('orders.order.move', $exception, $startedAt, [
                         'branch_id' => $branchId,
                         'order_id' => $orderId,
+                        'target_table_id' => $targetTableId,
+                    ]);
+
+                    throw $exception;
+                }
+
+                $targetOccupantOrderId = $this->targetOccupantOrderId($targetTableId, $branchId, $orderId);
+                $orders = $this->lockOrdersForUpdate(
+                    array_values(array_filter(
+                        [$orderId, $targetOccupantOrderId],
+                        static fn (?int $id): bool => $id !== null,
+                    )),
+                    $branchId,
+                );
+                $order = $orders[$orderId];
+
+                $this->ensureOrderOpen($order, 'orders.order.move', $startedAt, [
+                    'target_table_id' => $targetTableId,
+                ]);
+
+                if ($order->type !== 'dine_in') {
+                    $exception = OrdersDomainException::invalidOrderType();
+                    $this->logDomainFailure('orders.order.move', $exception, $startedAt, [
+                        'branch_id' => $branchId,
+                        'order_id' => $orderId,
+                        'type' => (string) $order->type,
                         'target_table_id' => $targetTableId,
                     ]);
 
@@ -93,16 +91,13 @@ final class MoveOrder
                     throw $exception;
                 }
 
-                $alreadyOpen = Order::query()
-                    ->where('branch_id', $branchId)
-                    ->where('table_id', $targetTableId)
-                    ->where('type', 'dine_in')
-                    ->where('status', 'open')
-                    ->where('id', '<>', (int) $order->id)
-                    ->lockForUpdate()
-                    ->exists();
+                $targetOccupant = $targetOccupantOrderId !== null ? ($orders[$targetOccupantOrderId] ?? null) : null;
 
-                if ($alreadyOpen) {
+                if ($targetOccupant instanceof Order
+                    && (int) $targetOccupant->id !== (int) $order->id
+                    && (int) $targetOccupant->table_id === $targetTableId
+                    && $targetOccupant->type === 'dine_in'
+                    && $targetOccupant->status === 'open') {
                     $exception = OrdersDomainException::tableAlreadyOpen();
                     $this->logDomainFailure('orders.order.move', $exception, $startedAt, [
                         'branch_id' => $branchId,
@@ -208,5 +203,19 @@ final class MoveOrder
     {
         return (string) $exception->getCode() === '23505'
             && str_contains($exception->getMessage(), 'orders_one_open_dine_in_per_table_idx');
+    }
+
+    private function targetOccupantOrderId(int $targetTableId, int $branchId, int $movingOrderId): ?int
+    {
+        $id = Order::query()
+            ->where('branch_id', $branchId)
+            ->where('table_id', $targetTableId)
+            ->where('type', 'dine_in')
+            ->where('status', 'open')
+            ->where('id', '<>', $movingOrderId)
+            ->orderBy('id')
+            ->value('id');
+
+        return is_numeric($id) ? (int) $id : null;
     }
 }

@@ -11,11 +11,11 @@ use App\Modules\Tenancy\Contracts\TenantResolver;
 use App\Modules\Tenancy\Contracts\TenantSettingsReader;
 use App\Support\Money\Money;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 final class OpenTablelessOrder
 {
     use RecordsOrderAction;
+    use RunsOrderTransactions;
 
     private const array ALLOWED_TYPES = [
         'fast_food',
@@ -56,7 +56,7 @@ final class OpenTablelessOrder
         $waiterId ??= $this->actingUserId();
         $currency = $this->currency($tenantId);
 
-        $order = DB::transaction(function () use ($branchId, $clientCount, $comment, $currency, $customerId, $type, $waiterId): Order {
+        $order = $this->runOrderTransaction(function () use ($branchId, $clientCount, $comment, $currency, $customerId, $type, $waiterId): Order {
             $zero = new Money(0, $currency);
             $openedAt = now();
 

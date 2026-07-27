@@ -13,11 +13,11 @@ use App\Modules\Tenancy\Contracts\TenantSettingsReader;
 use App\Support\Money\Money;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 final class OpenOrder
 {
     use RecordsOrderAction;
+    use RunsOrderTransactions;
 
     public function __construct(
         private readonly TenantResolver $tenants,
@@ -44,7 +44,7 @@ final class OpenOrder
         $currency = $this->currency($tenantId);
 
         try {
-            $order = DB::transaction(function () use ($branchId, $clientCount, $comment, $currency, $customerId, $startedAt, $tableId, $waiterId): Order {
+            $order = $this->runOrderTransaction(function () use ($branchId, $clientCount, $comment, $currency, $customerId, $startedAt, $tableId, $waiterId): Order {
                 $table = $this->tables->findActiveInBranch($tableId, $branchId);
 
                 if ($table === null) {

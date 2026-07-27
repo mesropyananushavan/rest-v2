@@ -3108,5 +3108,50 @@ Order moves plan:
   standalone tables RLS test instead of the Orders RLS test; moved the fixture
   and reran green.
 
-Next exact action: owner review of the local `phase-2-orders-move-order`
-changes. Do not push or merge until separately authorized.
+Orders concurrency-safety correction is active. Work on branch
+`feature/phase-2-orders-concurrency`; push only this feature branch, do not
+merge, force-push, tag, deploy, or push to `main`.
+
+Repo reconciliation: the prior `Next exact action` for owner review of local
+`phase-2-orders-move-order` changes is stale. `main` currently includes merge
+commit `37d35f4` for PR #26 from `phase-2-orders-move-order`; the worktree was
+clean on `main...origin/main` before creating
+`feature/phase-2-orders-concurrency` from `origin/main`.
+
+Orders concurrency plan:
+- [x] Stage 2.6-orders-concurrency.1: shared transaction and lock helpers.
+  Add Orders/Application traits for canonical ascending order-row locks and
+  Laravel-native transaction retry attempts, then refactor existing Orders
+  write actions to use them without changing money, audit, RLS, or
+  cross-module boundaries. Move CancelOrder, AssignWaiter, and AddSubtable
+  status checks inside the transaction under the shared order lock. Result:
+  added `LocksOrdersForUpdate` and `RunsOrderTransactions`; replaced direct
+  `DB::transaction` calls in Orders write actions with the retry helper;
+  removed divergent private order-lock helpers; refactored item-start actions
+  to discover `order_id` unlocked, lock involved orders first, then lock and
+  re-validate the item; preserved `MoveItem` branch-mismatch semantics; moved
+  CancelOrder, AssignWaiter, and AddSubtable open-status checks under the
+  locked order row.
+- [x] Stage 2.6-orders-concurrency.2: PostgreSQL concurrency harness and
+  fail-first proof. Add a PostgreSQL-only Orders concurrency suite with hard
+  lock/statement timeouts, real concurrent worker sessions, fail-first
+  evidence for the unfixed behavior, real retry recovery from PostgreSQL
+  concurrency errors, concurrent OpenOrder/MoveOrder occupancy coverage, and
+  TOCTOU coverage. Result: added process-based PostgreSQL Orders concurrency
+  tests under `tests/Feature/Orders/OrderConcurrencyTest.php`, worker helpers
+  under `tests/Support/Orders`, hard session timeouts (`lock_timeout =
+  1500ms`, `statement_timeout = 10000ms`), a real two-session deadlock retry
+  probe, concurrent OpenOrder/MoveOrder occupancy races, deterministic
+  order-before-item lock interleaving, and status-under-lock TOCTOU coverage.
+  `make orders-concurrency-pgsql` passed with `6 passed / 43 assertions`.
+  Fail-first proof against unfixed action code remains to be captured before
+  final verification.
+- [ ] Stage 2.6-orders-concurrency.3: gates, CI wiring, commit, and push.
+  Add the `orders-concurrency-pgsql` Make target and CI job, run Pint,
+  PHPStan, full SQLite Pest, tenant-isolation PostgreSQL, Orders concurrency
+  PostgreSQL, module-boundary grep, diff review, commit incrementally, and
+  push only `feature/phase-2-orders-concurrency`.
+
+Next exact action: capture ADD-1 fail-first output by temporarily running the
+new PostgreSQL concurrency suite against unfixed Orders action code, then
+restore the fixed branch state and run final gates.
