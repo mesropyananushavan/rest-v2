@@ -5,14 +5,27 @@ declare(strict_types=1);
 use App\Modules\Orders\Infrastructure\Models\Order;
 use App\Modules\Orders\Infrastructure\Models\OrderItem;
 use App\Modules\Orders\Infrastructure\Models\OrderItemMove;
+use App\Modules\Orders\Infrastructure\Models\OrderMove;
 use App\Modules\Orders\Infrastructure\Models\OrderSubtable;
+use App\Modules\Tables\Infrastructure\Models\Hall;
+use App\Modules\Tables\Infrastructure\Models\Table;
 use App\Modules\Tenancy\Contracts\BelongsToTenant;
+use App\Modules\Tenancy\Contracts\BranchContext;
+use App\Modules\Tenancy\Contracts\TenantResolver;
+use App\Modules\Tenancy\Infrastructure\Models\Branch;
+use App\Modules\Tenancy\Infrastructure\Models\Tenant;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 uses(RefreshDatabase::class);
+
+afterEach(function (): void {
+    app(BranchContext::class)->clear();
+    app(TenantResolver::class)->clear();
+});
 
 it('creates orders and order subtables schema with tenant branch and lifecycle indexes', function (): void {
     expect(Schema::hasTable('orders'))->toBeTrue()
@@ -81,14 +94,29 @@ it('creates orders and order subtables schema with tenant branch and lifecycle i
             'created_at',
             'updated_at',
         ]))->toBeTrue()
+        ->and(Schema::hasTable('order_moves'))->toBeTrue()
+        ->and(Schema::hasColumns('order_moves', [
+            'id',
+            'tenant_id',
+            'branch_id',
+            'order_id',
+            'source_table_id',
+            'target_table_id',
+            'actor_id',
+            'reason',
+            'created_at',
+            'updated_at',
+        ]))->toBeTrue()
         ->and(class_uses_recursive(Order::class))->toContain(BelongsToTenant::class)
         ->and(class_uses_recursive(OrderSubtable::class))->toContain(BelongsToTenant::class)
         ->and(class_uses_recursive(OrderItem::class))->toContain(BelongsToTenant::class)
         ->and(class_uses_recursive(OrderItemMove::class))->toContain(BelongsToTenant::class)
+        ->and(class_uses_recursive(OrderMove::class))->toContain(BelongsToTenant::class)
         ->and(class_uses_recursive(Order::class))->not->toContain(SoftDeletes::class)
         ->and(class_uses_recursive(OrderSubtable::class))->not->toContain(SoftDeletes::class)
         ->and(class_uses_recursive(OrderItem::class))->not->toContain(SoftDeletes::class)
-        ->and(class_uses_recursive(OrderItemMove::class))->not->toContain(SoftDeletes::class);
+        ->and(class_uses_recursive(OrderItemMove::class))->not->toContain(SoftDeletes::class)
+        ->and(class_uses_recursive(OrderMove::class))->not->toContain(SoftDeletes::class);
 
     $orderIndexNames = collect(Schema::getIndexes('orders'))
         ->pluck('name')
@@ -100,6 +128,9 @@ it('creates orders and order subtables schema with tenant branch and lifecycle i
         ->pluck('name')
         ->all();
     $itemMoveIndexNames = collect(Schema::getIndexes('order_item_moves'))
+        ->pluck('name')
+        ->all();
+    $moveIndexNames = collect(Schema::getIndexes('order_moves'))
         ->pluck('name')
         ->all();
 
@@ -133,7 +164,14 @@ it('creates orders and order subtables schema with tenant branch and lifecycle i
         ->and($itemMoveIndexNames)->toContain('order_item_moves_target_subtable_id_index')
         ->and($itemMoveIndexNames)->toContain('order_item_moves_actor_id_index')
         ->and($itemMoveIndexNames)->toContain('order_item_moves_tenant_branch_item_idx')
-        ->and($itemMoveIndexNames)->toContain('order_item_moves_tenant_branch_source_target_idx');
+        ->and($itemMoveIndexNames)->toContain('order_item_moves_tenant_branch_source_target_idx')
+        ->and($moveIndexNames)->toContain('order_moves_tenant_id_index')
+        ->and($moveIndexNames)->toContain('order_moves_branch_id_index')
+        ->and($moveIndexNames)->toContain('order_moves_order_id_index')
+        ->and($moveIndexNames)->toContain('order_moves_source_table_id_index')
+        ->and($moveIndexNames)->toContain('order_moves_target_table_id_index')
+        ->and($moveIndexNames)->toContain('order_moves_actor_id_index')
+        ->and($moveIndexNames)->toContain('order_moves_tenant_branch_order_idx');
 });
 
 it('creates PostgreSQL check constraints and order indexes', function (): void {
@@ -170,3 +208,166 @@ it('creates PostgreSQL check constraints and order indexes', function (): void {
         ->toContain('UNIQUE')
         ->toContain("WHERE (((status)::text = 'open'::text) AND ((type)::text = 'dine_in'::text))");
 });
+
+it('enforces PostgreSQL row level security for order moves', function (): void {
+    if (Schema::getConnection()->getDriverName() !== 'pgsql') {
+        expect(true)->toBeTrue();
+
+        return;
+    }
+
+    $tenantA = orderSchemaTenant('tenant-a');
+    $tenantB = orderSchemaTenant('tenant-b');
+
+    $sourceA = orderSchemaTable($tenantA, 'Tenant A Source');
+    $targetA = orderSchemaTable($tenantA, 'Tenant A Target');
+    $sourceB = orderSchemaTable($tenantB, 'Tenant B Source');
+    $targetB = orderSchemaTable($tenantB, 'Tenant B Target');
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+    app(BranchContext::class)->set((int) $tenantA['branch']->id);
+
+    $orderA = orderSchemaOrder($tenantA, $sourceA);
+    $moveA = OrderMove::query()->create([
+        'branch_id' => (int) $tenantA['branch']->id,
+        'order_id' => (int) $orderA->id,
+        'source_table_id' => (int) $sourceA->id,
+        'target_table_id' => (int) $targetA->id,
+        'actor_id' => null,
+        'reason' => 'Tenant A move',
+    ]);
+
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+    app(BranchContext::class)->set((int) $tenantB['branch']->id);
+
+    $orderB = orderSchemaOrder($tenantB, $sourceB);
+    $moveB = OrderMove::query()->create([
+        'branch_id' => (int) $tenantB['branch']->id,
+        'order_id' => (int) $orderB->id,
+        'source_table_id' => (int) $sourceB->id,
+        'target_table_id' => (int) $targetB->id,
+        'actor_id' => null,
+        'reason' => 'Tenant B move',
+    ]);
+
+    app(TenantResolver::class)->clear();
+
+    expect(orderSchemaRawOrderMoveIds())->toBe([]);
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+
+    expect(orderSchemaRawOrderMoveIds())->toBe([(int) $moveA->id]);
+
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+
+    expect(orderSchemaRawOrderMoveIds())->toBe([(int) $moveB->id]);
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+
+    expect(fn () => DB::transaction(fn (): bool => DB::insert(
+        'insert into order_moves (tenant_id, branch_id, order_id, source_table_id, target_table_id, actor_id, reason, created_at, updated_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+            (int) $tenantB['tenant']->id,
+            (int) $tenantB['branch']->id,
+            (int) $orderB->id,
+            (int) $sourceB->id,
+            (int) $targetB->id,
+            null,
+            'Blocked order move',
+            now(),
+            now(),
+        ],
+    )))->toThrow(QueryException::class);
+});
+
+/**
+ * @return array{tenant: Tenant, branch: Branch}
+ */
+function orderSchemaTenant(string $slug): array
+{
+    $tenant = Tenant::query()->create([
+        'name' => str($slug)->headline()->toString(),
+        'slug' => $slug,
+        'default_locale' => 'en',
+        'currency' => 'AMD',
+        'status' => 'active',
+    ]);
+
+    app(TenantResolver::class)->set((int) $tenant->id);
+
+    $branch = Branch::query()->create([
+        'name' => "{$slug} Branch",
+        'timezone' => 'Asia/Yerevan',
+        'status' => 'active',
+    ]);
+
+    app(TenantResolver::class)->clear();
+
+    return [
+        'tenant' => $tenant,
+        'branch' => $branch,
+    ];
+}
+
+/**
+ * @param  array{tenant: Tenant, branch: Branch}  $record
+ */
+function orderSchemaTable(array $record, string $name): Table
+{
+    app(TenantResolver::class)->set((int) $record['tenant']->id);
+    app(BranchContext::class)->set((int) $record['branch']->id);
+
+    $hall = Hall::query()->create([
+        'branch_id' => (int) $record['branch']->id,
+        'translated_name' => ['hy' => "{$name} Hall", 'ru' => "{$name} Hall", 'en' => "{$name} Hall"],
+        'color' => '#5FA8D3',
+        'sort_order' => 10,
+        'active' => true,
+    ]);
+
+    $table = Table::query()->create([
+        'branch_id' => (int) $record['branch']->id,
+        'hall_id' => (int) $hall->id,
+        'translated_name' => ['hy' => $name, 'ru' => $name, 'en' => $name],
+        'type' => 'standard',
+        'shape' => 'square',
+        'hdm_department' => 1,
+        'is_delivery' => false,
+        'sort_order' => 10,
+        'active' => true,
+    ]);
+
+    app(BranchContext::class)->clear();
+    app(TenantResolver::class)->clear();
+
+    return $table;
+}
+
+/**
+ * @param  array{tenant: Tenant, branch: Branch}  $record
+ */
+function orderSchemaOrder(array $record, Table $table): Order
+{
+    return Order::query()->create([
+        'branch_id' => (int) $record['branch']->id,
+        'type' => 'dine_in',
+        'status' => 'open',
+        'table_id' => (int) $table->id,
+        'opened_at' => now(),
+        'client_count' => 1,
+        'subtotal_minor' => 0,
+        'discount_minor' => 0,
+        'total_minor' => 0,
+        'currency' => 'AMD',
+    ]);
+}
+
+/**
+ * @return list<int>
+ */
+function orderSchemaRawOrderMoveIds(): array
+{
+    return collect(DB::select('select id from order_moves order by id'))
+        ->map(fn (object $row): int => (int) $row->id)
+        ->all();
+}

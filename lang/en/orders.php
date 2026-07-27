@@ -47,5 +47,6 @@ return [
         'item_qty_changed' => 'Item quantity changed.',
         'item_removed' => 'Item removed.',
         'item_moved' => 'Item moved.',
+        'order_moved' => 'Order moved.',
     ],
 ];

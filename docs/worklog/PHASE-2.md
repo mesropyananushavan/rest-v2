@@ -3059,5 +3059,54 @@ Order item moves plan:
   imports in `MoveItem`; existing Orders item/open actions were unchanged;
   `git diff --check` passed.
 
-Next exact action: owner review of the local `phase-2-order-item-moves` commit.
-Do not push or merge until separately authorized.
+Order moves slice is active. Work on branch `phase-2-orders-move-order`; do
+not push or merge.
+
+Repo reconciliation: the prior `Next exact action` for owner review of the
+local `phase-2-order-item-moves` commit is stale against the real repo state.
+`main` currently includes merge commit `320671f` for PR #25 from
+`phase-2-order-item-moves`; the worktree was clean before creating
+`phase-2-orders-move-order`.
+
+Order moves plan:
+- [x] Stage 2.5-order-moves.1: schema/model foundation. Add the reversible
+  `order_moves` migration after `2026_07_25_003000` with tenant/branch/order,
+  source/target table ids, actor/reason, audit indexes, PostgreSQL RLS, no
+  soft deletes, and add the tenant-scoped `OrderMove` model. Result: added
+  `2026_07_25_004000_create_order_moves_table` with the requested FKs,
+  single-column audit indexes, `order_moves_tenant_branch_order_idx`,
+  PostgreSQL `order_moves_tenant_isolation` RLS policy, no soft deletes, and
+  added the tenant-scoped `OrderMove` model.
+- [x] Stage 2.5-order-moves.2: MoveOrder application/domain behavior. Add
+  `MoveOrder` mirroring `MoveItem`/`OpenOrder`: tenant/branch guards,
+  transaction-wrapped locked order mutation, dine-in/open/table validation,
+  no-op and occupancy rejection, unique-index 23505 normalization,
+  `OrderMove` append, `orders.order.moved` audit, and structured logs.
+  Result: added `MoveOrder` with tenant/branch context guards, locked
+  branch-scoped order update, `TableDirectory` validation, no-op and occupied
+  table rejection, specific `orders_one_open_dine_in_per_table_idx` 23505
+  normalization, `OrderMove` append, `orders.order.moved` audit, and
+  `orders.order.move` structured logging. Added
+  `OrdersDomainException::orderMoveNoop()`.
+- [x] Stage 2.5-order-moves.3: tests and verification. Extend Orders schema,
+  action, and PostgreSQL tenant-isolation coverage for `order_moves`, add all
+  requested rejection paths, run Pint, PHPStan, full Pest, PostgreSQL RLS
+  isolation, module-boundary grep, and diff-stat proof, then update this
+  worklog with real results. Result: added schema/model/index/RLS coverage,
+  happy-path whole-order move coverage, rejection coverage for non-open,
+  non-`dine_in`, unknown/other-branch table, occupied target table, no-op,
+  tenant context, and branch context, plus tenant-isolation suite coverage for
+  `order_moves`. Final gates passed: `make pint` (`PASS 285 files`),
+  `make stan` (`168/168`, `[OK] No errors`), `make test` (`246 passed /
+  7 skipped / 2654 assertions`), and `make tenant-isolation-pgsql`
+  (`23 passed / 96 assertions`). Boundary grep for forbidden Orders imports
+  exited `1` with no output. Initial `make test` failed only because the new
+  log-spy helper asserted exactly one warning while the context could emit an
+  extra unrelated warning; changed it to require at least one matching
+  `orders.order.move` domain-failure warning. Initial PostgreSQL isolation
+  rerun failed only because an added target-table fixture was placed in the
+  standalone tables RLS test instead of the Orders RLS test; moved the fixture
+  and reran green.
+
+Next exact action: owner review of the local `phase-2-orders-move-order`
+changes. Do not push or merge until separately authorized.
