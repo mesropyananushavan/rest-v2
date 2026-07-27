@@ -3417,10 +3417,13 @@ Repo reconciliation: the prior `Next exact action` for owner review of
 Read-only order workspace slice was implemented on branch
 `feature/orders-readonly-workspace` and published normally without force-push.
 Implementation commit:
-`c55d3924df18fc1db60d55b4278fdd35bafbd70f`. Draft PR:
-[#28](https://github.com/mesropyananushavan/rest-v2/pull/28). GitHub CI passed
-for the published branch. The PR remains draft; no merge, deployment,
-force-push, or production verification occurred.
+`c55d3924df18fc1db60d55b4278fdd35bafbd70f`. PR
+[#28](https://github.com/mesropyananushavan/rest-v2/pull/28) is open and ready
+for review. Published head before the docs-only ready-state correction:
+`b3f20292b94a6d33313796b9dc2260a9ba144d7b`. The implementation and required CI
+checks passed before that documentation correction. No merge, deployment,
+force-push, or production verification occurred; the docs-only push will trigger
+exact-head CI again.
 
 Read-only order workspace plan:
 - [x] Stage 2.12-order-workspace-readonly.1: Application read model. Add
@@ -3461,7 +3464,8 @@ Read-only order workspace plan:
   `Unknown env config "min-release-age"` warning). Orders module-boundary grep
   exited `1` with no matches, and `git diff --check` passed.
 
-Next exact action: final owner review of draft PR
-[#28](https://github.com/mesropyananushavan/rest-v2/pull/28). Do not start the
-menu picker, order mutations, Payments, merge, or deployment without separate
-approval.
+Next exact action: wait for exact-head CI on PR
+[#28](https://github.com/mesropyananushavan/rest-v2/pull/28), perform a final
+read-only merge-readiness audit, and obtain explicit owner merge approval. Do
+not start the menu picker, order mutations, Payments, merge, or deployment
+without separate approval.
