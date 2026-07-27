@@ -3646,9 +3646,12 @@ Workspace item writes correction plan:
   (`6 passed / 43 assertions`), `npm run build` succeeded with the known
   `Unknown env config "min-release-age"` warning, `git diff --check` had no
   output, and the Orders workspace boundary grep exited `1` with no matches.
+  The code correction commit
+  `a5ccd5a2d6d4e8ddcef6d7a6416848de9501635b` was pushed normally; GitHub CI
+  for that head reported `SUCCESS` for `quality`, `tenant-isolation-pgsql`,
+  and `orders-concurrency-pgsql` on both push and pull-request workflow runs.
 
-Next exact action: push the correction commit to draft PR
-[#30](https://github.com/mesropyananushavan/rest-v2/pull/30), wait for
-exact-head CI, then report the correction round; do not force-push, merge,
-deploy, create a migration, modify `FindOrderWorkspace`, `template/`, or
-`docs/BLUEPRINT.md`.
+Next exact action: owner review of draft PR
+[#30](https://github.com/mesropyananushavan/rest-v2/pull/30); do not
+force-push, merge, deploy, mark ready for review, create a migration, modify
+`FindOrderWorkspace`, `template/`, or `docs/BLUEPRINT.md`.
