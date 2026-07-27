@@ -10,6 +10,7 @@ return [
     'nav' => [
         'dashboard' => 'Վահանակ',
         'menu' => 'Մենյու',
+        'orders_board' => 'Սեղանների տախտակ',
         'translation_overrides' => 'Թարգմանություններ',
         'tables' => 'Սրահներ եւ սեղաններ',
     ],

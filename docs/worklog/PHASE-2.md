@@ -3251,3 +3251,54 @@ Orders table-occupancy read plan:
 
 Next exact action: commit the Orders table-occupancy read slice and push
 `feature/orders-table-occupancy-read` for owner review.
+
+Read-only Orders table board slice is active. Work on branch
+`feature/orders-table-board-readonly`; push only this feature branch, do not
+merge, force-push, tag, deploy, or push to `main`.
+
+Repo reconciliation: the prior `Next exact action` for owner review of
+`feature/orders-table-occupancy-read` is stale. `main` currently includes merge
+commit `993041a` for the Orders table-occupancy read. The worktree was clean on
+`main...origin/main` before creating `feature/orders-table-board-readonly`
+from `origin/main`.
+
+Read-only table board plan:
+- [x] Stage 2.9-table-board-readonly.1: route, controller, layout shell, and
+  navigation. Add the `admin.orders.board` route under `/admin/orders/board`
+  with tenant/branch/auth and `can:orders.take`, create the first Orders HTTP
+  controller returning a full-page Blade wrapper, and add the sidebar link and
+  localized labels without adding permissions or mutations. Result: added
+  `OrderBoardController`, `resources/views/modules/orders/board.blade.php`,
+  `admin.orders.board` with `tenant`, `branch`, `auth`, and `can:orders.take`,
+  and a sidebar link gated by `@can('orders.take')`. Added board/nav
+  translations in `hy`, `ru`, and `en`; no permission or seeder changes.
+- [x] Stage 2.9-table-board-readonly.2: Livewire board composition and view.
+  Add `OrderBoard` as a thin Livewire adapter that resolves the active branch,
+  calls `HallLayoutReader` and `ListTableOccupancy`, composes only nested
+  scalar arrays for the view, formats money through `MoneyFormatter`, formats
+  opened time/duration for display, and renders read-only Tailwind table tiles
+  with modest polling. Result: added `OrderBoard` with no public DTO/Carbon
+  state; `render()` resolves the active branch, calls the Tables layout
+  contract and Orders occupancy read, converts localized names and occupancy
+  data to nested scalar arrays, formats totals with `MoneyFormatter`, and the
+  Blade view renders read-only free/occupied tiles with `wire:poll.15s`.
+- [x] Stage 2.9-table-board-readonly.3: server-side tests, gates, commit, and
+  push. Add route/Livewire tests for auth, `orders.take` permission, occupied
+  tile rendering, branch scoping, and no action affordances; run Pint,
+  PHPStan, full SQLite Pest, PostgreSQL tenant-isolation, the Orders boundary
+  grep, review the diff, commit the slice with this worklog update, and push
+  only `feature/orders-table-board-readonly`. Result so far: added
+  `OrderBoardTest` covering guest redirect, `orders.take` 403/200 route
+  access, full-page Livewire mounting, occupied/free tile rendering with
+  guests/order/total, active-branch and tenant exclusion, empty state, and no
+  `wire:click` action affordance. Gates passed so far: `make pint`
+  (`PASS 302 files`), `make stan` (`178/178`, `[OK] No errors`), `make test`
+  (`259 passed / 13 skipped / 2733 assertions`), and
+  `make tenant-isolation-pgsql` (`23 passed / 96 assertions`). The requested
+  Orders boundary grep exited `1` with no matches and `git diff --check`
+  passed. Committed as `9ba2b28` and pushed
+  `feature/orders-table-board-readonly` with upstream tracking.
+
+Next exact action: owner review of pushed branch
+`feature/orders-table-board-readonly`; do not merge or push to `main` without
+separate authorization.

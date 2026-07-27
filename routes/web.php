@@ -12,6 +12,7 @@ use App\Modules\Menu\Http\Controllers\MenuCategoryController;
 use App\Modules\Menu\Http\Controllers\MenuCategoryOptionController;
 use App\Modules\Menu\Http\Controllers\MenuIndexController;
 use App\Modules\Menu\Http\Controllers\MenuItemController;
+use App\Modules\Orders\Http\Controllers\OrderBoardController;
 use App\Modules\Tables\Http\Controllers\HallController;
 use App\Modules\Tables\Http\Controllers\TableController;
 use App\Modules\Tenancy\Http\Controllers\BranchShowController;
@@ -52,6 +53,10 @@ Route::post('/admin/locale', AdminLocaleSwitchController::class)
 Route::get('/admin/translation-overrides', AdminTranslationOverrideController::class)
     ->middleware(['tenant', 'branch', 'auth', 'can:'.TenantTranslationOverridePermissions::MANAGE])
     ->name('admin.translation-overrides.index');
+
+Route::get('/admin/orders/board', OrderBoardController::class)
+    ->middleware(['tenant', 'branch', 'auth', 'can:orders.take'])
+    ->name('admin.orders.board');
 
 Route::middleware(['tenant', 'branch', 'auth'])->prefix('/admin/menu')->name('admin.menu.')->group(function (): void {
     Route::get('/', MenuIndexController::class)
