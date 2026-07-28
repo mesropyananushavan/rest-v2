@@ -117,12 +117,14 @@ it('loads dashboard counters through the Livewire component', function (): void 
         ]);
     }
 
-    Livewire::actingAs($record['user'])
+    $component = Livewire::actingAs($record['user'])
         ->test(DashboardCounters::class)
         ->assertSet('categoryCount', 2)
         ->assertSet('itemCount', 2)
         ->assertSee(__('admin.dashboard.metrics.categories.label'), false)
         ->assertSee(__('admin.dashboard.metrics.items.label'), false);
+
+    assertRenderedHtmlHasNoUncompiledBladeDirectiveAttributes($component->html());
 });
 
 /**

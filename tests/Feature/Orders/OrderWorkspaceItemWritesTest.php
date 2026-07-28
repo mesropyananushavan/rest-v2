@@ -763,26 +763,21 @@ it('preserves menu picker state after successful and failed subtable and move mu
     orderWorkspaceWritesAssertMenuState($component, $expectedState);
 });
 
-it('keeps new workspace Livewire expressions encoded and non goal affordances absent', function (): void {
-    $blade = file_get_contents(resource_path('views/livewire/admin/order-workspace.blade.php'));
-
-    expect($blade)->toBeString()
-        ->and($blade)->not->toMatch('/wire:click="[^"]*\{\{/')
-        ->and($blade)->toContain('wire:click="createSubtable"')
-        ->and($blade)->toContain('moveLineToSelectedSubtable(@js($item[\'id\']))')
-        ->and($blade)->not->toContain('wire:submit');
-
+it('keeps new workspace Livewire expressions rendered encoded and non goal affordances absent', function (): void {
     $record = orderWorkspaceWritesUser('tenant-boundary-moves', 'waiter-boundary-moves', ['orders.take']);
 
     app()->setLocale('en');
     orderWorkspaceWritesActingIn($record, 0, 'workspace-boundary-moves');
     $order = orderWorkspaceWritesOrder($record, 0);
+    $subtable = orderWorkspaceWritesSubtable($order, 'Boundary Subtable');
     $category = orderWorkspaceWritesCategory('Boundary Menu', 'Boundary Category')['category'];
     $menuItem = orderWorkspaceWritesItem($category, $record['branches'][0], 'Boundary Dish', priceMinor: 1000);
-    app(AddItem::class)((int) $order->id, (int) $menuItem->id, 1);
+    $line = app(AddItem::class)((int) $order->id, (int) $menuItem->id, 1);
 
-    Livewire::actingAs($record['user'])
+    $component = Livewire::actingAs($record['user'])
         ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $order->id])
+        ->assertSee('wire:click="createSubtable"', false)
+        ->assertSee('Boundary Subtable', false)
         ->assertDontSee('closeSubtable', false)
         ->assertDontSee('renameSubtable', false)
         ->assertDontSee('targetOrderId', false)
@@ -796,6 +791,15 @@ it('keeps new workspace Livewire expressions encoded and non goal affordances ab
         ->assertDontSee('closeOrder', false)
         ->assertDontSee('<form', false)
         ->assertDontSee('wire:submit', false);
+
+    $html = $component->html();
+
+    assertRenderedHtmlHasNoUncompiledBladeDirectiveAttributes($html);
+
+    expect($html)->toContain('wire:click="moveLineToSelectedSubtable('.((int) $line->id).')"')
+        ->and($html)->toContain('value="'.((int) $subtable->id).'"')
+        ->and($html)->not->toContain('moveLineToSelectedSubtable(@js(')
+        ->and($html)->not->toContain('{{');
 });
 
 it('keeps workspace render and new mutation query counts stable as lines and subtables grow', function (): void {

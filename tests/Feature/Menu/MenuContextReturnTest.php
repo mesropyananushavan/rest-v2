@@ -88,12 +88,16 @@ it('returns item create and edit save and cancel paths to the originating menu c
     app(TenantResolver::class)->set((int) $records['tenant']->id);
     app(BranchContext::class)->set((int) $records['branch']->id);
 
-    Livewire::actingAs($records['user'])
+    $component = Livewire::actingAs($records['user'])
         ->test(MenuItemForm::class, [
             'defaultCurrency' => 'AMD',
             'item' => null,
             'menuContext' => $context,
-        ])
+        ]);
+
+    assertRenderedHtmlHasNoUncompiledBladeDirectiveAttributes($component->html());
+
+    $component
         ->set('category_id', (int) $records['category']->id)
         ->set('name_hy', 'Թեստային դիրք')
         ->set('name_ru', 'Тестовая позиция')

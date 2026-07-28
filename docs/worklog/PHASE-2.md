@@ -3818,7 +3818,76 @@ but the slice still enforces a stricter max-60 UI rule. The ignored
 `storage/framework/testing/orders-concurrency-*.start` markers remain local
 test artifact debt and were not cleaned.
 
-Next exact action: wait for exact-head CI on draft PR
-[#32](https://github.com/mesropyananushavan/rest-v2/pull/32), then perform
-owner review/readiness checks; do not mark ready, merge, deploy, or start the
-next Phase 2 slice without explicit owner approval.
+Stage 2.15 merge follow-up: PR #32 was merged as true merge commit
+`7463d6169bded9c5d5f16e8eedbdbf63c238b912` with parents
+`230ce6dbb9fe230cfa099b2013a3b337cd35628e` and
+`4fd78d8bf77db115a2c3c730f7226ff785e7a571`. Post-merge local gates on merged
+main passed: `make pint` (`PASS 317 files`), `make stan` (`188/188`, `[OK] No
+errors`), `make test` (`315 passed / 13 skipped / 3215 assertions`),
+`make tenant-isolation-pgsql` (`23 passed / 96 assertions`),
+`make orders-concurrency-pgsql` (`6 passed / 43 assertions`), and
+`npm run build` with the known npm `min-release-age` warning. Merge-commit CI
+was green for `quality`, `tenant-isolation-pgsql`, and
+`orders-concurrency-pgsql`. Manual browser verification after `make fresh`
+found that opening a table order, adding two items, and creating a subtable
+worked, but moving a line did not: the rendered move button emitted literal
+`wire:click="moveLineToSelectedSubtable(@js($item['id']))"`, so Livewire did
+not execute a concrete item-id expression. This leaves merged `main` browser
+broken until the Stage 2.16 hotfix lands.
+
+Task `2.16-fix-component-attribute-directive-compilation` is active on branch
+`fix/workspace-component-attribute-directives`, based on `origin/main` at
+`7463d6169bded9c5d5f16e8eedbdbf63c238b912`.
+
+- [x] Stage 2.16-hotfix.1: component-attribute audit and rendered-output test
+  guard. Confirm every `<x-...>` component attribute containing uncompiled
+  Blade directive or echo syntax, replace source-only assertions with rendered
+  output assertions, and add guards that fail when rendered admin Livewire
+  attributes contain literal Blade markers. Result: the `@` directive audit
+  found the broken workspace move button only; the same bug-class echo audit
+  also found translation override edit/reset buttons, Menu item pagination
+  previous/next methods, and Menu row-overflow dynamic ids. Added
+  `assertRenderedHtmlHasNoUncompiledBladeDirectiveAttributes()` and rendered
+  guards across the currently tested admin Livewire screens.
+- [x] Stage 2.16-hotfix.2: fix dynamic component attributes and AGENTS rule.
+  Make the workspace move affordance render a concrete Livewire expression,
+  fix any same-class component attributes found by the audit, and document the
+  component-attribute rule beside the existing JS-evaluated attribute guidance.
+  Result: dynamic component attributes now use bound attributes, including
+  `:wire:click="'moveLineToSelectedSubtable('.\Illuminate\Support\Js::from($item['id']).')'"`
+  on the workspace move button. AGENTS.md now states that component-tag
+  dynamic Livewire/Alpine expressions require bound attributes or plain HTML,
+  and interactive controls must be proved by rendered output.
+- [x] Stage 2.16-hotfix.3: proof and publication. Prove the new guard fails
+  against the pre-fix template and passes after the fix, rerun the full gate
+  set, re-run the Phase 2 browser demo through headless Chrome, clean temporary
+  browser artifacts, commit, push normally, and open a draft PR without merging.
+  Result: the focused rendered workspace test failed against the temporarily
+  reverted pre-fix move button with the guard reporting
+  `wire:click="moveLineToSelectedSubtable(@js($item['id']))"`, then passed
+  after the bound-attribute fix (`1 passed / 20 assertions`). Browser demo on
+  this branch after `make fresh`: opening the table created the order and left
+  the board on-screen by design; clicking the occupied tile opened the
+  workspace; two items were added for total `5200 ֏`; creating
+  `Demo Subtable 95276` rendered concrete move buttons
+  `moveLineToSelectedSubtable(1)` and `moveLineToSelectedSubtable(2)`; moving
+  one line in produced group counts `subtable=1`, `without_subtable=1`, total
+  `5200 ֏`; moving it back out produced `subtable=0`,
+  `without_subtable=2`, total `5200 ֏`. Final gates passed except direct
+  host `vendor/bin/pest`, which fails both before and after due host PHP
+  `8.1.2` not satisfying Composer's PHP `>=8.3.0` platform check:
+  `make pint` (`PASS 317 files`), `make stan` (`188/188`, `[OK] No errors`),
+  `make test` (`315 passed / 13 skipped / 3222 assertions`),
+  `make tenant-isolation-pgsql` (`23 passed / 96 assertions`),
+  `make orders-concurrency-pgsql` (`6 passed / 43 assertions`),
+  `npm run build` passed with the known npm `min-release-age` warning, and
+  `git diff --check` had no output. PostgreSQL gates were run sequentially.
+
+Gotcha carried forward for Stage 2.16: opening an order from the board still
+sets a success message and leaves the user on the board; the workspace is
+entered by clicking the occupied tile. That is owner design question F1 and is
+not part of this hotfix.
+
+Next exact action: owner review of the draft PR for
+`fix/workspace-component-attribute-directives`; do not merge, deploy, or change
+the board navigation behavior.

@@ -168,7 +168,7 @@ declare(strict_types=1);
                                                                                 <option value="{{ $target['value'] }}">{{ $target['label'] }}</option>
                                                                             @endforeach
                                                                         </select>
-                                                                        <x-button type="button" variant="outline-secondary" size="sm" wire:click="moveLineToSelectedSubtable(@js($item['id']))">
+                                                                        <x-button type="button" variant="outline-secondary" size="sm" :wire:click="'moveLineToSelectedSubtable('.\Illuminate\Support\Js::from($item['id']).')'">
                                                                             {{ __('orders.workspace.actions.move_item') }}
                                                                         </x-button>
                                                                     </div>
