@@ -3841,23 +3841,31 @@ Task `2.16-fix-component-attribute-directive-compilation` is active on branch
 
 - [x] Stage 2.16-hotfix.1: component-attribute audit and rendered-output test
   guard. Confirm every `<x-...>` component attribute containing uncompiled
-  Blade directive or echo syntax, replace source-only assertions with rendered
-  output assertions, and add guards that fail when rendered admin Livewire
-  attributes contain literal Blade markers. Result: the `@` directive audit
-  found the broken workspace move button only; the same bug-class echo audit
-  also found translation override edit/reset buttons, Menu item pagination
-  previous/next methods, and Menu row-overflow dynamic ids. Added
+  Blade directive, replace source-only assertions with rendered output
+  assertions, and add guards that fail when rendered admin Livewire attributes
+  contain literal Blade markers. Result: the directive audit found one actual
+  bug: the workspace move button emitted literal `@js($item['id'])`. A separate
+  consistency audit found working component attributes that used Blade echo
+  syntax for translation override edit/reset buttons, Menu item pagination
+  previous/next methods, and Menu row-overflow dynamic ids; echos are compiled
+  by Laravel in component attributes, so those controls were not defective and
+  were changed only for explicitness/consistency. Added
   `assertRenderedHtmlHasNoUncompiledBladeDirectiveAttributes()` and rendered
   guards across the currently tested admin Livewire screens.
 - [x] Stage 2.16-hotfix.2: fix dynamic component attributes and AGENTS rule.
   Make the workspace move affordance render a concrete Livewire expression,
   fix any same-class component attributes found by the audit, and document the
   component-attribute rule beside the existing JS-evaluated attribute guidance.
-  Result: dynamic component attributes now use bound attributes, including
+  Result: dynamic directive-dependent component attributes now use bound
+  attributes, including
   `:wire:click="'moveLineToSelectedSubtable('.\Illuminate\Support\Js::from($item['id']).')'"`
-  on the workspace move button. AGENTS.md now states that component-tag
-  dynamic Livewire/Alpine expressions require bound attributes or plain HTML,
-  and interactive controls must be proved by rendered output.
+  on the workspace move button. Previously-working echo-based component
+  attributes were kept as bound attributes after the correction round because
+  the replacements are functionally equivalent and clearer. AGENTS.md now
+  states that directives are not compiled inside component-tag attributes,
+  echo syntax is compiled there, dynamic Livewire/Alpine expressions should use
+  bound attributes or plain HTML, and interactive controls must be proved by
+  rendered output.
 - [x] Stage 2.16-hotfix.3: proof and publication. Prove the new guard fails
   against the pre-fix template and passes after the fix, rerun the full gate
   set, re-run the Phase 2 browser demo through headless Chrome, clean temporary
@@ -3882,6 +3890,19 @@ Task `2.16-fix-component-attribute-directive-compilation` is active on branch
   `make orders-concurrency-pgsql` (`6 passed / 43 assertions`),
   `npm run build` passed with the known npm `min-release-age` warning, and
   `git diff --check` had no output. PostgreSQL gates were run sequentially.
+  Correction follow-up tightened the guard to look for Blade marker/directive
+  call shapes rather than ordinary `@` text, added an email-in-attribute
+  positive control, and browser-verified the previously-working controls that
+  were changed for explicitness: translation override Edit rendered
+  `startEditing('admin.actions.cancel')`, opened the row editor, saved a custom
+  override, then Reset rendered `resetOverride('admin.actions.cancel')` and
+  removed the override; Menu item pagination rendered `nextItemPage` /
+  `previousItemPage`, advanced from `Pagination Dish 1` to `Pagination Dish 30`,
+  then returned to `Pagination Dish 1`; category overflow
+  `category_overflow_1_menu` and item overflow `item_overflow_1_menu` both
+  opened visible row-targeted menus. These four controls were working before
+  the hotfix and were changed only for consistency/explicitness, not because
+  they were defective.
 
 Gotcha carried forward for Stage 2.16: opening an order from the board still
 sets a success message and leaves the user on the board; the workspace is

@@ -223,12 +223,15 @@ each other and you cannot resolve it safely.
   encoder such as `@js` / `Js::from`, or resolve human-readable values
   server-side; server-side tests and curl smokes do not prove browser
   expression validity.
-- Blade directives and echo syntax are not compiled inside component-tag
-  attribute values such as `<x-button wire:click="...">`. Dynamic Livewire or
-  Alpine expressions on `<x-...>` tags must use a bound attribute
-  (`:wire:click="..."`, `:x-data="..."`, etc.) or a plain HTML element, and
-  every interactive control must be proven by assertions on rendered output,
-  never on template source alone.
+- Blade directives such as `@js(...)`, `@class(...)`, and `@lang(...)` are not
+  compiled inside component-tag attribute values such as
+  `<x-button wire:click="...">`; Blade echo syntax (`{{ ... }}` /
+  `{!! ... !!}`) is compiled there, but bound attributes are clearer for
+  dynamic JavaScript expressions. Dynamic Livewire or Alpine expressions on
+  `<x-...>` tags should use a bound attribute (`:wire:click="..."`,
+  `:x-data="..."`, etc.) or a plain HTML element, and every interactive control
+  must be proven by assertions on rendered output, never on template source
+  alone.
 - SPA frameworks (React, Vue, Angular, etc.) are not used for admin screens.
 - Focused UI libraries for specific widgets are allowed and encouraged when a
   real widget need exists, for example searchable selects, calendars/date
