@@ -4201,3 +4201,50 @@ permissions slice from the authorization debt above, (b) F1 board-to-workspace
 navigation, (c) remaining order lifecycle UI -- waiter assignment and move
 order, or (d) Phase 3 payments/cashbox. Do not pick one and do not start any
 of them.
+
+Task `2.19-docs-authorization-model` is active on branch
+`docs/authorization-model`, based on `origin/main` at
+`4272b6f652d1503d1d6d6db30139e5898413972a`.
+
+- [x] Step 2.19.1: documentation baseline and current-state verification.
+  Re-read `AGENTS.md`, `docs/BLUEPRINT.md` sections 3/4/5,
+  `docs/DECISIONS.md`, this worklog, `EloquentAuthorizer`, the Identity
+  `User`, `Role`, `Permission`, and `UserBranchAssignment` models,
+  `IdentityDemoSeeder`, and the base users migration. Verify the requested
+  current-state findings without changing code. Result:
+  `EloquentAuthorizer` implements inactive deny, active-superadmin allow, and
+  role permission lookup only; `IdentityDemoSeeder` marks both demo tenant
+  owners as superadmin; `users.tenant_id` is non-null and cascade-deletes;
+  `User` uses `BelongsToTenant`; `users.role_id` is tenant-level; no feature
+  availability or deviation storage exists.
+- [x] Step 2.19.2: permanent architecture record. Expand the existing
+  `Authn/Authz` cross-cutting concern in `docs/BLUEPRINT.md` with the decided
+  two-axis model, invariants, platform-superadmin identity distinction,
+  worked example, current-state gaps, grouped security debt, and open
+  questions, keeping decided/current/open material visually separate. Result:
+  `docs/BLUEPRINT.md` section 5 now records the normative model separately
+  from current-state gaps and open implementation questions.
+- [x] Step 2.19.3: decision log entry. Add one dated `docs/DECISIONS.md`
+  entry recording the two-axis separation, feature-availability naming,
+  point-exception precedence, live-link roles, bidirectional deviations,
+  per-branch user permission scope, superadmin bypass of both axes, and the
+  platform-operator-vs-tenant-owner distinction. Result: added the
+  2026-07-28 authorization two-axis decision entry.
+- [ ] Step 2.19.4: verification, commit, push, and draft PR. Run only
+  `git diff --name-status main` and `git diff --check`; confirm the diff
+  touches only `docs/BLUEPRINT.md`, `docs/DECISIONS.md`, and this worklog;
+  commit, push normally, and open a draft PR against `main`. Do not run
+  executable gates because this task changes documentation only. Result so far:
+  `git diff --name-status main` shows only `docs/BLUEPRINT.md`,
+  `docs/DECISIONS.md`, and `docs/worklog/PHASE-2.md`; `git diff --check`
+  produced no output. No executable gates were run.
+
+Implementation proposal for owner approval, not a decision: split the future
+implementation into at least three slices: feature availability with
+server-side enforcement first, per-user permission deviations second, and the
+management UI third. Do not start any of those slices in this documentation
+task.
+
+Next exact action: run only `git diff --name-status main` and
+`git diff --check`, confirm the three-file docs-only diff, then commit, push,
+and open the draft PR for owner review.
