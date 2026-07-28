@@ -4128,13 +4128,76 @@ adapter must map that to an existing safe translated error. `FindOrderWorkspace`
 filters `status = open`, so successful cancel makes the workspace route 404 and
 requires redirecting to the board.
 
-Stage 2.18 authorization debt: cancel is provisionally gated on the existing
-`orders.take` permission to stay consistent with current order mutations. That
-permission is held by waiter roles, so any waiter who can take orders can also
-void an order even after items were added. Restaurant voids are a known theft
-vector and normally require manager-level authorization. This is an open owner
-decision for a dedicated permissions slice; do not decide it in Stage 2.18.
+Stage 2.18 workspace cancel order: complete and merged. PR #37 was marked
+ready for review and merged as true merge commit
+`d4605b2fc9836aaa931eee85a10e3ced425f92df` with parents
+`1cc7dd769c1ef98452088df3add8b0f2e1175753` and
+`debd95db88e5211878dbb54c30c7ec87e4edadfa`. Raw parent line:
+`d4605b2fc9836aaa931eee85a10e3ced425f92df 1cc7dd769c1ef98452088df3add8b0f2e1175753 debd95db88e5211878dbb54c30c7ec87e4edadfa`.
+`git merge-base --is-ancestor
+debd95db88e5211878dbb54c30c7ec87e4edadfa origin/main` exited `0`, PR #37
+shows `MERGED`, and `origin/feature/orders-workspace-cancel` still exists at
+`debd95db88e5211878dbb54c30c7ec87e4edadfa`.
 
-Next exact action: owner review draft PR #37 for Stage 2.18. The open owner
-decision remains a dedicated permissions slice for cancel/void authority
-because `orders.take` currently lets waiters void loaded orders.
+Merged-main gates on `d4605b2fc9836aaa931eee85a10e3ced425f92df` passed:
+`make pint` (`PASS 317 files`), `make stan` (`188/188`, `[OK] No errors`),
+`make test` (`329 passed / 13 skipped / 3312 assertions`),
+`make tenant-isolation-pgsql` (`23 passed / 96 assertions`),
+`make orders-concurrency-pgsql` (`6 passed / 43 assertions`), `npm run build`
+passed with the known npm `Unknown env config "min-release-age"` warning, and
+the directive-only 2.16 component-attribute audit exited `1` with no matches.
+PostgreSQL targets were run sequentially. Merge-commit CI was green for
+`quality`, `tenant-isolation-pgsql`, and `orders-concurrency-pgsql`.
+
+Stage 2.18 browser observation after `make fresh`, verbatim:
+`Logged in as manager@arat.test and landed on /admin.`
+`Opened table 1 (1) from the board; it re-rendered as occupied.`
+`Added one menu item from the workspace picker: Լոռի ձվածեղ.`
+`Opened the cancel confirmation modal; it showed the one-line cancellation consequence.`
+`Cancelled order 1; redirected to http://127.0.0.1:8080/admin/orders/board; translated flash was visible; table 1 (1) was free again; old workspace link was absent.`
+Final browser state: URL
+`http://127.0.0.1:8080/admin/orders/board`, `flashVisible=true`,
+`tableFree=true`, table button text
+`1\nՍՈՎՈՐԱԿԱՆ\nՔԱՌԱԿՈՒՍԻ\nԱԶԱՏ\nԲացել սրահի պատվեր`,
+`oldWorkspaceLinkPresent=false`, `tableId=1`, `tableName=1`, `orderId=1`.
+Temporary Chrome profile and scratch script were removed; post-cleanup status
+showed clean `main` at the merge commit, no stashes, and one worktree.
+
+New baselines of record after Stage 2.18: Pint `317 files`, PHPStan `188/188`
+with `[OK] No errors`, SQLite test suite `329 passed / 13 skipped / 3312
+assertions`, tenant isolation PostgreSQL `23 passed / 96 assertions`, and
+orders concurrency PostgreSQL `6 passed / 43 assertions`.
+
+AUTHORIZATION DEBT after Stage 2.18: cancel is gated on `orders.take`, which
+the waiter role holds, so any waiter can currently void an order that already
+has line items. Voiding is a known theft vector in restaurants and is normally
+manager-restricted. This needs an owner decision and, if approved, a dedicated
+permissions slice touching the role model and `IdentityDemoSeeder`. It was
+deliberately NOT decided in Stage 2.18.
+
+Gotchas carried forward after Stage 2.18: Blade directives are not compiled
+inside component-tag attributes but echo syntax is; interactive controls must
+be proven on rendered output; the affordance contract understands only the
+`$set` Livewire magic action and fails loudly on others, so extend
+`tests/Pest.php` rather than weakening it; PostgreSQL make targets share
+`smartrest_test_local` and must run sequentially; Pest memory limit lives in
+`phpunit.xml`; never run PHP on the host because host PHP is 8.1 while the
+project requires 8.3; no browser-automation dependency exists.
+
+Open debt after Stage 2.18, for scheduling not doing now: the 2.16 guard flags
+`{{` and `{!!` inside attribute values while tenant translation overrides
+accept arbitrary text; that guard's directive allowlist misses directives not
+on the list; `AddSubtable` has no domain-level name validation; the
+concurrency harness never cleans up
+`storage/framework/testing/orders-concurrency-*.start` markers.
+
+F1 remains open and untouched: opening an order from the board does not
+navigate to the workspace; `OrderBoard::openOrder()` sets a status message and
+re-renders. Stage 2.18 added a redirect only on the cancel path and did not
+change F1.
+
+Next exact action: OWNER DECISION between (a) the cancel-authorization
+permissions slice from the authorization debt above, (b) F1 board-to-workspace
+navigation, (c) remaining order lifecycle UI -- waiter assignment and move
+order, or (d) Phase 3 payments/cashbox. Do not pick one and do not start any
+of them.
