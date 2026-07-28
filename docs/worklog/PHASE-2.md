@@ -3902,7 +3902,14 @@ Task `2.16-fix-component-attribute-directive-compilation` is active on branch
   `category_overflow_1_menu` and item overflow `item_overflow_1_menu` both
   opened visible row-targeted menus. These four controls were working before
   the hotfix and were changed only for consistency/explicitness, not because
-  they were defective.
+  they were defective. Post-correction gates: `make pint` passed 317 files,
+  `make stan` analysed 188/188 with `[OK] No errors`, `make test` passed with
+  `316 passed / 13 skipped / 3225 assertions`, `make tenant-isolation-pgsql`
+  passed `23 passed / 96 assertions`, `make orders-concurrency-pgsql` passed
+  `6 passed / 43 assertions`, `npm run build` passed with the known
+  `min-release-age` warning, `git diff --check` had no output, and the
+  component-attribute directive audit exited 1 with no matches. PostgreSQL
+  gates were run sequentially.
 
 Gotcha carried forward for Stage 2.16: opening an order from the board still
 sets a success message and leaves the user on the board; the workspace is
