@@ -3911,11 +3911,59 @@ Task `2.16-fix-component-attribute-directive-compilation` is active on branch
   component-attribute directive audit exited 1 with no matches. PostgreSQL
   gates were run sequentially.
 
-Gotcha carried forward for Stage 2.16: opening an order from the board still
-sets a success message and leaves the user on the board; the workspace is
-entered by clicking the occupied tile. That is owner design question F1 and is
-not part of this hotfix.
+Stage 2.16 hotfix merge follow-up: PR #33 was merged as true merge commit
+`96339afb579a47dff0db1b5438fa3cc354290869` with parents
+`7463d6169bded9c5d5f16e8eedbdbf63c238b912` and
+`bdfacbf52a43b56e90ae124347608f3482382ff2`. Post-merge gates on merged main
+passed: `make pint` (`PASS 317 files`), `make stan` (`188/188`, `[OK] No
+errors`), `make test` (`316 passed / 13 skipped / 3225 assertions`),
+`make tenant-isolation-pgsql` (`23 passed / 96 assertions`),
+`make orders-concurrency-pgsql` (`6 passed / 43 assertions`), `npm run build`
+with the known npm `min-release-age` warning, and the component-attribute
+directive audit exited `1` with no matches. PostgreSQL gates were run
+sequentially. Merge-commit CI was green for `quality`,
+`tenant-isolation-pgsql`, and `orders-concurrency-pgsql`.
 
-Next exact action: owner review of the draft PR for
-`fix/workspace-component-attribute-directives`; do not merge, deploy, or change
-the board navigation behavior.
+New baselines of record after Stage 2.16: Pint `317 files`, PHPStan `188/188`
+with `[OK] No errors`, SQLite test suite `316 passed / 13 skipped / 3225
+assertions`, tenant isolation PostgreSQL `23 passed / 96 assertions`, and
+orders concurrency PostgreSQL `6 passed / 43 assertions`.
+
+Stage 2.16 incident summary: one real defect shipped to main: an uncompiled
+Blade directive inside a component-tag attribute rendered literal
+`@js($item['id'])` into the order workspace move button. The defect shipped
+with 315 green tests because the tests exercised either the Livewire method
+directly via `->call()` or the raw template via `file_get_contents`, and no
+test asserted the rendered output of the interactive control. It was caught
+only by the manual browser walkthrough. The four echo-syntax component
+attributes in translation overrides and Menu were not defective; Laravel
+compiles echo syntax inside component-tag attributes, and those edits were kept
+only for consistency/explicitness.
+
+Gotchas carried forward after Stage 2.16: Blade directives are not compiled in
+component-tag attributes, but echo syntax is; interactive controls must be
+proved on rendered output, not template source alone; PostgreSQL make targets
+share `smartrest_test_local` and must run sequentially; Pest memory limit lives
+in `phpunit.xml`; never run PHP on the host because host PHP is 8.1 while the
+project requires 8.3; no browser-automation dependency exists, so the headless
+Chrome approach is ad hoc and fragile.
+
+Open debt after Stage 2.16, for scheduling not doing now: the rendered-output
+guard also flags `{{` and `{!!` inside attribute values, and tenant translation
+overrides accept arbitrary text, so a tenant override containing `{{` rendered
+into an attribute would false-positive; the guard's directive allowlist will
+miss directives not on the list; `AddSubtable` has no domain-level name
+validation; the concurrency harness never cleans up
+`storage/framework/testing/orders-concurrency-*.start` markers; workspace
+mutation round trips spend 12 queries on pre-mutation render and 6 on
+post-mutation refresh.
+
+F1 remains open: opening an order from the board does not navigate to the
+workspace; `OrderBoard::openOrder()` sets a status message and re-renders.
+This is still an owner design question and was untouched by Stage 2.16.
+
+Next exact action: OWNER DECISION between (a) a browser smoke-test slice
+covering board, workspace, and menu index, wired into CI; (b) F1
+board-to-workspace navigation; (c) remaining order lifecycle UI, including
+waiter assignment, cancel order, and move order; or (d) Phase 3
+payments/cashbox. Do not pick one and do not start any.
