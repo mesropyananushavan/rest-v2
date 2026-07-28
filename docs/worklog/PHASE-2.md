@@ -4380,8 +4380,12 @@ the disagreement.
   `manager@arat.test` could not see archive mode buttons, restore forms, or
   force-delete forms.
 
-Next exact action: commit the scoped 2.21 implementation and verification
-handoff, push `feature/permissions-for-destructive-operations`, open a draft PR
-against `main`, and wait for CI at the exact pushed head. Do not remove demo
-owner superadmin flags, change schema, implement feature availability or
+Draft PR #41 is open at
+`https://github.com/mesropyananushavan/rest-v2/pull/41`. Initial implementation
+commit `e1c7491d49d888ba51e8fa972763d93fce5b1b72` was pushed normally; this
+handoff update is docs-only and should become the PR head after push.
+
+Next exact action: wait for CI on draft PR #41 at the exact pushed head, then
+the owner reviews the PR. Do not mark ready, merge, delete the branch, remove
+demo owner superadmin flags, change schema, implement feature availability or
 per-user deviations, deploy, force-push, or merge feature work.
