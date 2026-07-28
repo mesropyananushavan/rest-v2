@@ -96,6 +96,7 @@ it('returns item create and edit save and cancel paths to the originating menu c
         ]);
 
     assertRenderedHtmlHasNoUncompiledBladeDirectiveAttributes($component->html());
+    assertRenderedLivewireBindingsResolve($component->html(), MenuItemForm::class);
 
     $component
         ->set('category_id', (int) $records['category']->id)

@@ -795,6 +795,7 @@ it('keeps new workspace Livewire expressions rendered encoded and non goal affor
     $html = $component->html();
 
     assertRenderedHtmlHasNoUncompiledBladeDirectiveAttributes($html);
+    assertRenderedLivewireBindingsResolve($html, OrderWorkspaceComponent::class);
 
     expect($html)->toContain('wire:click="moveLineToSelectedSubtable('.((int) $line->id).')"')
         ->and($html)->toContain('value="'.((int) $subtable->id).'"')

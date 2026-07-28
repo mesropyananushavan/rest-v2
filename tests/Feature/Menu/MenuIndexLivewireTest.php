@@ -64,6 +64,7 @@ it('searches globally by localized item name and renders the empty search state'
         ->assertSee(__('menu.actions.reset_search'), false);
 
     assertRenderedHtmlHasNoUncompiledBladeDirectiveAttributes($component->html());
+    assertRenderedLivewireBindingsResolve($component->html(), MenuIndex::class);
 });
 
 it('characterizes current search and category context semantics', function (): void {
@@ -337,7 +338,7 @@ it('normalizes archive visibility for managers and exposes archive maintenance t
         ->assertSet('archiveMode', 'active')
         ->assertDontSee('Lori Omelette', false);
 
-    Livewire::withQueryParams(['archive_mode' => 'archived'])
+    $ownerArchived = Livewire::withQueryParams(['archive_mode' => 'archived'])
         ->actingAs($owner)
         ->test(MenuIndex::class)
         ->assertSet('archiveMode', 'archived')
@@ -347,12 +348,16 @@ it('normalizes archive visibility for managers and exposes archive maintenance t
         ->assertSee(__('menu.actions.restore'), false)
         ->assertSee(__('menu.actions.force_delete'), false);
 
-    Livewire::withQueryParams(['archive_mode' => 'all', 'show_inactive' => '1'])
+    assertRenderedLivewireBindingsResolve($ownerArchived->html(), MenuIndex::class);
+
+    $ownerAll = Livewire::withQueryParams(['archive_mode' => 'all', 'show_inactive' => '1'])
         ->actingAs($owner)
         ->test(MenuIndex::class)
         ->assertSet('archiveMode', 'all')
         ->assertSee('Lori Omelette', false)
         ->assertSee('Hidden Soup', false);
+
+    assertRenderedLivewireBindingsResolve($ownerAll->html(), MenuIndex::class);
 });
 
 it('toggles item activity inline in both directions', function (): void {
@@ -364,7 +369,11 @@ it('toggles item activity inline in both directions', function (): void {
     $component = Livewire::withQueryParams(['show_inactive' => '1'])
         ->actingAs($records['user'])
         ->test(MenuIndex::class)
-        ->assertSee(__('menu.actions.deactivate'), false)
+        ->assertSee(__('menu.actions.deactivate'), false);
+
+    assertRenderedLivewireBindingsResolve($component->html(), MenuIndex::class);
+
+    $component
         ->call('toggleItemActivity', (int) $records['item']->id)
         ->assertSee(__('menu.flash.item_deactivated'), false)
         ->assertSee(__('menu.actions.activate'), false);

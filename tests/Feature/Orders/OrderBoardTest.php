@@ -73,6 +73,7 @@ it('renders occupied active branch tables as read only tiles and free tables as 
         ->assertDontSee('selectTable('.((int) $occupiedTable->id).')', false);
 
     assertRenderedHtmlHasNoUncompiledBladeDirectiveAttributes($component->html());
+    assertRenderedLivewireBindingsResolve($component->html(), OrderBoard::class);
 
     expect($freeTable)->toBeInstanceOf(Table::class);
 });
@@ -85,12 +86,16 @@ it('opens a dine-in order from a free table and re-renders the table as occupied
     $hall = orderBoardHall($record['branches'][0], 'Main Hall');
     $table = orderBoardTable($hall, 'Garden 4');
 
-    Livewire::actingAs($record['user'])
+    $component = Livewire::actingAs($record['user'])
         ->test(OrderBoard::class)
         ->assertSee('Garden 4', false)
         ->assertSee('selectTable('.((int) $table->id).')', false)
         ->call('selectTable', (int) $table->id)
-        ->assertSet('openModalVisible', true)
+        ->assertSet('openModalVisible', true);
+
+    assertRenderedLivewireBindingsResolve($component->html(), OrderBoard::class);
+
+    $component
         ->set('guestCount', 3)
         ->set('comment', 'Near the window')
         ->call('openOrder')
