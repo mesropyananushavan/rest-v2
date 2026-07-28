@@ -4230,14 +4230,16 @@ Task `2.19-docs-authorization-model` is active on branch
   per-branch user permission scope, superadmin bypass of both axes, and the
   platform-operator-vs-tenant-owner distinction. Result: added the
   2026-07-28 authorization two-axis decision entry.
-- [ ] Step 2.19.4: verification, commit, push, and draft PR. Run only
+- [x] Step 2.19.4: verification, commit, push, and draft PR. Run only
   `git diff --name-status main` and `git diff --check`; confirm the diff
   touches only `docs/BLUEPRINT.md`, `docs/DECISIONS.md`, and this worklog;
   commit, push normally, and open a draft PR against `main`. Do not run
   executable gates because this task changes documentation only. Result so far:
   `git diff --name-status main` shows only `docs/BLUEPRINT.md`,
   `docs/DECISIONS.md`, and `docs/worklog/PHASE-2.md`; `git diff --check`
-  produced no output. No executable gates were run.
+  produced no output. No executable gates were run. Documentation commit
+  `e2910e8` was pushed normally to `origin/docs/authorization-model`; draft PR
+  #39 is open at `https://github.com/mesropyananushavan/rest-v2/pull/39`.
 
 Implementation proposal for owner approval, not a decision: split the future
 implementation into at least three slices: feature availability with
@@ -4245,6 +4247,10 @@ server-side enforcement first, per-user permission deviations second, and the
 management UI third. Do not start any of those slices in this documentation
 task.
 
-Next exact action: run only `git diff --name-status main` and
-`git diff --check`, confirm the three-file docs-only diff, then commit, push,
-and open the draft PR for owner review.
+Task 2.19 implementation proposal remains owner-approval material only:
+availability with server-side enforcement first, per-user deviations second,
+and management UI third. No implementation was started.
+
+Next exact action: owner reviews draft PR #39 for task
+`2.19-docs-authorization-model`. Do not mark ready, merge, or start the
+implementation slices until the owner decides.
