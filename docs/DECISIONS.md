@@ -739,3 +739,37 @@ on `is_superadmin`, because that keeps tenant-owner maintenance capability tied
 to a platform-operator flag; using one shared destructive permission for both
 restore and permanent delete, because the owner may grant reversible restore
 without granting irreversible permanent deletion.
+
+## 2026-07-28 — Platform administration uses a separate UI and guard
+Decision: platform administration lives in a separate UI from restaurant
+administration. It uses the `/platform` route prefix, `platform.*` route names,
+its own middleware group, and its own `platform` auth guard. `/admin` remains
+restaurant administration; `/platform` is platform administration. The platform
+UI covers creating restaurants and branches, activating and deactivating them,
+listing all restaurants, and seeing payment status so non-paying tenants can be
+switched off. Tenant lifecycle, feature availability, and payment are separate
+concepts and must not be merged.
+Reason: platform administration operates on the tenant list and tenant
+lifecycle, not on tenant-owned restaurant data. The `tenants` table is not
+tenant-scoped, so those platform tasks do not require entering a tenant's data.
+That makes tenant entry an optional later capability rather than a prerequisite
+for the first platform UI. This is evidence toward a separate platform identity
+and guard, but it does not decide the platform-operator account shape. With the
+platform UI separated, `is_superadmin` no longer carries platform identity and
+remains only the break-glass bypass recorded in the central Identity authorizer
+decision.
+Naming rationale: `/platform` describes the system-side administration surface.
+`/product-owner` was rejected because "product owner" is an established scrum
+role with a different meaning. `/operator` was rejected because it describes
+the person rather than the system. `/console` was rejected because it is too
+generic.
+Cost accepted: two UIs mean two navigations, two layouts, duplicated
+authentication surface, and drift risk over time. The accepted mitigation is
+that the platform UI stays deliberately minimal: English only, no three-locale
+parity, tables and filters rather than rich Livewire screens.
+Rejected: putting platform administration inside `/admin`, because that would
+keep platform lifecycle work mixed with restaurant administration; using
+feature availability as payment state, because the availability layer records
+what exists for a tenant or branch and deliberately does not model billing;
+treating payment as tenant lifecycle itself, because payment is the reason a
+tenant may be switched off, not the switch.

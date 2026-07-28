@@ -4389,3 +4389,40 @@ Next exact action: wait for CI on draft PR #41 at the exact pushed head, then
 the owner reviews the PR. Do not mark ready, merge, delete the branch, remove
 demo owner superadmin flags, change schema, implement feature availability or
 per-user deviations, deploy, force-push, or merge feature work.
+
+Task `2.21-replace-superadmin-gates-with-permissions` is complete and merged.
+PR #41 was marked ready for review and merged as true merge commit
+`2a315e31fc2059ff1869fc6eb0b0413a7c549364` with parents
+`c2b59d25b84087c801b23619c6c52a1e18fb4271` and
+`4ab911f7fee0277f559c1d87128c20bad2719487`. The remote
+`feature/permissions-for-destructive-operations` branch remains present at
+`4ab911f7fee0277f559c1d87128c20bad2719487`. Post-merge local gates passed on
+merged `main`: `make pint` (`PASS 315 files`), `make stan` (`186/186`,
+`[OK] No errors`), `make test` (`329 passed / 13 skipped / 3359 assertions`),
+`make tenant-isolation-pgsql` (`23 passed / 96 assertions`),
+`make orders-concurrency-pgsql` (`6 passed / 43 assertions`), `npm run build`
+passed with the known npm `min-release-age` warning, `git diff --check` had no
+output, and the component-attribute directive audit exited `1` with no matches.
+The PostgreSQL gates were run sequentially. CI on merge commit
+`2a315e31fc2059ff1869fc6eb0b0413a7c549364` completed successfully.
+
+Task `2.22-docs-platform-admin-ui` is active on branch
+`docs/platform-admin-ui`, based on post-#41 `origin/main` at
+`2a315e31fc2059ff1869fc6eb0b0413a7c549364`.
+
+- [x] Step 2.22.1: record the separate platform administration UI decision in
+  `docs/BLUEPRINT.md`, `docs/DECISIONS.md`, and
+  `docs/spikes/platform-operator-identity.md`. Result: the docs now record
+  `/platform`, `platform.*`, the `platform` guard, the accepted cost of a
+  separate minimal UI, the three-concept separation between tenant lifecycle,
+  feature availability, and payment, and the effect on the platform-operator
+  identity spike as evidence toward S3 rather than a settled choice.
+- [ ] Step 2.22.2: verify, publish, and merge. Run only
+  `git diff --name-status main` and `git diff --check`, commit, push normally,
+  open a non-draft PR against `main`, wait for CI success, then merge as a true
+  merge commit without deleting the branch.
+
+Next exact action: verify the docs-only diff for task
+`2.22-docs-platform-admin-ui`, then commit, push, open a non-draft PR, wait for
+CI, and merge it as a true merge commit. Do not run executable gates for this
+documentation-only block.
