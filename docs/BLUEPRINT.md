@@ -272,6 +272,156 @@ Soft deletes: allowed for catalog/configuration entities where history must rema
 
 Authn/Authz: Laravel session auth for admin/employee UI; token auth for guest QR and displays. Permissions are action-based, e.g. `orders.close`, `payments.refund`, `stock.documents.post`, `admin.maintenance.run`. Roles are tenant-defined, branch assignment restricts data visibility. Policies call Identity contracts, not raw tables.
 
+Authorization model, decided: authorization has two separate axes that must not
+be merged into one mechanism or one table.
+
+Axis 1 is feature availability. It answers "does this feature exist here at
+all", not "may this person do it". This layer is deliberately not called
+tariffs, plans, subscriptions, or billing. It records only on/off and does not
+model why a feature is off: not purchased, not in the agreement, not mature
+enough to expose, or intentionally simplified for a client are all the same to
+this layer. If real billing plans appear later, they sit above feature
+availability and set these switches in bulk. Feature availability is scoped to
+tenant and branch: a feature can be off for the whole tenant, or off in one
+branch while on in another. Granularity is whole module plus point exceptions
+inside a module. The precedence rule is explicit: a point exception overrides
+the module-level state. If the stock module is on for the tenant but
+`stock.write_off` is off for one branch, write-off is off in that branch.
+Feature availability is controlled only by the platform superadmin. The tenant
+owner cannot see or change this layer; if the tenant owner could switch it, the
+layer would not mean anything.
+
+Axis 2 is user permissions. It answers "may this person do it, here". Scope is
+one user in one branch; the same person may be senior in one location and new in
+another. A role is a live link, not a copy. The user stores their role plus
+personal deviations. Adding a permission to a role takes effect immediately for
+everyone holding that role, and personal deviations survive that change.
+Personal deviations work in both directions: they can grant a permission the
+role does not give, and take away a permission the role does give. The tenant
+owner manages this axis only inside what feature availability allows.
+
+The intended management screen follows that storage model. Opening a user's card
+for a given branch shows one flat list of checkboxes. Checkboxes coming from the
+role are already ticked. Ticking or unticking a box silently records a personal
+deviation; the tenant owner sees one list, not "inherit" and "override"
+concepts. Boxes that differ from the role carry a small marker, and there is a
+`reset to role` action so a future manager can explain why one waiter's set
+differs from the role.
+
+Resolution order:
+
+1. user inactive -> deny
+2. `is_superadmin` -> allow, bypassing both axes
+3. feature not available for this tenant and branch -> deny, and hidden from navigation
+4. personal deviation for this branch: deny -> deny; grant -> allow
+5. role permission -> allow or deny
+
+`is_superadmin` marks a regular user account belonging to the platform operator
+on the SmartRest side. A tenant owner is never a platform superadmin.
+
+Authorization invariants:
+
+- Hiding is not blocking. Removing a navigation item is UX. The feature must be
+  blocked at the route and at the Application action, or a direct URL defeats
+  it.
+- On availability downgrade, personal deviations become inert, not deleted.
+  When the feature is switched back on, previous grants apply again without
+  being re-entered by hand.
+- The tenant owner cannot grant a permission the owner does not hold. There is
+  no upward privilege escalation.
+- Deny deviations carry a reason and an audit trail: who, when, and why. A deny
+  with no reason is useless exactly when it is needed.
+- Superadmin bypass must be marked specially in the audit log. A superadmin
+  working a support ticket can create data inside a module the tenant does not
+  have, for example stock entries for a tenant with stock switched off. The
+  owner will not see that data, and it will surface later if the feature is
+  switched on. The bypass is intended and stays; the audit marking is what
+  makes it recoverable.
+- Tenant-level permissions such as `tenancy.manage` and `identity.manage` have
+  no branch. Their resolution must be defined explicitly during
+  implementation; the choice is still open.
+
+Live-link roles are chosen over copy-on-assign because with copies, adding a
+permission to a role would require touching every existing user by hand, and a
+`re-apply template` button would wipe personal settings. Live link makes
+fleet-wide changes free and keeps deviations intact.
+
+Worked example for `stock.write_off`: Arat has two branches, Kentron and
+Dilijan. Stock is module-on for both branches, but Kentron has a point exception
+turning `stock.write_off` off. Mariam and Tigran are active non-superadmin users.
+Mariam's role grants `stock.write_off`; Tigran's role does not. In Kentron,
+Mariam's check reaches step 3 and denies because the point exception overrides
+the module-on state, so navigation hides write-off even though her role grants
+it. In Dilijan, Mariam's check passes steps 1-3, then denies at step 4 because
+she has a personal deny deviation for that branch. In Dilijan, Tigran's check
+passes steps 1-3, then allows at step 4 because he has a personal grant
+deviation for that branch even though his role lacks the permission. In Kentron,
+Tigran's check passes steps 1-4 with no applicable deviation, then denies at
+step 5 because his role does not grant the permission. If a SmartRest platform
+operator performs the same check while active, step 2 allows before both axes;
+the tenant context still controls which tenant data is visible.
+
+Authorization current state and gaps, descriptive: `EloquentAuthorizer` today
+implements only steps 1, 2, and 5: inactive users deny, active superadmins
+allow, and everyone else is checked only through role permissions. Feature
+availability and personal deviations do not exist. `IdentityDemoSeeder` marks
+both demo tenant owners, `owner@arat.test` and `owner@northstar.test`, with
+`superadmin => true` in the current seeder rows read at lines 156 and 164;
+because `EloquentAuthorizer::allows()` returns true for `is_superadmin` without
+checking tenant, a demo tenant owner currently bypasses authorization entirely.
+Under the decided model that would also bypass feature availability and expose
+modules deliberately switched off for the tenant, which contradicts the rule
+that a tenant owner cannot see that layer.
+
+Current user structure also has no above-tenant account. `users.tenant_id` is
+`foreignId()->constrained()->cascadeOnDelete()`, therefore not nullable, and
+`User` uses `BelongsToTenant`. Every user, including a platform operator, must
+belong to exactly one tenant. That is why the seeder marks each tenant's own
+owner as superadmin: it is a workaround for a missing platform-operator
+construct, not merely a seeding mistake. `users.role_id` is one tenant-level
+column, so a user has exactly one role across the whole tenant while the
+decided model scopes permission resolution per branch. There is no storage for
+feature availability, personal deviations, or deviation reasons.
+
+Consequences of the current user structure: authorization and data visibility
+are different mechanisms. `allows()` returns true for `is_superadmin` without
+checking tenant, but what data is visible is governed by tenant context and
+RLS. Passing authorization does not by itself grant access to another tenant's
+data. A platform operator needs an explicit, audited way to enter a tenant's
+context; without it, "who accessed this restaurant's data, and when" has no
+answer. Because `users.tenant_id` cascades on delete, deleting the tenant that
+hosts a platform operator account deletes that platform operator account too;
+this is a defect.
+
+Security debt before real tenant onboarding: three platform/tenant boundary
+debts must close before the first real tenant is onboarded. Tenant owner
+accounts are currently seeded as superadmins. Platform-operator account
+placement is missing, and the current tenant FK cascade-delete behavior would
+delete a platform operator with its hosting tenant. The project already records
+the runtime database role/BYPASSRLS boundary as a production gate for tenant
+isolation.
+
+Open questions for implementation time:
+
+- Does the role itself become per-branch, or does it stay tenant-level with
+  per-branch deviations carrying all the difference? The second option makes
+  large role differences between branches expensive to express.
+- Where does a platform operator account live given `users.tenant_id` is not
+  nullable? At least three shapes exist: nullable `tenant_id`, a dedicated
+  platform tenant, or a separate entity with its own auth guard. Each has
+  different consequences for RLS and `BelongsToTenant` scoping.
+- How do tenant-level permissions behave with no branch?
+- Is availability stored as an allow-list or a deny-list?
+- How does the navigation layer learn availability without an N+1 per menu
+  item?
+- How are availability and deviations cached and invalidated?
+- Is a deviation reason mandatory or optional?
+- How are existing role-only checks migrated without a flag day?
+- Where does the superadmin availability management UI live?
+
+Caching and invalidation, navigation N+1 behavior, and migration of existing
+role-only checks must be decided with code in hand, not in advance.
+
 Multi-tenancy: `ResolveTenant` middleware derives tenant from domain/header/session/token; `ResolveBranch` sets branch context. All tenant models use `TenantScoped` global scope and `BelongsToTenant` trait. Jobs serialize tenant/branch ids and restore context before execution. Cache keys use `tenant:{id}:branch:{id}:...`.
 
 i18n: UI strings use translation keys and resolve through a tenant-level database override layer on top of the `hy`/`ru`/`en` language files. Overrides are tenant-only, never branch-level, and a defined safety/auth/destructive-action key set is not overridable. DB localized names that users edit keep using the JSON translation value object unchanged, with fallback order user locale -> tenant locale -> `en`; those names are not part of the UI translation override layer. Currency/date/number formatting happens in presenters/resources, not domain services.

@@ -681,3 +681,40 @@ limit must live in project-level PHPUnit configuration that both local make
 targets and CI honour.
 Rejected: setting the limit only in `Makefile` — CI would not use it; reducing
 required coverage — would weaken the regression proof for this slice.
+
+## 2026-07-28 — Authorization uses separate availability and permission axes
+Decision: authorization is recorded as two separate axes that must not be merged
+into one mechanism or table. Feature availability answers whether a feature
+exists for a tenant/branch at all. It is explicitly not named tariff, plan,
+subscription, or billing because it records only on/off and does not encode why
+a feature is off; future billing plans, if introduced, sit above this layer and
+set availability switches in bulk. Availability is scoped to tenant and branch,
+is controlled only by the SmartRest platform superadmin, and supports module
+states plus point exceptions. A point exception overrides the module-level
+state: module on plus feature off means that feature is off.
+User permissions answer whether one user may perform an action in one branch.
+Roles are live links rather than copies: adding a permission to a role affects
+all users holding that role immediately, while personal deviations survive the
+role change. Deviations are branch-scoped and bidirectional, so they can grant
+a permission missing from the role or deny a permission granted by the role.
+Active `is_superadmin` users bypass both axes. `is_superadmin` identifies a
+regular account belonging to the SmartRest platform operator; a tenant owner is
+never a platform superadmin.
+Reason: feature availability and user permission answer different questions and
+have different operators. Combining them would let tenant owners change the
+platform-controlled product surface, or would make platform availability look
+like personal permission management. Live-link roles avoid touching every user
+when a role changes and avoid wiping personal settings through a re-apply
+template workflow. Per-branch scope matches restaurant operations where one
+person can be senior in one branch and new in another.
+Current gap: the existing `EloquentAuthorizer` implements only inactive-user
+deny, active-superadmin allow, and role permission lookup. Feature availability
+and personal deviations are not implemented yet. The current schema also has no
+above-tenant platform-operator account because `users.tenant_id` is non-null,
+cascades on tenant delete, and `User` uses `BelongsToTenant`.
+Rejected: naming the availability layer tariffs/plans/subscriptions, because
+that would imply billing semantics this layer intentionally does not model;
+copying role permissions onto users, because role updates would become manual
+fleet-wide edits and re-applying a template would destroy personal deviations;
+letting tenant owners control availability, because then the layer would no
+longer be a platform-controlled product boundary.
