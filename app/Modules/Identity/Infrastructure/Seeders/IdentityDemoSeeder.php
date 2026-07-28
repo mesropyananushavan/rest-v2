@@ -150,7 +150,7 @@ final class IdentityDemoSeeder extends Seeder
     {
         return [
             'owner' => ['tenancy.manage', TenantTranslationOverridePermissions::MANAGE, 'identity.manage', 'menu.archive.view', 'menu.categories.manage', 'menu.categories.restore', 'menu.categories.force_delete', 'menu.items.manage', 'menu.items.restore', 'menu.items.force_delete', 'tables.halls.archive.view', 'tables.halls.manage', 'tables.halls.restore', 'tables.halls.force_delete', 'tables.tables.archive.view', 'tables.tables.manage', 'tables.tables.restore', 'tables.tables.force_delete', 'orders.take', 'payments.capture'],
-            'manager' => [TenantTranslationOverridePermissions::MANAGE, 'identity.manage', 'menu.categories.manage', 'menu.items.manage', 'tables.halls.manage', 'tables.tables.manage', 'orders.take', 'payments.capture'],
+            'manager' => [TenantTranslationOverridePermissions::MANAGE, 'identity.manage', 'menu.archive.view', 'menu.categories.manage', 'menu.categories.restore', 'menu.items.manage', 'menu.items.restore', 'tables.halls.archive.view', 'tables.halls.manage', 'tables.halls.restore', 'tables.tables.archive.view', 'tables.tables.manage', 'tables.tables.restore', 'orders.take', 'payments.capture'],
             'cashier' => ['orders.take', 'payments.capture'],
             'waiter' => ['orders.take'],
         ];

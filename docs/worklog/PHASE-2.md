@@ -4505,9 +4505,52 @@ Stage 2.22 handoff:
 - Open owner decision: the S1/S2/S3 platform-operator account shape remains
   undecided.
 
-Next exact action: OWNER DECISION on role defaults for the eleven
-archive/restore/force-delete permissions and payment tracking depth for the
-platform UI. Work not depending on either, such as the audit log report UI or
-implementing the feature-availability axis, could start first, but both are
-large and both are easier to scope once the platform direction is known. Do not
-pick one and do not start any of them.
+Task `2.23-audit-log-report` is active on branch `feature/audit-log-report`,
+based on `origin/main` at `1a84ee5e5fb80d4f34068c3181555bf2024735dd`.
+
+Owner decision for this slice: manager gets archive visibility and reversible
+restore defaults for Menu and Tables, but no permanent delete defaults.
+Cashier and waiter remain unchanged. Audit-log reporting uses a mandatory
+server-enforced date window instead of adding an actor-leading index; actor is
+a residual filter inside the tenant/date range.
+
+- [x] Step 2.23.1: Part A role defaults and seeder regression test. Grant the
+  manager role `menu.archive.view`, `menu.categories.restore`,
+  `menu.items.restore`, `tables.halls.archive.view`, `tables.halls.restore`,
+  `tables.tables.archive.view`, and `tables.tables.restore`; do not grant any
+  `*.force_delete` permission and do not change cashier or waiter defaults.
+  Update focused seeder coverage and any tests that assumed manager lacked
+  these permissions. Run focused tests, then commit Part A separately. Result:
+  `IdentityDemoSeeder` grants manager only the approved archive visibility and
+  restore permissions; cashier and waiter defaults are unchanged. Updated
+  `MenuDemoSeederTest`, which previously asserted manager lacked these
+  permissions, to assert the exact owner/manager/cashier/waiter matrix and
+  manager non-membership in all four `*.force_delete` permissions.
+  Verification: `make test` passed (`330 passed / 13 skipped / 3346
+  assertions`) and `make pint` passed (`PASS 315 files`).
+- [ ] Step 2.23.2: audit report query design and authorization. Add an
+  owner-only `audit.logs.view` permission, a thin controller, and an
+  Application query object for a read-only `/admin` audit report. Enforce a
+  default last-7-days window and a documented maximum server-side window with
+  translated rejection. Keep every query paginated and make each filter
+  combination lead through an existing audit-log composite index.
+- [ ] Step 2.23.3: audit report UI and safe detail rendering. Add the
+  paginated admin list, optional actor/action/target-type/branch filters,
+  date-range inputs, navigation visibility, and row detail view showing
+  `before_json`, `after_json`, `correlation_id`, and `ip_address` safely as
+  escaped text, never markup or JavaScript.
+- [ ] Step 2.23.4: automated coverage. Add authorization, navigation,
+  tenant-isolation, branch-scoping, server-side window enforcement, safe JSON
+  rendering, pagination, filter, translation-key parity, rendered-affordance
+  guard coverage where applicable, and query-count tests proving actor eager
+  loading is not N+1 at 1 and 25 rows.
+- [ ] Step 2.23.5: documentation and final verification. Add the dated
+  `docs/DECISIONS.md` entry, keep this worklog current, verify `AGENTS.md`
+  still has no false statement or update it if needed, run all required gates
+  including the two PostgreSQL targets sequentially, perform the mandatory
+  headless Chrome audit-report verification, clean temporary artifacts, commit
+  Part B separately, push normally, and open a draft PR without merging.
+
+Next exact action: commit Step 2.23.1 as the separate Part A commit, then
+execute Step 2.23.2 by adding the audit read permission, thin controller, and
+Application query object without schema/index changes.

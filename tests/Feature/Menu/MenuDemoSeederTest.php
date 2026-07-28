@@ -27,33 +27,55 @@ it('seeds deterministic menu data visible to demo managers by tenant', function 
 
     $aratOwner = User::withoutGlobalScopes()->where('email', 'owner@arat.test')->firstOrFail();
     $aratManager = User::withoutGlobalScopes()->where('email', 'manager@arat.test')->firstOrFail();
+    $aratCashier = User::withoutGlobalScopes()->where('email', 'cashier@arat.test')->firstOrFail();
+    $aratWaiter = User::withoutGlobalScopes()->where('email', 'waiter@arat.test')->firstOrFail();
 
     app(TenantResolver::class)->set((int) $aratOwner->tenant_id);
 
-    expect($aratOwner->role()->firstOrFail()->permissions()->pluck('code')->all())
-        ->toContain('menu.archive.view')
-        ->toContain('menu.categories.restore')
-        ->toContain('menu.categories.force_delete')
-        ->toContain('menu.items.restore')
-        ->toContain('menu.items.force_delete')
-        ->toContain('tables.halls.archive.view')
-        ->toContain('tables.halls.restore')
-        ->toContain('tables.halls.force_delete')
-        ->toContain('tables.tables.archive.view')
-        ->toContain('tables.tables.restore')
-        ->toContain('tables.tables.force_delete');
+    $archivePermissionCodes = [
+        'menu.archive.view',
+        'menu.categories.restore',
+        'menu.categories.force_delete',
+        'menu.items.restore',
+        'menu.items.force_delete',
+        'tables.halls.archive.view',
+        'tables.halls.restore',
+        'tables.halls.force_delete',
+        'tables.tables.archive.view',
+        'tables.tables.restore',
+        'tables.tables.force_delete',
+    ];
 
-    expect($aratManager->role()->firstOrFail()->permissions()->pluck('code')->all())
-        ->not->toContain('menu.archive.view')
-        ->not->toContain('menu.categories.restore')
+    $roleArchivePermissions = [
+        'owner' => demoRolePermissionIntersection($aratOwner, $archivePermissionCodes),
+        'manager' => demoRolePermissionIntersection($aratManager, $archivePermissionCodes),
+        'cashier' => demoRolePermissionIntersection($aratCashier, $archivePermissionCodes),
+        'waiter' => demoRolePermissionIntersection($aratWaiter, $archivePermissionCodes),
+    ];
+
+    expect($roleArchivePermissions)->toBe([
+        'owner' => $archivePermissionCodes,
+        'manager' => [
+            'menu.archive.view',
+            'menu.categories.restore',
+            'menu.items.restore',
+            'tables.halls.archive.view',
+            'tables.halls.restore',
+            'tables.tables.archive.view',
+            'tables.tables.restore',
+        ],
+        'cashier' => [],
+        'waiter' => [],
+    ]);
+
+    expect($roleArchivePermissions['manager'])
+        ->toContain('menu.categories.restore')
+        ->toContain('menu.items.restore')
+        ->toContain('tables.halls.restore')
+        ->toContain('tables.tables.restore')
         ->not->toContain('menu.categories.force_delete')
-        ->not->toContain('menu.items.restore')
         ->not->toContain('menu.items.force_delete')
-        ->not->toContain('tables.halls.archive.view')
-        ->not->toContain('tables.halls.restore')
         ->not->toContain('tables.halls.force_delete')
-        ->not->toContain('tables.tables.archive.view')
-        ->not->toContain('tables.tables.restore')
         ->not->toContain('tables.tables.force_delete');
 
     $this->withSession(['_token' => menuDemoCsrfToken()])
@@ -130,6 +152,17 @@ it('seeds deterministic menu data visible to demo managers by tenant', function 
 function menuDemoCsrfToken(): string
 {
     return 'menu-demo-test-token';
+}
+
+/**
+ * @param  list<string>  $permissionCodes
+ * @return list<string>
+ */
+function demoRolePermissionIntersection(User $user, array $permissionCodes): array
+{
+    $held = $user->role()->firstOrFail()->permissions()->pluck('code')->all();
+
+    return array_values(array_intersect($permissionCodes, $held));
 }
 
 /**
