@@ -669,6 +669,7 @@ context mechanisms.
 Rejected: adding one-off superadmin allowances to each policy, controller, or
 Livewire component, because that would be inconsistent and easy to miss as new
 permissions are introduced.
+Cross-reference: the broader two-axis authorization model and platform-operator identity distinction are recorded in the 2026-07-28 authorization decision below.
 
 ## 2026-07-27 — Pest memory limit lives in phpunit.xml
 Decision: the Pest/PHPUnit test process sets `memory_limit=256M` in
