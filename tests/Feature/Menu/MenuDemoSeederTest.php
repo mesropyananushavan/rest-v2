@@ -22,10 +22,8 @@ it('seeds deterministic menu data visible to demo managers by tenant', function 
 
     $this->seed(DemoSeeder::class);
 
-    expect(User::withoutGlobalScopes()->where('email', 'owner@arat.test')->firstOrFail()->is_superadmin)->toBeTrue()
-        ->and(User::withoutGlobalScopes()->where('email', 'manager@arat.test')->firstOrFail()->is_superadmin)->toBeFalse()
-        ->and(User::withoutGlobalScopes()->where('email', 'owner@northstar.test')->firstOrFail()->is_superadmin)->toBeTrue()
-        ->and(User::withoutGlobalScopes()->where('email', 'manager@northstar.test')->firstOrFail()->is_superadmin)->toBeFalse();
+    expect(User::withoutGlobalScopes()->where('is_superadmin', true)->pluck('email')->all())
+        ->toBe([]);
 
     $aratOwner = User::withoutGlobalScopes()->where('email', 'owner@arat.test')->firstOrFail();
     $aratManager = User::withoutGlobalScopes()->where('email', 'manager@arat.test')->firstOrFail();

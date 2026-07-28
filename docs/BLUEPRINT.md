@@ -364,14 +364,11 @@ the tenant context still controls which tenant data is visible.
 Authorization current state and gaps, descriptive: `EloquentAuthorizer` today
 implements only steps 1, 2, and 5: inactive users deny, active superadmins
 allow, and everyone else is checked only through role permissions. Feature
-availability and personal deviations do not exist. `IdentityDemoSeeder` marks
-both demo tenant owners, `owner@arat.test` and `owner@northstar.test`, with
-`superadmin => true` in the current seeder rows read at lines 156 and 164;
-because `EloquentAuthorizer::allows()` returns true for `is_superadmin` without
-checking tenant, a demo tenant owner currently bypasses authorization entirely.
-Under the decided model that would also bypass feature availability and expose
-modules deliberately switched off for the tenant, which contradicts the rule
-that a tenant owner cannot see that layer.
+availability and personal deviations do not exist. Earlier demo data marked
+both tenant owners, `owner@arat.test` and `owner@northstar.test`, with
+`superadmin => true`; that workaround is closed. The demo now has no seeded
+superadmin account. Tests that need to exercise the bypass set the flag
+explicitly on a purpose-made user.
 
 Current user structure also has no above-tenant account. `users.tenant_id` is
 `foreignId()->constrained()->cascadeOnDelete()`, therefore not nullable, and
@@ -394,12 +391,12 @@ hosts a platform operator account deletes that platform operator account too;
 this is a defect.
 
 Security debt before real tenant onboarding: three platform/tenant boundary
-debts must close before the first real tenant is onboarded. Tenant owner
-accounts are currently seeded as superadmins. Platform-operator account
-placement is missing, and the current tenant FK cascade-delete behavior would
-delete a platform operator with its hosting tenant. The project already records
-the runtime database role/BYPASSRLS boundary as a production gate for tenant
-isolation.
+debts must close before the first real tenant is onboarded. Closed: tenant
+owner accounts are no longer seeded as superadmins. Still open:
+platform-operator account placement is missing, and the current tenant FK
+cascade-delete behavior would delete a platform operator with its hosting
+tenant. Still open: the project records the runtime database role/BYPASSRLS
+boundary as a production gate for tenant isolation.
 
 Open questions for implementation time:
 

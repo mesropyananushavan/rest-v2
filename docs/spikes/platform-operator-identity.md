@@ -24,10 +24,12 @@ authorization open questions.
 
 The decided authorization model gives only the platform superadmin control over
 feature availability. It also records three platform/tenant boundary debts that
-must close before real tenant onboarding: tenant owner accounts are currently
-seeded as superadmins, the platform-operator account has no structural place,
-and runtime database role/RLS separation remains a production gate. The current
-schema confirms the structural problem: `users.tenant_id` is
+must close before real tenant onboarding: tenant owner accounts seeded as
+superadmins, the platform-operator account having no structural place, and
+runtime database role/RLS separation remaining a production gate. The
+tenant-owner seeder workaround was removed on 2026-07-28; the demo now has no
+seeded superadmin account. The current schema confirms the structural problem:
+`users.tenant_id` is
 `foreignId()->constrained()->cascadeOnDelete()` in
 `database/migrations/0001_01_01_000000_create_users_table.php:65`,
 `users` has tenant-scoped unique constraints on `email` and `username` at
