@@ -19,7 +19,7 @@ $canRestore = $category->parent_id === null || ! ($parent instanceof MenuCategor
             <x-button :href="route('admin.menu.categories.edit', array_merge(['category' => (int) $category->id], $menuContext))" variant="outline-secondary" size="sm">
                 {{ __('menu.actions.edit') }}
             </x-button>
-            <x-row-overflow id="category_overflow_{{ (int) $category->id }}" :label="__('menu.actions.more')">
+            <x-row-overflow :id="'category_overflow_'.((int) $category->id)" :label="__('menu.actions.more')">
                 <x-confirm-modal
                     id="archive_category_{{ (int) $category->id }}"
                     :action="route('admin.menu.categories.destroy', array_merge(['category' => (int) $category->id], $menuContext))"
@@ -32,7 +32,7 @@ $canRestore = $category->parent_id === null || ! ($parent instanceof MenuCategor
                 />
             </x-row-overflow>
         @elseif ($canViewArchive)
-            <x-row-overflow id="category_overflow_{{ (int) $category->id }}" :label="__('menu.actions.more')">
+            <x-row-overflow :id="'category_overflow_'.((int) $category->id)" :label="__('menu.actions.more')">
                 @if ($canRestore)
                     <form method="post" action="{{ route('admin.menu.categories.restore', array_merge(['category' => (int) $category->id], $menuContext)) }}">
                         @csrf

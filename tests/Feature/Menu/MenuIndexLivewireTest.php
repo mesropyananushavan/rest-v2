@@ -53,7 +53,7 @@ it('searches globally by localized item name and renders the empty search state'
     app(TenantResolver::class)->set((int) $records['tenant']->id);
     app(BranchContext::class)->set((int) $records['branch']->id);
 
-    Livewire::actingAs($records['user'])
+    $component = Livewire::actingAs($records['user'])
         ->test(MenuIndex::class)
         ->set('search', 'ձվածեղ')
         ->assertSee(__('menu.search.results_heading'), false)
@@ -62,6 +62,8 @@ it('searches globally by localized item name and renders the empty search state'
         ->set('search', 'does-not-exist')
         ->assertSee(__('menu.empty.search_title'), false)
         ->assertSee(__('menu.actions.reset_search'), false);
+
+    assertRenderedHtmlHasNoUncompiledBladeDirectiveAttributes($component->html());
 });
 
 it('characterizes current search and category context semantics', function (): void {

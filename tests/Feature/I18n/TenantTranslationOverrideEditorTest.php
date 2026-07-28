@@ -131,6 +131,8 @@ it('keeps special translation values out of JavaScript evaluated attributes', fu
         expect($html)->toContain(e($value));
     }
 
+    assertRenderedHtmlHasNoUncompiledBladeDirectiveAttributes($html);
+
     foreach (['Chef', 'Quote', 'Path C:', 'Line one', 'Unicode', 'Markup marker'] as $marker) {
         expect($javascriptAttributes)->not->toContain($marker);
     }

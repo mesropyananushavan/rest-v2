@@ -130,11 +130,11 @@ use Illuminate\Support\Js;
                             </td>
                             <td>
                                 <div class="flex justify-end gap-2">
-                                    <x-button type="button" variant="outline-primary" size="sm" wire:click="startEditing({{ Js::from($row->key) }})">
+                                    <x-button type="button" variant="outline-primary" size="sm" :wire:click="'startEditing('.Js::from($row->key).')'">
                                         {{ __('admin.translation_overrides.actions.edit') }}
                                     </x-button>
                                     @if ($row->overridden)
-                                        <x-button type="button" variant="outline-danger" size="sm" wire:click="resetOverride({{ Js::from($row->key) }})">
+                                        <x-button type="button" variant="outline-danger" size="sm" :wire:click="'resetOverride('.Js::from($row->key).')'">
                                             {{ __('admin.translation_overrides.actions.reset') }}
                                         </x-button>
                                     @endif

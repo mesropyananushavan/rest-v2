@@ -75,7 +75,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
                     </x-button>
                 @endif
                 @if (! $item->trashed() && $canManageItems)
-                    <x-row-overflow id="item_overflow_{{ (int) $item->id }}" :label="__('menu.actions.more')">
+                    <x-row-overflow :id="'item_overflow_'.((int) $item->id)" :label="__('menu.actions.more')">
                         <x-confirm-modal
                             id="archive_item_{{ (int) $item->id }}"
                             :action="route('admin.menu.items.destroy', array_merge(['item' => (int) $item->id], $menuContext))"
@@ -89,7 +89,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
                     </x-row-overflow>
                 @endif
                 @if ($item->trashed() && $canManageItems && $canViewArchive)
-                    <x-row-overflow id="item_overflow_{{ (int) $item->id }}" :label="__('menu.actions.more')">
+                    <x-row-overflow :id="'item_overflow_'.((int) $item->id)" :label="__('menu.actions.more')">
                         @if (! $item->category?->trashed())
                             <form method="post" action="{{ route('admin.menu.items.restore', array_merge(['item' => (int) $item->id], $menuContext)) }}">
                                 @csrf

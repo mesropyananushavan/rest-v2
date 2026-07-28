@@ -58,7 +58,7 @@ it('renders occupied active branch tables as read only tiles and free tables as 
     $freeTable = orderBoardTable($hall, 'Window 2', sortOrder: 20, shape: 'circle');
     $order = orderBoardDineInOrder($occupiedTable, $record['user'], clientCount: 4, totalMinor: 12300);
 
-    Livewire::actingAs($record['user'])
+    $component = Livewire::actingAs($record['user'])
         ->test(OrderBoard::class)
         ->assertSee('Main Hall', false)
         ->assertSee('Window 1', false)
@@ -71,6 +71,8 @@ it('renders occupied active branch tables as read only tiles and free tables as 
         ->assertSee('123 ֏', false)
         ->assertSee('selectTable('.((int) $freeTable->id).')', false)
         ->assertDontSee('selectTable('.((int) $occupiedTable->id).')', false);
+
+    assertRenderedHtmlHasNoUncompiledBladeDirectiveAttributes($component->html());
 
     expect($freeTable)->toBeInstanceOf(Table::class);
 });

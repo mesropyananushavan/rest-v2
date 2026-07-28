@@ -64,3 +64,15 @@ it('renders the confirm modal Livewire mode without changing the default HTTP mo
         ->not->toContain('<form')
         ->not->toContain('wire:submit');
 });
+
+it('does not treat ordinary at signs in rendered attributes as uncompiled Blade directives', function (): void {
+    $html = Blade::render(<<<'BLADE'
+        <a href="mailto:info@example.com" title="a@b.com">Email</a>
+    BLADE);
+
+    assertRenderedHtmlHasNoUncompiledBladeDirectiveAttributes($html);
+
+    expect($html)
+        ->toContain('mailto:info@example.com')
+        ->toContain('title="a@b.com"');
+});
