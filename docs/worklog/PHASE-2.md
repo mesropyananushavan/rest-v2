@@ -4417,12 +4417,58 @@ Task `2.22-docs-platform-admin-ui` is active on branch
   separate minimal UI, the three-concept separation between tenant lifecycle,
   feature availability, and payment, and the effect on the platform-operator
   identity spike as evidence toward S3 rather than a settled choice.
-- [ ] Step 2.22.2: verify, publish, and merge. Run only
+- [x] Step 2.22.2: verify, publish, and merge. Run only
   `git diff --name-status main` and `git diff --check`, commit, push normally,
   open a non-draft PR against `main`, wait for CI success, then merge as a true
-  merge commit without deleting the branch.
+  merge commit without deleting the branch. Result: PR #42 was opened
+  non-draft, CI passed at exact head
+  `8e9ad67365dd75ea6a2bbce4ca9737a6b84863f6`, and it was merged as true merge
+  commit `131b4a75049db22bbdc3d1f8921aaedd423a2761` with parents
+  `2a315e31fc2059ff1869fc6eb0b0413a7c549364` and
+  `8e9ad67365dd75ea6a2bbce4ca9737a6b84863f6`. The remote
+  `docs/platform-admin-ui` branch remains present.
 
-Next exact action: verify the docs-only diff for task
-`2.22-docs-platform-admin-ui`, then commit, push, open a non-draft PR, wait for
-CI, and merge it as a true merge commit. Do not run executable gates for this
-documentation-only block.
+Task `2.22-remove-superadmin-from-demo-owners` is active on branch
+`feature/remove-superadmin-from-demo-owners`, based on `origin/main` at
+`131b4a75049db22bbdc3d1f8921aaedd423a2761`.
+
+- [x] Step 2.22.1: permission audit before seeder changes. Enumerate every
+  checked permission code with file/line evidence, enumerate seeded permission
+  rows and owner-role grants from `IdentityDemoSeeder`, compute checked-minus-
+  seeded, seeded-minus-checked, and checked permissions missing from the owner
+  role. Stop before seeder edits if any checked permission is unseeded or any
+  checked permission is missing from the owner role. Result: no checked
+  permission was unseeded, and the owner role lacked no checked permission.
+  Seeded-but-unchecked remains `tenancy.manage`, `identity.manage`, and
+  `payments.capture`.
+- [x] Step 2.22.2: remove the demo owner workaround. If the audit is clean, set
+  both demo tenant owners to `superadmin => false` without changing role
+  defaults, permissions, `EloquentAuthorizer`, schema, migrations, or platform
+  operator identity. Result: `owner@arat.test` and `owner@northstar.test` are
+  now seeded with `superadmin => false`; no permissions or role grants changed.
+- [x] Step 2.22.3: regression coverage. Fix tests that relied on seeded demo
+  owner superadmin, add a seeder test proving no seeded demo user is
+  superadmin, and add authorizer coverage proving an explicitly flagged user
+  still gets the bypass. Result: `MenuDemoSeederTest` now asserts no seeded
+  demo user is superadmin, and `TenantIsolationTest` covers the explicit
+  purpose-made superadmin bypass through the authorizer and Gate.
+- [x] Step 2.22.4: documentation. Mark only the owner-seeded-superadmin debt
+  closed in `docs/BLUEPRINT.md`, add one spike line noting the workaround is
+  removed, and update this worklog. Change `AGENTS.md` only if the slice makes
+  an existing statement false. Result: BLUEPRINT and spike now record that the
+  workaround is removed; `AGENTS.md` was checked and no statement was made
+  false by this slice.
+- [x] Step 2.22.5: verification and publish. Run `make pint`, `make stan`,
+  `make test`, `make tenant-isolation-pgsql`, `make orders-concurrency-pgsql`,
+  `npm run build`, `git diff --check`, and the 2.16 directive audit, with the
+  two PostgreSQL targets sequential. After `make fresh`, perform the required
+  headless Chrome verification as `owner@arat.test` and `manager@arat.test`,
+  clean temporary artifacts, prove cleanup, commit, push normally, and open a
+  draft PR. Result: all local gates passed, including PostgreSQL gates
+  sequentially; after `make fresh`, headless Chrome verified non-superadmin
+  `owner@arat.test` could switch to Arat Kentron, open menu, switch to
+  archived view, and see restore plus force-delete affordances, while
+  `manager@arat.test` saw none. Temporary Chrome artifacts were removed.
+
+Next exact action: owner reviews the draft PR for task
+`2.22-remove-superadmin-from-demo-owners`; do not merge until approved.

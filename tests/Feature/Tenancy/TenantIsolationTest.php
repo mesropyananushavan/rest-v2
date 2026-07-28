@@ -813,11 +813,21 @@ it('checks action permissions through the identity authorizer contract', functio
         ->and(Gate::forUser($tenant['user'])->allows('identity.manage'))->toBeFalse();
 });
 
+it('keeps the explicit superadmin authorizer bypass for purpose-made users', function (): void {
+    $tenant = tenantWithUser('tenant-a', 'support-operator', [], superadmin: true);
+
+    app(TenantResolver::class)->set((int) $tenant['tenant']->id);
+
+    expect($tenant['user']->is_superadmin)->toBeTrue()
+        ->and(app(Authorizer::class)->allows($tenant['user'], 'identity.manage'))->toBeTrue()
+        ->and(Gate::forUser($tenant['user'])->allows('identity.manage'))->toBeTrue();
+});
+
 /**
  * @param  list<string>  $permissionCodes
  * @return array{tenant: Tenant, branch: Branch, role: Role, user: User}
  */
-function tenantWithUser(string $slug, string $username, array $permissionCodes): array
+function tenantWithUser(string $slug, string $username, array $permissionCodes, bool $superadmin = false): array
 {
     $tenant = Tenant::query()->create([
         'name' => str($slug)->headline()->toString(),
@@ -860,6 +870,7 @@ function tenantWithUser(string $slug, string $username, array $permissionCodes):
         'username' => $username,
         'default_locale' => 'hy',
         'active' => true,
+        'is_superadmin' => $superadmin,
         'password' => Hash::make('password'),
     ]);
 
