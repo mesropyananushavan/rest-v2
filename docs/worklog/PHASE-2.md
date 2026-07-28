@@ -3993,7 +3993,8 @@ Task `2.17-livewire-affordance-contract` is active on branch
   `git diff --check` had no output, and the component-attribute directive
   audit exited `1` with no matches. PostgreSQL gates were run sequentially.
 
-Stage 2.17 Livewire affordance contract: complete locally pending draft PR/CI.
+Stage 2.17 Livewire affordance contract: complete in draft PR #35
+(`https://github.com/mesropyananushavan/rest-v2/pull/35`).
 The contract extracts rendered `wire:*` attributes with PHP `DOMDocument`
 using the already-installed DOM extension, validates action bindings as clean
 public method calls or Livewire `$set(...)` public-property targets, validates
@@ -4007,11 +4008,15 @@ Covered admin Livewire screens: `DashboardCounters`,
 `OrderWorkspace`. No existing dead bindings were found. No dependencies were
 added; `composer.json` and `package.json` are unchanged.
 
+Draft PR #35 CI at code head `b39d5b51b2a6e1fd4a302887e89f67c5d182d32c`
+completed with `quality`, `tenant-isolation-pgsql`, and
+`orders-concurrency-pgsql` all `SUCCESS`; a worklog-only follow-up commit then
+updated this handoff line and requires the same CI check at the final PR head.
+
 New baselines after Stage 2.17: Pint `317 files`, PHPStan `188/188` with
 `[OK] No errors`, SQLite test suite `316 passed / 13 skipped / 3237
 assertions`, tenant isolation PostgreSQL `23 passed / 96 assertions`, and
 orders concurrency PostgreSQL `6 passed / 43 assertions`.
 
-Next exact action: push `feature/livewire-affordance-contract`, open a draft
-PR against `main`, wait for CI, and keep the PR draft/unmerged for owner
-review.
+Next exact action: owner review of draft PR #35 after CI is green at the final
+PR head. Do not mark ready and do not merge without owner authorization.
