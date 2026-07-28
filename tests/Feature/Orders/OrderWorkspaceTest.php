@@ -135,6 +135,209 @@ it('links occupied board tiles to the workspace while preserving free table moda
         ->assertSet('openModalVisible', true);
 });
 
+it('cancels an open workspace order redirects to the board with flash and frees the table', function (): void {
+    $record = orderWorkspaceUser('tenant-a', 'waiter-a', ['orders.take']);
+
+    app()->setLocale('en');
+    orderWorkspaceActingIn($record, 0, 'orders-workspace-cancel-success');
+    $hall = orderWorkspaceHall($record['branches'][0], 'Main Hall');
+    $table = orderWorkspaceTableInHall($hall, 'Cancel Table');
+    $order = orderWorkspaceDineInOrder($table, $record['user'], totalMinor: 3000);
+    orderWorkspaceItem($order, ['hy' => 'Ապուր', 'ru' => 'Суп', 'en' => 'Soup'], 1, 1000, 0, 1000);
+    orderWorkspaceItem($order, ['hy' => 'Հաց', 'ru' => 'Хлеб', 'en' => 'Bread'], 2, 1000, 0, 2000);
+
+    $component = Livewire::actingAs($record['user'])
+        ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $order->id])
+        ->assertSee(__('orders.workspace.actions.cancel_order'), false)
+        ->assertSee(__('orders.workspace.confirm.cancel_order_message_with_lines', ['count' => 2]), false)
+        ->assertDontSee('<form', false)
+        ->assertDontSee('wire:submit', false);
+
+    assertRenderedHtmlHasNoUncompiledBladeDirectiveAttributes($component->html());
+    assertRenderedLivewireBindingsResolve($component->html(), OrderWorkspaceComponent::class);
+
+    $component
+        ->call('cancelOrder')
+        ->assertRedirect(route('admin.orders.board'));
+
+    expect(session('status'))->toBe(__('orders.flash.cancelled'));
+
+    $freshOrder = Order::query()->findOrFail((int) $order->id);
+
+    expect((string) $freshOrder->status)->toBe('cancelled')
+        ->and($freshOrder->closed_at)->not->toBeNull();
+
+    $board = $this->actingAs($record['user'])
+        ->withSession(['branch_id' => (int) $record['branches'][0]->id])
+        ->get(route('admin.orders.board'))
+        ->assertOk()
+        ->assertSee(__('orders.flash.cancelled'), false)
+        ->assertSee(__('orders.board.free'), false)
+        ->assertSee('selectTable('.((int) $table->id).')', false)
+        ->assertDontSee(route('admin.orders.workspace', ['order' => (int) $order->id]), false);
+
+    assertRenderedHtmlHasNoUncompiledBladeDirectiveAttributes($board->getContent());
+    assertRenderedLivewireBindingsResolve($board->getContent(), OrderBoard::class);
+});
+
+it('renders cancel confirmation consequence and line count in every locale', function (string $locale): void {
+    $record = orderWorkspaceUser("tenant-{$locale}", "waiter-{$locale}", ['orders.take']);
+
+    app()->setLocale($locale);
+    orderWorkspaceActingIn($record, 0, "orders-workspace-cancel-copy-{$locale}");
+    $emptyOrder = orderWorkspaceDineInOrder(orderWorkspaceTable($record, 0, "Empty {$locale}"), $record['user']);
+    $loadedOrder = orderWorkspaceDineInOrder(orderWorkspaceTable($record, 0, "Loaded {$locale}"), $record['user']);
+    orderWorkspaceItem($loadedOrder, ['hy' => 'Ապրանք 1', 'ru' => 'Позиция 1', 'en' => 'Item 1'], 1, 1000, 0, 1000);
+    orderWorkspaceItem($loadedOrder, ['hy' => 'Ապրանք 2', 'ru' => 'Позиция 2', 'en' => 'Item 2'], 1, 1000, 0, 1000);
+
+    Livewire::actingAs($record['user'])
+        ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $emptyOrder->id])
+        ->assertSee(__('orders.workspace.confirm.cancel_order_message_empty'), false)
+        ->assertDontSee(__('orders.workspace.confirm.cancel_order_message_with_lines', ['count' => 2]), false);
+
+    Livewire::actingAs($record['user'])
+        ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $loadedOrder->id])
+        ->assertSee(__('orders.workspace.confirm.cancel_order_message_with_lines', ['count' => 2]), false);
+})->with(['hy', 'ru', 'en']);
+
+it('returns translated errors for stale and out of scope cancel attempts without changing data', function (): void {
+    $tenantA = orderWorkspaceUser('tenant-a', 'waiter-a', ['orders.take'], branchCount: 2);
+    $tenantB = orderWorkspaceUser('tenant-b', 'waiter-b', ['orders.take']);
+
+    app()->setLocale('en');
+    orderWorkspaceActingIn($tenantA, 0, 'orders-workspace-cancel-scope-a');
+    $order = orderWorkspaceDineInOrder(orderWorkspaceTable($tenantA, 0, 'Visible Cancel Table'), $tenantA['user']);
+    $safeMountOrder = orderWorkspaceDineInOrder(orderWorkspaceTable($tenantA, 0, 'Safe Mount Cancel Table'), $tenantA['user']);
+
+    orderWorkspaceActingIn($tenantA, 1, 'orders-workspace-cancel-scope-other-branch');
+    $otherBranchOrder = orderWorkspaceDineInOrder(orderWorkspaceTable($tenantA, 1, 'Other Branch Cancel Table'), $tenantA['user']);
+
+    orderWorkspaceActingIn($tenantB, 0, 'orders-workspace-cancel-scope-b');
+    $otherTenantOrder = orderWorkspaceDineInOrder(orderWorkspaceTable($tenantB, 0, 'Other Tenant Cancel Table'), $tenantB['user']);
+
+    orderWorkspaceActingIn($tenantA, 0, 'orders-workspace-cancel-scope-mounted');
+
+    $component = Livewire::actingAs($tenantA['user'])
+        ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $order->id]);
+
+    $order->forceFill([
+        'status' => 'cancelled',
+        'closed_at' => now(),
+    ])->save();
+
+    $component
+        ->call('cancelOrder')
+        ->assertSet('errorMessage', __('orders.order_not_open'))
+        ->assertSee(__('orders.workspace.unavailable_title'), false)
+        ->assertDontSee('cancelOrder', false);
+
+    $freshOrder = Order::query()->findOrFail((int) $order->id);
+
+    expect((string) $freshOrder->status)->toBe('cancelled');
+
+    foreach ([$otherBranchOrder, $otherTenantOrder] as $outOfScopeOrder) {
+        Livewire::actingAs($tenantA['user'])
+            ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $safeMountOrder->id])
+            ->set('orderId', (int) $outOfScopeOrder->id)
+            ->call('cancelOrder')
+            ->assertSet('errorMessage', __('orders.workspace.errors.generic'));
+
+        expect((string) $outOfScopeOrder->refresh()->status)->toBe('open');
+    }
+});
+
+it('keeps mounted cancel safe after the order is closed or cancelled elsewhere', function (string $status): void {
+    $record = orderWorkspaceUser('tenant-a', 'waiter-a', ['orders.take']);
+
+    app()->setLocale('en');
+    orderWorkspaceActingIn($record, 0, "orders-workspace-cancel-stale-{$status}");
+    $order = orderWorkspaceDineInOrder(orderWorkspaceTable($record, 0, "Stale Cancel {$status}"), $record['user']);
+    orderWorkspaceItem($order, ['hy' => 'Ապրանք', 'ru' => 'Позиция', 'en' => 'Item'], 1, 1000, 0, 1000);
+
+    $component = Livewire::actingAs($record['user'])
+        ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $order->id]);
+
+    $order->forceFill([
+        'status' => $status,
+        'closed_at' => now(),
+    ])->save();
+
+    $component
+        ->call('cancelOrder')
+        ->assertSet('errorMessage', __('orders.order_not_open'))
+        ->assertSee(__('orders.workspace.unavailable_title'), false)
+        ->assertDontSee('cancelOrder', false);
+
+    $freshOrder = Order::query()->findOrFail((int) $order->id);
+
+    expect((string) $freshOrder->status)->toBe($status)
+        ->and(OrderItem::query()->where('order_id', (int) $order->id)->count())->toBe(1);
+})->with(['closed', 'cancelled']);
+
+it('maps the branch context cancel domain error to a translated message', function (): void {
+    $record = orderWorkspaceUser('tenant-a', 'waiter-a', ['orders.take']);
+
+    app()->setLocale('en');
+    orderWorkspaceActingIn($record, 0, 'orders-workspace-cancel-branch-context');
+    $order = orderWorkspaceDineInOrder(orderWorkspaceTable($record, 0, 'Branch Context Cancel Table'), $record['user']);
+
+    $component = Livewire::actingAs($record['user'])
+        ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $order->id]);
+
+    app(BranchContext::class)->clear();
+
+    $component
+        ->call('cancelOrder')
+        ->assertSet('errorMessage', __('orders.branch_context_required'))
+        ->assertSee(__('orders.workspace.unavailable_title'), false);
+
+    expect((string) $order->refresh()->status)->toBe('open');
+});
+
+it('forbids cancel mounting without the orders take permission', function (): void {
+    $allowed = orderWorkspaceUser('tenant-a', 'waiter-a', ['orders.take']);
+    $denied = orderWorkspaceUser('tenant-b', 'viewer-b', []);
+
+    orderWorkspaceActingIn($allowed, 0, 'orders-workspace-cancel-permission');
+    $order = orderWorkspaceDineInOrder(orderWorkspaceTable($allowed, 0, 'Permission Cancel Table'), $allowed['user']);
+
+    orderWorkspaceActingIn($denied, 0, 'orders-workspace-cancel-permission-denied');
+
+    Livewire::actingAs($denied['user'])
+        ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $order->id])
+        ->assertStatus(403);
+
+    expect((string) $order->refresh()->status)->toBe('open');
+});
+
+it('keeps cancel-visible workspace render query count stable as line count grows', function (): void {
+    $small = orderWorkspaceCancelRenderQueryCount(1, 'small');
+    $large = orderWorkspaceCancelRenderQueryCount(8, 'large');
+
+    expect($small)->toBe(6)
+        ->and($large)->toBe(6);
+});
+
+it('keeps order translation key sets identical and reuses the cancelled flash key', function (): void {
+    app()->setLocale('hy');
+
+    $translations = [
+        'hy' => require base_path('lang/hy/orders.php'),
+        'ru' => require base_path('lang/ru/orders.php'),
+        'en' => require base_path('lang/en/orders.php'),
+    ];
+
+    $keys = [];
+
+    foreach ($translations as $locale => $localeTranslations) {
+        $keys[$locale] = orderWorkspaceFlattenTranslationKeys($localeTranslations);
+    }
+
+    expect($keys['hy'])->toBe($keys['ru'])
+        ->and($keys['hy'])->toBe($keys['en'])
+        ->and($translations['hy']['flash']['cancelled'])->toBe(__('orders.flash.cancelled'));
+});
+
 it('renders header subtables assigned and unassigned items and totals read only', function (): void {
     $record = orderWorkspaceUser('tenant-a', 'waiter-a', ['orders.take']);
 
@@ -606,4 +809,61 @@ function orderWorkspaceTranslations(string $text): array
         'ru' => $text,
         'en' => $text,
     ];
+}
+
+function orderWorkspaceCancelRenderQueryCount(int $lineCount, string $label): int
+{
+    $record = orderWorkspaceUser("tenant-cancel-query-{$label}", "waiter-cancel-query-{$label}", ['orders.take']);
+
+    orderWorkspaceActingIn($record, 0, "orders-workspace-cancel-query-{$label}");
+    $order = orderWorkspaceDineInOrder(orderWorkspaceTable($record, 0, "Cancel Query {$label}"), $record['user']);
+
+    for ($index = 1; $index <= $lineCount; $index++) {
+        orderWorkspaceItem($order, ['hy' => "Ապրանք {$index}", 'ru' => "Позиция {$index}", 'en' => "Item {$index}"], 1, 1000, 0, 1000);
+    }
+
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+
+    try {
+        $component = Livewire::actingAs($record['user'])
+            ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $order->id]);
+        $queryCount = count(DB::getQueryLog());
+    } finally {
+        DB::disableQueryLog();
+        DB::flushQueryLog();
+    }
+
+    $component
+        ->assertSee(__('orders.workspace.actions.cancel_order'), false)
+        ->assertSee(__('orders.workspace.confirm.cancel_order_message_with_lines', ['count' => $lineCount]), false);
+
+    assertRenderedLivewireBindingsResolve($component->html(), OrderWorkspaceComponent::class);
+
+    return $queryCount;
+}
+
+/**
+ * @param  array<string, mixed>  $translations
+ * @return list<string>
+ */
+function orderWorkspaceFlattenTranslationKeys(array $translations, string $prefix = ''): array
+{
+    $keys = [];
+
+    foreach ($translations as $key => $value) {
+        $path = $prefix === '' ? (string) $key : "{$prefix}.{$key}";
+
+        if (is_array($value)) {
+            array_push($keys, ...orderWorkspaceFlattenTranslationKeys($value, $path));
+
+            continue;
+        }
+
+        $keys[] = $path;
+    }
+
+    sort($keys);
+
+    return $keys;
 }

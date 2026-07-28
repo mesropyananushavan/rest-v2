@@ -117,7 +117,7 @@ it('changes quantities and removes a line only through the confirmed remove acti
         ->and((int) Order::query()->findOrFail((int) $order->id)->total_minor)->toBe(0);
 });
 
-it('keeps the workspace mutation boundary limited to item add quantity remove subtable creation and move controls', function (): void {
+it('keeps the workspace mutation boundary limited to item add quantity remove subtable creation move and cancel controls', function (): void {
     $record = orderWorkspaceWritesUser('tenant-a', 'waiter-a', ['orders.take']);
 
     app()->setLocale('en');
@@ -133,6 +133,7 @@ it('keeps the workspace mutation boundary limited to item add quantity remove su
         ->assertSee('addMenuItem', false)
         ->assertSee('createSubtable', false)
         ->assertSee('moveLineToSelectedSubtable', false)
+        ->assertSee('cancelOrder()', false)
         ->assertSee(__('orders.workspace.menu_picker.target_subtable_label'), false)
         ->assertDontSee('<form', false)
         ->assertDontSee('wire:submit', false)
@@ -142,7 +143,6 @@ it('keeps the workspace mutation boundary limited to item add quantity remove su
         ->assertDontSee(__('orders.board.action_open'), false)
         ->assertDontSee('moveOrder', false)
         ->assertDontSee('assignWaiter', false)
-        ->assertDontSee('cancelOrder', false)
         ->assertDontSee('applyDiscount', false)
         ->assertDontSee('discountOrder', false)
         ->assertDontSee('discountItem', false)
@@ -763,7 +763,7 @@ it('preserves menu picker state after successful and failed subtable and move mu
     orderWorkspaceWritesAssertMenuState($component, $expectedState);
 });
 
-it('keeps new workspace Livewire expressions rendered encoded and non goal affordances absent', function (): void {
+it('keeps new workspace Livewire expressions rendered encoded and only scoped lifecycle affordances present', function (): void {
     $record = orderWorkspaceWritesUser('tenant-boundary-moves', 'waiter-boundary-moves', ['orders.take']);
 
     app()->setLocale('en');
@@ -783,7 +783,7 @@ it('keeps new workspace Livewire expressions rendered encoded and non goal affor
         ->assertDontSee('targetOrderId', false)
         ->assertDontSee('moveOrder', false)
         ->assertDontSee('assignWaiter', false)
-        ->assertDontSee('cancelOrder', false)
+        ->assertSee('cancelOrder()', false)
         ->assertDontSee('applyDiscount', false)
         ->assertDontSee('discountOrder', false)
         ->assertDontSee('discountItem', false)

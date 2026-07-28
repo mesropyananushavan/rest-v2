@@ -31,6 +31,15 @@ final class OrderBoard extends Component
 
     public ?string $errorMessage = null;
 
+    public function mount(): void
+    {
+        $status = session()->pull('status');
+
+        if (is_string($status) && $status !== '') {
+            $this->statusMessage = $status;
+        }
+    }
+
     public function render(): View
     {
         return view('livewire.admin.order-board', [

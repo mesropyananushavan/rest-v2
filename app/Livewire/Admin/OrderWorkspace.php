@@ -11,6 +11,7 @@ use App\Modules\Menu\Contracts\SellableMenuCategoryGroup;
 use App\Modules\Menu\Contracts\SellableMenuItem;
 use App\Modules\Orders\Application\AddItem;
 use App\Modules\Orders\Application\AddSubtable;
+use App\Modules\Orders\Application\CancelOrder;
 use App\Modules\Orders\Application\ChangeItemQty;
 use App\Modules\Orders\Application\FindOrderWorkspace;
 use App\Modules\Orders\Application\MoveItem;
@@ -91,6 +92,13 @@ final class OrderWorkspace extends Component
     {
         try {
             $workspace = app(FindOrderWorkspace::class)($this->orderId);
+        } catch (OrdersDomainException $exception) {
+            $this->errorMessage ??= $this->domainErrorMessage($exception);
+
+            return view('livewire.admin.order-workspace', [
+                'menu' => $this->emptyMenu(),
+                'order' => $this->staleUnavailableOrder(),
+            ]);
         } catch (ModelNotFoundException $exception) {
             if (! $this->workspaceLoaded || $this->lastOrder === [] || $this->lastMenu === []) {
                 throw $exception;
@@ -299,6 +307,27 @@ final class OrderWorkspace extends Component
         $this->statusMessage = __('orders.flash.item_moved');
     }
 
+    public function cancelOrder(): void
+    {
+        $this->authorizeTakingOrders();
+        $this->resetFeedback();
+
+        try {
+            app(CancelOrder::class)($this->orderId);
+        } catch (OrdersDomainException $exception) {
+            $this->errorMessage = $this->domainErrorMessage($exception);
+
+            return;
+        } catch (ModelNotFoundException) {
+            $this->errorMessage = __('orders.workspace.errors.generic');
+
+            return;
+        }
+
+        session()->flash('status', __('orders.flash.cancelled'));
+        $this->redirectRoute('admin.orders.board');
+    }
+
     /**
      * @return array{
      *     id: int,
@@ -313,6 +342,8 @@ final class OrderWorkspace extends Component
      *     total: string,
      *     can_mutate: bool,
      *     stale_unavailable: bool,
+     *     line_count: int,
+     *     cancel_confirmation_message: string,
      *     subtables: list<array{id: int, name: string}>,
      *     groups: list<array{id: int|null, name: string, items: list<array{id: int, current_subtable_id: int|null, name: string, qty: int, unit_price: string, discount: string, total: string, move_targets: list<array{value: string, label: string}>}>}>
      * }
@@ -320,6 +351,7 @@ final class OrderWorkspace extends Component
     private function order(OrderWorkspaceData $workspace): array
     {
         $locale = app()->getLocale();
+        $lineCount = count($workspace->items);
 
         return [
             'id' => $workspace->id,
@@ -334,6 +366,10 @@ final class OrderWorkspace extends Component
             'total' => $this->money($workspace->totalMinor, $workspace->currency, $locale),
             'can_mutate' => $workspace->status === 'open',
             'stale_unavailable' => false,
+            'line_count' => $lineCount,
+            'cancel_confirmation_message' => $lineCount > 0
+                ? __('orders.workspace.confirm.cancel_order_message_with_lines', ['count' => $lineCount])
+                : __('orders.workspace.confirm.cancel_order_message_empty'),
             'subtables' => array_map(
                 fn (OrderWorkspaceSubtable $subtable): array => [
                     'id' => $subtable->id,
@@ -359,6 +395,8 @@ final class OrderWorkspace extends Component
      *     total: string,
      *     can_mutate: bool,
      *     stale_unavailable: bool,
+     *     line_count: int,
+     *     cancel_confirmation_message: string,
      *     subtables: list<array{id: int, name: string}>,
      *     groups: list<array{id: int|null, name: string, items: list<array{id: int, current_subtable_id: int|null, name: string, qty: int, unit_price: string, discount: string, total: string, move_targets: list<array{value: string, label: string}>}>}>
      * }
@@ -378,6 +416,8 @@ final class OrderWorkspace extends Component
             'total' => '',
             'can_mutate' => false,
             'stale_unavailable' => true,
+            'line_count' => 0,
+            'cancel_confirmation_message' => '',
             'subtables' => [],
             'groups' => [],
         ];

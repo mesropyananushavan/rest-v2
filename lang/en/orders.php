@@ -102,10 +102,14 @@ return [
             'decrease_qty' => 'Decrease quantity',
             'move_item' => 'Move',
             'remove_item' => 'Remove',
+            'cancel_order' => 'Cancel order',
         ],
         'confirm' => [
             'remove_item_title' => 'Remove item',
             'remove_item_message' => 'This removes the item from the open order.',
+            'cancel_order_title' => 'Cancel order',
+            'cancel_order_message_empty' => 'This cancels the order and releases the table.',
+            'cancel_order_message_with_lines' => 'This order already has :count line items. Cancelling it cancels the order and releases the table.',
         ],
         'errors' => [
             'generic' => 'The order could not be changed. Refresh the workspace and try again.',
