@@ -4254,3 +4254,52 @@ and management UI third. No implementation was started.
 Next exact action: owner reviews draft PR #39 for task
 `2.19-docs-authorization-model`. Do not mark ready, merge, or start the
 implementation slices until the owner decides.
+
+Task `2.19-docs-authorization-model` is complete and merged. PR #39 was marked
+ready for review and merged as true merge commit
+`bb3c3a2fd8cd7d340cb03bd5cd0bdf6d18b172c3` with parents
+`4272b6f652d1503d1d6d6db30139e5898413972a` and
+`3bcbadaa7cc5905ffb08282e1013908a8b76a5c6`.
+
+Task `2.20-spike-platform-operator-identity` is active on branch
+`docs/spike-platform-operator-identity`, based on `origin/main` at
+`bb3c3a2fd8cd7d340cb03bd5cd0bdf6d18b172c3`.
+
+- [x] Step 2.20.1: read-only code evidence pass. Re-read `AGENTS.md`,
+  `docs/BLUEPRINT.md`, `docs/DECISIONS.md`, this worklog, Identity user/role
+  authorization code, the users and audit migrations, RLS policies, tenant and
+  branch middleware, auth flow, audit recorder, and direct `is_superadmin`
+  usages. Result: confirmed `users.tenant_id` is non-null/cascade-deleting,
+  `User` uses `BelongsToTenant`, RLS is tenant-id equality based, login and
+  session flow assume a tenant user, audit recording requires tenant context,
+  and `is_superadmin` is used both as central authorizer bypass and as direct
+  destructive/archive gate.
+- [x] Step 2.20.2: documentation spike. Create
+  `docs/spikes/platform-operator-identity.md` comparing S1 nullable user
+  tenant, S2 dedicated platform tenant, and S3 separate platform entity/auth
+  guard, with file/line evidence and no recommendation in the document. Result:
+  spike records schema, RLS, tenant scope, auth, tenant-entry/audit, blast
+  radius, reversibility, dependent-debt impact, direct `is_superadmin` usage,
+  tests likely to change, newly surfaced questions, and owner decisions.
+- [x] Step 2.20.3: decision cross-reference. Add exactly one cross-reference
+  line to the 2026-07-24 superadmin bypass decision pointing readers to the
+  2026-07-28 authorization model extension. Result: `docs/DECISIONS.md`
+  contains the cross-reference and no other decision-text changes.
+- [x] Step 2.20.4: verification, commit, push, and draft PR. Run only
+  `git diff --name-status main` and `git diff --check`; confirm the diff
+  touches only `docs/spikes/platform-operator-identity.md`,
+  `docs/worklog/PHASE-2.md`, and `docs/DECISIONS.md`; commit, push normally,
+  and open a draft PR against `main`. Do not run executable gates because this
+  task changes documentation only. Result: `git diff --name-status main`
+  shows only `docs/DECISIONS.md`,
+  `docs/spikes/platform-operator-identity.md`, and
+  `docs/worklog/PHASE-2.md`; `git diff --check` produced no output. No
+  executable gates were run. Initial documentation commit
+  `e2e848b9803b7d1bf96afc4433385a55c3713e33` was pushed normally to
+  `origin/docs/spike-platform-operator-identity`; draft PR #40 is open at
+  `https://github.com/mesropyananushavan/rest-v2/pull/40`.
+
+Next exact action: owner reviews draft PR #40 for task
+`2.20-spike-platform-operator-identity`. Do not mark ready, merge, deploy, run
+gates, force-push, rewrite history, or change files outside the three permitted
+documentation paths.
