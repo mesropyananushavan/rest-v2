@@ -17,7 +17,7 @@ declare(strict_types=1);
  *     can_mutate: bool,
  *     stale_unavailable: bool,
  *     subtables: list<array{id: int, name: string}>,
- *     groups: list<array{id: int|null, name: string, items: list<array{id: int, name: string, qty: int, unit_price: string, discount: string, total: string}>}>
+ *     groups: list<array{id: int|null, name: string, items: list<array{id: int, current_subtable_id: int|null, name: string, qty: int, unit_price: string, discount: string, total: string, move_targets: list<array{value: string, label: string}>}>}>
  * } $order
  * @var array{
  *     search: string,
@@ -67,6 +67,28 @@ declare(strict_types=1);
     <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <div class="space-y-5">
             <x-card :title="__('orders.workspace.items_title')">
+                @if ($order['can_mutate'])
+                    <div class="mb-5 rounded-[1.25rem] border border-emerald-100 bg-emerald-50/50 p-4">
+                        <label for="order-workspace-new-subtable" class="mb-2 block text-sm font-black uppercase tracking-[0.16em] text-green-800">
+                            {{ __('orders.workspace.subtables.create_label') }}
+                        </label>
+                        <div class="flex flex-col gap-3 md:flex-row">
+                            <input
+                                id="order-workspace-new-subtable"
+                                type="text"
+                                wire:model="newSubtableName"
+                                maxlength="60"
+                                class="min-h-12 flex-1 rounded-2xl border border-emerald-200 bg-white px-4 text-base font-semibold text-smartrest-ink shadow-sm outline-none transition placeholder:text-slate-400 focus:border-smartrest-success focus:ring-4 focus:ring-smartrest-success/15"
+                                placeholder="{{ __('orders.workspace.subtables.create_placeholder') }}"
+                            >
+                            <x-button type="button" variant="primary" wire:click="createSubtable">
+                                {{ __('orders.workspace.actions.create_subtable') }}
+                            </x-button>
+                        </div>
+                        <p class="mt-2 text-sm text-green-900/70">{{ __('orders.workspace.subtables.create_help') }}</p>
+                    </div>
+                @endif
+
                 @if ($order['groups'] === [])
                     <div class="rounded-sr-brand border border-dashed border-slate-200 bg-slate-50 px-5 py-8 text-center text-sm font-semibold text-smartrest-muted">
                         {{ __('orders.workspace.no_items') }}
@@ -130,15 +152,38 @@ declare(strict_types=1);
                                                     <td class="font-black text-smartrest-ink">{{ $item['total'] }}</td>
                                                     @if ($order['can_mutate'])
                                                         <td class="text-right">
-                                                            <x-confirm-modal
-                                                                id="remove_order_item_{{ (int) $item['id'] }}"
-                                                                livewire-method="confirmRemoveItem"
-                                                                :livewire-arguments="[(int) $item['id']]"
-                                                                :title="__('orders.workspace.confirm.remove_item_title')"
-                                                                :message="__('orders.workspace.confirm.remove_item_message')"
-                                                                :trigger-label="__('orders.workspace.actions.remove_item')"
-                                                                :confirm-label="__('orders.workspace.actions.remove_item')"
-                                                            />
+                                                            <div class="flex flex-col items-stretch gap-2 md:items-end">
+                                                                @if ($item['move_targets'] !== [])
+                                                                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                                                                        <label for="order-workspace-move-target-{{ (int) $item['id'] }}" class="sr-only">
+                                                                            {{ __('orders.workspace.actions.move_item') }}
+                                                                        </label>
+                                                                        <select
+                                                                            id="order-workspace-move-target-{{ (int) $item['id'] }}"
+                                                                            wire:model="moveTargetSubtableIds.{{ (int) $item['id'] }}"
+                                                                            class="min-h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-bold text-smartrest-ink shadow-sm outline-none transition focus:border-smartrest-success focus:ring-4 focus:ring-smartrest-success/15"
+                                                                        >
+                                                                            <option value="">{{ __('orders.workspace.move.select_target') }}</option>
+                                                                            @foreach ($item['move_targets'] as $target)
+                                                                                <option value="{{ $target['value'] }}">{{ $target['label'] }}</option>
+                                                                            @endforeach
+                                                                        </select>
+                                                                        <x-button type="button" variant="outline-secondary" size="sm" wire:click="moveLineToSelectedSubtable(@js($item['id']))">
+                                                                            {{ __('orders.workspace.actions.move_item') }}
+                                                                        </x-button>
+                                                                    </div>
+                                                                @endif
+
+                                                                <x-confirm-modal
+                                                                    id="remove_order_item_{{ (int) $item['id'] }}"
+                                                                    livewire-method="confirmRemoveItem"
+                                                                    :livewire-arguments="[(int) $item['id']]"
+                                                                    :title="__('orders.workspace.confirm.remove_item_title')"
+                                                                    :message="__('orders.workspace.confirm.remove_item_message')"
+                                                                    :trigger-label="__('orders.workspace.actions.remove_item')"
+                                                                    :confirm-label="__('orders.workspace.actions.remove_item')"
+                                                                />
+                                                            </div>
                                                         </td>
                                                     @endif
                                                 </tr>
