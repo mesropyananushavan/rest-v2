@@ -69,6 +69,12 @@ $locale = $adminShell['locale'] ?? app()->getLocale();
                             <span>{{ __('admin.nav.translation_overrides') }}</span>
                         </a>
                     @endcan
+                    @can('audit.logs.view')
+                        <a href="{{ route('admin.audit-logs.index') }}" class="flex items-center gap-3 rounded-sr-brand px-3 py-3 text-sm font-semibold no-underline transition {{ request()->routeIs('admin.audit-logs.*') ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white' }}">
+                            <span class="h-2 w-2 rounded-full {{ request()->routeIs('admin.audit-logs.*') ? 'bg-smartrest-success' : 'bg-current opacity-50' }}"></span>
+                            <span>{{ __('admin.nav.audit_logs') }}</span>
+                        </a>
+                    @endcan
                     @can('tables.halls.manage')
                         <a href="{{ route('admin.tables.halls.index') }}" class="flex items-center gap-3 rounded-sr-brand px-3 py-3 text-sm font-semibold no-underline transition {{ request()->routeIs('admin.tables.*') ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white' }}">
                             <span class="h-2 w-2 rounded-full {{ request()->routeIs('admin.tables.*') ? 'bg-smartrest-success' : 'bg-current opacity-50' }}"></span>

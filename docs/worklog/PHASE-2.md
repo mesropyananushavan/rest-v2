@@ -4505,9 +4505,111 @@ Stage 2.22 handoff:
 - Open owner decision: the S1/S2/S3 platform-operator account shape remains
   undecided.
 
-Next exact action: OWNER DECISION on role defaults for the eleven
-archive/restore/force-delete permissions and payment tracking depth for the
-platform UI. Work not depending on either, such as the audit log report UI or
-implementing the feature-availability axis, could start first, but both are
-large and both are easier to scope once the platform direction is known. Do not
-pick one and do not start any of them.
+Task `2.23-audit-log-report` is active on branch `feature/audit-log-report`,
+based on `origin/main` at `1a84ee5e5fb80d4f34068c3181555bf2024735dd`.
+
+Owner decision for this slice: manager gets archive visibility and reversible
+restore defaults for Menu and Tables, but no permanent delete defaults.
+Cashier and waiter remain unchanged. Audit-log reporting uses a mandatory
+server-enforced date window instead of adding an actor-leading index; actor is
+a residual filter inside the tenant/date range.
+
+- [x] Step 2.23.1: Part A role defaults and seeder regression test. Grant the
+  manager role `menu.archive.view`, `menu.categories.restore`,
+  `menu.items.restore`, `tables.halls.archive.view`, `tables.halls.restore`,
+  `tables.tables.archive.view`, and `tables.tables.restore`; do not grant any
+  `*.force_delete` permission and do not change cashier or waiter defaults.
+  Update focused seeder coverage and any tests that assumed manager lacked
+  these permissions. Run focused tests, then commit Part A separately. Result:
+  `IdentityDemoSeeder` grants manager only the approved archive visibility and
+  restore permissions; cashier and waiter defaults are unchanged. Updated
+  `MenuDemoSeederTest`, which previously asserted manager lacked these
+  permissions, to assert the exact owner/manager/cashier/waiter matrix and
+  manager non-membership in all four `*.force_delete` permissions.
+  Verification: `make test` passed (`330 passed / 13 skipped / 3346
+  assertions`) and `make pint` passed (`PASS 315 files`).
+- [x] Step 2.23.2: audit report query design and authorization. Add an
+  owner-only `audit.logs.view` permission, a thin controller, and an
+  Application query object for a read-only `/admin` audit report. Enforce a
+  default last-7-days window and a documented maximum server-side window with
+  translated rejection. Keep every query paginated and make each filter
+  combination lead through an existing audit-log composite index. Result:
+  added `AuditLogPermissions::VIEW` as `audit.logs.view`, seeded it to owner
+  only, and implemented `AdminAuditLogController` plus `BrowseAuditLogs` with
+  a default 7-day date window and server-side 31-calendar-day maximum. No
+  schema, migration, or index was added. Actor filtering is residual inside
+  the tenant/date window.
+- [x] Step 2.23.3: audit report UI and safe detail rendering. Add the
+  paginated admin list, optional actor/action/target-type/branch filters,
+  date-range inputs, navigation visibility, and row detail view showing
+  `before_json`, `after_json`, `correlation_id`, and `ip_address` safely as
+  escaped text, never markup or JavaScript. Result: added plain Blade list and
+  detail views under `resources/views/admin/audit-logs`, visible in navigation
+  only to users with `audit.logs.view`. The detail view renders JSON only in
+  escaped `<pre>` text; no Livewire or JavaScript expression is used.
+- [x] Step 2.23.4: automated coverage. Add authorization, navigation,
+  tenant-isolation, branch-scoping, server-side window enforcement, safe JSON
+  rendering, pagination, filter, translation-key parity, rendered-affordance
+  guard coverage where applicable, and query-count tests proving actor eager
+  loading is not N+1 at 1 and 25 rows. Result: added `AuditLogReportTest`
+  coverage for seeded owner-only audit permission, permission denial and hidden
+  navigation, combinable filters, tenant isolation, assigned-branch scoping,
+  unassigned branch rejection, server-side max-window rejection, safe escaped
+  JSON detail output, hy/ru/en key parity, and rendered HTML guard coverage
+  for the new non-Livewire screens. Query-count proof for `BrowseAuditLogs`:
+  1 row = `2` queries and 25 rows = `2` queries, proving actor names are
+  joined without per-row reads. Existing assertions changed:
+  `TenantTranslationOverrideEditorTest` now scopes two searches to
+  `q=dashboard` because adding `admin.audit_logs.*` keys changed the
+  first-page composition of the full admin translation catalogue; the tested
+  behavior remains translation rendering/query-count invariance, not catalogue
+  page ordering. Verification so far after Part B implementation: initial
+  `make test` failed on the audit assertion encoding shape and the existing
+  translation catalogue page assumptions; after correcting the assertions,
+  `make test` passed (`338 passed / 13 skipped / 3382 assertions`),
+  `make pint` passed after formatting (`321 files`), and `make stan` passed
+  (`191/191`, `[OK] No errors`).
+- [x] Step 2.23.5: documentation and final verification. Add the dated
+  `docs/DECISIONS.md` entry, keep this worklog current, verify `AGENTS.md`
+  still has no false statement or update it if needed, run all required gates
+  including the two PostgreSQL targets sequentially, perform the mandatory
+  headless Chrome audit-report verification, clean temporary artifacts, commit
+  Part B separately, push normally, and open a draft PR without merging.
+  Result so far: added the dated `docs/DECISIONS.md` entry for the bounded
+  audit report read path, `audit.logs.view`, and the deliberately deferred
+  `(tenant_id, actor_id, created_at)` index decision. `AGENTS.md` was checked;
+  no existing statement was made false by this slice, so it was not changed.
+  Local gates passed: `make pint` (`PASS 321 files`), `make stan` (`191/191`,
+  `[OK] No errors`), `make test` (`338 passed / 13 skipped / 3386
+  assertions`), `make tenant-isolation-pgsql` (`24 passed / 99 assertions`),
+  `make orders-concurrency-pgsql` (`6 passed / 43 assertions`), `npm run
+  build` passed with the known npm `min-release-age` warning, `git diff
+  --check` had no output, and the 2.16 component-attribute directive audit
+  exited `1` with no matches. PostgreSQL gates were run sequentially.
+  `make fresh` passed before browser verification. Headless Chrome then logged
+  in as non-superadmin `owner@arat.test`, observed the audit navigation entry,
+  submitted the existing menu category archive form for
+  `/admin/menu/categories/1`, opened `/admin/audit-logs`, and observed
+  `Ani Petrosyan #1`, `menu.category.archived`, `menu_category #1`, and branch
+  `Arat Kentron #1`. Applying action filter `no.such.audit.action` narrowed
+  the list from 11 rows to 0 rows. Opening detail row `15` rendered before and
+  after JSON as escaped `<pre>` text with no nested markup, plus correlation
+  and IP `192.168.80.1`. After clearing browser storage, headless Chrome logged
+  in as `manager@arat.test`; manager had no audit nav entry and
+  `/admin/audit-logs` returned `403`. Temporary browser script and Chrome
+  profile were removed. Cleanup proof after the Part B commit:
+  `git status --branch --porcelain=v2` showed branch
+  `feature/audit-log-report` at `a195065e3b7e1650b8023d158468c63810de54ca`
+  with `+2 -0` and no file entries; `git stash list` had no output;
+  `git worktree list` showed only `/home/am/work/projects/rest-v2`; `ls -la`
+  showed no temporary browser script or `.tmp-chrome-audit-profile`. Part B was
+  committed as `a195065e3b7e1650b8023d158468c63810de54ca`, pushed normally,
+  and opened as draft PR #45
+  `https://github.com/mesropyananushavan/rest-v2/pull/45`. CI at that pushed
+  head passed: duplicate `quality`, `tenant-isolation-pgsql`, and
+  `orders-concurrency-pgsql` check runs all concluded `pass`.
+
+Next exact action: owner reviews draft PR #45. Do not mark ready, merge,
+force-push, rewrite history, deploy, change schema, add indexes, install
+dependencies, touch audit recorders/traits, modify `docs/BLUEPRINT.md` or
+`template/`, or decide manager/cashier/waiter defaults for `audit.logs.view`.

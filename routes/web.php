@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\AdminAuditLogController;
 use App\Http\Controllers\AdminBranchSwitchController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminLocaleSwitchController;
@@ -17,6 +18,7 @@ use App\Modules\Orders\Http\Controllers\OrderWorkspaceController;
 use App\Modules\Tables\Http\Controllers\HallController;
 use App\Modules\Tables\Http\Controllers\TableController;
 use App\Modules\Tenancy\Http\Controllers\BranchShowController;
+use App\Support\Audit\AuditLogPermissions;
 use App\Support\I18n\TenantTranslationOverridePermissions;
 use Illuminate\Support\Facades\Route;
 
@@ -54,6 +56,15 @@ Route::post('/admin/locale', AdminLocaleSwitchController::class)
 Route::get('/admin/translation-overrides', AdminTranslationOverrideController::class)
     ->middleware(['tenant', 'branch', 'auth', 'can:'.TenantTranslationOverridePermissions::MANAGE])
     ->name('admin.translation-overrides.index');
+
+Route::get('/admin/audit-logs', [AdminAuditLogController::class, 'index'])
+    ->middleware(['tenant', 'branch', 'auth', 'can:'.AuditLogPermissions::VIEW])
+    ->name('admin.audit-logs.index');
+
+Route::get('/admin/audit-logs/{auditLog}', [AdminAuditLogController::class, 'show'])
+    ->whereNumber('auditLog')
+    ->middleware(['tenant', 'branch', 'auth', 'can:'.AuditLogPermissions::VIEW])
+    ->name('admin.audit-logs.show');
 
 Route::get('/admin/orders/board', OrderBoardController::class)
     ->middleware(['tenant', 'branch', 'auth', 'can:orders.take'])

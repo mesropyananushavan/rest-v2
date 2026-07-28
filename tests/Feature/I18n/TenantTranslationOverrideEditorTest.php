@@ -116,7 +116,7 @@ it('keeps special translation values out of JavaScript evaluated attributes', fu
 
     $response = $this->actingAs($records['user'])
         ->withSession(['branch_id' => (int) $records['branch']->id])
-        ->get(route('admin.translation-overrides.index', ['locale' => 'en']));
+        ->get(route('admin.translation-overrides.index', ['locale' => 'en', 'q' => 'dashboard']));
 
     $response->assertOk();
 
@@ -274,7 +274,7 @@ it('keeps editor render query count independent of rendered result size', functi
     );
     $large = translationEditorRenderQueryCount(
         $records,
-        ['locale' => 'en'],
+        ['locale' => 'en', 'q' => 'dashboard'],
         fn (Testable $component): Testable => $component
             ->assertSee('admin.dashboard.title', false)
             ->assertSee('admin.dashboard.heading', false)
