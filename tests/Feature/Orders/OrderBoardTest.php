@@ -16,6 +16,7 @@ use App\Modules\Tenancy\Infrastructure\Models\Branch;
 use App\Modules\Tenancy\Infrastructure\Models\Tenant;
 use App\Support\Logging\LogContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
 
@@ -76,6 +77,34 @@ it('renders occupied active branch tables as read only tiles and free tables as 
     assertRenderedLivewireBindingsResolve($component->html(), OrderBoard::class);
 
     expect($freeTable)->toBeInstanceOf(Table::class);
+});
+
+it('renders redirected cancel flash on the board without a cancel affordance', function (): void {
+    $record = orderBoardUser('tenant-a', 'waiter-a', ['orders.take']);
+
+    orderBoardContext($record, 0);
+    $hall = orderBoardHall($record['branches'][0], 'Main Hall');
+    orderBoardTable($hall, 'Free Flash Table');
+
+    session()->flash('status', __('orders.flash.cancelled'));
+
+    $component = Livewire::actingAs($record['user'])
+        ->test(OrderBoard::class)
+        ->assertSet('statusMessage', __('orders.flash.cancelled'))
+        ->assertSee(__('orders.flash.cancelled'), false)
+        ->assertDontSee('cancelOrder', false)
+        ->assertDontSee(__('orders.workspace.actions.cancel_order'), false);
+
+    assertRenderedHtmlHasNoUncompiledBladeDirectiveAttributes($component->html());
+    assertRenderedLivewireBindingsResolve($component->html(), OrderBoard::class);
+});
+
+it('keeps flashed board render query count stable as table count grows', function (): void {
+    $small = orderBoardFlashedRenderQueryCount(tableCount: 1, label: 'small');
+    $large = orderBoardFlashedRenderQueryCount(tableCount: 8, label: 'large');
+
+    expect($small)->toBe(3)
+        ->and($large)->toBe(3);
 });
 
 it('opens a dine-in order from a free table and re-renders the table as occupied', function (): void {
@@ -381,4 +410,38 @@ function orderBoardText(string $text): array
         'ru' => $text,
         'en' => $text,
     ];
+}
+
+function orderBoardFlashedRenderQueryCount(int $tableCount, string $label): int
+{
+    $record = orderBoardUser("tenant-board-query-{$label}", "waiter-board-query-{$label}", ['orders.take']);
+
+    orderBoardContext($record, 0);
+    $hall = orderBoardHall($record['branches'][0], "Board Query {$label}");
+
+    for ($index = 1; $index <= $tableCount; $index++) {
+        orderBoardTable($hall, "Board Query Table {$index}", sortOrder: $index);
+    }
+
+    session()->flash('status', __('orders.flash.cancelled'));
+
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+
+    try {
+        $component = Livewire::actingAs($record['user'])
+            ->test(OrderBoard::class);
+        $queryCount = count(DB::getQueryLog());
+    } finally {
+        DB::disableQueryLog();
+        DB::flushQueryLog();
+    }
+
+    $component
+        ->assertSee(__('orders.flash.cancelled'), false)
+        ->assertDontSee('cancelOrder', false);
+
+    assertRenderedLivewireBindingsResolve($component->html(), OrderBoard::class);
+
+    return $queryCount;
 }

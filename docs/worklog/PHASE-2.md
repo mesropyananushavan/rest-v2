@@ -4030,3 +4030,106 @@ Next exact action: OWNER DECISION between (a) F1 board-to-workspace
 navigation, (b) remaining order lifecycle UI, including waiter assignment,
 cancel order, and move order, or (c) Phase 3 payments/cashbox. Do not pick one
 and do not start any of them.
+
+Task `2.18-workspace-cancel-order` is active on branch
+`feature/orders-workspace-cancel`, based on `origin/main` at
+`1cc7dd769c1ef98452088df3add8b0f2e1175753`.
+
+- [x] Stage 2.18.1: workspace cancel adapter, board flash, and translations.
+  Add a thin `OrderWorkspace::cancelOrder()` adapter that re-checks
+  `orders.take`, calls the existing `CancelOrder::__invoke(int $orderId)`,
+  maps `OrdersDomainException` and stale/not-found cases to translated safe
+  errors, and redirects on success to `admin.orders.board` with the existing
+  `orders.flash.cancelled` message carried through session flash. Add
+  `OrderBoard::mount()` consumption of that flash into the existing rendered
+  `statusMessage`. Add only the needed `hy`/`ru`/`en` workspace confirmation
+  keys and keep locale key sets identical. Do not modify `CancelOrder`,
+  `FindOrderWorkspace`, schema, seeders, `template/`, or `docs/BLUEPRINT.md`.
+  Result: `OrderWorkspace::cancelOrder()` now re-checks `orders.take`, calls
+  `CancelOrder`, translates `OrdersDomainException`, maps out-of-scope
+  `ModelNotFoundException` to `orders.workspace.errors.generic`, flashes the
+  reused `orders.flash.cancelled` key into the session, and redirects to
+  `admin.orders.board`. `OrderBoard::mount()` consumes `session('status')` into
+  its existing `statusMessage`. The workspace render path now converts a
+  post-mount `OrdersDomainException` such as lost branch context into the stale
+  unavailable state with the translated error instead of a 500. Added only
+  `orders.workspace.actions.cancel_order` and three
+  `orders.workspace.confirm.cancel_order_*` keys in `hy`/`ru`/`en`; key sets
+  are test-proven identical. `CancelOrder`, `FindOrderWorkspace`, schema,
+  seeders, `template/`, and `docs/BLUEPRINT.md` remain untouched.
+- [x] Stage 2.18.2: workspace cancel affordance and rendered-contract coverage.
+  Place the destructive cancel control in the order workspace header actions
+  only when `can_mutate` is true, using `x-confirm-modal` Livewire mode, no
+  `<form>`, no `wire:submit`, and no board cancel control. The confirmation
+  copy states that the order is cancelled and the table is released; when
+  there are line items, include the rendered line count. Expand
+  `assertRenderedHtmlHasNoUncompiledBladeDirectiveAttributes()` and
+  `assertRenderedLivewireBindingsResolve()` coverage for the open workspace
+  render with cancel visible and for the board render that displays the
+  post-cancel flash. Result: the cancel control sits beside "Back to table
+  board" in the workspace page-header actions and is not rendered on
+  `OrderBoard`. It uses `x-confirm-modal` Livewire mode with rendered
+  `wire:click="cancelOrder()"`; rendered guards pass for the cancel-visible
+  workspace and the flashed board states. Existing negative assertions that
+  said cancel must be absent from the open workspace were updated to positive
+  assertions because Stage 2.18 intentionally adds that affordance; non-goal
+  negatives for board cancel, move order, waiter assignment, discounts,
+  payments, close order, `<form>`, and `wire:submit` remain.
+- [x] Stage 2.18.3: cancel behavior, safety, and query-count proof. Add tests
+  proving success redirects to the board with the reused flash, the previously
+  occupied table becomes free on the board, direct calls after concurrent close
+  or cancel return translated errors without data changes, users without
+  `orders.take` get 403, other-tenant and other-branch attempts yield
+  translated safe errors rather than 500/cross-scope mutation, all
+  `CancelOrder` `OrdersDomainException` paths are translated, confirmation
+  copy is correct in `hy`/`ru`/`en`, no cancel affordance appears when
+  `can_mutate` is false, and changed-screen query counts do not grow per row.
+  Result: added Orders workspace and board coverage for successful cancel
+  redirect/flash/table release, all three locale confirmation variants,
+  concurrent closed/cancelled direct calls returning `orders.order_not_open`,
+  missing branch context returning `orders.branch_context_required`, other
+  branch/tenant mutation attempts returning the translated generic error, and
+  users without `orders.take` getting 403. Query counts are exact and stable:
+  cancel-visible workspace render is `6` queries for both `1` and `8` order
+  lines; flashed board render is `3` queries for both `1` and `8` tables.
+- [ ] Stage 2.18.4: final gates, commit, push, and draft PR. Run `make pint`,
+  `make stan`, `make test`, `make tenant-isolation-pgsql` alone,
+  `make orders-concurrency-pgsql` alone, `npm run build`, `git diff --check`,
+  and the 2.16 component-attribute directive audit expecting exit `1`. Review
+  the diff, commit with the worklog update, push normally, open a draft PR, and
+  report CI status at the exact pushed head. Do not merge, deploy, force-push,
+  rewrite history, install dependencies, or touch `.env`. Result so far:
+  initial `make test` failed only in the new translation-key test because the
+  active locale was English while the assertion compared against the Armenian
+  file value; fixed by setting `hy` explicitly. A later exact-query assertion
+  trial measured workspace render at `6`, not the guessed `7`; fixed the test
+  to the measured exact count. Current gates: `make pint` passed
+  (`PASS 317 files`), `make stan` analysed `188/188` with `[OK] No errors`,
+  `make test` passed (`329 passed / 13 skipped / 3312 assertions`),
+  `make tenant-isolation-pgsql` passed (`23 passed / 96 assertions`),
+  `make orders-concurrency-pgsql` passed (`6 passed / 43 assertions`),
+  `npm run build` passed with the known npm `Unknown env config
+  "min-release-age"` warning, `git diff --check` had no output, and the 2.16
+  component-attribute directive audit exited `1` with no matches. PostgreSQL
+  gates were run sequentially. Commit, push, draft PR, and CI status are still
+  pending.
+
+Stage 2.18 pre-implementation findings: `CancelOrder` directly raises
+`orders.branch_context_required` when branch context is absent and can raise
+`orders.order_not_open` through `LocksOrdersForUpdate::ensureOrderOpen()` after
+locking the branch-scoped order. A missing, other-tenant, or other-branch row
+from `lockOrderForUpdate()` raises `ModelNotFoundException`, so the Livewire
+adapter must map that to an existing safe translated error. `FindOrderWorkspace`
+filters `status = open`, so successful cancel makes the workspace route 404 and
+requires redirecting to the board.
+
+Stage 2.18 authorization debt: cancel is provisionally gated on the existing
+`orders.take` permission to stay consistent with current order mutations. That
+permission is held by waiter roles, so any waiter who can take orders can also
+void an order even after items were added. Restaurant voids are a known theft
+vector and normally require manager-level authorization. This is an open owner
+decision for a dedicated permissions slice; do not decide it in Stage 2.18.
+
+Next exact action: continue Stage 2.18.4 by committing the scoped Stage 2.18
+diff, pushing `feature/orders-workspace-cancel`, opening a draft PR against
+`main`, then recording the PR URL and exact-head CI status.

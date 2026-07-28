@@ -102,10 +102,14 @@ return [
             'decrease_qty' => 'Պակասեցնել քանակը',
             'move_item' => 'Տեղափոխել',
             'remove_item' => 'Հեռացնել',
+            'cancel_order' => 'Չեղարկել պատվերը',
         ],
         'confirm' => [
             'remove_item_title' => 'Հեռացնել ապրանքը',
             'remove_item_message' => 'Ապրանքը կհեռացվի բաց պատվերից։',
+            'cancel_order_title' => 'Չեղարկել պատվերը',
+            'cancel_order_message_empty' => 'Պատվերը կչեղարկվի, եւ սեղանը կազատվի։',
+            'cancel_order_message_with_lines' => 'Այս պատվերում արդեն կա :count տող։ Չեղարկելու դեպքում պատվերը կչեղարկվի, եւ սեղանը կազատվի։',
         ],
         'errors' => [
             'generic' => 'Պատվերը չհաջողվեց փոխել։ Թարմացրեք աշխատասեղանը եւ փորձեք կրկին։',
