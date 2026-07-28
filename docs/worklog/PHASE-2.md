@@ -4569,7 +4569,7 @@ a residual filter inside the tenant/date range.
   `make test` passed (`338 passed / 13 skipped / 3382 assertions`),
   `make pint` passed after formatting (`321 files`), and `make stan` passed
   (`191/191`, `[OK] No errors`).
-- [ ] Step 2.23.5: documentation and final verification. Add the dated
+- [x] Step 2.23.5: documentation and final verification. Add the dated
   `docs/DECISIONS.md` entry, keep this worklog current, verify `AGENTS.md`
   still has no false statement or update it if needed, run all required gates
   including the two PostgreSQL targets sequentially, perform the mandatory
@@ -4597,12 +4597,19 @@ a residual filter inside the tenant/date range.
   and IP `192.168.80.1`. After clearing browser storage, headless Chrome logged
   in as `manager@arat.test`; manager had no audit nav entry and
   `/admin/audit-logs` returned `403`. Temporary browser script and Chrome
-  profile were removed. Part B still needs commit, push, draft PR, cleanup
-  proof, and CI observation.
+  profile were removed. Cleanup proof after the Part B commit:
+  `git status --branch --porcelain=v2` showed branch
+  `feature/audit-log-report` at `a195065e3b7e1650b8023d158468c63810de54ca`
+  with `+2 -0` and no file entries; `git stash list` had no output;
+  `git worktree list` showed only `/home/am/work/projects/rest-v2`; `ls -la`
+  showed no temporary browser script or `.tmp-chrome-audit-profile`. Part B was
+  committed as `a195065e3b7e1650b8023d158468c63810de54ca`, pushed normally,
+  and opened as draft PR #45
+  `https://github.com/mesropyananushavan/rest-v2/pull/45`. CI at that pushed
+  head passed: duplicate `quality`, `tenant-isolation-pgsql`, and
+  `orders-concurrency-pgsql` check runs all concluded `pass`.
 
-Next exact action: commit Part B separately, push `feature/audit-log-report`,
-open a draft PR against `main`, wait for CI conclusions at the exact pushed
-head, and record cleanup proof with `git status --branch --porcelain=v2`,
-`git stash list`, `git worktree list`, and `ls -la`. Do not mark the PR ready,
-merge, force-push, deploy, change schema, add indexes, install dependencies, or
-touch audit recorders/traits.
+Next exact action: owner reviews draft PR #45. Do not mark ready, merge,
+force-push, rewrite history, deploy, change schema, add indexes, install
+dependencies, touch audit recorders/traits, modify `docs/BLUEPRINT.md` or
+`template/`, or decide manager/cashier/waiter defaults for `audit.logs.view`.
