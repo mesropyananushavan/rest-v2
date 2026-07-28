@@ -117,27 +117,29 @@ it('changes quantities and removes a line only through the confirmed remove acti
         ->and((int) Order::query()->findOrFail((int) $order->id)->total_minor)->toBe(0);
 });
 
-it('keeps the workspace mutation boundary limited to item add quantity and remove controls', function (): void {
+it('keeps the workspace mutation boundary limited to item add quantity remove subtable creation and move controls', function (): void {
     $record = orderWorkspaceWritesUser('tenant-a', 'waiter-a', ['orders.take']);
 
     app()->setLocale('en');
     orderWorkspaceWritesActingIn($record, 0, 'workspace-writes-boundary');
     $order = orderWorkspaceWritesOrder($record, 0);
     $category = orderWorkspaceWritesCategory('Dining Menu', 'Hot Dishes')['category'];
-    orderWorkspaceWritesItem($category, $record['branches'][0], 'Khash', priceMinor: 1000);
+    $menuItem = orderWorkspaceWritesItem($category, $record['branches'][0], 'Khash', priceMinor: 1000);
+    app(AddItem::class)((int) $order->id, (int) $menuItem->id, 1);
+    orderWorkspaceWritesSubtable($order, 'Guest A');
 
     Livewire::actingAs($record['user'])
         ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $order->id])
         ->assertSee('addMenuItem', false)
-        ->assertDontSee(__('orders.workspace.menu_picker.target_subtable_label'), false)
+        ->assertSee('createSubtable', false)
+        ->assertSee('moveLineToSelectedSubtable', false)
+        ->assertSee(__('orders.workspace.menu_picker.target_subtable_label'), false)
         ->assertDontSee('<form', false)
         ->assertDontSee('wire:submit', false)
         ->assertDontSee('type="number"', false)
         ->assertDontSee('AddItem', false)
         ->assertDontSee('openOrder', false)
         ->assertDontSee(__('orders.board.action_open'), false)
-        ->assertDontSee('addSubtable', false)
-        ->assertDontSee('moveItem', false)
         ->assertDontSee('moveOrder', false)
         ->assertDontSee('assignWaiter', false)
         ->assertDontSee('cancelOrder', false)

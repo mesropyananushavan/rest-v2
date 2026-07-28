@@ -3764,6 +3764,51 @@ Stage 2.15 branch publication: implementation commit
 ready-for-review transition, merge, deployment, force-push, or branch deletion
 was performed.
 
+Stage 2.15 correction round: owner review found two stale negative assertions
+in `OrderWorkspaceItemWritesTest` that still asserted `addSubtable` and
+`moveItem` were absent on an open workspace even though subtable creation and
+item moves are now in scope. Replaced them with positive assertions for the
+actual Livewire affordances `createSubtable` and
+`moveLineToSelectedSubtable`, seeded the boundary fixture with one line and
+one open subtable so the move affordance is non-vacuous, and changed the
+subtable target-label assertion to positive for that fixture. Other
+out-of-scope negatives remain unchanged: no `<form>`, no `wire:submit`, no
+`type="number"`, no raw `AddItem`, no `openOrder`, no board open action, no
+cross-order move, no waiter assignment, no cancel, no discounts, no payments,
+and no close-order affordance. The newer boundary test negatives remain
+correct for non-goal scope: no subtable close/rename, no `targetOrderId`, no
+cross-order move, no waiter assignment, no cancel, no discounts, no payments,
+and no close-order affordance. Audit of the Orders workspace test files found
+no other stale `addSubtable`/`moveItem` negative assertions; the remaining
+`createSubtable`/`moveLineToSelectedSubtable` negatives are for closed or
+cancelled stale workspaces where mutation affordances must stay absent.
+
+Stage 2.15 correction verification: final local gates passed after the
+correction. `make pint` passed (`PASS 317 files`), `make stan` passed
+(`188/188`, `[OK] No errors`), `make test` passed (`315 passed / 13 skipped /
+3215 assertions`) after an initial failed correction attempt exposed that the
+boundary fixture needed an existing subtable for a non-vacuous move affordance,
+direct container `vendor/bin/pest` passed (`315 passed / 13 skipped / 3215
+assertions`), `make tenant-isolation-pgsql` passed (`23 passed / 96
+assertions`), `make orders-concurrency-pgsql` passed (`6 passed / 43
+assertions`), `npm run build` succeeded with the known `Unknown env config
+"min-release-age"` warning, `git diff --check` had no output, and the Orders
+workspace boundary grep exited `1` with no matches. PostgreSQL gates were run
+sequentially. Temporary query-breakdown logging was removed before the final
+gates; the remaining debug grep hits are the permanent query-count helper and
+false-positive `array` matches.
+
+Stage 2.15 query breakdown: create-subtable remains `27` queries per Livewire
+round trip: auth/permission `2`, tenant/branch context `0` direct queries,
+pre-mutation Livewire workspace/menu renders `12`, adapter/action path `7`
+(`FindOrderWorkspace` open check `3`, duplicate open-subtable name check `1`,
+`AddSubtable` order lookup/insert/audit `3`), post-mutation workspace re-read
+`3`, and menu picker re-render `3`. Move-item remains `30` queries:
+auth/permission `2`, tenant/branch context `0` direct queries, pre-mutation
+Livewire workspace/menu renders `12`, `MoveItem` action path `10`, post-mutation
+workspace re-read `3`, and menu picker re-render `3`. Counts stay stable across
+1 vs 10 lines and 1 vs 10 subtables.
+
 Gotchas for Stage 2.15: `AddSubtable` still only trims names, so required,
 max-length, and duplicate-open-subtable validation remains adapter-level domain
 debt until the Application action owns it. The prompt described
