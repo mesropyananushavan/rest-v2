@@ -4290,12 +4290,16 @@ Task `2.20-spike-platform-operator-identity` is active on branch
   touches only `docs/spikes/platform-operator-identity.md`,
   `docs/worklog/PHASE-2.md`, and `docs/DECISIONS.md`; commit, push normally,
   and open a draft PR against `main`. Do not run executable gates because this
-  task changes documentation only. Result so far: `git diff --name-status main`
+  task changes documentation only. Result: `git diff --name-status main`
   shows only `docs/DECISIONS.md`,
   `docs/spikes/platform-operator-identity.md`, and
   `docs/worklog/PHASE-2.md`; `git diff --check` produced no output. No
-  executable gates were run.
+  executable gates were run. Initial documentation commit
+  `e2e848b9803b7d1bf96afc4433385a55c3713e33` was pushed normally to
+  `origin/docs/spike-platform-operator-identity`; draft PR #40 is open at
+  `https://github.com/mesropyananushavan/rest-v2/pull/40`.
 
-Next exact action: commit the documentation-only spike, push normally, and open
-a draft PR. Do not merge, deploy, run gates, force-push, rewrite history, or
-change files outside the three permitted documentation paths.
+Next exact action: owner reviews draft PR #40 for task
+`2.20-spike-platform-operator-identity`. Do not mark ready, merge, deploy, run
+gates, force-push, rewrite history, or change files outside the three permitted
+documentation paths.
