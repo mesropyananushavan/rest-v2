@@ -30,7 +30,7 @@ afterEach(function (): void {
 });
 
 it('returns category create and edit save and cancel paths to the originating menu context', function (): void {
-    $records = menuContextReturnRecords(superadmin: true);
+    $records = menuContextReturnRecords(extraPermissionCodes: ['menu.archive.view']);
     $context = menuContextReturnQuery((int) $records['category']->id, archiveMode: 'all');
     $expectedReturnUrl = menuContextReturnUrl((int) $records['category']->id, archiveMode: 'all');
     $createUrl = route('admin.menu.categories.create', ['context' => $context]);
@@ -73,7 +73,7 @@ it('returns category create and edit save and cancel paths to the originating me
 });
 
 it('returns item create and edit save and cancel paths to the originating menu context', function (): void {
-    $records = menuContextReturnRecords(superadmin: true);
+    $records = menuContextReturnRecords(extraPermissionCodes: ['menu.archive.view']);
     $context = menuContextReturnQuery((int) $records['category']->id, archiveMode: 'all');
     $expectedReturnUrl = menuContextReturnUrl((int) $records['category']->id, archiveMode: 'all');
 
@@ -130,7 +130,7 @@ it('returns item create and edit save and cancel paths to the originating menu c
 });
 
 it('keeps menu context intact after validation failures', function (): void {
-    $records = menuContextReturnRecords(superadmin: true);
+    $records = menuContextReturnRecords(extraPermissionCodes: ['menu.archive.view']);
     $context = menuContextReturnQuery((int) $records['category']->id, archiveMode: 'all');
     $expectedReturnUrl = menuContextReturnUrl((int) $records['category']->id, archiveMode: 'all');
     $createUrl = route('admin.menu.categories.create', ['context' => $context]);
@@ -195,7 +195,7 @@ it('degrades invalid bookmarked menu context category ids to the default categor
 /**
  * @return array{tenant: Tenant, branch: Branch, user: User, root: MenuCategory, category: MenuCategory, item: MenuItem}
  */
-function menuContextReturnRecords(string $slug = 'context-return', bool $superadmin = false): array
+function menuContextReturnRecords(string $slug = 'context-return', array $extraPermissionCodes = [], bool $superadmin = false): array
 {
     $tenant = Tenant::query()->create([
         'name' => str($slug)->headline()->toString(),
@@ -229,7 +229,7 @@ function menuContextReturnRecords(string $slug = 'context-return', bool $superad
         'name' => "{$slug} Role",
     ]);
 
-    $permissions = collect(['menu.categories.manage', 'menu.items.manage'])
+    $permissions = collect(['menu.categories.manage', 'menu.items.manage', ...$extraPermissionCodes])
         ->map(fn (string $code): Permission => Permission::query()->firstOrCreate(
             ['code' => $code],
             ['name' => $code],

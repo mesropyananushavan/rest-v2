@@ -86,7 +86,7 @@ it('requires the halls manage permission', function (): void {
         ->assertForbidden();
 });
 
-it('keeps archive visibility restore and permanent delete superadmin only', function (): void {
+it('authorizes hall archive visibility restore and permanent delete through non-superadmin permissions', function (): void {
     $manager = hallsBladeUser('tenant-a', 'manager-a', ['tables.halls.manage']);
 
     hallsBladeContext($manager);
@@ -108,39 +108,51 @@ it('keeps archive visibility restore and permanent delete superadmin only', func
         ->post(route('admin.tables.halls.restore', ['hall' => (int) $hall->id]))
         ->assertForbidden();
 
-    $owner = hallsBladeUser('tenant-b', 'owner-b', ['tables.halls.manage'], superadmin: true);
+    $restoreOnly = hallsBladeAdditionalUser($manager, 'hall-restore-only', ['tables.halls.restore']);
 
-    hallsBladeContext($owner);
-    $ownerHall = app(CreateHall::class)(hallsBladeText('Owner Archive Candidate'), '#D36B5F');
-    app(ArchiveHall::class)((int) $ownerHall->id);
+    $this->actingAs($restoreOnly)
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->post(route('admin.tables.halls.restore', ['hall' => (int) $hall->id]))
+        ->assertRedirect(route('admin.tables.halls.index', ['archive_mode' => 'archived']));
+
+    expect($restoreOnly->is_superadmin)->toBeFalse()
+        ->and(Hall::query()->find((int) $hall->id))->not->toBeNull();
+
+    hallsBladeContext($manager);
+    app(ArchiveHall::class)((int) $hall->id);
     app(TenantResolver::class)->clear();
     app(BranchContext::class)->clear();
 
-    $this->actingAs($owner['user'])
-        ->withSession(['branch_id' => (int) $owner['branch']->id])
+    $this->actingAs($restoreOnly)
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->delete(route('admin.tables.halls.force-delete', ['hall' => (int) $hall->id]))
+        ->assertForbidden();
+
+    $archiveOperator = hallsBladeAdditionalUser($manager, 'hall-archive-operator', [
+        'tables.halls.manage',
+        'tables.halls.archive.view',
+        'tables.halls.restore',
+        'tables.halls.force_delete',
+    ]);
+
+    $this->actingAs($archiveOperator)
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
         ->get(route('admin.tables.halls.index', ['archive_mode' => 'archived']))
         ->assertOk()
         ->assertSee(__('tables.halls.archive_modes.archived'), false)
         ->assertSee(__('tables.halls.actions.restore'), false)
         ->assertSee(__('tables.halls.actions.force_delete'), false);
 
-    $this->actingAs($owner['user'])
-        ->withSession(['branch_id' => (int) $owner['branch']->id])
-        ->post(route('admin.tables.halls.restore', ['hall' => (int) $ownerHall->id]))
+    $forceDeleteOnly = hallsBladeAdditionalUser($manager, 'hall-force-delete-only', ['tables.halls.force_delete']);
+
+    $this->actingAs($forceDeleteOnly)
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->delete(route('admin.tables.halls.force-delete', ['hall' => (int) $hall->id]))
         ->assertRedirect(route('admin.tables.halls.index', ['archive_mode' => 'archived']));
 
-    hallsBladeContext($owner);
-    app(ArchiveHall::class)((int) $ownerHall->id);
-    app(TenantResolver::class)->clear();
-    app(BranchContext::class)->clear();
-
-    $this->actingAs($owner['user'])
-        ->withSession(['branch_id' => (int) $owner['branch']->id])
-        ->delete(route('admin.tables.halls.force-delete', ['hall' => (int) $ownerHall->id]))
-        ->assertRedirect(route('admin.tables.halls.index', ['archive_mode' => 'archived']));
-
-    hallsBladeContext($owner);
-    expect(Hall::withTrashed()->find((int) $ownerHall->id))->toBeNull();
+    hallsBladeContext($manager);
+    expect(Hall::withTrashed()->find((int) $hall->id))->toBeNull()
+        ->and($forceDeleteOnly->is_superadmin)->toBeFalse();
 });
 
 it('returns 404 for foreign tenant and foreign branch hall ids', function (): void {
@@ -237,6 +249,53 @@ function hallsBladeUser(string $tenantSlug, string $username, array $permissionC
         'branches' => $branches,
         'user' => $user,
     ];
+}
+
+/**
+ * @param  array{tenant: Tenant, branch: Branch, branches: list<Branch>, user: User}  $record
+ * @param  list<string>  $permissionCodes
+ */
+function hallsBladeAdditionalUser(array $record, string $username, array $permissionCodes): User
+{
+    app(TenantResolver::class)->set((int) $record['tenant']->id);
+    app(BranchContext::class)->set((int) $record['branch']->id);
+
+    $role = Role::query()->create([
+        'code' => "{$username}-role",
+        'name' => "{$username} Role",
+    ]);
+
+    $permissions = collect($permissionCodes)
+        ->map(fn (string $code): Permission => Permission::query()->firstOrCreate(
+            ['code' => $code],
+            ['name' => $code],
+        ));
+
+    $role->permissions()->attach(
+        $permissions->pluck('id')->all(),
+        ['tenant_id' => (int) $record['tenant']->id],
+    );
+
+    $user = User::query()->create([
+        'role_id' => (int) $role->id,
+        'name' => $username,
+        'email' => "{$username}@smartrest.test",
+        'username' => $username,
+        'default_locale' => 'en',
+        'active' => true,
+        'is_superadmin' => false,
+        'password' => Hash::make('password'),
+    ]);
+
+    UserBranchAssignment::query()->create([
+        'user_id' => (int) $user->id,
+        'branch_id' => (int) $record['branch']->id,
+    ]);
+
+    app(BranchContext::class)->clear();
+    app(TenantResolver::class)->clear();
+
+    return $user;
 }
 
 /**

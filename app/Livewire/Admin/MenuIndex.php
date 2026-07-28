@@ -81,8 +81,12 @@ final class MenuIndex extends Component
 
         return view('livewire.admin.menu-index', [
             'archiveMode' => $readModel->archiveMode,
+            'canForceDeleteCategories' => auth()->user()?->can('menu.categories.force_delete') ?? false,
+            'canForceDeleteItems' => auth()->user()?->can('menu.items.force_delete') ?? false,
             'canManageCategories' => auth()->user()?->can('menu.categories.manage') ?? false,
             'canManageItems' => auth()->user()?->can('menu.items.manage') ?? false,
+            'canRestoreCategories' => auth()->user()?->can('menu.categories.restore') ?? false,
+            'canRestoreItems' => auth()->user()?->can('menu.items.restore') ?? false,
             'canViewArchive' => $this->canViewArchive(),
             'categories' => $readModel->categories,
             'globalResults' => $readModel->globalResults,
@@ -199,6 +203,6 @@ final class MenuIndex extends Component
 
     private function canViewArchive(): bool
     {
-        return (bool) data_get(auth()->user(), 'is_superadmin');
+        return auth()->user()?->can('menu.archive.view') ?? false;
     }
 }

@@ -21,12 +21,14 @@ final class TableController
 {
     public function index(int $hall, Request $request, FindHall $findHall, PaginateTables $tables): View
     {
-        $canViewArchive = (bool) data_get($request->user(), 'is_superadmin');
+        $canViewArchive = $request->user()?->can('tables.tables.archive.view') ?? false;
         $archiveMode = $canViewArchive ? $this->archiveMode($request) : 'active';
         $includeInactive = $request->boolean('show_inactive');
 
         return view('modules.tables.tables.index', [
             'archiveMode' => $archiveMode,
+            'canForceDeleteTables' => $request->user()?->can('tables.tables.force_delete') ?? false,
+            'canRestoreTables' => $request->user()?->can('tables.tables.restore') ?? false,
             'canViewArchive' => $canViewArchive,
             'hall' => $findHall($hall),
             'includeInactive' => $includeInactive,

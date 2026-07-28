@@ -11,6 +11,10 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 /** @var bool $canManageCategories */
 /** @var bool $canManageItems */
+/** @var bool $canRestoreCategories */
+/** @var bool $canRestoreItems */
+/** @var bool $canForceDeleteCategories */
+/** @var bool $canForceDeleteItems */
 /** @var bool $canViewArchive */
 /** @var 'active'|'archived'|'all' $archiveMode */
 /** @var LengthAwarePaginator<int, MenuCategory> $categories */
@@ -121,6 +125,8 @@ $locale = app()->getLocale();
 
                                 @include('livewire.admin.menu.partials.category-actions', [
                                     'canManageCategories' => $canManageCategories,
+                                    'canRestoreCategories' => $canRestoreCategories,
+                                    'canForceDeleteCategories' => $canForceDeleteCategories,
                                     'canViewArchive' => $canViewArchive,
                                     'category' => $rootCategory,
                                     'menuContext' => $menuContext,
@@ -151,6 +157,8 @@ $locale = app()->getLocale();
 
                                         @include('livewire.admin.menu.partials.category-actions', [
                                             'canManageCategories' => $canManageCategories,
+                                            'canRestoreCategories' => $canRestoreCategories,
+                                            'canForceDeleteCategories' => $canForceDeleteCategories,
                                             'canViewArchive' => $canViewArchive,
                                             'category' => $category,
                                             'menuContext' => $menuContext,
@@ -204,6 +212,8 @@ $locale = app()->getLocale();
                     @if ($globalResults !== null && $globalResults->count() > 0)
                         @include('livewire.admin.menu.partials.item-list', [
                             'canManageItems' => $canManageItems,
+                            'canRestoreItems' => $canRestoreItems,
+                            'canForceDeleteItems' => $canForceDeleteItems,
                             'canViewArchive' => $canViewArchive,
                             'imageUrls' => $imageUrls,
                             'items' => $globalResults,
@@ -271,6 +281,8 @@ $locale = app()->getLocale();
                     @if ($items !== null && $items->count() > 0)
                         @include('livewire.admin.menu.partials.item-list', [
                             'canManageItems' => $canManageItems,
+                            'canRestoreItems' => $canRestoreItems,
+                            'canForceDeleteItems' => $canForceDeleteItems,
                             'canViewArchive' => $canViewArchive,
                             'imageUrls' => $imageUrls,
                             'items' => $items,

@@ -7,6 +7,8 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 /** @var LengthAwarePaginator<int, Hall> $halls */
 /** @var 'active'|'archived'|'all' $archiveMode */
+/** @var bool $canForceDeleteHalls */
+/** @var bool $canRestoreHalls */
 /** @var bool $canViewArchive */
 /** @var bool $includeInactive */
 ?>
@@ -126,20 +128,24 @@ use Illuminate\Pagination\LengthAwarePaginator;
                                             :confirm-label="__('tables.halls.actions.archive')"
                                         />
                                     @elseif ($canViewArchive)
-                                        <form method="post" action="{{ route('admin.tables.halls.restore', ['hall' => (int) $hall->id]) }}">
-                                            @csrf
-                                            <x-button type="submit" variant="outline-primary" size="sm">
-                                                {{ __('tables.halls.actions.restore') }}
-                                            </x-button>
-                                        </form>
-                                        <x-confirm-modal
-                                            id="force_delete_hall_{{ (int) $hall->id }}"
-                                            :action="route('admin.tables.halls.force-delete', ['hall' => (int) $hall->id])"
-                                            :title="__('tables.halls.confirm.force_delete_title')"
-                                            :message="__('tables.halls.confirm.force_delete_message')"
-                                            :trigger-label="__('tables.halls.actions.force_delete')"
-                                            :confirm-label="__('tables.halls.actions.force_delete')"
-                                        />
+                                        @if ($canRestoreHalls)
+                                            <form method="post" action="{{ route('admin.tables.halls.restore', ['hall' => (int) $hall->id]) }}">
+                                                @csrf
+                                                <x-button type="submit" variant="outline-primary" size="sm">
+                                                    {{ __('tables.halls.actions.restore') }}
+                                                </x-button>
+                                            </form>
+                                        @endif
+                                        @if ($canForceDeleteHalls)
+                                            <x-confirm-modal
+                                                id="force_delete_hall_{{ (int) $hall->id }}"
+                                                :action="route('admin.tables.halls.force-delete', ['hall' => (int) $hall->id])"
+                                                :title="__('tables.halls.confirm.force_delete_title')"
+                                                :message="__('tables.halls.confirm.force_delete_message')"
+                                                :trigger-label="__('tables.halls.actions.force_delete')"
+                                                :confirm-label="__('tables.halls.actions.force_delete')"
+                                            />
+                                        @endif
                                     @endif
                                 </div>
                             </td>

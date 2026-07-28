@@ -150,7 +150,7 @@ it('keeps menu index category render query count independent of rendered result 
     );
 
     expect($smallQueryCount)->toBe($largeQueryCount)
-        ->and($smallQueryCount)->toBe(10);
+        ->and($smallQueryCount)->toBe(16);
 });
 
 it('keeps menu index search render query count independent of rendered result size', function (): void {
@@ -197,7 +197,7 @@ it('keeps menu index search render query count independent of rendered result si
     );
 
     expect($smallQueryCount)->toBe($largeQueryCount)
-        ->and($smallQueryCount)->toBe(10);
+        ->and($smallQueryCount)->toBe(16);
 });
 
 it('uses the category URL state and filters the category panel search', function (): void {
@@ -307,14 +307,13 @@ it('paginates the category panel by roots and keeps empty roots visible on later
         ->assertSee(__('menu.empty.no_subcategories_title'), false);
 });
 
-it('normalizes archive visibility for managers and exposes archive maintenance to superadmins', function (): void {
+it('normalizes archive visibility for managers and exposes archive maintenance by permission', function (): void {
     $records = menuIndexLivewireRecords();
     $owner = menuIndexLivewireUser(
         (int) $records['tenant']->id,
         (int) $records['branch']->id,
         'owner-menu-index',
-        ['menu.categories.manage', 'menu.items.manage'],
-        superadmin: true,
+        ['menu.archive.view', 'menu.categories.manage', 'menu.categories.restore', 'menu.categories.force_delete', 'menu.items.manage', 'menu.items.restore', 'menu.items.force_delete'],
     );
 
     app(TenantResolver::class)->set((int) $records['tenant']->id);
@@ -358,6 +357,8 @@ it('normalizes archive visibility for managers and exposes archive maintenance t
         ->assertSee('Hidden Soup', false);
 
     assertRenderedLivewireBindingsResolve($ownerAll->html(), MenuIndex::class);
+
+    expect($owner->is_superadmin)->toBeFalse();
 });
 
 it('toggles item activity inline in both directions', function (): void {
@@ -446,8 +447,7 @@ it('does not expose or allow inline item activity toggle for archived items', fu
         (int) $records['tenant']->id,
         (int) $records['branch']->id,
         'owner-menu-index-toggle',
-        ['menu.categories.manage', 'menu.items.manage'],
-        superadmin: true,
+        ['menu.archive.view', 'menu.categories.manage', 'menu.items.manage'],
     );
 
     app(TenantResolver::class)->set((int) $records['tenant']->id);

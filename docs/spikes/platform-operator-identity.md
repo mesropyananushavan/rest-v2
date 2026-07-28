@@ -617,6 +617,7 @@ recording.
   platform authentication uses a second guard?
 - If S1 is chosen, what exact PostgreSQL uniqueness rule protects platform
   operator email and username uniqueness when `tenant_id` is null?
+Answered on 2026-07-28: destructive operations and archive visibility are ordinary permissions; see `docs/DECISIONS.md` "Destructive operations and archive visibility use permissions".
 
 ## What the owner must decide
 

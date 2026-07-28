@@ -51,7 +51,7 @@ return [
         ],
         'confirm' => [
             'archive_title' => 'Archive hall?',
-            'archive_message' => 'This hides the hall from normal workflows. A superadmin can restore it later.',
+            'archive_message' => 'This hides the hall from normal workflows. An authorized user can bring it back later.',
             'force_delete_title' => 'Delete hall forever?',
             'force_delete_message' => 'This permanently deletes the archived hall. This action is irreversible.',
         ],
@@ -111,7 +111,7 @@ return [
         ],
         'confirm' => [
             'archive_title' => 'Archive table?',
-            'archive_message' => 'This hides the table from normal workflows. A superadmin can restore it later.',
+            'archive_message' => 'This hides the table from normal workflows. An authorized user can bring it back later.',
             'force_delete_title' => 'Delete table forever?',
             'force_delete_message' => 'This permanently deletes the archived table. This action is irreversible.',
         ],

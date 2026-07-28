@@ -97,7 +97,7 @@ it('requires the tables manage permission', function (): void {
         ->assertForbidden();
 });
 
-it('keeps table archive visibility restore and permanent delete superadmin only', function (): void {
+it('authorizes table archive visibility restore and permanent delete through non-superadmin permissions', function (): void {
     $manager = tablesBladeUser('tenant-a', 'manager-a', ['tables.halls.manage', 'tables.tables.manage']);
 
     tablesBladeContext($manager);
@@ -125,40 +125,51 @@ it('keeps table archive visibility restore and permanent delete superadmin only'
         ->delete(route('admin.tables.tables.force-delete', ['hall' => (int) $hall->id, 'table' => (int) $table->id]))
         ->assertForbidden();
 
-    $owner = tablesBladeUser('tenant-b', 'owner-b', ['tables.halls.manage', 'tables.tables.manage'], superadmin: true);
+    $restoreOnly = tablesBladeAdditionalUser($manager, 'table-restore-only', ['tables.tables.restore']);
 
-    tablesBladeContext($owner);
-    $ownerHall = app(CreateHall::class)(tablesBladeText('Owner Archive Hall'), '#D36B5F');
-    $ownerTable = app(CreateTable::class)((int) $ownerHall->id, tablesBladeText('Owner Archive Candidate'));
-    app(ArchiveTable::class)((int) $ownerHall->id, (int) $ownerTable->id);
+    $this->actingAs($restoreOnly)
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->post(route('admin.tables.tables.restore', ['hall' => (int) $hall->id, 'table' => (int) $table->id]))
+        ->assertRedirect(route('admin.tables.tables.index', ['hall' => (int) $hall->id, 'archive_mode' => 'archived']));
+
+    expect($restoreOnly->is_superadmin)->toBeFalse()
+        ->and(Table::query()->find((int) $table->id))->not->toBeNull();
+
+    tablesBladeContext($manager);
+    app(ArchiveTable::class)((int) $hall->id, (int) $table->id);
     app(TenantResolver::class)->clear();
     app(BranchContext::class)->clear();
 
-    $this->actingAs($owner['user'])
-        ->withSession(['branch_id' => (int) $owner['branch']->id])
-        ->get(route('admin.tables.tables.index', ['hall' => (int) $ownerHall->id, 'archive_mode' => 'archived']))
+    $this->actingAs($restoreOnly)
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->delete(route('admin.tables.tables.force-delete', ['hall' => (int) $hall->id, 'table' => (int) $table->id]))
+        ->assertForbidden();
+
+    $archiveOperator = tablesBladeAdditionalUser($manager, 'table-archive-operator', [
+        'tables.tables.manage',
+        'tables.tables.archive.view',
+        'tables.tables.restore',
+        'tables.tables.force_delete',
+    ]);
+
+    $this->actingAs($archiveOperator)
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->get(route('admin.tables.tables.index', ['hall' => (int) $hall->id, 'archive_mode' => 'archived']))
         ->assertOk()
         ->assertSee(__('tables.tables.archive_modes.archived'), false)
         ->assertSee(__('tables.tables.actions.restore'), false)
         ->assertSee(__('tables.tables.actions.force_delete'), false);
 
-    $this->actingAs($owner['user'])
-        ->withSession(['branch_id' => (int) $owner['branch']->id])
-        ->post(route('admin.tables.tables.restore', ['hall' => (int) $ownerHall->id, 'table' => (int) $ownerTable->id]))
-        ->assertRedirect(route('admin.tables.tables.index', ['hall' => (int) $ownerHall->id, 'archive_mode' => 'archived']));
+    $forceDeleteOnly = tablesBladeAdditionalUser($manager, 'table-force-delete-only', ['tables.tables.force_delete']);
 
-    tablesBladeContext($owner);
-    app(ArchiveTable::class)((int) $ownerHall->id, (int) $ownerTable->id);
-    app(TenantResolver::class)->clear();
-    app(BranchContext::class)->clear();
+    $this->actingAs($forceDeleteOnly)
+        ->withSession(['branch_id' => (int) $manager['branch']->id])
+        ->delete(route('admin.tables.tables.force-delete', ['hall' => (int) $hall->id, 'table' => (int) $table->id]))
+        ->assertRedirect(route('admin.tables.tables.index', ['hall' => (int) $hall->id, 'archive_mode' => 'archived']));
 
-    $this->actingAs($owner['user'])
-        ->withSession(['branch_id' => (int) $owner['branch']->id])
-        ->delete(route('admin.tables.tables.force-delete', ['hall' => (int) $ownerHall->id, 'table' => (int) $ownerTable->id]))
-        ->assertRedirect(route('admin.tables.tables.index', ['hall' => (int) $ownerHall->id, 'archive_mode' => 'archived']));
-
-    tablesBladeContext($owner);
-    expect(Table::withTrashed()->find((int) $ownerTable->id))->toBeNull();
+    tablesBladeContext($manager);
+    expect(Table::withTrashed()->find((int) $table->id))->toBeNull()
+        ->and($forceDeleteOnly->is_superadmin)->toBeFalse();
 });
 
 it('returns 404 for foreign tenant foreign branch and foreign hall table ids', function (): void {
@@ -279,6 +290,53 @@ function tablesBladeUser(string $tenantSlug, string $username, array $permission
         'branches' => $branches,
         'user' => $user,
     ];
+}
+
+/**
+ * @param  array{tenant: Tenant, branch: Branch, branches: list<Branch>, user: User}  $record
+ * @param  list<string>  $permissionCodes
+ */
+function tablesBladeAdditionalUser(array $record, string $username, array $permissionCodes): User
+{
+    app(TenantResolver::class)->set((int) $record['tenant']->id);
+    app(BranchContext::class)->set((int) $record['branch']->id);
+
+    $role = Role::query()->create([
+        'code' => "{$username}-role",
+        'name' => "{$username} Role",
+    ]);
+
+    $permissions = collect($permissionCodes)
+        ->map(fn (string $code): Permission => Permission::query()->firstOrCreate(
+            ['code' => $code],
+            ['name' => $code],
+        ));
+
+    $role->permissions()->attach(
+        $permissions->pluck('id')->all(),
+        ['tenant_id' => (int) $record['tenant']->id],
+    );
+
+    $user = User::query()->create([
+        'role_id' => (int) $role->id,
+        'name' => $username,
+        'email' => "{$username}@smartrest.test",
+        'username' => $username,
+        'default_locale' => 'en',
+        'active' => true,
+        'is_superadmin' => false,
+        'password' => Hash::make('password'),
+    ]);
+
+    UserBranchAssignment::query()->create([
+        'user_id' => (int) $user->id,
+        'branch_id' => (int) $record['branch']->id,
+    ]);
+
+    app(BranchContext::class)->clear();
+    app(TenantResolver::class)->clear();
+
+    return $user;
 }
 
 /**
