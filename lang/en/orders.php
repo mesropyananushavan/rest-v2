@@ -97,8 +97,10 @@ return [
         'table_label' => 'Table #:id',
         'actions' => [
             'add_menu_item' => 'Add',
+            'create_subtable' => 'Create subtable',
             'increase_qty' => 'Increase quantity',
             'decrease_qty' => 'Decrease quantity',
+            'move_item' => 'Move',
             'remove_item' => 'Remove',
         ],
         'confirm' => [
@@ -107,6 +109,21 @@ return [
         ],
         'errors' => [
             'generic' => 'The order could not be changed. Refresh the workspace and try again.',
+        ],
+        'validation' => [
+            'subtable_name_required' => 'Enter a subtable name.',
+            'subtable_name_max' => 'Subtable name may not be longer than :max characters.',
+            'subtable_name_duplicate' => 'An open subtable with this name already exists on this order.',
+            'move_target_required' => 'Select where to move the item.',
+            'move_target_invalid' => 'The selected move target is invalid.',
+        ],
+        'subtables' => [
+            'create_label' => 'New subtable',
+            'create_placeholder' => 'Example: Guest 2',
+            'create_help' => 'Use subtables to split items for guests at the same table.',
+        ],
+        'move' => [
+            'select_target' => 'Move to...',
         ],
         'menu_picker' => [
             'title' => 'Menu',

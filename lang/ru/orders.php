@@ -97,8 +97,10 @@ return [
         'table_label' => 'Стол #:id',
         'actions' => [
             'add_menu_item' => 'Добавить',
+            'create_subtable' => 'Создать подстол',
             'increase_qty' => 'Увеличить количество',
             'decrease_qty' => 'Уменьшить количество',
+            'move_item' => 'Переместить',
             'remove_item' => 'Удалить',
         ],
         'confirm' => [
@@ -107,6 +109,21 @@ return [
         ],
         'errors' => [
             'generic' => 'Не удалось изменить заказ. Обновите рабочий экран и попробуйте еще раз.',
+        ],
+        'validation' => [
+            'subtable_name_required' => 'Введите название подстола.',
+            'subtable_name_max' => 'Название подстола не должно быть длиннее :max символов.',
+            'subtable_name_duplicate' => 'В этом заказе уже есть открытый подстол с таким названием.',
+            'move_target_required' => 'Выберите, куда переместить позицию.',
+            'move_target_invalid' => 'Выбранная цель перемещения недействительна.',
+        ],
+        'subtables' => [
+            'create_label' => 'Новый подстол',
+            'create_placeholder' => 'Например: Гость 2',
+            'create_help' => 'Используйте подстолы, чтобы разделять позиции гостей за одним столом.',
+        ],
+        'move' => [
+            'select_target' => 'Переместить в...',
         ],
         'menu_picker' => [
             'title' => 'Меню',

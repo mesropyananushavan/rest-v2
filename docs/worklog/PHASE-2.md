@@ -3683,8 +3683,87 @@ not in parallel.
 Deferred after Stage 2.14: MoveOrder UI, waiter assignment UI, cancel-order UI,
 discounts, modifiers, JSON API for order mutations, and all of Phase 3.
 
-Next exact action: implement the Phase 2 closing slice, subtable creation UI
-(`AddSubtable`) plus move-item-between-subtables UI (`MoveItem`) inside the
-order workspace, matching the docs/BLUEPRINT.md section 9 Phase 2 demo of
-"open table, add items, move item to subtable"; no payments, no closing, no
-fiscal, no printing.
+Task `2.15-workspace-subtables-and-item-moves` is active on branch
+`feature/orders-workspace-subtables-and-moves`, based on post-PR #31 `main`
+merge commit `230ce6dbb9fe230cfa099b2013a3b337cd35628e`. PR #31 was merged as
+a true merge commit with parents `c98b0088c828201710324ac7b4b7094ee7a679ba`
+and `2e95550622de23613cbf653d1421e86622c8a166`. Baseline gates on unmodified
+post-PR #31 main passed before implementation edits: `make pint` (`PASS 317
+files`), `make stan` (`188/188`, `[OK] No errors`), `make test` (`304 passed /
+13 skipped / 3102 assertions`), direct container `vendor/bin/pest`
+(`304 passed / 13 skipped / 3102 assertions`), `make tenant-isolation-pgsql`
+(`23 passed / 96 assertions`), `make orders-concurrency-pgsql` (`6 passed / 43
+assertions`), `npm run build` succeeded with the known `Unknown env config
+"min-release-age"` warning, `git diff --check` had no output, and the Orders
+workspace boundary grep exited `1` with no matches.
+
+Workspace subtables and item moves plan:
+- [x] Stage 2.15-workspace-subtables-moves.1: Livewire adapter actions and
+  state. Add scalar subtable-name and move-target state, validate subtable
+  names in the adapter per the known AddSubtable domain gap, re-check
+  `orders.take` in every new mutation, call only `AddSubtable` and `MoveItem`,
+  map all known Orders domain errors to translated messages, preserve menu
+  picker state, and keep `FindOrderWorkspace` untouched. Result:
+  `OrderWorkspace` now has scalar `newSubtableName` and per-line
+  `moveTargetSubtableIds`, validates required/trimmed/max-60/duplicate-open
+  subtable names before `AddSubtable`, calls `MoveItem` with
+  `targetOrderId: null`, maps the explicit without-subtable sentinel to
+  `null`, passes numeric submitted target ids to `MoveItem`, and uses a
+  translation-backed domain-error mapper with generic fallback. `FindOrderWorkspace`
+  was not modified.
+- [x] Stage 2.15-workspace-subtables-moves.2: Blade UI and translations.
+  Render open-order-only subtable creation and item move affordances with no
+  `<form>` and no `wire:submit`; exclude each line's current location from move
+  targets; encode identifiers through `@js`; reuse `orders.flash.subtable_added`
+  and `orders.flash.item_moved`; add only needed `hy`/`ru`/`en` workspace keys.
+  Result: the workspace renders a no-form subtable creator and per-line move
+  selector only when `can_mutate` is true. Move targets are generated from the
+  current read model and exclude the line's current location. New Livewire
+  method names avoid the old negative-boundary literals `addSubtable` and
+  `moveItem`, so existing negative assertions stayed unchanged. Added matching
+  `hy`/`ru`/`en` keys and reused the existing flash keys.
+- [x] Stage 2.15-workspace-subtables-moves.3: tests and query proof. Add
+  feature coverage for subtable validation, successful creation, successful
+  moves, item-move no-op race handling, target-id rejection through MoveItem,
+  permission/open-status guards, menu state survival, translation key parity,
+  no-form/no-submit/negative UI boundaries, and fixed query counts for 1 vs 10
+  lines and 1 vs 10 subtables. Result: added coverage in
+  `OrderWorkspaceItemWritesTest` for empty/whitespace/over-length/duplicate
+  subtable names, successful creation, moves from without-subtable to a subtable
+  and between subtables, current-location target exclusion, concurrent
+  `itemMoveNoop`, four bad target-id cases through `MoveItem`, new mutation
+  permission rechecks, mounted closed/cancelled safety, menu picker state
+  survival, UI expression safety, non-goal affordance absence, and exact query
+  counts. Focused Orders workspace trio passed (`39 passed / 389 assertions`).
+  Query-count proof for 1 line/1 subtable, 10 lines/1 subtable, and
+  1 line/10 subtables is identical: render `7`, create subtable `27`, move item
+  `30`.
+- [x] Stage 2.15-workspace-subtables-moves.4: verification, commit, push, and
+  draft PR. Run all required gates, update this worklog with exact results and
+  gotchas, confirm no temporary measurement code remains, commit locally, push
+  the feature branch normally, and open a draft PR against `main` without
+  marking it ready or merging it. Result so far: local gates passed before the
+  commit/PR handoff. `make pint` passed (`PASS 317 files`), `make stan` passed
+  (`188/188`, `[OK] No errors`), `make test` passed (`315 passed / 13 skipped /
+  3215 assertions`), direct container `vendor/bin/pest` passed (`315 passed /
+  13 skipped / 3215 assertions`), `make tenant-isolation-pgsql` passed
+  (`23 passed / 96 assertions`), `make orders-concurrency-pgsql` passed
+  (`6 passed / 43 assertions`), `npm run build` succeeded with the known
+  `Unknown env config "min-release-age"` warning, `git diff --check` had no
+  output, and the Orders workspace boundary grep exited `1` with no matches.
+  Temporary query-measurement output was removed; the remaining debug grep hits
+  are pre-existing legitimate query-count helpers and false positives.
+
+Gotchas for Stage 2.15: `AddSubtable` still only trims names, so required,
+max-length, and duplicate-open-subtable validation remains adapter-level domain
+debt until the Application action owns it. The prompt described
+`order_subtables.name` as having no length constraint; in this Laravel schema it
+is `string('name')`, which means the framework default varchar length applies,
+but the slice still enforces a stricter max-60 UI rule. The ignored
+`storage/framework/testing/orders-concurrency-*.start` markers remain local
+test artifact debt and were not cleaned.
+
+Next exact action: commit the completed Stage 2.15 slice, push
+`feature/orders-workspace-subtables-and-moves`, open a draft PR against `main`,
+then update this worklog with the draft PR URL and exact pushed-head CI state;
+owner decision pending: none.

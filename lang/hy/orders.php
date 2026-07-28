@@ -97,8 +97,10 @@ return [
         'table_label' => 'Սեղան #:id',
         'actions' => [
             'add_menu_item' => 'Ավելացնել',
+            'create_subtable' => 'Ստեղծել ենթասեղան',
             'increase_qty' => 'Ավելացնել քանակը',
             'decrease_qty' => 'Պակասեցնել քանակը',
+            'move_item' => 'Տեղափոխել',
             'remove_item' => 'Հեռացնել',
         ],
         'confirm' => [
@@ -107,6 +109,21 @@ return [
         ],
         'errors' => [
             'generic' => 'Պատվերը չհաջողվեց փոխել։ Թարմացրեք աշխատասեղանը եւ փորձեք կրկին։',
+        ],
+        'validation' => [
+            'subtable_name_required' => 'Մուտքագրեք ենթասեղանի անունը։',
+            'subtable_name_max' => 'Ենթասեղանի անունը չի կարող գերազանցել :max նիշը։',
+            'subtable_name_duplicate' => 'Այս պատվերում այդ անունով բաց ենթասեղան արդեն կա։',
+            'move_target_required' => 'Ընտրեք, թե ուր տեղափոխել ապրանքը։',
+            'move_target_invalid' => 'Տեղափոխման ընտրված ուղղությունը անվավեր է։',
+        ],
+        'subtables' => [
+            'create_label' => 'Նոր ենթասեղան',
+            'create_placeholder' => 'Օրինակ՝ Հյուր 2',
+            'create_help' => 'Ենթասեղանները օգնում են նույն սեղանի հյուրերի ապրանքները առանձնացնել։',
+        ],
+        'move' => [
+            'select_target' => 'Տեղափոխել դեպի...',
         ],
         'menu_picker' => [
             'title' => 'Ճաշացանկ',

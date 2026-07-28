@@ -10,20 +10,24 @@ use App\Modules\Menu\Contracts\SellableMenuCategory;
 use App\Modules\Menu\Contracts\SellableMenuCategoryGroup;
 use App\Modules\Menu\Contracts\SellableMenuItem;
 use App\Modules\Orders\Application\AddItem;
+use App\Modules\Orders\Application\AddSubtable;
 use App\Modules\Orders\Application\ChangeItemQty;
 use App\Modules\Orders\Application\FindOrderWorkspace;
+use App\Modules\Orders\Application\MoveItem;
 use App\Modules\Orders\Application\OrderWorkspace as OrderWorkspaceData;
 use App\Modules\Orders\Application\OrderWorkspaceItem;
 use App\Modules\Orders\Application\OrderWorkspaceSubtable;
 use App\Modules\Orders\Application\RemoveItem;
 use App\Modules\Orders\Domain\OrdersDomainException;
 use App\Modules\Orders\Infrastructure\Models\OrderItem;
+use App\Modules\Orders\Infrastructure\Models\OrderSubtable;
 use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Support\I18n\LocalizedText;
 use App\Support\Money\Money;
 use App\Support\Money\MoneyFormatter;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Lang;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
@@ -32,6 +36,10 @@ final class OrderWorkspace extends Component
     private const int MENU_ITEM_PAGE_SIZE = 12;
 
     private const int MENU_CATEGORY_PAGE_SIZE = 6;
+
+    private const int SUBTABLE_NAME_MAX_LENGTH = 60;
+
+    private const string MOVE_TARGET_WITHOUT_SUBTABLE = 'without_subtable';
 
     public int $orderId;
 
@@ -48,6 +56,13 @@ final class OrderWorkspace extends Component
     public int $menuCategoryPage = 1;
 
     public ?string $targetSubtableId = null;
+
+    public string $newSubtableName = '';
+
+    /**
+     * @var array<int, string>
+     */
+    public array $moveTargetSubtableIds = [];
 
     public ?string $statusMessage = null;
 
@@ -214,6 +229,76 @@ final class OrderWorkspace extends Component
         $this->statusMessage = __('orders.flash.item_removed');
     }
 
+    public function createSubtable(): void
+    {
+        $this->authorizeTakingOrders();
+        $this->resetFeedback();
+
+        $name = $this->validatedSubtableName();
+
+        if ($name === null) {
+            return;
+        }
+
+        $workspace = $this->openWorkspaceForMutation();
+
+        if (! $workspace instanceof OrderWorkspaceData) {
+            return;
+        }
+
+        if ($this->subtableNameExists($workspace, $name)) {
+            $this->errorMessage = __('orders.workspace.validation.subtable_name_duplicate');
+
+            return;
+        }
+
+        try {
+            app(AddSubtable::class)($this->orderId, $name);
+        } catch (OrdersDomainException $exception) {
+            $this->errorMessage = $this->domainErrorMessage($exception);
+
+            return;
+        } catch (ModelNotFoundException) {
+            $this->errorMessage = __('orders.order_not_open');
+
+            return;
+        }
+
+        $this->newSubtableName = '';
+        $this->statusMessage = __('orders.flash.subtable_added');
+    }
+
+    public function moveLineToSelectedSubtable(int $orderItemId): void
+    {
+        $this->authorizeTakingOrders();
+        $this->resetFeedback();
+
+        $targetSubtableId = $this->selectedMoveTargetSubtableId($orderItemId);
+
+        if ($this->errorMessage !== null) {
+            return;
+        }
+
+        try {
+            app(MoveItem::class)(
+                orderItemId: $orderItemId,
+                targetOrderId: null,
+                targetSubtableId: $targetSubtableId,
+            );
+        } catch (OrdersDomainException $exception) {
+            $this->errorMessage = $this->domainErrorMessage($exception);
+
+            return;
+        } catch (ModelNotFoundException) {
+            $this->errorMessage = __('orders.item_not_in_order');
+
+            return;
+        }
+
+        unset($this->moveTargetSubtableIds[$orderItemId]);
+        $this->statusMessage = __('orders.flash.item_moved');
+    }
+
     /**
      * @return array{
      *     id: int,
@@ -229,7 +314,7 @@ final class OrderWorkspace extends Component
      *     can_mutate: bool,
      *     stale_unavailable: bool,
      *     subtables: list<array{id: int, name: string}>,
-     *     groups: list<array{id: int|null, name: string, items: list<array{id: int, name: string, qty: int, unit_price: string, discount: string, total: string}>}>
+     *     groups: list<array{id: int|null, name: string, items: list<array{id: int, current_subtable_id: int|null, name: string, qty: int, unit_price: string, discount: string, total: string, move_targets: list<array{value: string, label: string}>}>}>
      * }
      */
     private function order(OrderWorkspaceData $workspace): array
@@ -275,7 +360,7 @@ final class OrderWorkspace extends Component
      *     can_mutate: bool,
      *     stale_unavailable: bool,
      *     subtables: list<array{id: int, name: string}>,
-     *     groups: list<array{id: int|null, name: string, items: list<array{id: int, name: string, qty: int, unit_price: string, discount: string, total: string}>}>
+     *     groups: list<array{id: int|null, name: string, items: list<array{id: int, current_subtable_id: int|null, name: string, qty: int, unit_price: string, discount: string, total: string, move_targets: list<array{value: string, label: string}>}>}>
      * }
      */
     private function staleUnavailableOrder(): array
@@ -301,14 +386,14 @@ final class OrderWorkspace extends Component
     /**
      * @param  list<OrderWorkspaceSubtable>  $subtables
      * @param  list<OrderWorkspaceItem>  $items
-     * @return list<array{id: int|null, name: string, items: list<array{id: int, name: string, qty: int, unit_price: string, discount: string, total: string}>}>
+     * @return list<array{id: int|null, name: string, items: list<array{id: int, current_subtable_id: int|null, name: string, qty: int, unit_price: string, discount: string, total: string, move_targets: list<array{value: string, label: string}>}>}>
      */
     private function groups(array $subtables, array $items, string $locale): array
     {
         $itemsBySubtable = [];
 
         foreach ($items as $item) {
-            $itemsBySubtable[$item->subtableId ?? 0][] = $this->item($item, $locale);
+            $itemsBySubtable[$item->subtableId ?? 0][] = $this->item($item, $subtables, $locale);
         }
 
         $groups = [];
@@ -333,18 +418,50 @@ final class OrderWorkspace extends Component
     }
 
     /**
-     * @return array{id: int, name: string, qty: int, unit_price: string, discount: string, total: string}
+     * @param  list<OrderWorkspaceSubtable>  $subtables
+     * @return array{id: int, current_subtable_id: int|null, name: string, qty: int, unit_price: string, discount: string, total: string, move_targets: list<array{value: string, label: string}>}
      */
-    private function item(OrderWorkspaceItem $item, string $locale): array
+    private function item(OrderWorkspaceItem $item, array $subtables, string $locale): array
     {
         return [
             'id' => $item->id,
+            'current_subtable_id' => $item->subtableId,
             'name' => $this->itemName($item, $locale),
             'qty' => $item->qty,
             'unit_price' => $this->money($item->unitPriceMinor, $item->currency, $locale),
             'discount' => $this->money($item->discountMinor, $item->currency, $locale),
             'total' => $this->money($item->totalMinor, $item->currency, $locale),
+            'move_targets' => $this->moveTargets($item->subtableId, $subtables),
         ];
+    }
+
+    /**
+     * @param  list<OrderWorkspaceSubtable>  $subtables
+     * @return list<array{value: string, label: string}>
+     */
+    private function moveTargets(?int $currentSubtableId, array $subtables): array
+    {
+        $targets = [];
+
+        if ($currentSubtableId !== null) {
+            $targets[] = [
+                'value' => self::MOVE_TARGET_WITHOUT_SUBTABLE,
+                'label' => __('orders.workspace.unassigned_items'),
+            ];
+        }
+
+        foreach ($subtables as $subtable) {
+            if ($currentSubtableId === $subtable->id) {
+                continue;
+            }
+
+            $targets[] = [
+                'value' => (string) $subtable->id,
+                'label' => $subtable->name,
+            ];
+        }
+
+        return $targets;
     }
 
     private function itemName(OrderWorkspaceItem $item, string $locale): string
@@ -519,6 +636,79 @@ final class OrderWorkspace extends Component
         return (int) trim($this->targetSubtableId);
     }
 
+    private function validatedSubtableName(): ?string
+    {
+        $name = trim($this->newSubtableName);
+
+        if ($name === '') {
+            $this->errorMessage = __('orders.workspace.validation.subtable_name_required');
+
+            return null;
+        }
+
+        if (mb_strlen($name) > self::SUBTABLE_NAME_MAX_LENGTH) {
+            $this->errorMessage = __('orders.workspace.validation.subtable_name_max', [
+                'max' => self::SUBTABLE_NAME_MAX_LENGTH,
+            ]);
+
+            return null;
+        }
+
+        return $name;
+    }
+
+    private function openWorkspaceForMutation(): ?OrderWorkspaceData
+    {
+        try {
+            return app(FindOrderWorkspace::class)($this->orderId);
+        } catch (OrdersDomainException $exception) {
+            $this->errorMessage = $this->domainErrorMessage($exception);
+
+            return null;
+        } catch (ModelNotFoundException) {
+            $this->errorMessage = __('orders.order_not_open');
+
+            return null;
+        }
+    }
+
+    private function subtableNameExists(OrderWorkspaceData $workspace, string $name): bool
+    {
+        $normalizedName = mb_strtolower($name);
+
+        return OrderSubtable::query()
+            ->where('branch_id', $this->branchId())
+            ->where('order_id', $workspace->id)
+            ->where('status', 'open')
+            ->get(['name'])
+            ->contains(
+                fn (OrderSubtable $subtable): bool => mb_strtolower(trim((string) $subtable->name)) === $normalizedName,
+            );
+    }
+
+    private function selectedMoveTargetSubtableId(int $orderItemId): ?int
+    {
+        if (! array_key_exists($orderItemId, $this->moveTargetSubtableIds)) {
+            $this->errorMessage = __('orders.workspace.validation.move_target_required');
+
+            return null;
+        }
+
+        $target = $this->moveTargetSubtableIds[$orderItemId];
+
+        if ($target === self::MOVE_TARGET_WITHOUT_SUBTABLE) {
+            return null;
+        }
+
+        if (! preg_match('/^-?\d+$/', $target)) {
+            $this->errorMessage = __('orders.workspace.validation.move_target_invalid');
+
+            return null;
+        }
+
+        return (int) $target;
+    }
+
     private function resetFeedback(): void
     {
         $this->statusMessage = null;
@@ -532,16 +722,12 @@ final class OrderWorkspace extends Component
 
     private function domainErrorMessage(OrdersDomainException $exception): string
     {
-        return match ($exception->errorCode()) {
-            'orders.tenant_context_required',
-            'orders.branch_context_required',
-            'orders.order_not_open',
-            'orders.menu_item_not_found',
-            'orders.currency_mismatch',
-            'orders.item_not_in_order',
-            'orders.invalid_quantity',
-            'orders.subtable_not_in_order' => __($exception->errorCode()),
-            default => __('orders.workspace.errors.generic'),
-        };
+        $code = $exception->errorCode();
+
+        if (Lang::has($code)) {
+            return __($code);
+        }
+
+        return __('orders.workspace.errors.generic');
     }
 }

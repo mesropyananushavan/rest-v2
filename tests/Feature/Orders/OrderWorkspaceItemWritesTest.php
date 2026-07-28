@@ -12,6 +12,7 @@ use App\Modules\Menu\Application\CreateMenuItem;
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use App\Modules\Orders\Application\AddItem;
+use App\Modules\Orders\Application\MoveItem;
 use App\Modules\Orders\Infrastructure\Models\Order;
 use App\Modules\Orders\Infrastructure\Models\OrderItem;
 use App\Modules\Orders\Infrastructure\Models\OrderSubtable;
@@ -462,6 +463,353 @@ it('keeps add item query count stable as order lines and picked menu items grow'
         ->and($tenPickedItemQueries)->toBeLessThanOrEqual(45);
 });
 
+it('creates subtables through the workspace and validates names before calling the action', function (): void {
+    $record = orderWorkspaceWritesUser('tenant-subtables', 'waiter-subtables', ['orders.take']);
+
+    app()->setLocale('en');
+    orderWorkspaceWritesActingIn($record, 0, 'workspace-subtables-create');
+    $order = orderWorkspaceWritesOrder($record, 0);
+    orderWorkspaceWritesSubtable($order, 'Guest A');
+
+    $component = Livewire::actingAs($record['user'])
+        ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $order->id])
+        ->set('newSubtableName', '')
+        ->call('createSubtable')
+        ->assertSet('errorMessage', __('orders.workspace.validation.subtable_name_required'))
+        ->set('newSubtableName', '   ')
+        ->call('createSubtable')
+        ->assertSet('errorMessage', __('orders.workspace.validation.subtable_name_required'))
+        ->set('newSubtableName', str_repeat('A', 61))
+        ->call('createSubtable')
+        ->assertSet('errorMessage', __('orders.workspace.validation.subtable_name_max', ['max' => 60]))
+        ->set('newSubtableName', ' guest a ')
+        ->call('createSubtable')
+        ->assertSet('errorMessage', __('orders.workspace.validation.subtable_name_duplicate'))
+        ->set('newSubtableName', ' Guest B ')
+        ->call('createSubtable')
+        ->assertSet('statusMessage', __('orders.flash.subtable_added'))
+        ->assertSet('newSubtableName', '')
+        ->assertSee('Guest B', false);
+
+    expect(OrderSubtable::query()->where('order_id', (int) $order->id)->pluck('name')->all())
+        ->toBe(['Guest A', 'Guest B'])
+        ->and(substr_count($component->html(), 'Guest B'))->toBeGreaterThanOrEqual(2);
+});
+
+it('moves a line from without subtable to a subtable and between subtables while excluding the current target', function (): void {
+    $record = orderWorkspaceWritesUser('tenant-moves', 'waiter-moves', ['orders.take']);
+
+    app()->setLocale('en');
+    orderWorkspaceWritesActingIn($record, 0, 'workspace-moves-success');
+    $order = orderWorkspaceWritesOrder($record, 0);
+    $subtableA = orderWorkspaceWritesSubtable($order, 'Guest A');
+    $subtableB = orderWorkspaceWritesSubtable($order, 'Guest B');
+    $category = orderWorkspaceWritesCategory('Move Menu', 'Move Category')['category'];
+    $menuItem = orderWorkspaceWritesItem($category, $record['branches'][0], 'Dolma', priceMinor: 1000);
+    $line = app(AddItem::class)((int) $order->id, (int) $menuItem->id, 1);
+
+    $component = Livewire::actingAs($record['user'])
+        ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $order->id]);
+
+    $initialMoveSelect = orderWorkspaceWritesMoveSelectHtml($component->html(), (int) $line->id);
+
+    expect($initialMoveSelect)->toContain('Guest A')
+        ->and($initialMoveSelect)->toContain('Guest B')
+        ->and($initialMoveSelect)->not->toContain(__('orders.workspace.unassigned_items'));
+
+    $component
+        ->set("moveTargetSubtableIds.{$line->id}", (string) $subtableA->id)
+        ->call('moveLineToSelectedSubtable', (int) $line->id)
+        ->assertSet('statusMessage', __('orders.flash.item_moved'))
+        ->assertSee('Guest A', false);
+
+    expect((int) OrderItem::query()->findOrFail((int) $line->id)->subtable_id)->toBe((int) $subtableA->id);
+
+    $afterFirstMoveSelect = orderWorkspaceWritesMoveSelectHtml($component->html(), (int) $line->id);
+
+    expect($afterFirstMoveSelect)->toContain(__('orders.workspace.unassigned_items'))
+        ->and($afterFirstMoveSelect)->toContain('Guest B')
+        ->and($afterFirstMoveSelect)->not->toContain('Guest A');
+
+    $component
+        ->set("moveTargetSubtableIds.{$line->id}", (string) $subtableB->id)
+        ->call('moveLineToSelectedSubtable', (int) $line->id)
+        ->assertSet('statusMessage', __('orders.flash.item_moved'));
+
+    expect((int) OrderItem::query()->findOrFail((int) $line->id)->subtable_id)->toBe((int) $subtableB->id);
+
+    $afterSecondMoveSelect = orderWorkspaceWritesMoveSelectHtml($component->html(), (int) $line->id);
+
+    expect($afterSecondMoveSelect)->toContain(__('orders.workspace.unassigned_items'))
+        ->and($afterSecondMoveSelect)->toContain('Guest A')
+        ->and($afterSecondMoveSelect)->not->toContain('Guest B');
+});
+
+it('renders a translated item move noop when another cashier already moved the line', function (): void {
+    $record = orderWorkspaceWritesUser('tenant-noop', 'waiter-noop', ['orders.take']);
+
+    app()->setLocale('en');
+    orderWorkspaceWritesActingIn($record, 0, 'workspace-move-noop');
+    $order = orderWorkspaceWritesOrder($record, 0);
+    $subtable = orderWorkspaceWritesSubtable($order, 'Guest A');
+    $category = orderWorkspaceWritesCategory('Noop Menu', 'Noop Category')['category'];
+    $menuItem = orderWorkspaceWritesItem($category, $record['branches'][0], 'Harissa', priceMinor: 1000);
+    $line = app(AddItem::class)((int) $order->id, (int) $menuItem->id, 1);
+
+    $component = Livewire::actingAs($record['user'])
+        ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $order->id])
+        ->set("moveTargetSubtableIds.{$line->id}", (string) $subtable->id);
+
+    app(MoveItem::class)((int) $line->id, null, (int) $subtable->id);
+
+    $component
+        ->call('moveLineToSelectedSubtable', (int) $line->id)
+        ->assertSet('errorMessage', __('orders.item_move_noop'));
+});
+
+it('passes client supplied move target ids to MoveItem and renders translated rejections', function (): void {
+    $tenantA = orderWorkspaceWritesUser('tenant-move-target-a', 'waiter-move-target-a', ['orders.take'], branchCount: 2);
+    $tenantB = orderWorkspaceWritesUser('tenant-move-target-b', 'waiter-move-target-b', ['orders.take']);
+
+    app()->setLocale('en');
+    orderWorkspaceWritesActingIn($tenantA, 0, 'workspace-move-target-source');
+    $order = orderWorkspaceWritesOrder($tenantA, 0);
+    $category = orderWorkspaceWritesCategory('Target Menu', 'Target Category')['category'];
+    $menuItem = orderWorkspaceWritesItem($category, $tenantA['branches'][0], 'Ghapama', priceMinor: 1000);
+    $line = app(AddItem::class)((int) $order->id, (int) $menuItem->id, 1);
+
+    $sameBranchOtherOrder = orderWorkspaceWritesOrder($tenantA, 0);
+    $sameBranchSubtable = orderWorkspaceWritesSubtable($sameBranchOtherOrder, 'Other order');
+
+    orderWorkspaceWritesActingIn($tenantA, 1, 'workspace-move-target-other-branch');
+    $otherBranchOrder = orderWorkspaceWritesOrder($tenantA, 1);
+    $otherBranchSubtable = orderWorkspaceWritesSubtable($otherBranchOrder, 'Other branch');
+
+    orderWorkspaceWritesActingIn($tenantB, 0, 'workspace-move-target-other-tenant');
+    $otherTenantOrder = orderWorkspaceWritesOrder($tenantB, 0);
+    $otherTenantSubtable = orderWorkspaceWritesSubtable($otherTenantOrder, 'Other tenant');
+
+    orderWorkspaceWritesActingIn($tenantA, 0, 'workspace-move-target-render');
+    $missingSubtableId = ((int) max([
+        $sameBranchSubtable->id,
+        $otherBranchSubtable->id,
+        $otherTenantSubtable->id,
+    ])) + 10_000;
+
+    foreach ([
+        'different order in same branch' => (int) $sameBranchSubtable->id,
+        'different branch' => (int) $otherBranchSubtable->id,
+        'different tenant' => (int) $otherTenantSubtable->id,
+        'non-existent subtable' => $missingSubtableId,
+    ] as $case => $subtableId) {
+        Livewire::actingAs($tenantA['user'])
+            ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $order->id])
+            ->set("moveTargetSubtableIds.{$line->id}", (string) $subtableId)
+            ->call('moveLineToSelectedSubtable', (int) $line->id)
+            ->assertSet('errorMessage', __('orders.subtable_not_in_order'));
+
+        $freshOrder = Order::query()->findOrFail((int) $order->id);
+        $freshLine = OrderItem::query()->findOrFail((int) $line->id);
+
+        expect($freshLine->subtable_id, $case)->toBeNull()
+            ->and((int) $freshOrder->subtotal_minor, $case)->toBe(1000)
+            ->and((int) $freshOrder->total_minor, $case)->toBe(1000);
+    }
+});
+
+it('rechecks orders take permission in new mounted component mutations', function (string $method): void {
+    $record = orderWorkspaceWritesUser("tenant-permission-{$method}", "waiter-permission-{$method}", ['orders.take']);
+
+    app()->setLocale('en');
+    orderWorkspaceWritesActingIn($record, 0, "workspace-permission-{$method}");
+    $order = orderWorkspaceWritesOrder($record, 0);
+    $subtable = orderWorkspaceWritesSubtable($order, 'Guest A');
+    $category = orderWorkspaceWritesCategory("Permission Menu {$method}", "Permission Category {$method}")['category'];
+    $menuItem = orderWorkspaceWritesItem($category, $record['branches'][0], "Permission Dish {$method}", priceMinor: 1000);
+    $line = app(AddItem::class)((int) $order->id, (int) $menuItem->id, 1);
+
+    $component = Livewire::actingAs($record['user'])
+        ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $order->id]);
+
+    Role::query()
+        ->findOrFail((int) $record['user']->role_id)
+        ->permissions()
+        ->detach();
+
+    if ($method === 'create') {
+        $component
+            ->set('newSubtableName', 'Late Guest')
+            ->call('createSubtable')
+            ->assertStatus(403);
+    } else {
+        $component
+            ->set("moveTargetSubtableIds.{$line->id}", (string) $subtable->id)
+            ->call('moveLineToSelectedSubtable', (int) $line->id)
+            ->assertStatus(403);
+    }
+})->with(['create', 'move']);
+
+it('keeps new mounted component mutations safe after the order is closed or cancelled elsewhere', function (string $status): void {
+    $record = orderWorkspaceWritesUser("tenant-new-stale-{$status}", "waiter-new-stale-{$status}", ['orders.take']);
+
+    app()->setLocale('en');
+    orderWorkspaceWritesActingIn($record, 0, "workspace-new-stale-{$status}");
+    $order = orderWorkspaceWritesOrder($record, 0);
+    $subtable = orderWorkspaceWritesSubtable($order, 'Guest A');
+    $category = orderWorkspaceWritesCategory("Stale Menu {$status}", "Stale Category {$status}")['category'];
+    $menuItem = orderWorkspaceWritesItem($category, $record['branches'][0], "Stale Dish {$status}", priceMinor: 1000);
+    $line = app(AddItem::class)((int) $order->id, (int) $menuItem->id, 1);
+
+    $component = Livewire::actingAs($record['user'])
+        ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $order->id]);
+
+    $order->forceFill([
+        'status' => $status,
+        'closed_at' => now(),
+    ])->save();
+
+    $component
+        ->set('newSubtableName', 'Late Guest')
+        ->call('createSubtable')
+        ->assertSet('errorMessage', __('orders.order_not_open'))
+        ->set("moveTargetSubtableIds.{$line->id}", (string) $subtable->id)
+        ->call('moveLineToSelectedSubtable', (int) $line->id)
+        ->assertSet('errorMessage', __('orders.order_not_open'))
+        ->assertSee(__('orders.workspace.unavailable_title'), false)
+        ->assertDontSee('createSubtable', false)
+        ->assertDontSee('moveLineToSelectedSubtable', false)
+        ->assertDontSee(__('orders.workspace.menu_picker.title'), false)
+        ->assertDontSee("Stale Dish {$status}", false);
+
+    $freshLine = OrderItem::query()->findOrFail((int) $line->id);
+
+    expect(OrderSubtable::query()->where('order_id', (int) $order->id)->pluck('name')->all())
+        ->toBe(['Guest A'])
+        ->and($freshLine->subtable_id)->toBeNull();
+})->with(['closed', 'cancelled']);
+
+it('preserves menu picker state after successful and failed subtable and move mutations', function (): void {
+    $record = orderWorkspaceWritesUser('tenant-state-moves', 'waiter-state-moves', ['orders.take']);
+
+    app()->setLocale('en');
+    orderWorkspaceWritesActingIn($record, 0, 'workspace-state-moves');
+    $order = orderWorkspaceWritesOrder($record, 0);
+    $subtable = orderWorkspaceWritesSubtable($order, 'Guest A');
+    $category = null;
+    $menuItem = null;
+
+    for ($index = 1; $index <= 7; $index++) {
+        $currentCategory = orderWorkspaceWritesCategory("Move State Menu {$index}", "Move State Category {$index}")['category'];
+
+        for ($itemIndex = 1; $itemIndex <= ($index === 1 ? 13 : 1); $itemIndex++) {
+            $currentItem = orderWorkspaceWritesItem(
+                $currentCategory,
+                $record['branches'][0],
+                sprintf('Move State Dish %02d-%02d', $index, $itemIndex),
+                priceMinor: 1000,
+                sortOrder: $itemIndex,
+            );
+
+            if ($index === 1 && $itemIndex === 13) {
+                $category = $currentCategory;
+                $menuItem = $currentItem;
+            }
+        }
+    }
+
+    expect($category)->toBeInstanceOf(MenuCategory::class)
+        ->and($menuItem)->toBeInstanceOf(MenuItem::class);
+
+    $line = app(AddItem::class)((int) $order->id, (int) $menuItem->id, 1);
+
+    $component = Livewire::actingAs($record['user'])
+        ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $order->id])
+        ->set('menuSearch', 'Move State Dish')
+        ->call('selectMenuCategory', (int) $category->id)
+        ->call('nextMenuPage')
+        ->call('nextMenuCategoryPage');
+
+    $expectedState = [
+        'menuSearch' => 'Move State Dish',
+        'menuCategoryId' => (int) $category->id,
+        'menuPage' => 2,
+        'menuCategoryPage' => 2,
+    ];
+
+    $component
+        ->set('newSubtableName', 'Guest B')
+        ->call('createSubtable')
+        ->assertSet('statusMessage', __('orders.flash.subtable_added'));
+    orderWorkspaceWritesAssertMenuState($component, $expectedState);
+
+    $component
+        ->set('newSubtableName', 'guest b')
+        ->call('createSubtable')
+        ->assertSet('errorMessage', __('orders.workspace.validation.subtable_name_duplicate'));
+    orderWorkspaceWritesAssertMenuState($component, $expectedState);
+
+    $component
+        ->set("moveTargetSubtableIds.{$line->id}", (string) $subtable->id)
+        ->call('moveLineToSelectedSubtable', (int) $line->id)
+        ->assertSet('statusMessage', __('orders.flash.item_moved'));
+    orderWorkspaceWritesAssertMenuState($component, $expectedState);
+
+    $component
+        ->set("moveTargetSubtableIds.{$line->id}", (string) $subtable->id)
+        ->call('moveLineToSelectedSubtable', (int) $line->id)
+        ->assertSet('errorMessage', __('orders.item_move_noop'));
+    orderWorkspaceWritesAssertMenuState($component, $expectedState);
+});
+
+it('keeps new workspace Livewire expressions encoded and non goal affordances absent', function (): void {
+    $blade = file_get_contents(resource_path('views/livewire/admin/order-workspace.blade.php'));
+
+    expect($blade)->toBeString()
+        ->and($blade)->not->toMatch('/wire:click="[^"]*\{\{/')
+        ->and($blade)->toContain('wire:click="createSubtable"')
+        ->and($blade)->toContain('moveLineToSelectedSubtable(@js($item[\'id\']))')
+        ->and($blade)->not->toContain('wire:submit');
+
+    $record = orderWorkspaceWritesUser('tenant-boundary-moves', 'waiter-boundary-moves', ['orders.take']);
+
+    app()->setLocale('en');
+    orderWorkspaceWritesActingIn($record, 0, 'workspace-boundary-moves');
+    $order = orderWorkspaceWritesOrder($record, 0);
+    $category = orderWorkspaceWritesCategory('Boundary Menu', 'Boundary Category')['category'];
+    $menuItem = orderWorkspaceWritesItem($category, $record['branches'][0], 'Boundary Dish', priceMinor: 1000);
+    app(AddItem::class)((int) $order->id, (int) $menuItem->id, 1);
+
+    Livewire::actingAs($record['user'])
+        ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $order->id])
+        ->assertDontSee('closeSubtable', false)
+        ->assertDontSee('renameSubtable', false)
+        ->assertDontSee('targetOrderId', false)
+        ->assertDontSee('moveOrder', false)
+        ->assertDontSee('assignWaiter', false)
+        ->assertDontSee('cancelOrder', false)
+        ->assertDontSee('applyDiscount', false)
+        ->assertDontSee('discountOrder', false)
+        ->assertDontSee('discountItem', false)
+        ->assertDontSee('payment', false)
+        ->assertDontSee('closeOrder', false)
+        ->assertDontSee('<form', false)
+        ->assertDontSee('wire:submit', false);
+});
+
+it('keeps workspace render and new mutation query counts stable as lines and subtables grow', function (): void {
+    $small = orderWorkspaceWritesSubtableMoveQueryCounts(lineCount: 1, subtableCount: 1, label: 'small');
+    $largeLines = orderWorkspaceWritesSubtableMoveQueryCounts(lineCount: 10, subtableCount: 1, label: 'large-lines');
+    $largeSubtables = orderWorkspaceWritesSubtableMoveQueryCounts(lineCount: 1, subtableCount: 10, label: 'large-subtables');
+
+    expect($largeLines)->toBe($small)
+        ->and($largeSubtables)->toBe($small)
+        ->and($small)->toBe([
+            'render' => 7,
+            'create_subtable' => 27,
+            'move_item' => 30,
+        ]);
+});
+
 /**
  * @param  list<string>  $permissionCodes
  * @return array{tenant: Tenant, branches: list<Branch>, user: User}
@@ -747,4 +1095,93 @@ function orderWorkspaceWritesAddRoundTripQueryCount(int $lineCount, int $pickedI
     );
 
     return $queries;
+}
+
+function orderWorkspaceWritesMoveSelectHtml(string $html, int $orderItemId): string
+{
+    preg_match(
+        '/<select[^>]+id="order-workspace-move-target-'.preg_quote((string) $orderItemId, '/').'"[^>]*>.*?<\/select>/s',
+        $html,
+        $matches,
+    );
+
+    expect($matches[0] ?? null)->toBeString();
+
+    return $matches[0];
+}
+
+/**
+ * @param  array{menuSearch: string, menuCategoryId: int, menuPage: int, menuCategoryPage: int}  $expectedState
+ */
+function orderWorkspaceWritesAssertMenuState(mixed $component, array $expectedState): void
+{
+    foreach ($expectedState as $property => $value) {
+        $component->assertSet($property, $value);
+    }
+}
+
+/**
+ * @return array{render: int, create_subtable: int, move_item: int}
+ */
+function orderWorkspaceWritesSubtableMoveQueryCounts(int $lineCount, int $subtableCount, string $label): array
+{
+    $record = orderWorkspaceWritesUser("tenant-query-moves-{$label}", "waiter-query-moves-{$label}", ['orders.take']);
+
+    app()->setLocale('en');
+    orderWorkspaceWritesActingIn($record, 0, "workspace-query-moves-{$label}");
+    $order = orderWorkspaceWritesOrder($record, 0);
+    $category = orderWorkspaceWritesCategory("Query Move Menu {$label}", "Query Move Category {$label}")['category'];
+    $targetSubtable = null;
+
+    for ($index = 1; $index <= $subtableCount; $index++) {
+        $subtable = orderWorkspaceWritesSubtable($order, "Query Guest {$label} {$index}");
+
+        if ($targetSubtable === null) {
+            $targetSubtable = $subtable;
+        }
+    }
+
+    $movedLine = null;
+
+    for ($index = 1; $index <= $lineCount; $index++) {
+        $menuItem = orderWorkspaceWritesItem(
+            $category,
+            $record['branches'][0],
+            "Query Move Dish {$label} {$index}",
+            priceMinor: 1000,
+            sortOrder: $index,
+        );
+        $line = app(AddItem::class)((int) $order->id, (int) $menuItem->id, 1);
+
+        if ($movedLine === null) {
+            $movedLine = $line;
+        }
+    }
+
+    expect($targetSubtable)->toBeInstanceOf(OrderSubtable::class)
+        ->and($movedLine)->toBeInstanceOf(OrderItem::class);
+
+    [, $renderQueries] = orderWorkspaceWritesQueryCount(
+        fn () => Livewire::actingAs($record['user'])->test(OrderWorkspaceComponent::class, ['orderId' => (int) $order->id]),
+    );
+
+    [, $createSubtableQueries] = orderWorkspaceWritesQueryCount(
+        fn () => Livewire::actingAs($record['user'])
+            ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $order->id])
+            ->set('newSubtableName', "Query New Guest {$label}")
+            ->call('createSubtable'),
+    );
+
+    [, $moveQueries] = orderWorkspaceWritesQueryCount(
+        fn () => Livewire::actingAs($record['user'])
+            ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $order->id])
+            ->set("moveTargetSubtableIds.{$movedLine->id}", (string) $targetSubtable->id)
+            ->call('moveLineToSelectedSubtable', (int) $movedLine->id),
+    );
+
+    return [
+        'render' => $renderQueries,
+        'create_subtable' => $createSubtableQueries,
+        'move_item' => $moveQueries,
+    ];
 }
