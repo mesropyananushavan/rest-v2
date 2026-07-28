@@ -4092,7 +4092,7 @@ Task `2.18-workspace-cancel-order` is active on branch
   users without `orders.take` getting 403. Query counts are exact and stable:
   cancel-visible workspace render is `6` queries for both `1` and `8` order
   lines; flashed board render is `3` queries for both `1` and `8` tables.
-- [ ] Stage 2.18.4: final gates, commit, push, and draft PR. Run `make pint`,
+- [x] Stage 2.18.4: final gates, commit, push, and draft PR. Run `make pint`,
   `make stan`, `make test`, `make tenant-isolation-pgsql` alone,
   `make orders-concurrency-pgsql` alone, `npm run build`, `git diff --check`,
   and the 2.16 component-attribute directive audit expecting exit `1`. Review
@@ -4111,8 +4111,12 @@ Task `2.18-workspace-cancel-order` is active on branch
   `npm run build` passed with the known npm `Unknown env config
   "min-release-age"` warning, `git diff --check` had no output, and the 2.16
   component-attribute directive audit exited `1` with no matches. PostgreSQL
-  gates were run sequentially. Commit, push, draft PR, and CI status are still
-  pending.
+  gates were run sequentially. Implementation/worklog commit
+  `832ece7ca8c4b421feb6bda492942ed33976e9f1` was pushed normally to
+  `origin/feature/orders-workspace-cancel`; draft PR #37 is open at
+  `https://github.com/mesropyananushavan/rest-v2/pull/37`. CI status must be
+  checked on the exact final pushed head after this worklog handoff commit is
+  pushed; no merge or deployment was performed.
 
 Stage 2.18 pre-implementation findings: `CancelOrder` directly raises
 `orders.branch_context_required` when branch context is absent and can raise
@@ -4130,6 +4134,7 @@ void an order even after items were added. Restaurant voids are a known theft
 vector and normally require manager-level authorization. This is an open owner
 decision for a dedicated permissions slice; do not decide it in Stage 2.18.
 
-Next exact action: continue Stage 2.18.4 by committing the scoped Stage 2.18
-diff, pushing `feature/orders-workspace-cancel`, opening a draft PR against
-`main`, then recording the PR URL and exact-head CI status.
+Next exact action: owner review draft PR #37 for Stage 2.18 and check CI on
+the exact pushed head of `feature/orders-workspace-cancel`. The open owner
+decision remains a dedicated permissions slice for cancel/void authority
+because `orders.take` currently lets waiters void loaded orders.
