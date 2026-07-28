@@ -3754,6 +3754,16 @@ Workspace subtables and item moves plan:
   Temporary query-measurement output was removed; the remaining debug grep hits
   are pre-existing legitimate query-count helpers and false positives.
 
+Stage 2.15 branch publication: implementation commit
+`99ec62088a6ad02c80667bd9bb4093b5199acff4` was pushed normally to
+`origin/feature/orders-workspace-subtables-and-moves`. Draft PR
+[#32](https://github.com/mesropyananushavan/rest-v2/pull/32) was opened against
+`main` and remains draft. At PR creation, GitHub checks for exact head
+`99ec62088a6ad02c80667bd9bb4093b5199acff4` were queued/in progress for
+`quality`, `tenant-isolation-pgsql`, and `orders-concurrency-pgsql`; no
+ready-for-review transition, merge, deployment, force-push, or branch deletion
+was performed.
+
 Gotchas for Stage 2.15: `AddSubtable` still only trims names, so required,
 max-length, and duplicate-open-subtable validation remains adapter-level domain
 debt until the Application action owns it. The prompt described
@@ -3763,7 +3773,7 @@ but the slice still enforces a stricter max-60 UI rule. The ignored
 `storage/framework/testing/orders-concurrency-*.start` markers remain local
 test artifact debt and were not cleaned.
 
-Next exact action: commit the completed Stage 2.15 slice, push
-`feature/orders-workspace-subtables-and-moves`, open a draft PR against `main`,
-then update this worklog with the draft PR URL and exact pushed-head CI state;
-owner decision pending: none.
+Next exact action: wait for exact-head CI on draft PR
+[#32](https://github.com/mesropyananushavan/rest-v2/pull/32), then perform
+owner review/readiness checks; do not mark ready, merge, deploy, or start the
+next Phase 2 slice without explicit owner approval.
