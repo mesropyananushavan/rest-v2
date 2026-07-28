@@ -773,3 +773,42 @@ feature availability as payment state, because the availability layer records
 what exists for a tenant or branch and deliberately does not model billing;
 treating payment as tenant lifecycle itself, because payment is the reason a
 tenant may be switched off, not the switch.
+
+## 2026-07-28 — Audit log report uses a bounded date-window read path
+Decision: restaurant administration exposes a read-only audit log report under
+`/admin/audit-logs`. The screen uses a thin Blade controller plus an
+Application query object rather than Livewire because the neighboring Halls and
+Tables screens use that pattern for straightforward filter/list/detail CRUD,
+while Menu uses Livewire only for its dense master-detail interaction. The
+permission is `audit.logs.view`: `audit` is the cross-cutting resource family,
+`logs` names the concrete append-only records, and `view` matches the existing
+archive visibility convention for read-only access. Demo owner roles get the
+permission by default; manager, cashier, and waiter defaults are deliberately
+not decided in this slice.
+
+Audit listing queries require a date window for every request. The default
+window is the last 7 calendar days, and the server rejects windows longer than
+31 calendar days with a translated validation message. Thirty-one days covers
+a normal monthly operational review while keeping every page bounded; larger
+investigations should be split into explicit windows rather than paging an
+unbounded append-only table. Filters are optional and composable, but the
+leading access path always stays on existing composite indexes:
+`audit_logs_tenant_created_at_idx` for the required tenant/date window and for
+actor-only residual filtering, `audit_logs_tenant_action_created_at_idx` when
+`action` is present without a branch filter,
+`audit_logs_tenant_branch_created_at_idx` when `branch_id` is present, and
+`audit_logs_tenant_target_idx` for target-type filtering. Actor filtering is a
+residual predicate inside the already bounded tenant/date set.
+
+Reason: `audit_logs` grows without bound and is written from every audited
+mutation path, including hot order mutations. Adding
+`(tenant_id, actor_id, created_at)` now would add write amplification to the
+hot path for an occasional admin report. A tenant-scoped date range is an index
+range scan on the existing `audit_logs_tenant_created_at_idx`, and residual
+actor filtering inside that bounded set is the better current trade. The actor
+index remains a cheap follow-up if real data shows actor filtering is slow, but
+that decision must come from measurements, not speculation.
+
+Non-goals: no export, no CSV, no printing, no retention or purge policy, and no
+new audit write sites. The report reads existing audit records only and does
+not change audit recorders, audit models, schema, migrations, or indexes.
