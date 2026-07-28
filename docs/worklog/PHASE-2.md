@@ -4505,7 +4505,8 @@ Stage 2.22 handoff:
 - Open owner decision: the S1/S2/S3 platform-operator account shape remains
   undecided.
 
-Task `2.23-audit-log-report` is active on branch `feature/audit-log-report`,
+Task `2.23-audit-log-report` is complete and merged. It ran on branch
+`feature/audit-log-report`,
 based on `origin/main` at `1a84ee5e5fb80d4f34068c3181555bf2024735dd`.
 
 Owner decision for this slice: manager gets archive visibility and reversible
@@ -4609,7 +4610,68 @@ a residual filter inside the tenant/date range.
   head passed: duplicate `quality`, `tenant-isolation-pgsql`, and
   `orders-concurrency-pgsql` check runs all concluded `pass`.
 
-Next exact action: owner reviews draft PR #45. Do not mark ready, merge,
-force-push, rewrite history, deploy, change schema, add indexes, install
-dependencies, touch audit recorders/traits, modify `docs/BLUEPRINT.md` or
-`template/`, or decide manager/cashier/waiter defaults for `audit.logs.view`.
+Stage 2.23 handoff:
+
+- PR #45 was marked ready and merged as true merge commit
+  `bec513f10abfa0411ddcb954a01c51d81193d051` with parents
+  `1a84ee5e5fb80d4f34068c3181555bf2024735dd` and
+  `bf7df0fb0bb596d14be14ec0c3bb503214f39bea`. The remote
+  `feature/audit-log-report` branch remains present.
+- Merged-main gates passed: `make pint` (`PASS 321 files`), `make stan`
+  (`191/191`, `[OK] No errors`), `make test` (`338 passed / 13 skipped /
+  3386 assertions`), `make tenant-isolation-pgsql` (`24 passed / 99
+  assertions`), `make orders-concurrency-pgsql` (`6 passed / 43 assertions`),
+  `npm run build` passed with the known npm `min-release-age` warning, and the
+  2.16 component-attribute directive audit exited `1` with no matches.
+  PostgreSQL gates were run sequentially.
+- CI on merge commit `bec513f10abfa0411ddcb954a01c51d81193d051` completed
+  successfully.
+- New baselines of record: Pint 321 files; PHPStan 191/191; Pest 338 passed /
+  13 skipped / 3386 assertions; tenant-isolation PostgreSQL 24 passed / 99
+  assertions; orders-concurrency PostgreSQL 6 passed / 43 assertions.
+- Part A: manager now holds archive visibility and reversible restore defaults
+  for Menu and Tables: `menu.archive.view`, `menu.categories.restore`,
+  `menu.items.restore`, `tables.halls.archive.view`, `tables.halls.restore`,
+  `tables.tables.archive.view`, and `tables.tables.restore`. Manager still
+  holds no `*.force_delete` permission by default. Cashier and waiter archive
+  defaults remain undecided by the owner.
+- Part B: the restaurant admin audit report exists at `/admin/audit-logs`
+  behind `audit.logs.view`. The permission is owner-only by default. Manager,
+  cashier, and waiter defaults for `audit.logs.view` remain undecided by the
+  owner.
+- Audit report queries require a mandatory date window because `audit_logs` is
+  append-only and unbounded, so no report query may run without a bounded
+  window. The default window is the last 7 days, and the server-enforced
+  maximum is 31 days.
+- Deferred index decision: `(tenant_id, actor_id, created_at)` was deliberately
+  not added. Audit is written from 51 call sites, including every order
+  mutation, so an actor-leading index would add write amplification on the hot
+  order path to serve an occasional report. Actor filtering remains a residual
+  predicate inside the bounded tenant/date scan. Revisit this only from
+  measurements on real data, never from speculation.
+- Gotchas carried forward: Blade directives are not compiled inside
+  component-tag attributes but echo syntax is; interactive controls must be
+  proven on rendered output; the affordance contract understands only the
+  `$set` Livewire magic action; PostgreSQL make targets share
+  `smartrest_test_local` and must run sequentially; Pest memory limit lives in
+  `phpunit.xml`; never run PHP on the host; the login rate limiter returns
+  `429` under repeated automated logins, which matters for browser
+  verification scripts.
+- Security debt status: one of three closed. Tenant owners are no longer seeded
+  as superadmins, and the demo now has no seeded superadmin at all. Two remain
+  open: platform-operator account placement with its cascade-delete defect,
+  and the BYPASSRLS runtime-role boundary. Both depend on the same undecided
+  S1/S2/S3 question.
+- Open owner decision: payment tracking depth for the platform UI is undecided:
+  a single "paid until" date with a manual switch, versus invoices, amounts,
+  history, scheduled deactivation, and notifications. The platform slice cannot
+  be scoped until this is answered.
+- Open owner decision: role defaults for `audit.logs.view` and cashier/waiter
+  archive permissions remain undecided.
+- Open owner decision: the S1/S2/S3 platform-operator account shape remains
+  undecided.
+
+Next exact action: OWNER DECISION on payment tracking depth, which currently
+blocks the platform UI slice. Work not depending on it: implementing the
+feature-availability axis (Axis 1) from the BLUEPRINT authorization model. Do
+not pick one and do not start either.
