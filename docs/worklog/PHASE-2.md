@@ -4428,9 +4428,9 @@ Task `2.22-docs-platform-admin-ui` is active on branch
   `8e9ad67365dd75ea6a2bbce4ca9737a6b84863f6`. The remote
   `docs/platform-admin-ui` branch remains present.
 
-Task `2.22-remove-superadmin-from-demo-owners` is active on branch
-`feature/remove-superadmin-from-demo-owners`, based on `origin/main` at
-`131b4a75049db22bbdc3d1f8921aaedd423a2761`.
+Task `2.22-remove-superadmin-from-demo-owners` is complete and merged. It ran
+on branch `feature/remove-superadmin-from-demo-owners`, based on `origin/main`
+at `131b4a75049db22bbdc3d1f8921aaedd423a2761`.
 
 - [x] Step 2.22.1: permission audit before seeder changes. Enumerate every
   checked permission code with file/line evidence, enumerate seeded permission
@@ -4439,8 +4439,11 @@ Task `2.22-remove-superadmin-from-demo-owners` is active on branch
   role. Stop before seeder edits if any checked permission is unseeded or any
   checked permission is missing from the owner role. Result: no checked
   permission was unseeded, and the owner role lacked no checked permission.
-  Seeded-but-unchecked remains `tenancy.manage`, `identity.manage`, and
-  `payments.capture`.
+  Seeded but not yet checked, not dead: `identity.manage` is waiting for the
+  user-permission management screen described by the BLUEPRINT authorization
+  model; `tenancy.manage` is waiting for the platform administration UI
+  recorded in the 2026-07-28 platform decision; `payments.capture` belongs to
+  Phase 3.
 - [x] Step 2.22.2: remove the demo owner workaround. If the audit is clean, set
   both demo tenant owners to `superadmin => false` without changing role
   defaults, permissions, `EloquentAuthorizer`, schema, migrations, or platform
@@ -4470,5 +4473,41 @@ Task `2.22-remove-superadmin-from-demo-owners` is active on branch
   archived view, and see restore plus force-delete affordances, while
   `manager@arat.test` saw none. Temporary Chrome artifacts were removed.
 
-Next exact action: owner reviews the draft PR for task
-`2.22-remove-superadmin-from-demo-owners`; do not merge until approved.
+Stage 2.22 handoff:
+
+- PR #43 merged as true merge commit
+  `d81faf898c16dc1cbc06ddfe0df3a85ba765760a` with parents
+  `131b4a75049db22bbdc3d1f8921aaedd423a2761` and
+  `2073396262ef296a539cfaccb0d83142ea5fe1f8`.
+- Merged-main gates passed: `make pint` PASS 315 files; `make stan` 186/186,
+  `[OK] No errors`; `make test` 330 passed / 13 skipped / 3359 assertions;
+  `make tenant-isolation-pgsql` 24 passed / 99 assertions;
+  `make orders-concurrency-pgsql` 6 passed / 43 assertions; `npm run build`
+  passed; the 2.16 component-attribute directive audit exited 1 as required.
+- New baselines of record: Pint 315 files; PHPStan 186/186; Pest 330 passed /
+  13 skipped / 3359 assertions; tenant-isolation PostgreSQL 24 passed / 99
+  assertions; orders-concurrency PostgreSQL 6 passed / 43 assertions.
+- Security debt status: one of three closed. Tenant owners are no longer seeded
+  as superadmins, and the demo now has no seeded superadmin at all. Two remain
+  open, and both depend on the same unanswered question: platform-operator
+  account placement with its cascade-delete defect, and the BYPASSRLS
+  runtime-role boundary.
+- The demo deliberately has no superadmin account until the S1/S2/S3 platform
+  identity question is decided. Tests that need the bypass set the flag
+  explicitly on purpose-made users.
+- Open owner decision: role defaults for the eleven archive/restore/force-delete
+  permissions are currently owner only; whether manager, cashier, or waiter get
+  any of them is undecided.
+- Open owner decision: payment tracking depth for the platform UI is undecided:
+  a single "paid until" date with a manual switch, versus invoices, amounts,
+  history, scheduled deactivation, and notifications. The platform slice cannot
+  be scoped until this is answered.
+- Open owner decision: the S1/S2/S3 platform-operator account shape remains
+  undecided.
+
+Next exact action: OWNER DECISION on role defaults for the eleven
+archive/restore/force-delete permissions and payment tracking depth for the
+platform UI. Work not depending on either, such as the audit log report UI or
+implementing the feature-availability axis, could start first, but both are
+large and both are easier to scope once the platform direction is known. Do not
+pick one and do not start any of them.

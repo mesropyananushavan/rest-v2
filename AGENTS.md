@@ -66,11 +66,14 @@
   restoring archived records, and permanently deleting archived records are
   ordinary permissions. Anyone holding the permission may perform the action,
   including a waiter if the tenant owner grants it; these actions are not tied
-  to a role and not tied to `is_superadmin`. Use the permission pattern
-  `{module}.{resource}.archive.view`, `{module}.{resource}.restore`, and
-  `{module}.{resource}.force_delete` when adding archive maintenance to a new
-  module. Restore and permanent delete are separate permissions; granting one
-  does not grant the other. Physical deletion is never exposed to normal users;
+  to a role and not tied to `is_superadmin`. Declare archive visibility at the
+  level where the archive is presented: `{module}.archive.view` for one screen
+  showing a module-wide archive, or `{module}.{resource}.archive.view` when each
+  resource has its own archived view. Use `{module}.{resource}.restore` and
+  `{module}.{resource}.force_delete` for restore and permanent delete when
+  adding archive maintenance to a new module. Restore and permanent delete are
+  separate permissions; granting one does not grant the other. Physical
+  deletion is never exposed to normal users;
   any permanent delete UI is an irreversible maintenance action with a hard
   irreversible confirmation. Archive and permanent-delete controls must use
   the shared confirm-modal component. Archive filters, archived badges, restore
