@@ -422,6 +422,63 @@ Open questions for implementation time:
 Caching and invalidation, navigation N+1 behavior, and migration of existing
 role-only checks must be decided with code in hand, not in advance.
 
+Platform administration UI, decided: platform administration lives in a
+separate UI from the restaurant admin. It uses the `/platform` route prefix,
+`platform.*` route names, its own middleware group, and its own `platform` auth
+guard. `/admin` remains restaurant administration. `/platform` is the chosen
+name because it describes the system-side administration surface. The rejected
+names are `/product-owner`, because "product owner" is an established scrum
+role and would mislead a future reader; `/operator`, because it describes the
+person rather than the system; and `/console`, because it is too generic.
+
+The platform UI scope is tenant lifecycle and payment-status operation:
+creating restaurants and branches, activating and deactivating them, seeing the
+list of all restaurants, and seeing payment status so a non-paying tenant can
+be switched off. None of those tasks require entering a tenant's data. The
+`tenants` table is the list of tenants and is not tenant-scoped. Therefore a
+separate platform UI makes "how does a platform operator enter a tenant's
+context" an optional later capability rather than a prerequisite for platform
+administration. This reduces what the platform-operator identity decision must
+solve up front.
+
+This is evidence toward the platform-operator identity spike's S3 shape: a
+separate platform entity with its own auth guard. It is evidence, not a
+decision; S1, S2, and S3 remain open until that decision is made. With platform
+administration in its own UI, `is_superadmin` stops carrying platform identity
+and remains only the break-glass access flag recorded in the 2026-07-24
+decision: a platform operator working inside a tenant as themselves. The cost
+is accepted: two UIs mean two navigations, two layouts, duplicated
+authentication surface, and drift risk over time. The mitigation is that the
+platform UI stays deliberately minimal: English only, no three-locale parity,
+tables and filters rather than rich Livewire screens.
+
+Three concepts must not be merged:
+
+- Tenant lifecycle: whether the restaurant is switched on or off, and whether
+  anyone can log in at all. `tenants.status` already exists with default
+  `active` and an index, `branches.status` also exists, and
+  `EloquentTenantDirectory` already filters active tenants. The switch
+  physically exists and has no UI.
+- Feature availability: Axis 1 in this authorization model, deciding which
+  modules exist for a tenant or branch. A disabled stock module does not stop
+  the restaurant working; a deactivated tenant stops everything.
+- Payment: why a tenant was switched off. Nothing for this exists in the
+  system: no subscriptions, invoices, dates, payment history, scheduled
+  automatic deactivation, or customer notifications. The 2026-07-28
+  authorization decision deliberately excluded billing from feature
+  availability, so payment is a third independent concern that drives tenant
+  lifecycle rather than replacing it.
+
+Conflating tenant lifecycle, feature availability, and payment is the most
+likely mistake in this area.
+
+Open payment question: How deep does payment tracking go at the start: a single
+"paid until" date with a manual switch the operator flips, or full accounting
+with invoices, amounts, payment history, scheduled automatic deactivation and
+customer notifications. The owner has not decided. The two answers differ by
+roughly one slice versus a multi-week module, and the platform UI slice cannot
+be scoped until this is answered.
+
 Multi-tenancy: `ResolveTenant` middleware derives tenant from domain/header/session/token; `ResolveBranch` sets branch context. All tenant models use `TenantScoped` global scope and `BelongsToTenant` trait. Jobs serialize tenant/branch ids and restore context before execution. Cache keys use `tenant:{id}:branch:{id}:...`.
 
 i18n: UI strings use translation keys and resolve through a tenant-level database override layer on top of the `hy`/`ru`/`en` language files. Overrides are tenant-only, never branch-level, and a defined safety/auth/destructive-action key set is not overridable. DB localized names that users edit keep using the JSON translation value object unchanged, with fallback order user locale -> tenant locale -> `en`; those names are not part of the UI translation override layer. Currency/date/number formatting happens in presenters/resources, not domain services.

@@ -604,6 +604,18 @@ use unqualified `auth` middleware through the tenant admin routes
 test helpers and tests for platform login, tenant entry, and audit actor
 recording.
 
+## Platform UI decision impact
+
+The 2026-07-28 platform administration decision adds evidence toward S3 without
+settling S1/S2/S3. The owner described a platform-side UI at `/platform`, with
+`platform.*` route names and a `platform` guard, for creating restaurants and
+branches, activating and deactivating them, listing all restaurants, and seeing
+payment status. That capability set is materially different from break-glass
+access inside a tenant. Because those tasks operate on the non-tenant-scoped
+`tenants` list and tenant lifecycle, they do not require entering a tenant's
+data. Tenant entry becomes an optional later capability instead of a
+prerequisite for the first platform administration slice.
+
 ## Newly surfaced questions
 
 - What authorizes destructive operations and archive visibility once tenant
