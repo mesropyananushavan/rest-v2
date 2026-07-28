@@ -3962,8 +3962,56 @@ F1 remains open: opening an order from the board does not navigate to the
 workspace; `OrderBoard::openOrder()` sets a status message and re-renders.
 This is still an owner design question and was untouched by Stage 2.16.
 
-Next exact action: OWNER DECISION between (a) a browser smoke-test slice
-covering board, workspace, and menu index, wired into CI; (b) F1
-board-to-workspace navigation; (c) remaining order lifecycle UI, including
-waiter assignment, cancel order, and move order; or (d) Phase 3
-payments/cashbox. Do not pick one and do not start any.
+Task `2.17-livewire-affordance-contract` is active on branch
+`feature/livewire-affordance-contract`, based on `origin/main` at
+`b74c6cacd33338c942b20824da17c334c4671b07`.
+
+- [x] Stage 2.17.1: add the shared rendered Livewire affordance contract in
+  `tests/Pest.php`, using the existing PHP DOM extension to extract rendered
+  attributes, then validate public action methods and public model properties
+  while ignoring Livewire-owned runtime attributes. Result: helper covers
+  action calls, Livewire `$set(...)`, model root properties, nested model roots
+  such as `moveTargetSubtableIds.123`, and rejects uncompiled Blade markers.
+- [x] Stage 2.17.2: apply the contract to the six admin Livewire screens
+  already under test in meaningful render states: `DashboardCounters`,
+  `TranslationOverridesEditor`, `MenuIndex`, `MenuItemForm`, `OrderBoard`, and
+  `OrderWorkspace`. Result: focused container Pest subset passed `73 passed /
+  621 assertions`; no existing dead binding was found.
+- [x] Stage 2.17.3: prove the contract fails for a renamed method, a Blade
+  method typo, and a missing model property, then restore all temporary fault
+  injections before final gates. Result: C1, C2, and C3 each failed with a
+  specific missing method/property message; restored workspace proof passed `1
+  passed / 21 assertions`.
+- [x] Stage 2.17.4: run the full gate set, update this worklog with results,
+  commit, push normally, and open a draft PR without merging.
+  Result before commit: `make pint` passed and fixed one style issue in
+  `tests/Pest.php` (`317 files`), `make stan` analysed `188/188` with `[OK]
+  No errors`, `make test` passed `316 passed / 13 skipped / 3237 assertions`,
+  `make tenant-isolation-pgsql` passed `23 passed / 96 assertions`,
+  `make orders-concurrency-pgsql` passed `6 passed / 43 assertions`,
+  `npm run build` passed with the known npm `min-release-age` warning,
+  `git diff --check` had no output, and the component-attribute directive
+  audit exited `1` with no matches. PostgreSQL gates were run sequentially.
+
+Stage 2.17 Livewire affordance contract: complete locally pending draft PR/CI.
+The contract extracts rendered `wire:*` attributes with PHP `DOMDocument`
+using the already-installed DOM extension, validates action bindings as clean
+public method calls or Livewire `$set(...)` public-property targets, validates
+`wire:model*` root public properties, and ignores Livewire-owned metadata/state
+attributes (`wire:id`, `wire:name`, `wire:snapshot`, `wire:effects`,
+`wire:key`, `wire:navigate`, `wire:loading*`, `wire:transition*`,
+`wire:ignore*`, `wire:poll*`). Nested model paths validate the root property,
+for example `moveTargetSubtableIds.123` validates `moveTargetSubtableIds`.
+Covered admin Livewire screens: `DashboardCounters`,
+`TranslationOverridesEditor`, `MenuIndex`, `MenuItemForm`, `OrderBoard`, and
+`OrderWorkspace`. No existing dead bindings were found. No dependencies were
+added; `composer.json` and `package.json` are unchanged.
+
+New baselines after Stage 2.17: Pint `317 files`, PHPStan `188/188` with
+`[OK] No errors`, SQLite test suite `316 passed / 13 skipped / 3237
+assertions`, tenant isolation PostgreSQL `23 passed / 96 assertions`, and
+orders concurrency PostgreSQL `6 passed / 43 assertions`.
+
+Next exact action: push `feature/livewire-affordance-contract`, open a draft
+PR against `main`, wait for CI, and keep the PR draft/unmerged for owner
+review.

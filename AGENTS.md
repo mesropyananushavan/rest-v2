@@ -232,6 +232,11 @@ each other and you cannot resolve it safely.
   `:x-data="..."`, etc.) or a plain HTML element, and every interactive control
   must be proven by assertions on rendered output, never on template source
   alone.
+- Every interactive Livewire control must be covered by the rendered-affordance
+  contract in `tests/Pest.php`, proving rendered `wire:*` bindings resolve to
+  real public component methods or properties. Adding a new admin Livewire
+  screen, or a new rendered binding on an existing one, requires adding or
+  expanding that contract coverage.
 - SPA frameworks (React, Vue, Angular, etc.) are not used for admin screens.
 - Focused UI libraries for specific widgets are allowed and encouraged when a
   real widget need exists, for example searchable selects, calendars/date

@@ -146,10 +146,14 @@ it('removes an existing item image through the Livewire form', function (): void
     );
     $internalImage = menuImageLivewireMetadata($item, 'internal_image');
 
-    Livewire::test(MenuItemForm::class, [
+    $component = Livewire::test(MenuItemForm::class, [
         'defaultCurrency' => 'AMD',
         'item' => $item,
-    ])
+    ]);
+
+    assertRenderedLivewireBindingsResolve($component->html(), MenuItemForm::class);
+
+    $component
         ->call('removeInternalImage')
         ->assertHasNoErrors();
 

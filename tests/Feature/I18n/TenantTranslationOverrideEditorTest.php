@@ -132,6 +132,7 @@ it('keeps special translation values out of JavaScript evaluated attributes', fu
     }
 
     assertRenderedHtmlHasNoUncompiledBladeDirectiveAttributes($html);
+    assertRenderedLivewireBindingsResolve($html, TranslationOverridesEditor::class);
 
     foreach (['Chef', 'Quote', 'Path C:', 'Line one', 'Unicode', 'Markup marker'] as $marker) {
         expect($javascriptAttributes)->not->toContain($marker);
@@ -151,10 +152,14 @@ it('edits and resets an override through the existing actions while preserving U
     $records = translationEditorUser('translation-editor-write', [TenantTranslationOverridePermissions::MANAGE]);
     translationEditorContext($records);
 
-    Livewire::withQueryParams(['locale' => 'en', 'q' => 'dashboard', 'page' => 1])
+    $component = Livewire::withQueryParams(['locale' => 'en', 'q' => 'dashboard', 'page' => 1])
         ->actingAs($records['user'])
         ->test(TranslationOverridesEditor::class)
-        ->call('startEditing', 'admin.dashboard.title')
+        ->call('startEditing', 'admin.dashboard.title');
+
+    assertRenderedLivewireBindingsResolve($component->html(), TranslationOverridesEditor::class);
+
+    $component
         ->set('overrideValue', 'Ops Center')
         ->call('save')
         ->assertSet('locale', 'en')

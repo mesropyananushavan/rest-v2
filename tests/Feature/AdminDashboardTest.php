@@ -125,6 +125,7 @@ it('loads dashboard counters through the Livewire component', function (): void 
         ->assertSee(__('admin.dashboard.metrics.items.label'), false);
 
     assertRenderedHtmlHasNoUncompiledBladeDirectiveAttributes($component->html());
+    assertRenderedLivewireBindingsResolve($component->html(), DashboardCounters::class);
 });
 
 /**
