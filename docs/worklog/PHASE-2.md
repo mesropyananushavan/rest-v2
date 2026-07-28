@@ -4303,3 +4303,89 @@ Next exact action: owner reviews draft PR #40 for task
 `2.20-spike-platform-operator-identity`. Do not mark ready, merge, deploy, run
 gates, force-push, rewrite history, or change files outside the three permitted
 documentation paths.
+
+Task `2.20-spike-platform-operator-identity` is complete and merged. PR #40 was
+marked ready for review and merged as true merge commit
+`c2b59d25b84087c801b23619c6c52a1e18fb4271` with parents
+`bb3c3a2fd8cd7d340cb03bd5cd0bdf6d18b172c3` and
+`fb5df6916906371f3b00576c4ff9940ab8e368d3`. The remote
+`docs/spike-platform-operator-identity` branch remains present at
+`fb5df6916906371f3b00576c4ff9940ab8e368d3`.
+
+Task `2.21-replace-superadmin-gates-with-permissions` is active on branch
+`feature/permissions-for-destructive-operations`, based on post-#40
+`origin/main` at `c2b59d25b84087c801b23619c6c52a1e18fb4271`.
+
+Pre-implementation finding: `AGENTS.md` still states that archive visibility,
+restore controls, and permanent-delete controls are superadmin-only. That
+conflicts with the owner-approved 2.21 task decision that restore, permanent
+delete, and archive visibility are ordinary permissions. Do not edit
+`AGENTS.md` in this slice; implement the newer scoped owner decision and report
+the disagreement.
+
+- [x] Step 2.21.1: route and screen permission replacement. Replace the eight
+  destructive route `superadmin` gates with action-specific `can:` middleware,
+  and replace the five archive visibility checks with permission checks. Split
+  archive visibility from restore and force-delete UI visibility so each new
+  permission is independently meaningful. Result: Menu category/item restore
+  and force-delete routes, halls restore/force-delete routes, and tables
+  restore/force-delete routes now use separate `can:` middleware. Menu and
+  Tables archive visibility now checks archive-view permissions instead of
+  `is_superadmin`, with restore and force-delete controls split behind their
+  own permissions.
+- [x] Step 2.21.2: permission seeding and middleware cleanup. Register the new
+  permission rows in `IdentityDemoSeeder`, grant them to `owner` only, leave
+  manager/cashier/waiter defaults unchanged, and remove
+  `EnsureSuperAdmin`/`EnsureSuperAdminForDeletes` plus aliases only if grep
+  proves no references remain. Result: added `menu.archive.view`,
+  `menu.categories.restore`, `menu.categories.force_delete`,
+  `menu.items.restore`, `menu.items.force_delete`,
+  `tables.halls.archive.view`, `tables.halls.restore`,
+  `tables.halls.force_delete`, `tables.tables.archive.view`,
+  `tables.tables.restore`, and `tables.tables.force_delete`; owner roles get
+  them, other role defaults stay unchanged. The superadmin middleware classes
+  and aliases were removed after grep showed no remaining route references.
+- [x] Step 2.21.3: non-superadmin regression coverage. Update focused Menu and
+  Tables route/UI tests so non-superadmin users with permissions can see
+  archived records, restore, and permanently delete; non-superadmin users
+  without permissions get 403 and no archive controls; and restore-only users
+  cannot permanently delete. Result: focused Menu Blade, Menu Livewire,
+  overflow, context-return, demo-seeder, Hall Blade, and Table Blade coverage
+  now proves the new paths with non-superadmin actors. Restore-only users are
+  refused permanent delete.
+- [x] Step 2.21.4: documentation update. Add the dated DECISIONS entry, add one
+  line under the spike's newly surfaced questions marking the destructive
+  operations question answered, and keep this worklog current. Result:
+  `docs/DECISIONS.md` records the 2026-07-28 permission decision, and
+  `docs/spikes/platform-operator-identity.md` points the earlier question to
+  that decision.
+- [x] Step 2.21.5: verification and publish. Run `make pint`, `make stan`,
+  `make test`, `make tenant-isolation-pgsql`, `make orders-concurrency-pgsql`,
+  `npm run build`, `git diff --check`, and the 2.16 component-attribute
+  directive audit. Run the two PostgreSQL gates sequentially. After
+  `make fresh`, perform the required headless Chrome verification as a
+  non-superadmin user, clean up temporary browser artifacts, prove cleanup with
+  `git status --branch --porcelain=v2`, `git stash list`, `git worktree list`,
+  and `ls -la`, then commit, push normally, and open a draft PR. Result so far:
+  local gates passed: `make pint` (`PASS 315 files`), `make stan` (`186/186`,
+  `[OK] No errors`), `make test` (`329 passed / 13 skipped / 3359
+  assertions`), `make tenant-isolation-pgsql` (`23 passed / 96 assertions`),
+  `make orders-concurrency-pgsql` (`6 passed / 43 assertions`), `npm run
+  build` passed with the known npm `min-release-age` warning, `git diff
+  --check` had no output, and the component-attribute directive audit exited
+  `1` with no matches. The PostgreSQL gates were run sequentially. `make
+  fresh` passed before browser verification. Headless Chrome verified a
+  non-superadmin owner-role user could open Menu archived mode, see archived
+  item `Լոռի ձվածեղ`, submit the restore form, and see the restored flash;
+  `manager@arat.test` could not see archive mode buttons, restore forms, or
+  force-delete forms.
+
+Draft PR #41 is open at
+`https://github.com/mesropyananushavan/rest-v2/pull/41`. Initial implementation
+commit `e1c7491d49d888ba51e8fa972763d93fce5b1b72` was pushed normally; this
+handoff update is docs-only and should become the PR head after push.
+
+Next exact action: wait for CI on draft PR #41 at the exact pushed head, then
+the owner reviews the PR. Do not mark ready, merge, delete the branch, remove
+demo owner superadmin flags, change schema, implement feature availability or
+per-user deviations, deploy, force-push, or merge feature work.

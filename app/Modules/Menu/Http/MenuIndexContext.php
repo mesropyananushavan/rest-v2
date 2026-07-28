@@ -45,7 +45,7 @@ final readonly class MenuIndexContext
             }
         }
 
-        return self::fromInput($input, $browseItems, (bool) data_get($request->user(), 'is_superadmin'), $defaultArchiveMode);
+        return self::fromInput($input, $browseItems, $request->user()?->can('menu.archive.view') ?? false, $defaultArchiveMode);
     }
 
     /**

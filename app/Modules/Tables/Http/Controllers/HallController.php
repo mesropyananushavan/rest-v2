@@ -20,12 +20,14 @@ final class HallController
 {
     public function index(Request $request, PaginateHalls $halls): View
     {
-        $canViewArchive = (bool) data_get($request->user(), 'is_superadmin');
+        $canViewArchive = $request->user()?->can('tables.halls.archive.view') ?? false;
         $archiveMode = $canViewArchive ? $this->archiveMode($request) : 'active';
         $includeInactive = $request->boolean('show_inactive');
 
         return view('modules.tables.halls.index', [
             'archiveMode' => $archiveMode,
+            'canForceDeleteHalls' => $request->user()?->can('tables.halls.force_delete') ?? false,
+            'canRestoreHalls' => $request->user()?->can('tables.halls.restore') ?? false,
             'canViewArchive' => $canViewArchive,
             'halls' => $halls($includeInactive, $archiveMode, (int) $request->integer('per_page', 25), (int) $request->integer('page', 1)),
             'includeInactive' => $includeInactive,

@@ -9,6 +9,8 @@ use App\Support\Money\MoneyFormatter;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 /** @var bool $canManageItems */
+/** @var bool $canRestoreItems */
+/** @var bool $canForceDeleteItems */
 /** @var bool $canViewArchive */
 /** @var MenuItemImageUrlResolver $imageUrls */
 /** @var LengthAwarePaginator<int, MenuItem> $items */
@@ -88,9 +90,9 @@ use Illuminate\Pagination\LengthAwarePaginator;
                         />
                     </x-row-overflow>
                 @endif
-                @if ($item->trashed() && $canManageItems && $canViewArchive)
+                @if ($item->trashed() && $canViewArchive && ($canRestoreItems || $canForceDeleteItems))
                     <x-row-overflow :id="'item_overflow_'.((int) $item->id)" :label="__('menu.actions.more')">
-                        @if (! $item->category?->trashed())
+                        @if (! $item->category?->trashed() && $canRestoreItems)
                             <form method="post" action="{{ route('admin.menu.items.restore', array_merge(['item' => (int) $item->id], $menuContext)) }}">
                                 @csrf
                                 <button type="submit" role="menuitem" class="flex w-full items-center px-3 py-2 text-left text-sm font-semibold text-green-800 transition hover:bg-smartrest-success/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-smartrest-success">
@@ -98,16 +100,18 @@ use Illuminate\Pagination\LengthAwarePaginator;
                                 </button>
                             </form>
                         @endif
-                        <x-confirm-modal
-                            id="force_delete_item_{{ (int) $item->id }}"
-                            :action="route('admin.menu.items.force-delete', array_merge(['item' => (int) $item->id], $menuContext))"
-                            :title="__('menu.confirm.force_delete_item_title')"
-                            :message="__('menu.confirm.force_delete_item_message')"
-                            :trigger-label="__('menu.actions.force_delete')"
-                            :confirm-label="__('menu.actions.force_delete')"
-                            :trigger-class="'flex w-full items-center px-3 py-2 text-left text-sm font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-smartrest-danger'"
-                            role="menuitem"
-                        />
+                        @if ($canForceDeleteItems)
+                            <x-confirm-modal
+                                id="force_delete_item_{{ (int) $item->id }}"
+                                :action="route('admin.menu.items.force-delete', array_merge(['item' => (int) $item->id], $menuContext))"
+                                :title="__('menu.confirm.force_delete_item_title')"
+                                :message="__('menu.confirm.force_delete_item_message')"
+                                :trigger-label="__('menu.actions.force_delete')"
+                                :confirm-label="__('menu.actions.force_delete')"
+                                :trigger-class="'flex w-full items-center px-3 py-2 text-left text-sm font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-smartrest-danger'"
+                                role="menuitem"
+                            />
+                        @endif
                     </x-row-overflow>
                 @endif
             </div>

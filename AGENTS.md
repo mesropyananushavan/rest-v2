@@ -64,12 +64,18 @@
   (archive) for entities where restoration is valid. A user with the normal
   manage permission for that entity may archive it. Viewing archived records,
   restoring archived records, and permanently deleting archived records are
-  superadmin-only (`is_superadmin = true`). Physical deletion is never exposed
-  to normal users; any permanent delete UI is a superadmin-only maintenance
-  action with a hard irreversible confirmation. Archive and permanent-delete
-  controls must use the shared confirm-modal component. Archive filters,
-  archived badges, restore controls, and permanent-delete controls must not be
-  rendered for non-superadmins. This applies to every current and future
+  ordinary permissions. Anyone holding the permission may perform the action,
+  including a waiter if the tenant owner grants it; these actions are not tied
+  to a role and not tied to `is_superadmin`. Use the permission pattern
+  `{module}.{resource}.archive.view`, `{module}.{resource}.restore`, and
+  `{module}.{resource}.force_delete` when adding archive maintenance to a new
+  module. Restore and permanent delete are separate permissions; granting one
+  does not grant the other. Physical deletion is never exposed to normal users;
+  any permanent delete UI is an irreversible maintenance action with a hard
+  irreversible confirmation. Archive and permanent-delete controls must use
+  the shared confirm-modal component. Archive filters, archived badges, restore
+  controls, and permanent-delete controls must not be rendered to users lacking
+  the corresponding permission. This applies to every current and future
   module.
 - **Scale from day one:** every design and code review must ask what happens at
   1000 tenants, 100 active users per tenant, and millions of rows per table.

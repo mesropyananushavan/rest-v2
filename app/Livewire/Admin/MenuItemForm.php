@@ -330,7 +330,7 @@ final class MenuItemForm extends Component
         return MenuIndexContext::fromInput(
             $menuContext,
             app(BrowseMenuItems::class),
-            (bool) data_get(auth()->user(), 'is_superadmin'),
+            auth()->user()?->can('menu.archive.view') ?? false,
         );
     }
 

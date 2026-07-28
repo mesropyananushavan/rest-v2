@@ -719,3 +719,23 @@ copying role permissions onto users, because role updates would become manual
 fleet-wide edits and re-applying a template would destroy personal deviations;
 letting tenant owners control availability, because then the layer would no
 longer be a platform-controlled product boundary.
+
+## 2026-07-28 — Destructive operations and archive visibility use permissions
+Decision: restore, permanent delete, and archive visibility are ordinary
+permissions, not `is_superadmin` gates. Restore and permanent delete are
+separate permissions because restore is reversible while permanent delete is
+not. Any tenant user may hold these permissions, including a waiter, if the
+tenant owner grants them. `is_superadmin` therefore returns to its single
+documented purpose: the active-user break-glass bypass in the Identity
+authorizer.
+Reason: the platform flag had drifted into two jobs: the documented central
+authorizer bypass and hard gates on destructive routes/archive visibility.
+Keeping destructive maintenance behind real permissions makes the behavior
+tenant-manageable and lets the project later remove `is_superadmin` from demo
+tenant owner accounts without silently removing their archive maintenance
+capability.
+Rejected: continuing to gate restore, permanent delete, or archive visibility
+on `is_superadmin`, because that keeps tenant-owner maintenance capability tied
+to a platform-operator flag; using one shared destructive permission for both
+restore and permanent delete, because the owner may grant reversible restore
+without granting irreversible permanent deletion.

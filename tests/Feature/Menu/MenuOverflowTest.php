@@ -66,12 +66,11 @@ it('renders active menu destructive actions inside row overflow menus and keeps 
         ->toContain('focusFirstItem()');
 });
 
-it('renders archived restore and force delete only inside superadmin row overflow menus', function (): void {
+it('renders archived restore and force delete only for non-superadmins with archive permissions', function (): void {
     $owner = menuOverflowUser(
         'menu-overflow-archived',
         'menu-overflow-owner',
-        ['menu.categories.manage', 'menu.items.manage'],
-        superadmin: true,
+        ['menu.archive.view', 'menu.categories.manage', 'menu.categories.restore', 'menu.categories.force_delete', 'menu.items.manage', 'menu.items.restore', 'menu.items.force_delete'],
     );
     $itemRecords = menuOverflowRecords($owner, 'Item Archive');
 
@@ -118,9 +117,11 @@ it('renders archived restore and force delete only inside superadmin row overflo
         __('menu.actions.restore'),
         'force_delete_category_'.(int) $categoryRecords['category']->id,
     ]);
+
+    expect($owner['user']->is_superadmin)->toBeFalse();
 });
 
-it('does not render archive maintenance content inside overflow menus for non-superadmins', function (): void {
+it('does not render archive maintenance content inside overflow menus without archive permissions', function (): void {
     $manager = menuOverflowUser('menu-overflow-gated', 'menu-overflow-gated-manager', ['menu.categories.manage', 'menu.items.manage']);
     $records = menuOverflowRecords($manager, 'Gated Archive');
 

@@ -85,9 +85,9 @@ return [
     ],
     'confirm' => [
         'archive_category_title' => 'Archive category?',
-        'archive_category_message' => 'This archives the category and its current items. You can restore the category later as a superadmin.',
+        'archive_category_message' => 'This archives the category and its current items. An authorized user can bring the category back later.',
         'archive_item_title' => 'Archive item?',
-        'archive_item_message' => 'This hides the item from normal menu workflows. A superadmin can restore it later.',
+        'archive_item_message' => 'This hides the item from normal menu workflows. An authorized user can bring it back later.',
         'force_delete_category_title' => 'Delete category forever?',
         'force_delete_category_message' => 'This permanently deletes the archived category and its archived items. This action is irreversible.',
         'force_delete_item_title' => 'Delete item forever?',

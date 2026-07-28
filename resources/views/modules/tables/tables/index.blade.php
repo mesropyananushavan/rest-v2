@@ -9,6 +9,8 @@ use Illuminate\Pagination\LengthAwarePaginator;
 /** @var Hall $hall */
 /** @var LengthAwarePaginator<int, Table> $tables */
 /** @var 'active'|'archived'|'all' $archiveMode */
+/** @var bool $canForceDeleteTables */
+/** @var bool $canRestoreTables */
 /** @var bool $canViewArchive */
 /** @var bool $includeInactive */
 ?>
@@ -129,20 +131,24 @@ use Illuminate\Pagination\LengthAwarePaginator;
                                             :confirm-label="__('tables.tables.actions.archive')"
                                         />
                                     @elseif ($canViewArchive)
-                                        <form method="post" action="{{ route('admin.tables.tables.restore', ['hall' => (int) $hall->id, 'table' => (int) $table->id]) }}">
-                                            @csrf
-                                            <x-button type="submit" variant="outline-primary" size="sm">
-                                                {{ __('tables.tables.actions.restore') }}
-                                            </x-button>
-                                        </form>
-                                        <x-confirm-modal
-                                            id="force_delete_table_{{ (int) $table->id }}"
-                                            :action="route('admin.tables.tables.force-delete', ['hall' => (int) $hall->id, 'table' => (int) $table->id])"
-                                            :title="__('tables.tables.confirm.force_delete_title')"
-                                            :message="__('tables.tables.confirm.force_delete_message')"
-                                            :trigger-label="__('tables.tables.actions.force_delete')"
-                                            :confirm-label="__('tables.tables.actions.force_delete')"
-                                        />
+                                        @if ($canRestoreTables)
+                                            <form method="post" action="{{ route('admin.tables.tables.restore', ['hall' => (int) $hall->id, 'table' => (int) $table->id]) }}">
+                                                @csrf
+                                                <x-button type="submit" variant="outline-primary" size="sm">
+                                                    {{ __('tables.tables.actions.restore') }}
+                                                </x-button>
+                                            </form>
+                                        @endif
+                                        @if ($canForceDeleteTables)
+                                            <x-confirm-modal
+                                                id="force_delete_table_{{ (int) $table->id }}"
+                                                :action="route('admin.tables.tables.force-delete', ['hall' => (int) $hall->id, 'table' => (int) $table->id])"
+                                                :title="__('tables.tables.confirm.force_delete_title')"
+                                                :message="__('tables.tables.confirm.force_delete_message')"
+                                                :trigger-label="__('tables.tables.actions.force_delete')"
+                                                :confirm-label="__('tables.tables.actions.force_delete')"
+                                            />
+                                        @endif
                                     @endif
                                 </div>
                             </td>

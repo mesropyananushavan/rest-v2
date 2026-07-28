@@ -123,10 +123,21 @@ final class IdentityDemoSeeder extends Seeder
             'tenancy.manage' => 'Manage tenants and branches',
             TenantTranslationOverridePermissions::MANAGE => 'Manage tenant translation overrides',
             'identity.manage' => 'Manage users and roles',
+            'menu.archive.view' => 'View archived menu records',
             'menu.categories.manage' => 'Manage menu categories',
+            'menu.categories.restore' => 'Restore archived menu categories',
+            'menu.categories.force_delete' => 'Permanently delete archived menu categories',
             'menu.items.manage' => 'Manage menu items',
+            'menu.items.restore' => 'Restore archived menu items',
+            'menu.items.force_delete' => 'Permanently delete archived menu items',
+            'tables.halls.archive.view' => 'View archived halls',
             'tables.halls.manage' => 'Manage halls',
+            'tables.halls.restore' => 'Restore archived halls',
+            'tables.halls.force_delete' => 'Permanently delete archived halls',
+            'tables.tables.archive.view' => 'View archived tables',
             'tables.tables.manage' => 'Manage tables',
+            'tables.tables.restore' => 'Restore archived tables',
+            'tables.tables.force_delete' => 'Permanently delete archived tables',
             'orders.take' => 'Take orders',
             'payments.capture' => 'Capture payments',
         ];
@@ -138,7 +149,7 @@ final class IdentityDemoSeeder extends Seeder
     private function rolePermissions(): array
     {
         return [
-            'owner' => ['tenancy.manage', TenantTranslationOverridePermissions::MANAGE, 'identity.manage', 'menu.categories.manage', 'menu.items.manage', 'tables.halls.manage', 'tables.tables.manage', 'orders.take', 'payments.capture'],
+            'owner' => ['tenancy.manage', TenantTranslationOverridePermissions::MANAGE, 'identity.manage', 'menu.archive.view', 'menu.categories.manage', 'menu.categories.restore', 'menu.categories.force_delete', 'menu.items.manage', 'menu.items.restore', 'menu.items.force_delete', 'tables.halls.archive.view', 'tables.halls.manage', 'tables.halls.restore', 'tables.halls.force_delete', 'tables.tables.archive.view', 'tables.tables.manage', 'tables.tables.restore', 'tables.tables.force_delete', 'orders.take', 'payments.capture'],
             'manager' => [TenantTranslationOverridePermissions::MANAGE, 'identity.manage', 'menu.categories.manage', 'menu.items.manage', 'tables.halls.manage', 'tables.tables.manage', 'orders.take', 'payments.capture'],
             'cashier' => ['orders.take', 'payments.capture'],
             'waiter' => ['orders.take'],

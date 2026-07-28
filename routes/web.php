@@ -88,10 +88,10 @@ Route::middleware(['tenant', 'branch', 'auth'])->prefix('/admin/menu')->name('ad
         ->middleware('can:menu.categories.manage')
         ->name('categories.destroy');
     Route::post('/categories/{category}/restore', [MenuCategoryController::class, 'restore'])
-        ->middleware(['can:menu.categories.manage', 'superadmin'])
+        ->middleware('can:menu.categories.restore')
         ->name('categories.restore');
     Route::delete('/categories/{category}/force-delete', [MenuCategoryController::class, 'forceDelete'])
-        ->middleware(['can:menu.categories.manage', 'superadmin'])
+        ->middleware('can:menu.categories.force_delete')
         ->name('categories.force-delete');
 
     Route::get('/items/create', [MenuItemController::class, 'create'])
@@ -113,10 +113,10 @@ Route::middleware(['tenant', 'branch', 'auth'])->prefix('/admin/menu')->name('ad
         ->middleware('can:menu.items.manage')
         ->name('items.destroy');
     Route::post('/items/{item}/restore', [MenuItemController::class, 'restore'])
-        ->middleware(['can:menu.items.manage', 'superadmin'])
+        ->middleware('can:menu.items.restore')
         ->name('items.restore');
     Route::delete('/items/{item}/force-delete', [MenuItemController::class, 'forceDelete'])
-        ->middleware(['can:menu.items.manage', 'superadmin'])
+        ->middleware('can:menu.items.force_delete')
         ->name('items.force-delete');
 });
 
@@ -140,10 +140,10 @@ Route::middleware(['tenant', 'branch', 'auth'])->prefix('/admin/tables/halls')->
         ->middleware('can:tables.halls.manage')
         ->name('destroy');
     Route::post('/{hall}/restore', [HallController::class, 'restore'])
-        ->middleware(['can:tables.halls.manage', 'superadmin'])
+        ->middleware('can:tables.halls.restore')
         ->name('restore');
     Route::delete('/{hall}/force-delete', [HallController::class, 'forceDelete'])
-        ->middleware(['can:tables.halls.manage', 'superadmin'])
+        ->middleware('can:tables.halls.force_delete')
         ->name('force-delete');
 });
 
@@ -167,9 +167,9 @@ Route::middleware(['tenant', 'branch', 'auth'])->prefix('/admin/tables/halls/{ha
         ->middleware('can:tables.tables.manage')
         ->name('destroy');
     Route::post('/{table}/restore', [TableController::class, 'restore'])
-        ->middleware(['can:tables.tables.manage', 'superadmin'])
+        ->middleware('can:tables.tables.restore')
         ->name('restore');
     Route::delete('/{table}/force-delete', [TableController::class, 'forceDelete'])
-        ->middleware(['can:tables.tables.manage', 'superadmin'])
+        ->middleware('can:tables.tables.force_delete')
         ->name('force-delete');
 });

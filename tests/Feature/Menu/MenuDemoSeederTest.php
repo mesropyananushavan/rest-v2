@@ -27,6 +27,37 @@ it('seeds deterministic menu data visible to demo managers by tenant', function 
         ->and(User::withoutGlobalScopes()->where('email', 'owner@northstar.test')->firstOrFail()->is_superadmin)->toBeTrue()
         ->and(User::withoutGlobalScopes()->where('email', 'manager@northstar.test')->firstOrFail()->is_superadmin)->toBeFalse();
 
+    $aratOwner = User::withoutGlobalScopes()->where('email', 'owner@arat.test')->firstOrFail();
+    $aratManager = User::withoutGlobalScopes()->where('email', 'manager@arat.test')->firstOrFail();
+
+    app(TenantResolver::class)->set((int) $aratOwner->tenant_id);
+
+    expect($aratOwner->role()->firstOrFail()->permissions()->pluck('code')->all())
+        ->toContain('menu.archive.view')
+        ->toContain('menu.categories.restore')
+        ->toContain('menu.categories.force_delete')
+        ->toContain('menu.items.restore')
+        ->toContain('menu.items.force_delete')
+        ->toContain('tables.halls.archive.view')
+        ->toContain('tables.halls.restore')
+        ->toContain('tables.halls.force_delete')
+        ->toContain('tables.tables.archive.view')
+        ->toContain('tables.tables.restore')
+        ->toContain('tables.tables.force_delete');
+
+    expect($aratManager->role()->firstOrFail()->permissions()->pluck('code')->all())
+        ->not->toContain('menu.archive.view')
+        ->not->toContain('menu.categories.restore')
+        ->not->toContain('menu.categories.force_delete')
+        ->not->toContain('menu.items.restore')
+        ->not->toContain('menu.items.force_delete')
+        ->not->toContain('tables.halls.archive.view')
+        ->not->toContain('tables.halls.restore')
+        ->not->toContain('tables.halls.force_delete')
+        ->not->toContain('tables.tables.archive.view')
+        ->not->toContain('tables.tables.restore')
+        ->not->toContain('tables.tables.force_delete');
+
     $this->withSession(['_token' => menuDemoCsrfToken()])
         ->post(route('login.store'), menuDemoLoginPayload('manager@arat.test'))
         ->assertRedirect(route('admin.dashboard'));
