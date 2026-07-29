@@ -4854,11 +4854,23 @@ Plan:
   and leap cases, anchor 29 non-leap/leap cases, repeated advancement from
   clamped dates, and invalid anchor rejection. Verification: `make test`
   passed (`359 passed / 14 skipped / 3504 assertions`).
-- [ ] Step SUB-01.3: subscription read model. Add billing config, Tenancy
+- [x] Step SUB-01.3: subscription read model. Add billing config, Tenancy
   contract, readonly DTO, Eloquent reader implementation, and
   `AppServiceProvider` binding. Prove grace inclusive boundaries, missing
   subscription row behavior, injected-current-time determinism, and the
-  single-query suspendable tenant-id listing.
+  single-query suspendable tenant-id listing. Result: added `config/billing.php`
+  with platform timezone and default grace settings, `TenantSubscriptionReader`,
+  `TenantSubscriptionStatus`, `EloquentTenantSubscriptionReader`, and the
+  provider binding. Read tests prove due-day/grace-last-day/first-suspendable
+  edges, platform timezone normalization, missing-row exclusion, and
+  single-query suspendable tenant listing. The reader intentionally bypasses
+  Eloquent tenant scope for platform/fleet reads; PostgreSQL RLS still limits
+  such fleet reads unless a later suspension slice provides an execution
+  context allowed to scan tenant-owned subscription rows. Verification:
+  `make test` passed (`363 passed / 14 skipped / 3527 assertions`),
+  `make stan` passed (`197/197`, `[OK] No errors`), and after moving the
+  reader behavior test out of the PostgreSQL tenant-isolation target,
+  `make tenant-isolation-pgsql` passed (`39 passed / 192 assertions`).
 - [ ] Step SUB-01.4: deterministic seeding. Extend the Tenancy demo seeder with
   idempotent subscription rows for both demo tenants, and add focused demo
   seeder coverage so the rows are visible after `make fresh`.
@@ -4869,6 +4881,6 @@ Plan:
   commands, review the final diff file by file, commit scoped paths, push
   `feature/subscription-schema`, and open a draft PR without merging.
 
-Next exact action: implement Step SUB-01.3 subscription read model with config,
-contract, DTO, reader binding, and deterministic read tests.
+Next exact action: implement Step SUB-01.4 deterministic Tenancy demo seeding
+for subscription rows and focused seeder coverage.
 No owner decision is pending.

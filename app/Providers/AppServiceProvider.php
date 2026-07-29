@@ -21,10 +21,12 @@ use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Modules\Tenancy\Contracts\TenantDirectory;
 use App\Modules\Tenancy\Contracts\TenantResolver;
 use App\Modules\Tenancy\Contracts\TenantSettingsReader;
+use App\Modules\Tenancy\Contracts\TenantSubscriptionReader;
 use App\Modules\Tenancy\Http\Middleware\EnsureTenantIsServiceable;
 use App\Modules\Tenancy\Infrastructure\Context\InMemoryBranchContext;
 use App\Modules\Tenancy\Infrastructure\Context\InMemoryTenantResolver;
 use App\Modules\Tenancy\Infrastructure\Directory\EloquentTenantDirectory;
+use App\Modules\Tenancy\Infrastructure\Directory\EloquentTenantSubscriptionReader;
 use App\Modules\Tenancy\Infrastructure\Settings\EloquentTenantSettingsReader;
 use App\Support\Audit\AuditRecorder;
 use App\Support\Audit\EloquentAuditRecorder;
@@ -60,6 +62,12 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(BranchContext::class, InMemoryBranchContext::class);
         $this->app->bind(TenantDirectory::class, EloquentTenantDirectory::class);
         $this->app->bind(TenantSettingsReader::class, EloquentTenantSettingsReader::class);
+        $this->app->bind(TenantSubscriptionReader::class, function (): EloquentTenantSubscriptionReader {
+            $platformTimezone = config('billing.platform_timezone');
+            assert(is_string($platformTimezone));
+
+            return new EloquentTenantSubscriptionReader($platformTimezone);
+        });
         $this->app->bind(Authorizer::class, EloquentAuthorizer::class);
         $this->app->bind(UserDirectory::class, EloquentUserDirectory::class);
         $this->app->bind(PermissionCatalog::class, EloquentPermissionCatalog::class);
