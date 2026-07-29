@@ -4885,7 +4885,11 @@ Plan:
   `make pint`, `make stan`, `make test`, `make tenant-isolation-pgsql`, and
   `make orders-concurrency-pgsql` sequentially, run the required grep/stat
   commands, review the final diff file by file, commit scoped paths, push
-  `feature/subscription-schema`, and open a draft PR without merging.
+  `feature/subscription-schema`, and open a draft PR without merging. Progress:
+  added the R1-R5 subscription decisions entry covering anchored monthly
+  billing, clamping without drift, inclusive grace, 05:00 quiet-hour suspension
+  intent, platform billing timezone, and Tenancy placement. Final exact-head
+  gates and delivery remain pending.
 
 Next exact action: implement Step SUB-01.5 documentation, final verification,
 diff review, branch push, and draft PR creation.
