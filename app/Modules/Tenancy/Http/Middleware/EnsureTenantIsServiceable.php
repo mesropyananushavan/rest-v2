@@ -25,7 +25,7 @@ final class EnsureTenantIsServiceable
 
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user() === null) {
+        if (! Auth::check()) {
             $response = $next($request);
 
             assert($response instanceof Response);
@@ -46,7 +46,13 @@ final class EnsureTenantIsServiceable
         $this->logBlockedTenant($tenantId);
 
         if ($request->expectsJson() || $request->is('api/*')) {
-            return ApiResponse::error($request, 'tenant.suspended', __('api.errors.tenant_suspended'), null, 403);
+            $response = ApiResponse::error($request, 'tenant.suspended', __('api.errors.tenant_suspended'), null, 403);
+
+            if ($request->headers->has('X-Livewire')) {
+                abort($response);
+            }
+
+            return $response;
         }
 
         Auth::logout();

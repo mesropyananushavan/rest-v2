@@ -840,13 +840,28 @@ tenant off. A single Tenancy contract predicate keeps the active-only rule in
 one decision point and adds one indexed lookup by tenant primary key and
 status to protected requests.
 
-Known gap: Livewire 4 update requests do not automatically replay every
+Livewire closure: Livewire 4 update requests do not automatically replay every
 middleware from the original page route. The installed Livewire
 `PersistentMiddleware` mechanism reconstructs the originating route from the
-snapshot but filters it through Livewire's persistent middleware whitelist; this
-application does not add `tenant.active` to that whitelist in this slice.
-Schedule follow-up coverage before relying on tenant lifecycle enforcement for
-mounted Livewire update actions.
+snapshot but filters it through Livewire's persistent middleware whitelist. The
+application closes that gap by registering only
+`EnsureTenantIsServiceable::class` through Livewire's supported
+`addPersistentMiddleware()` API in `AppServiceProvider`, where the project
+already wires global cross-cutting concerns. The Livewire update route itself
+still carries the `web` middleware group, so `AttachLogContext`,
+`ResolveTenant`, and `ResolveBranch` continue to run on the real update
+request and are not duplicated in the persistent list.
+
+Livewire update requests are legitimate JSON requests (`X-Livewire` and
+`Content-Type: application/json`), so suspended tenants receive the same
+`ApiResponse::error` envelope as protected JSON/API routes. Livewire's
+persistent middleware runner ignores ordinary non-redirect responses returned
+from persisted middleware, so the middleware throws that existing response for
+`X-Livewire` requests while continuing to return it normally for API routes.
+This decision would silently reopen if a future route-level middleware is added
+after authentication and must also apply to already-mounted Livewire
+components, but that middleware is not added to Livewire's persistent list and
+covered by a real HTTP update test.
 
 Rejected: putting the check in the global `web` group, because that would
 block guests and can create login loops; adding status enums or a migration,

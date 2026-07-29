@@ -21,6 +21,7 @@ use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Modules\Tenancy\Contracts\TenantDirectory;
 use App\Modules\Tenancy\Contracts\TenantResolver;
 use App\Modules\Tenancy\Contracts\TenantSettingsReader;
+use App\Modules\Tenancy\Http\Middleware\EnsureTenantIsServiceable;
 use App\Modules\Tenancy\Infrastructure\Context\InMemoryBranchContext;
 use App\Modules\Tenancy\Infrastructure\Context\InMemoryTenantResolver;
 use App\Modules\Tenancy\Infrastructure\Directory\EloquentTenantDirectory;
@@ -46,6 +47,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Livewire\Livewire;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -108,6 +110,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         View::composer('layouts.admin', AdminShellComposer::class);
+
+        Livewire::addPersistentMiddleware(EnsureTenantIsServiceable::class);
 
         Queue::createPayloadUsing(fn (): array => [
             'smartrest_context' => LogContext::current(),

@@ -7,6 +7,8 @@ use App\Modules\Identity\Infrastructure\Models\UserBranchAssignment;
 use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Modules\Tenancy\Contracts\TenantResolver;
 use App\Modules\Tenancy\Http\Middleware\EnsureTenantIsServiceable;
+use App\Modules\Tenancy\Http\Middleware\ResolveBranch;
+use App\Modules\Tenancy\Http\Middleware\ResolveTenant;
 use App\Modules\Tenancy\Infrastructure\Models\Branch;
 use App\Modules\Tenancy\Infrastructure\Models\Tenant;
 use Database\Seeders\DemoSeeder;
@@ -17,6 +19,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Testing\TestResponse;
+use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
@@ -94,6 +98,67 @@ it('returns the existing json error envelope when an api tenant is suspended', f
         ->assertJsonMissingPath('data');
 });
 
+it('allows an active tenant to complete a real http livewire update', function (): void {
+    tenantStatusUser('tenant-status-livewire-active', 'livewire-active-manager', 'livewire-active-manager@smartrest.test');
+
+    $this->withSession(['_token' => tenantStatusCsrfToken()])
+        ->withServerVariables(['REMOTE_ADDR' => '203.0.113.104'])
+        ->post(route('login.store'), tenantStatusLoginPayload([
+            'email' => 'livewire-active-manager@smartrest.test',
+            'password' => 'password',
+        ]))
+        ->assertRedirect(route('admin.dashboard'));
+
+    $snapshot = tenantStatusDashboardLivewireSnapshot($this->get(route('admin.dashboard'))->assertOk());
+
+    $this->withSession(['_token' => tenantStatusCsrfToken()])
+        ->withHeader('X-Livewire', '1')
+        ->withHeader('X-CSRF-TOKEN', tenantStatusCsrfToken())
+        ->withServerVariables(['REMOTE_ADDR' => '203.0.113.105'])
+        ->postJson(route('default-livewire.update'), tenantStatusLivewirePayload($snapshot))
+        ->assertOk()
+        ->assertJsonStructure([
+            'components' => [
+                ['snapshot', 'effects'],
+            ],
+        ]);
+});
+
+it('blocks a real http livewire update when the tenant is suspended', function (): void {
+    $record = tenantStatusUser('tenant-status-livewire-suspended', 'livewire-suspended-manager', 'livewire-suspended-manager@smartrest.test');
+
+    $this->withSession(['_token' => tenantStatusCsrfToken()])
+        ->withServerVariables(['REMOTE_ADDR' => '203.0.113.106'])
+        ->post(route('login.store'), tenantStatusLoginPayload([
+            'email' => 'livewire-suspended-manager@smartrest.test',
+            'password' => 'password',
+        ]))
+        ->assertRedirect(route('admin.dashboard'));
+
+    $snapshot = tenantStatusDashboardLivewireSnapshot($this->get(route('admin.dashboard'))->assertOk());
+
+    tenantStatusSuspend((int) $record['tenant']->id);
+
+    $this->withSession(['_token' => tenantStatusCsrfToken()])
+        ->withHeader('X-Livewire', '1')
+        ->withHeader('X-CSRF-TOKEN', tenantStatusCsrfToken())
+        ->withServerVariables(['REMOTE_ADDR' => '203.0.113.107'])
+        ->postJson(route('default-livewire.update'), tenantStatusLivewirePayload($snapshot))
+        ->assertForbidden()
+        ->assertJsonPath('errors.0.code', 'tenant.suspended')
+        ->assertJsonPath('errors.0.message', __('api.errors.tenant_suspended'))
+        ->assertJsonPath('errors.0.field', null)
+        ->assertJsonStructure([
+            'errors' => [
+                ['code', 'message', 'field'],
+            ],
+            'meta' => ['request_id'],
+        ])
+        ->assertJsonMissingPath('data');
+
+    $this->assertAuthenticated();
+});
+
 it('rejects login when the session already carries a suspended tenant id', function (): void {
     $record = tenantStatusUser('tenant-status-session', 'session-manager', 'session-manager@smartrest.test');
 
@@ -103,7 +168,7 @@ it('rejects login when the session already carries a suspended tenant id', funct
         '_token' => tenantStatusCsrfToken(),
         'tenant_id' => (int) $record['tenant']->id,
     ])
-        ->withServerVariables(['REMOTE_ADDR' => '203.0.113.104'])
+        ->withServerVariables(['REMOTE_ADDR' => '203.0.113.108'])
         ->post(route('login.store'), tenantStatusLoginPayload([
             'email' => 'session-manager@smartrest.test',
             'password' => 'password',
@@ -120,7 +185,7 @@ it('rejects login when a non-production tenant header names a suspended tenant',
 
     $this->withSession(['_token' => tenantStatusCsrfToken()])
         ->withHeader('X-Tenant-ID', (string) $record['tenant']->id)
-        ->withServerVariables(['REMOTE_ADDR' => '203.0.113.105'])
+        ->withServerVariables(['REMOTE_ADDR' => '203.0.113.109'])
         ->post(route('login.store'), tenantStatusLoginPayload([
             'email' => 'header-manager@smartrest.test',
             'password' => 'password',
@@ -134,7 +199,7 @@ it('keeps logout reachable when the current tenant is suspended', function (): v
     $record = tenantStatusUser('tenant-status-logout', 'logout-manager', 'logout-manager@smartrest.test');
 
     $this->withSession(['_token' => tenantStatusCsrfToken()])
-        ->withServerVariables(['REMOTE_ADDR' => '203.0.113.106'])
+        ->withServerVariables(['REMOTE_ADDR' => '203.0.113.110'])
         ->post(route('login.store'), tenantStatusLoginPayload([
             'email' => 'logout-manager@smartrest.test',
             'password' => 'password',
@@ -192,6 +257,15 @@ it('requires tenant serviceability middleware on authenticated routes except log
     expect($missing)->toBe([]);
 });
 
+it('registers only tenant serviceability as app-specific livewire persistent middleware', function (): void {
+    $persistentMiddleware = Livewire::getPersistentMiddleware();
+
+    expect($persistentMiddleware)
+        ->toContain(EnsureTenantIsServiceable::class)
+        ->not->toContain(ResolveTenant::class)
+        ->not->toContain(ResolveBranch::class);
+});
+
 /**
  * @return array{tenant: Tenant, branch: Branch, user: User}
  */
@@ -246,6 +320,37 @@ function tenantStatusSuspend(int $tenantId): void
         ->update(['status' => 'suspended']);
 
     Auth::forgetGuards();
+}
+
+function tenantStatusDashboardLivewireSnapshot(TestResponse $response): string
+{
+    preg_match('/wire:snapshot="([^"]+)"/', $response->getContent(), $matches);
+
+    expect($matches[1] ?? null)->not->toBeNull();
+
+    $snapshot = html_entity_decode($matches[1], ENT_QUOTES | ENT_HTML5);
+    $decodedSnapshot = json_decode($snapshot, true, flags: JSON_THROW_ON_ERROR);
+
+    expect($decodedSnapshot['memo']['path'] ?? null)->toBe('admin')
+        ->and($decodedSnapshot['memo']['method'] ?? null)->toBe('GET');
+
+    return $snapshot;
+}
+
+/**
+ * @return array<string, list<array{snapshot: string, updates: array<string, mixed>, calls: list<array<string, mixed>>}>>
+ */
+function tenantStatusLivewirePayload(string $snapshot): array
+{
+    return [
+        'components' => [
+            [
+                'snapshot' => $snapshot,
+                'updates' => ['categoryCount' => 0],
+                'calls' => [],
+            ],
+        ],
+    ];
 }
 
 function tenantStatusCsrfToken(): string

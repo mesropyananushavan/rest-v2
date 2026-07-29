@@ -4731,6 +4731,37 @@ Delivery:
 - Draft PR opened: `https://github.com/mesropyananushavan/rest-v2/pull/47`.
 - Nothing merged, nothing pushed to `main`, and no history was rewritten.
 
-Next exact action: owner review of draft PR #47 for the SUB-00 tenant status
-enforcement slice. No local implementation work remains for this slice unless
-the owner requests PR revisions.
+Task `SUB-00-FIX-livewire-tenant-status` is active on branch
+`fix/tenant-status-enforcement` for draft PR #47.
+
+Plan:
+
+- [x] Step SUB-00-FIX.1: verify installed Livewire persistent middleware API
+  and update-route middleware. Result: installed Livewire exposes
+  `addPersistentMiddleware()`, `setPersistentMiddleware()`, and
+  `getPersistentMiddleware()`; the default update route is registered with
+  `web` plus `RequireLivewireHeaders`, and custom update routes are forced to
+  include `web`, so `AttachLogContext`, `ResolveTenant`, and `ResolveBranch`
+  still run on the real update request.
+- [x] Step SUB-00-FIX.2: close the Livewire bypass. Result: registered only
+  `EnsureTenantIsServiceable::class` through `Livewire::addPersistentMiddleware`
+  in `AppServiceProvider::boot()`. The middleware now uses the auth guard for
+  guest detection so Livewire's reconstructed request sees the authenticated
+  session, and throws the existing API envelope for `X-Livewire` JSON requests
+  because Livewire ignores non-redirect responses returned from persisted
+  middleware.
+- [x] Step SUB-00-FIX.3: add real HTTP Livewire coverage. Result: extended
+  `TenantStatusEnforcementTest` with real POSTs to `default-livewire.update`
+  using a rendered dashboard `wire:snapshot`; active tenants receive a normal
+  Livewire JSON response and suspended tenants receive the `tenant.suspended`
+  API envelope. Focused container Pest run for
+  `tests/Feature/Tenancy/TenantStatusEnforcementTest.php` passed:
+  `11 passed / 74 assertions`.
+- [ ] Step SUB-00-FIX.4: final verification and delivery. Run `make pint`,
+  `make stan`, `make test`, `make tenant-isolation-pgsql`, and
+  `make orders-concurrency-pgsql` at the final head, collect the requested
+  evidence dump commands, review the diff, append commits, push the existing
+  branch, and leave draft PR #47 open without merging.
+
+Next exact action: run final verification for Step SUB-00-FIX.4, then commit,
+push, and report evidence for draft PR #47 without merging.
