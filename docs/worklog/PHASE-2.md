@@ -5062,12 +5062,82 @@ Plan:
   `SuspendTenant` setting `status` to `suspended` and `ReactivateTenant`
   setting `status` to `active`. The same grep also lists unrelated status
   reads/messages and pre-existing seeder/default status assignments.
-- [ ] Step SUB-02.5: final gates, delivery, and draft PR. Run `make pint`,
+- [x] Step SUB-02.5: final gates, delivery, and draft PR. Run `make pint`,
   `make stan`, `make test`, `make tenant-isolation-pgsql`, and
   `make orders-concurrency-pgsql` sequentially at final head; collect required
   grep/stat/status/main evidence; push `feature/subscription-operations`; open
-  a draft PR against `main`; do not merge.
+  a draft PR against `main`; do not merge. Result: final implementation head
+  `ee91ce94c57bc2e2679d2f5c8c94110de63250f9` passed Pint `343 files`,
+  PHPStan `205/205`, SQLite Pest `372 passed / 14 skipped / 3583 assertions`,
+  PostgreSQL Tenancy `52 passed / 270 assertions`, and Orders concurrency
+  PostgreSQL `6 passed / 43 assertions`. The branch was pushed and draft PR
+  #49 was opened against `main`.
 
-Next exact action: commit this worklog checkpoint, then run the final five
-gates at the final head before pushing a draft PR. No owner decision is
-pending.
+End-of-day handoff for `TASK-SUB-02`:
+
+A. Current state
+
+- `origin/main` = `2bdb6ee` (merge of PR #48, subscription schema and read
+  model).
+- Open draft PR #49: branch `feature/subscription-operations`, implementation
+  head `ee91ce9`.
+- CI for `ee91ce9`: green. Runs
+  `https://github.com/mesropyananushavan/rest-v2/actions/runs/30450599745`
+  (pull_request) and
+  `https://github.com/mesropyananushavan/rest-v2/actions/runs/30450590513`
+  (push) completed successfully; jobs `tenant-isolation-pgsql`,
+  `orders-concurrency-pgsql`, and `quality` all succeeded in both runs.
+- Measured gates at `ee91ce9`: Pint `343 files`; PHPStan `205/205`;
+  SQLite Pest `372 passed / 14 skipped / 3583 assertions`;
+  `tenant-isolation-pgsql` `52 passed / 270 assertions`;
+  `orders-concurrency-pgsql` `6 passed / 43 assertions`.
+
+B. What shipped so far in the subscription line
+
+- PR #47 (`fd48e21`): tenant status enforcement - request gate, Livewire
+  persistent middleware, login path closed.
+- PR #48 (`2bdb6ee`): `tenant_subscriptions` schema (platform-owned, no RLS),
+  `MonthlyBillingCycle` anchor arithmetic, `TenantSubscriptionReader`, and
+  `config/billing.php`.
+- PR #49 (open): manual operations - record payment, suspend, reactivate,
+  console commands, and audit under RLS with null actor.
+
+C. Agreed business rules
+
+- Suspension runs at 05:00 platform time (`Asia/Yerevan`); grace is 3 days and
+  inclusive.
+- The billing anchor never drifts; one payment advances exactly one period; a
+  tenant two periods overdue stays overdue after one payment.
+- Paying does not reactivate; reactivation is a separate explicit operation.
+- The interface is console-only until the platform operator entity exists.
+- There is no money, amount, or ledger in this line yet.
+
+D. Next actions, in order
+
+1. Verify and merge PR #49 after owner review; merge commit only, never squash.
+2. Slice 3: scheduled suspension job - hourly, idempotent, quiet hour 05:00,
+   and calls the existing `SuspendTenant` action instead of writing
+   `tenants.status` itself.
+3. Slice 4: owner-facing warning in the UI during grace.
+4. Blocked on the S1/S2/S3 decision: platform operator identity, then
+   `/platform` UI.
+5. Later: payment ledger with amounts and card autocharge.
+
+E. Open debts and unverified items
+
+- Manual browser verification of the kill-switch on merged main is still
+  outstanding.
+- The Makefile Pint target has no `--test` variant; CI uses
+  `vendor/bin/pint --test`.
+- `is_superadmin` is still present in the User model and
+  `EloquentAuthorizer`; the seeder sets it false, but the bypass code path is
+  not removed.
+- `MenuSeedLoadCommand` writes `tenants.status` in seed/load paths
+  (pre-existing, seed-only).
+- PHPStan analyses `app/` only; tests are not statically checked.
+- `orders-concurrency-pgsql` can fail on a cold container with
+  "the database system is starting up"; rerun rather than treating it as a
+  test failure.
+
+Next exact action: owner reviews PR #49, then verify and merge it with a true
+merge commit if CI is green. No owner decision is pending before review.
