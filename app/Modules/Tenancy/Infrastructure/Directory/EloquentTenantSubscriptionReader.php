@@ -43,6 +43,7 @@ final class EloquentTenantSubscriptionReader implements TenantSubscriptionReader
         /** @var list<int|string> $ids */
         $ids = TenantSubscription::query()
             ->withoutGlobalScope(TenantScoped::class)
+            ->whereDate('next_due_on', '<', $today)
             ->whereRaw($this->suspendablePredicate(), [$today])
             ->orderBy('tenant_id')
             ->pluck('tenant_id')

@@ -21,7 +21,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unique('tenant_id');
-            $table->index(['tenant_id', 'next_due_on', 'grace_days'], 'tenant_subscriptions_suspendable_lookup_idx');
+            $table->index(['next_due_on', 'tenant_id', 'grace_days'], 'tenant_subscriptions_suspendable_lookup_idx');
         });
 
         $this->addPostgresConstraints();

@@ -4836,8 +4836,8 @@ Plan:
   Tenancy conventions, schema tests, and PostgreSQL read/WITH CHECK tenant
   isolation coverage. Result: added `tenant_subscriptions` with tenant FK,
   unique one-row-per-tenant constraint that also covers tenant lookup, a
-  suspendable lookup index, PostgreSQL anchor/grace checks, and exact RLS
-  policy. Added
+  next-due-leading suspendable lookup index for the fleet overdue/suspendable
+  scan, PostgreSQL anchor/grace checks, and exact RLS policy. Added
   `TenantSubscription` with `BelongsToTenant`, no `SoftDeletes`, date casts,
   schema coverage, and PostgreSQL read visibility plus savepoint-wrapped
   `WITH CHECK` write-block proof. Verification: `make test` passed
