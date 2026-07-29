@@ -4757,11 +4757,16 @@ Plan:
   API envelope. Focused container Pest run for
   `tests/Feature/Tenancy/TenantStatusEnforcementTest.php` passed:
   `11 passed / 74 assertions`.
-- [ ] Step SUB-00-FIX.4: final verification and delivery. Run `make pint`,
+- [x] Step SUB-00-FIX.4: final verification and delivery. Run `make pint`,
   `make stan`, `make test`, `make tenant-isolation-pgsql`, and
   `make orders-concurrency-pgsql` at the final head, collect the requested
   evidence dump commands, review the diff, append commits, push the existing
-  branch, and leave draft PR #47 open without merging.
+  branch, and leave draft PR #47 open without merging. Result: verification at
+  commit `979fdf9` passed: `make pint` = `PASS 323 files`; `make stan` =
+  `192/192`, `[OK] No errors`; `make test` = `349 passed / 13 skipped /
+  3460 assertions`; `make tenant-isolation-pgsql` = `35 passed / 173
+  assertions`; `make orders-concurrency-pgsql` = `6 passed / 43 assertions`.
 
-Next exact action: run final verification for Step SUB-00-FIX.4, then commit,
-push, and report evidence for draft PR #47 without merging.
+Next exact action: commit this verification handoff, rerun required gates at
+the new final head, push branch `fix/tenant-status-enforcement`, and report
+the requested evidence for draft PR #47 without merging.
