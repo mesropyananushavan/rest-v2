@@ -11,6 +11,8 @@ interface TenantDirectory
      */
     public function activeTenantIds(): array;
 
+    public function isServiceable(int $tenantId): bool;
+
     public function tenantName(int $tenantId): ?string;
 
     /**

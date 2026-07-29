@@ -4671,7 +4671,59 @@ Stage 2.23 handoff:
 - Open owner decision: the S1/S2/S3 platform-operator account shape remains
   undecided.
 
-Next exact action: OWNER DECISION on payment tracking depth, which currently
-blocks the platform UI slice. Work not depending on it: implementing the
-feature-availability axis (Axis 1) from the BLUEPRINT authorization model. Do
-not pick one and do not start either.
+Task `SUB-00-tenant-status-enforcement` is active on branch
+`fix/tenant-status-enforcement`, based on `origin/main` at
+`7f3794a2b1f57886918fc5ac6292a30b594a8110`.
+
+Plan:
+
+- [x] Step SUB-00.1: tenant serviceability predicate and request middleware.
+  Add one Tenancy contract decision point for active tenants, implement
+  `EnsureTenantIsServiceable`, register alias `tenant.active`, and apply it
+  after `auth` on protected web/API routes except logout. Result: added
+  `TenantDirectory::isServiceable()`, implemented it with the same private
+  serviceable-tenant query used by `activeTenantIds()`, added
+  `EnsureTenantIsServiceable`, registered `tenant.active`, and applied it to
+  protected web/API routes while leaving logout unblocked.
+- [x] Step SUB-00.2: login path and translations. Filter resolver-supplied
+  login tenant ids through the serviceability predicate and add
+  `auth.tenant_suspended` plus `api.errors.tenant_suspended` in `hy`, `ru`,
+  and `en`. Result: `AuthenticateUser::tenantIdsForAttempt()` now returns an
+  empty list when the resolver already holds a non-serviceable tenant id, so
+  session and non-production header login paths fail with the existing generic
+  login error. Added all required `hy`, `ru`, and `en` translation keys.
+- [x] Step SUB-00.3: coverage. Add route middleware coverage and Tenancy
+  feature tests proving active login still works, suspended sessions are
+  blocked on the next request, JSON uses the existing API envelope, session and
+  header login paths fail, logout remains reachable, and login/health do not
+  loop. Result: added `TenantStatusEnforcementTest` with the required real
+  login/session/header/API/logout/guest-health cases and the route middleware
+  coverage guard. Initial full SQLite gate passed after implementation:
+  `make test` = `346 passed / 13 skipped / 3427 assertions`. Manual guard
+  proof: temporarily removed `tenant.active` from `admin.dashboard`; `make
+  test` failed with `admin.dashboard` reported missing and the suspended-session
+  regression returned `200`; route middleware was restored immediately.
+- [x] Step SUB-00.4: Livewire investigation and documentation. Determine
+  whether Livewire 4 update requests re-apply originating route middleware,
+  record the tenant lifecycle enforcement decision in `docs/DECISIONS.md`, and
+  keep this worklog current. Result: installed Livewire source shows update
+  requests reconstruct the original route but filter middleware through
+  Livewire's persistent middleware whitelist; this app does not add
+  `tenant.active` to that whitelist, so Livewire update actions are a newly
+  identified follow-up gap, not fixed in this slice. Added the dated
+  `docs/DECISIONS.md` entry.
+- [x] Step SUB-00.5: final verification and delivery. Run `make pint`,
+  `make stan`, `make test`, `make tenant-isolation-pgsql`, and
+  `make orders-concurrency-pgsql` sequentially as required, run the requested
+  grep proof, review the full diff file by file, commit, push the task branch,
+  and open a draft PR without merging. Result: final verification passed:
+  `make pint` = `PASS 323 files`; `make stan` = `192/192`, `[OK] No errors`;
+  `make test` = `346 passed / 13 skipped / 3427 assertions`;
+  `make tenant-isolation-pgsql` = `32 passed / 140 assertions`;
+  `make orders-concurrency-pgsql` = `6 passed / 43 assertions`. Ran
+  `rg -n "'active'" app --glob '*.php'`, `git diff --check`, and reviewed the
+  full task diff file by file.
+
+Next exact action: commit the verified SUB-00 tenant status enforcement slice,
+push branch `fix/tenant-status-enforcement`, and open a draft PR without
+merging.

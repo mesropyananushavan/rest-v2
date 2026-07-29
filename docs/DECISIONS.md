@@ -812,3 +812,45 @@ that decision must come from measurements, not speculation.
 Non-goals: no export, no CSV, no printing, no retention or purge policy, and no
 new audit write sites. The report reads existing audit records only and does
 not change audit recorders, audit models, schema, migrations, or indexes.
+
+## 2026-07-29 — Tenant lifecycle blocks authenticated restaurant traffic
+Decision: authenticated restaurant-admin and protected JSON/API routes require
+the resolved tenant to be serviceable through the Tenancy `TenantDirectory`
+contract. Serviceable means the existing `tenants.status` value is `active`;
+no additional lifecycle status vocabulary, subscription table, billing model,
+grace period, scheduler, or migration is introduced. The same predicate gates
+resolver-supplied login tenant ids so session and non-production
+`X-Tenant-ID` resolution cannot authenticate into a non-active tenant.
+
+The request gate is explicit route middleware, registered as `tenant.active`,
+and sits after authentication on protected routes. Guest requests and requests
+with no resolved tenant pass through unchanged so `/login`, guest redirects,
+and the `/up` health endpoint cannot redirect-loop. Logout is intentionally
+not behind the gate so a user can always terminate a suspended tenant session.
+HTML blocks log the user out, clear tenant and branch context, invalidate the
+session, and redirect to the existing login form with a translated error.
+JSON/API blocks return the existing `ApiResponse::error` envelope with
+`tenant.suspended`.
+
+Reason: tenant lifecycle is the coarse on/off switch for whether a restaurant
+can use SmartRest at all, and the 2026-07-28 platform decision separates it
+from feature availability and payment. Enforcing it only during login leaves
+already-authenticated sessions usable after a platform operator switches a
+tenant off. A single Tenancy contract predicate keeps the active-only rule in
+one decision point and adds one indexed lookup by tenant primary key and
+status to protected requests.
+
+Known gap: Livewire 4 update requests do not automatically replay every
+middleware from the original page route. The installed Livewire
+`PersistentMiddleware` mechanism reconstructs the originating route from the
+snapshot but filters it through Livewire's persistent middleware whitelist; this
+application does not add `tenant.active` to that whitelist in this slice.
+Schedule follow-up coverage before relying on tenant lifecycle enforcement for
+mounted Livewire update actions.
+
+Rejected: putting the check in the global `web` group, because that would
+block guests and can create login loops; adding status enums or a migration,
+because the existing `tenants.status` switch already exists; using billing or
+subscription concepts, because payment is a later driver of tenant lifecycle,
+not this enforcement mechanism; blocking logout, because users must be able to
+end a suspended session safely.

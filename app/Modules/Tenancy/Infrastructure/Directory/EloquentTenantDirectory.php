@@ -7,19 +7,26 @@ namespace App\Modules\Tenancy\Infrastructure\Directory;
 use App\Modules\Tenancy\Contracts\TenantDirectory;
 use App\Modules\Tenancy\Infrastructure\Models\Branch;
 use App\Modules\Tenancy\Infrastructure\Models\Tenant;
+use Illuminate\Database\Eloquent\Builder;
 
 final class EloquentTenantDirectory implements TenantDirectory
 {
     public function activeTenantIds(): array
     {
         /** @var list<int|string> $ids */
-        $ids = array_values(Tenant::query()
-            ->where('status', 'active')
+        $ids = array_values($this->serviceableTenants()
             ->orderBy('id')
             ->pluck('id')
             ->all());
 
         return array_map(fn (int|string $id): int => (int) $id, $ids);
+    }
+
+    public function isServiceable(int $tenantId): bool
+    {
+        return $this->serviceableTenants()
+            ->whereKey($tenantId)
+            ->exists();
     }
 
     public function tenantName(int $tenantId): ?string
@@ -51,5 +58,13 @@ final class EloquentTenantDirectory implements TenantDirectory
             ->all();
 
         return array_values($branches);
+    }
+
+    /**
+     * @return Builder<Tenant>
+     */
+    private function serviceableTenants(): Builder
+    {
+        return Tenant::query()->where('status', 'active');
     }
 }

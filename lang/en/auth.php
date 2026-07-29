@@ -17,4 +17,5 @@ return [
         'password' => 'Password',
     ],
     'failed' => 'These credentials do not match an active user.',
+    'tenant_suspended' => 'This restaurant account is not active. Contact SmartRest support.',
 ];
