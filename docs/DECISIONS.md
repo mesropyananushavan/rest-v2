@@ -878,3 +878,82 @@ because the existing `tenants.status` switch already exists; using billing or
 subscription concepts, because payment is a later driver of tenant lifecycle,
 not this enforcement mechanism; blocking logout, because users must be able to
 end a suspended session safely.
+
+## 2026-07-29 — Tenant subscriptions use anchored monthly billing dates
+Decision: tenant subscription state lives in the Tenancy module as a read-only
+tenant-lifecycle input, not in a new Billing module. This slice records one
+subscription row per tenant with a fixed monthly `billing_anchor_day`, the
+next expected due date, per-tenant grace days, and an informational last-paid
+date. It does not record money, plans, payments, invoices, card charging,
+reactivation, scheduling, or tenant suspension, and it does not write
+`tenants.status`.
+
+Billing dates are monthly and anchored to the original tenant day of month.
+The anchor never drifts: if a tenant is due on 01 July, the following due
+dates are 01 August and 01 September regardless of when payment arrives. When
+the anchor does not exist in the target month, the due date clamps to that
+month's last calendar day, but the stored anchor is preserved. For example,
+anchor 31 advances 31 January to 28 February, or 29 February in a leap year,
+then back to 31 March rather than sticking to the clamped February day.
+
+Grace is stored per tenant and defaults to 3 days from configuration. Grace is
+inclusive: with due date 01 August and grace 3, the tenant is still within
+grace through 04 August and becomes suspendable on 05 August. Automatic
+suspension, when implemented later, is intended to run at 05:00 local platform
+time so it happens during a quiet operational hour rather than during a
+restaurant's active evening service. This slice records that timing decision
+only; it adds no scheduler, job, command, route, or status mutation.
+
+All subscription date decisions use calendar dates in the platform timezone,
+`Asia/Yerevan`, read from config. Tenants do not get their own timezone column.
+Branch timezones remain branch-operational concerns for restaurant activity
+and are unrelated to platform billing.
+
+Reason: a fixed anchor makes payment timing an accounting fact rather than a
+schedule mutation. Late or early payment must not shift the future due cadence
+or create customer-specific drift that becomes difficult to explain and audit.
+Per-tenant grace keeps the serviceability decision explicit and queryable while
+leaving room for manually approved exceptions without changing the billing
+algorithm. The 05:00 quiet hour minimizes disruption when a later suspension
+job consumes the suspendable read model. A single platform timezone avoids
+ambiguous due-date boundaries across tenants and keeps billing independent of
+branch-local operating time. The Tenancy module owns this because the current
+slice feeds tenant lifecycle/serviceability; a Billing module would be
+premature until the product has real payments, plans, invoices, or provider
+integration.
+
+Rejected: deriving the next due date from payment arrival, because that causes
+anchor drift; storing only the clamped due day, because that loses the original
+anchor and makes 31st-of-month tenants stick to February; making grace a
+global constant only, because exceptions would require code changes; adding a
+tenant timezone, because billing is a platform-level calendar concern; adding
+a scheduler or status writer now, because this slice is intentionally schema
+and read-model only; creating a Billing module now, because no billing-domain
+behavior exists yet.
+
+## 2026-07-29 — Tenant subscriptions are platform-owned, not RLS-scoped
+Decision: `tenant_subscriptions` is platform-owned tenant lifecycle data, in
+the same ownership category as `tenants`, not tenant-owned restaurant
+operational data. The unreleased migration no longer enables or forces
+PostgreSQL RLS and no longer creates a tenant-isolation policy for this table.
+The `TenantSubscription` model does not use `BelongsToTenant` / `TenantScoped`.
+Every per-tenant read and write must set or filter `tenant_id` explicitly.
+
+This supersedes the earlier subscription RLS assumption made in the
+subscription schema slice. Removing RLS before release avoids depending on the
+current runtime database role's `BYPASSRLS` capability. That role capability is
+a known security debt already scheduled for removal; the suspendable fleet scan
+must return the same tenant ids after the runtime role no longer has
+`BYPASSRLS`.
+
+Reason: the suspendable subscription read model is a platform fleet operation.
+It must run without a tenant context and must not be silently narrowed by a
+leftover tenant context. Tenant-owned RLS semantics intentionally hide rows
+when no `smartrest.tenant_id` is set, which is correct for restaurant
+operational tables but wrong for this platform lifecycle table.
+
+Rejected: keeping RLS and relying on the current runtime role bypass, because
+that would break as soon as the BYPASSRLS debt is fixed; adding a special RLS
+policy for fleet jobs now, because this table does not need tenant-owned RLS
+classification; keeping `BelongsToTenant` with manual scope bypasses, because
+platform reads and writes are clearer and safer when `tenant_id` is explicit.
