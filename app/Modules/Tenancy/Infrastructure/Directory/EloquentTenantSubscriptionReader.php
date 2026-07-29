@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Tenancy\Infrastructure\Directory;
 
-use App\Modules\Tenancy\Contracts\TenantScoped;
 use App\Modules\Tenancy\Contracts\TenantSubscriptionReader;
 use App\Modules\Tenancy\Contracts\TenantSubscriptionStatus;
 use App\Modules\Tenancy\Infrastructure\Models\TenantSubscription;
@@ -22,9 +21,7 @@ final class EloquentTenantSubscriptionReader implements TenantSubscriptionReader
 
     public function statusForTenant(int $tenantId, DateTimeInterface $now): ?TenantSubscriptionStatus
     {
-        // Subscription status is a platform/fleet read; Eloquent tenant scope is bypassed intentionally and covered by tests.
         $subscription = TenantSubscription::query()
-            ->withoutGlobalScope(TenantScoped::class)
             ->where('tenant_id', $tenantId)
             ->first(['tenant_id', 'next_due_on', 'grace_days']);
 
@@ -39,11 +36,9 @@ final class EloquentTenantSubscriptionReader implements TenantSubscriptionReader
     {
         $today = $this->today($now)->format('Y-m-d');
 
-        // Subscription suspension discovery is a platform/fleet read, not a tenant-context read.
         /** @var list<int|string> $ids */
         $ids = TenantSubscription::query()
-            ->withoutGlobalScope(TenantScoped::class)
-            ->whereDate('next_due_on', '<', $today)
+            ->where('next_due_on', '<', $today)
             ->whereRaw($this->suspendablePredicate(), [$today])
             ->orderBy('tenant_id')
             ->pluck('tenant_id')

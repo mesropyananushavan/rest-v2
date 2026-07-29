@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Tenancy\Infrastructure\Models;
 
-use App\Modules\Tenancy\Contracts\BelongsToTenant;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 
@@ -17,8 +16,6 @@ use Illuminate\Database\Eloquent\Model;
 ])]
 final class TenantSubscription extends Model
 {
-    use BelongsToTenant;
-
     protected function casts(): array
     {
         return [

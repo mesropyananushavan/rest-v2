@@ -68,7 +68,16 @@ it('treats tenants without subscription rows as not suspendable', function (): v
         ->toBe([(int) $tenantWithSubscription->id]);
 });
 
-it('lists suspendable tenants in one query without requiring a tenant context', function (): void {
+it('does not read one tenant subscription status when another tenant id is requested', function (): void {
+    $tenantA = subscriptionReaderTenant('tenant-a');
+    $tenantB = subscriptionReaderTenant('tenant-b');
+    subscriptionReaderCreateSubscription($tenantA, '2026-08-01', 3);
+
+    expect(app(TenantSubscriptionReader::class)->statusForTenant((int) $tenantB->id, subscriptionReaderNow('2026-08-05 10:00:00')))
+        ->toBeNull();
+});
+
+it('lists suspendable tenants in one query with a completely empty tenant context', function (): void {
     $suspendable = subscriptionReaderTenant('tenant-a');
     $withinGrace = subscriptionReaderTenant('tenant-b');
     $missingSubscription = subscriptionReaderTenant('tenant-c');
@@ -77,6 +86,10 @@ it('lists suspendable tenants in one query without requiring a tenant context', 
     subscriptionReaderCreateSubscription($withinGrace, '2026-08-02', 3);
 
     app(TenantResolver::class)->clear();
+
+    if (DB::connection()->getDriverName() === 'pgsql') {
+        expect(DB::scalar("select current_setting('smartrest.tenant_id', true)"))->toBe('');
+    }
 
     DB::enableQueryLog();
 
@@ -92,6 +105,29 @@ it('lists suspendable tenants in one query without requiring a tenant context', 
         ->and($queryCount)->toBe(1);
 });
 
+it('keeps the suspendable fleet scan unchanged when tenant context is set', function (): void {
+    $suspendable = subscriptionReaderTenant('tenant-a');
+    $withinGrace = subscriptionReaderTenant('tenant-b');
+    $otherSuspendable = subscriptionReaderTenant('tenant-c');
+
+    subscriptionReaderCreateSubscription($suspendable, '2026-08-01', 3);
+    subscriptionReaderCreateSubscription($withinGrace, '2026-08-02', 3);
+    subscriptionReaderCreateSubscription($otherSuspendable, '2026-07-31', 4);
+
+    app(TenantResolver::class)->clear();
+
+    $withoutContext = app(TenantSubscriptionReader::class)
+        ->suspendableTenantIds(subscriptionReaderNow('2026-08-05 10:00:00'));
+
+    app(TenantResolver::class)->set((int) $withinGrace->id);
+
+    $withContext = app(TenantSubscriptionReader::class)
+        ->suspendableTenantIds(subscriptionReaderNow('2026-08-05 10:00:00'));
+
+    expect($withoutContext)->toBe([(int) $suspendable->id, (int) $otherSuspendable->id])
+        ->and($withContext)->toBe($withoutContext);
+});
+
 function subscriptionReaderTenant(string $slug): Tenant
 {
     return Tenant::query()->create([
@@ -105,18 +141,13 @@ function subscriptionReaderTenant(string $slug): Tenant
 
 function subscriptionReaderCreateSubscription(Tenant $tenant, string $nextDueOn, int $graceDays): TenantSubscription
 {
-    app(TenantResolver::class)->set((int) $tenant->id);
-
-    $subscription = TenantSubscription::query()->create([
+    return TenantSubscription::query()->create([
+        'tenant_id' => (int) $tenant->id,
         'billing_anchor_day' => (int) (new DateTimeImmutable($nextDueOn))->format('j'),
         'next_due_on' => $nextDueOn,
         'grace_days' => $graceDays,
         'last_paid_on' => null,
     ]);
-
-    app(TenantResolver::class)->clear();
-
-    return $subscription;
 }
 
 function subscriptionReaderNow(string $dateTime): DateTimeImmutable

@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Schema;
 
 uses(RefreshDatabase::class);
 
-it('creates tenant subscriptions with tenant scope and lookup indexes', function (): void {
+it('creates platform-owned tenant subscriptions with lookup indexes', function (): void {
     expect(Schema::hasTable('tenant_subscriptions'))->toBeTrue()
         ->and(Schema::hasColumns('tenant_subscriptions', [
             'id',
@@ -23,7 +23,7 @@ it('creates tenant subscriptions with tenant scope and lookup indexes', function
             'created_at',
             'updated_at',
         ]))->toBeTrue()
-        ->and(class_uses_recursive(TenantSubscription::class))->toContain(BelongsToTenant::class)
+        ->and(class_uses_recursive(TenantSubscription::class))->not->toContain(BelongsToTenant::class)
         ->and(class_uses_recursive(TenantSubscription::class))->not->toContain(SoftDeletes::class);
 
     $indexNames = collect(Schema::getIndexes('tenant_subscriptions'))

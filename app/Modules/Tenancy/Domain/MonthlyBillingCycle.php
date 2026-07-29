@@ -10,12 +10,9 @@ use InvalidArgumentException;
 
 final class MonthlyBillingCycle
 {
-    public function nextDueOn(int $billingAnchorDay, DateTimeInterface $currentDueOn, DateTimeInterface $now): DateTimeImmutable
+    public function nextDueOn(int $billingAnchorDay, DateTimeInterface $currentDueOn): DateTimeImmutable
     {
         $this->assertValidAnchorDay($billingAnchorDay);
-
-        // The caller supplies time context explicitly, but payment timing must not move the anchor.
-        $this->dateOnly($now);
 
         $targetMonth = $this->dateOnly($currentDueOn)->modify('first day of next month');
         $targetDay = min($billingAnchorDay, (int) $targetMonth->format('t'));

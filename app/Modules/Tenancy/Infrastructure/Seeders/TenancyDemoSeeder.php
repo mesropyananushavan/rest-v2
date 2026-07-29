@@ -79,6 +79,7 @@ final class TenancyDemoSeeder extends Seeder
         TenantSubscription::query()->updateOrCreate(
             ['tenant_id' => $tenantId],
             [
+                'tenant_id' => $tenantId,
                 'billing_anchor_day' => $subscriptionRow['billing_anchor_day'],
                 'next_due_on' => $subscriptionRow['next_due_on'],
                 'grace_days' => $defaultGraceDays + $subscriptionRow['grace_days_offset'],

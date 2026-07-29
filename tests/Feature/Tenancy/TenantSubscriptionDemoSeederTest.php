@@ -23,13 +23,13 @@ it('seeds deterministic subscription rows for demo tenants idempotently', functi
     $arat = Tenant::query()->where('slug', 'arat-riverside')->firstOrFail();
     $northstar = Tenant::query()->where('slug', 'northstar-bistro')->firstOrFail();
 
-    app(TenantResolver::class)->set((int) $arat->id);
+    $aratSubscription = TenantSubscription::query()
+        ->where('tenant_id', (int) $arat->id)
+        ->firstOrFail();
 
-    $aratSubscription = TenantSubscription::query()->firstOrFail();
-
-    app(TenantResolver::class)->set((int) $northstar->id);
-
-    $northstarSubscription = TenantSubscription::query()->firstOrFail();
+    $northstarSubscription = TenantSubscription::query()
+        ->where('tenant_id', (int) $northstar->id)
+        ->firstOrFail();
 
     expect($aratSubscription->billing_anchor_day)->toBe(1)
         ->and($aratSubscription->next_due_on?->format('Y-m-d'))->toBe('2026-08-01')
@@ -40,9 +40,7 @@ it('seeds deterministic subscription rows for demo tenants idempotently', functi
         ->and($northstarSubscription->grace_days)->toBe(5)
         ->and($northstarSubscription->last_paid_on?->format('Y-m-d'))->toBe('2026-07-31');
 
-    app(TenantResolver::class)->set((int) $arat->id);
-    expect(TenantSubscription::query()->count())->toBe(1);
-
-    app(TenantResolver::class)->set((int) $northstar->id);
-    expect(TenantSubscription::query()->count())->toBe(1);
+    expect(TenantSubscription::query()->where('tenant_id', (int) $arat->id)->count())->toBe(1)
+        ->and(TenantSubscription::query()->where('tenant_id', (int) $northstar->id)->count())->toBe(1)
+        ->and(TenantSubscription::query()->whereNull('tenant_id')->count())->toBe(0);
 });

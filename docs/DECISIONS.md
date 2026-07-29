@@ -930,3 +930,30 @@ tenant timezone, because billing is a platform-level calendar concern; adding
 a scheduler or status writer now, because this slice is intentionally schema
 and read-model only; creating a Billing module now, because no billing-domain
 behavior exists yet.
+
+## 2026-07-29 — Tenant subscriptions are platform-owned, not RLS-scoped
+Decision: `tenant_subscriptions` is platform-owned tenant lifecycle data, in
+the same ownership category as `tenants`, not tenant-owned restaurant
+operational data. The unreleased migration no longer enables or forces
+PostgreSQL RLS and no longer creates a tenant-isolation policy for this table.
+The `TenantSubscription` model does not use `BelongsToTenant` / `TenantScoped`.
+Every per-tenant read and write must set or filter `tenant_id` explicitly.
+
+This supersedes the earlier subscription RLS assumption made in the
+subscription schema slice. Removing RLS before release avoids depending on the
+current runtime database role's `BYPASSRLS` capability. That role capability is
+a known security debt already scheduled for removal; the suspendable fleet scan
+must return the same tenant ids after the runtime role no longer has
+`BYPASSRLS`.
+
+Reason: the suspendable subscription read model is a platform fleet operation.
+It must run without a tenant context and must not be silently narrowed by a
+leftover tenant context. Tenant-owned RLS semantics intentionally hide rows
+when no `smartrest.tenant_id` is set, which is correct for restaurant
+operational tables but wrong for this platform lifecycle table.
+
+Rejected: keeping RLS and relying on the current runtime role bypass, because
+that would break as soon as the BYPASSRLS debt is fixed; adding a special RLS
+policy for fleet jobs now, because this table does not need tenant-owned RLS
+classification; keeping `BelongsToTenant` with manual scope bypasses, because
+platform reads and writes are clearer and safer when `tenant_id` is explicit.

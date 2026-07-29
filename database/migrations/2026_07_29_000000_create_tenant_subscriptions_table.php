@@ -25,13 +25,10 @@ return new class extends Migration
         });
 
         $this->addPostgresConstraints();
-        $this->enablePostgresTenantPolicy();
     }
 
     public function down(): void
     {
-        $this->dropPostgresTenantPolicy();
-
         Schema::dropIfExists('tenant_subscriptions');
     }
 
@@ -43,25 +40,5 @@ return new class extends Migration
 
         DB::statement('ALTER TABLE tenant_subscriptions ADD CONSTRAINT tenant_subscriptions_billing_anchor_day_chk CHECK (billing_anchor_day BETWEEN 1 AND 31)');
         DB::statement('ALTER TABLE tenant_subscriptions ADD CONSTRAINT tenant_subscriptions_grace_days_chk CHECK (grace_days >= 0)');
-    }
-
-    private function enablePostgresTenantPolicy(): void
-    {
-        if (Schema::getConnection()->getDriverName() !== 'pgsql') {
-            return;
-        }
-
-        DB::statement('ALTER TABLE tenant_subscriptions ENABLE ROW LEVEL SECURITY');
-        DB::statement('ALTER TABLE tenant_subscriptions FORCE ROW LEVEL SECURITY');
-        DB::statement("CREATE POLICY tenant_subscriptions_tenant_isolation ON tenant_subscriptions USING (tenant_id = nullif(current_setting('smartrest.tenant_id', true), '')::bigint) WITH CHECK (tenant_id = nullif(current_setting('smartrest.tenant_id', true), '')::bigint)");
-    }
-
-    private function dropPostgresTenantPolicy(): void
-    {
-        if (Schema::getConnection()->getDriverName() !== 'pgsql') {
-            return;
-        }
-
-        DB::statement('DROP POLICY IF EXISTS tenant_subscriptions_tenant_isolation ON tenant_subscriptions');
     }
 };

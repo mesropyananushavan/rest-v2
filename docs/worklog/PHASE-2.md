@@ -4905,6 +4905,114 @@ Plan:
   scheduler, job, command, tenant-status writer, or tenant status value was
   added.
 
-Next exact action: monitor the draft PR opened from `feature/subscription-schema`
-and address CI/review feedback if any.
+Task `TASK-SUB-01-FIX-fleet-read-pgsql` is active on existing branch
+`feature/subscription-schema` for draft PR #48. Append commits only; no
+force-push, rebase, squash, merge, PR state change, or direct push to `main`.
+
+Plan:
+
+- [x] Step SUB-01-FIX.1: platform-owned subscription schema/model correction.
+  Edit the existing unreleased `tenant_subscriptions` migration to remove only
+  this table's PostgreSQL RLS enable/force/policy statements while keeping the
+  tenant FK, unique `tenant_id`, CHECK constraints, and suspendable lookup
+  index pending EXPLAIN. Remove `BelongsToTenant` from `TenantSubscription`.
+  Update schema coverage to assert the model is not tenant-scoped and the table
+  remains non-soft-deleted. If a tenant-owned table enumerator fails and has no
+  platform-owned allowlist mechanism, STOP. Result: removed only
+  `tenant_subscriptions` RLS statements from the existing unreleased migration;
+  kept tenant FK cascade, unique `tenant_id`, CHECK constraints, and
+  `tenant_subscriptions_suspendable_lookup_idx`. Removed `BelongsToTenant` from
+  `TenantSubscription` and updated schema coverage to prove it is
+  platform-owned and not soft-deleted. No architecture-test allowlist was
+  needed: current tests have explicit schema/RLS coverage, not a tenant-owned
+  table enumerator.
+- [x] Step SUB-01-FIX.2: explicit tenant writes and reader semantics. Remove
+  deliberate tenant-scope bypasses/comments from
+  `EloquentTenantSubscriptionReader`, keep `statusForTenant()` explicitly
+  filtering by `tenant_id`, and make every subscription write set `tenant_id`
+  explicitly in `TenancyDemoSeeder` and test helpers. Add coverage proving a
+  tenant A subscription is not read when requesting tenant B status. Result:
+  `statusForTenant()` now filters by `tenant_id` without a scope bypass;
+  `suspendableTenantIds()` no longer bypasses a global scope and now uses a
+  plain `next_due_on < ?` comparison instead of `whereDate()`. The demo seeder
+  and subscription test helper write `tenant_id` explicitly. Added coverage
+  proving tenant A's subscription is not returned for tenant B, plus demo
+  seeder coverage proving no null-tenant subscription rows exist. No factories
+  for `TenantSubscription` exist.
+- [x] Step SUB-01-FIX.3: PostgreSQL read-model coverage relocation. Move every
+  subscription read-model behavior test from `tests/Feature/Billing` to
+  `tests/Feature/Tenancy` so `make tenant-isolation-pgsql` runs it. Replace the
+  obsolete tenant-subscription RLS read/WITH-CHECK proof with two pgsql tests:
+  a no-tenant-context fleet scan returns expected ids, and a set tenant context
+  does not change the fleet-scan result. Ensure grace exact-edge suspendable
+  cases execute under PostgreSQL. Result: moved
+  `TenantSubscriptionReaderTest` and `TenantSubscriptionDemoSeederTest` to
+  `tests/Feature/Tenancy`; removed the obsolete tenant-subscriptions RLS test
+  from `TenantIsolationTest`. PostgreSQL Tenancy target passed with the moved
+  read model tests active: `45 passed / 225 assertions`. The two fleet-scan
+  tests are `it lists suspendable tenants in one query with a completely empty
+  tenant context` and `it keeps the suspendable fleet scan unchanged when
+  tenant context is set`. The no-context test asserts the PostgreSQL
+  `smartrest.tenant_id` setting is empty before scanning.
+- [x] Step SUB-01-FIX.4: suspendable query EXPLAIN and index decision. Capture
+  the literal suspendable SQL and literal PostgreSQL `EXPLAIN` plan. If the
+  plan is sequential, make the predicate sargable and re-run EXPLAIN, or remove
+  the unused index and report that plainly. Do not keep an index the measured
+  plan does not choose. Result: populated `smartrest_test_local` with 50000
+  local `subscription-explain` tenant/subscription rows via the existing
+  `make pgsql` target, ran `ANALYZE`, and measured the actual suspendable query
+  shape. The query used `Index Only Scan using
+  tenant_subscriptions_suspendable_lookup_idx`, so the index is kept.
+
+  Literal EXPLAIN query:
+
+  ```sql
+  explain (analyze, buffers) select "tenant_id" from "tenant_subscriptions" where "next_due_on" < '2026-08-05' and (next_due_on + (grace_days * interval '1 day')) < '2026-08-05'::date order by "tenant_id" asc;
+  ```
+
+  Literal EXPLAIN plan:
+
+  ```text
+                                                                                      QUERY PLAN
+  ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+   Sort  (cost=305.54..305.71 rows=66 width=8) (actual time=0.846..0.851 rows=100 loops=1)
+     Sort Key: tenant_id
+     Sort Method: quicksort  Memory: 25kB
+     Buffers: shared hit=208
+     ->  Index Only Scan using tenant_subscriptions_suspendable_lookup_idx on tenant_subscriptions  (cost=0.29..303.55 rows=66 width=8) (actual time=0.059..0.783 rows=100 loops=1)
+           Index Cond: (next_due_on < '2026-08-05'::date)
+           Filter: ((next_due_on + ((grace_days)::double precision * '1 day'::interval)) < '2026-08-05'::date)
+           Rows Removed by Filter: 100
+           Heap Fetches: 211
+           Buffers: shared hit=205
+   Planning:
+     Buffers: shared hit=122
+   Planning Time: 1.166 ms
+   Execution Time: 0.922 ms
+  (14 rows)
+  ```
+- [x] Step SUB-01-FIX.5: dead parameter, decisions, worklog, gates, and
+  delivery. Remove or document the unused
+  `MonthlyBillingCycle::nextDueOn()` `$now` parameter, supersede the RLS
+  subscription decision in `docs/DECISIONS.md` including the explicit
+  BYPASSRLS independence requirement, record final measured numbers here, run
+  `make pint`, `make stan`, `make test`, `make tenant-isolation-pgsql`, and
+  `make orders-concurrency-pgsql` at the final head, collect the requested
+  grep/stat/status/head evidence, review the diff, commit scoped paths, and
+  push `feature/subscription-schema` without changing PR #48 state. Result:
+  removed the unused `$now` parameter from
+  `MonthlyBillingCycle::nextDueOn()` and updated all unit tests. Added the
+  `docs/DECISIONS.md` superseding entry that classifies
+  `tenant_subscriptions` as platform-owned like `tenants`, records that RLS was
+  removed before release, and explicitly states the fleet scan must not depend
+  on runtime `BYPASSRLS` and must keep the same behavior when that debt is
+  removed. Final gates after the correction and this worklog update must be:
+  `make pint` = `PASS 334 files`, `make stan` = `197/197` with
+  `[OK] No errors`, `make test` = `366 passed / 13 skipped /
+  3540 assertions`, `make tenant-isolation-pgsql` = `45 passed /
+  225 assertions`, and `make orders-concurrency-pgsql` = `6 passed /
+  43 assertions`.
+
+Next exact action: collect the required evidence commands, commit the scoped
+SUB-01-FIX changes, push `feature/subscription-schema`, and leave PR #48 draft.
 No owner decision is pending.
