@@ -4766,7 +4766,10 @@ Plan:
   `192/192`, `[OK] No errors`; `make test` = `349 passed / 13 skipped /
   3460 assertions`; `make tenant-isolation-pgsql` = `35 passed / 173
   assertions`; `make orders-concurrency-pgsql` = `6 passed / 43 assertions`.
+  After the verification handoff commit, the same required gates were rerun at
+  commit `88896c8` and passed with the same numbers.
 
-Next exact action: commit this verification handoff, rerun required gates at
-the new final head, push branch `fix/tenant-status-enforcement`, and report
-the requested evidence for draft PR #47 without merging.
+Next exact action: push branch `fix/tenant-status-enforcement` and report the
+requested evidence for draft PR #47 without merging. No local implementation
+work remains for `SUB-00-FIX-livewire-tenant-status` unless the owner requests
+PR revisions.
