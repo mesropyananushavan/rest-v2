@@ -957,3 +957,60 @@ that would break as soon as the BYPASSRLS debt is fixed; adding a special RLS
 policy for fleet jobs now, because this table does not need tenant-owned RLS
 classification; keeping `BelongsToTenant` with manual scope bypasses, because
 platform reads and writes are clearer and safer when `tenant_id` is explicit.
+
+## 2026-07-29 — Manual subscription operations are console-only and audited
+Decision: the first subscription operation interface is console-only. Platform
+operators may manually record one subscription payment, suspend a tenant, or
+reactivate a tenant through Artisan commands. No HTTP route, Livewire screen,
+platform guard, platform operator entity, scheduler, queued job, or UI is added
+in this slice. Console access on the server is the platform authorization
+boundary until the platform operator identity exists.
+
+One recorded payment advances `tenant_subscriptions.next_due_on` by exactly one
+monthly billing period from the stored current due date using
+`MonthlyBillingCycle`, regardless of how late the payment is. A tenant that is
+two periods overdue remains overdue after one payment; this is intentional and
+keeps payment recording from silently forgiving missing periods. Recording a
+payment also stores `last_paid_on`, but it never writes `tenants.status` and
+does not reactivate the tenant.
+
+Payment recording uses an optimistic-concurrency guard: the console displays
+the current `next_due_on`, passes that displayed date to the Application action
+as the expected value, and the action rejects the mutation if the row-lock read
+sees a different stored due date. This prevents a repeated or stale console run
+from silently advancing the subscription twice.
+
+Manual suspension and reactivation are the only Application write paths for
+`tenants.status`. They reject no-op transitions with stable Tenancy domain
+error codes so the later automatic suspension job can call the same actions
+instead of duplicating status rules. Reactivation is allowed even when the
+subscription remains suspendable, but the console prints a warning that the
+future automated job will suspend the tenant again unless the subscription is
+advanced or intentionally forgiven. Tenant owners must never be able to
+reactivate themselves: tenant lifecycle is a platform operation, and allowing a
+non-paying tenant to flip itself active would bypass the kill-switch and the
+future platform administration boundary.
+
+Audit rows for these console operations are written with the target tenant
+context set and branch context cleared. That satisfies the existing
+RLS-protected `audit_logs` policy without weakening isolation. The actor is
+left null in console context because the current audit schema already permits a
+null `actor_id` and no platform operator user exists yet.
+
+No money is modeled in this slice. There are no amounts, currencies, fees,
+plans, payment ledger rows, invoices, cashbox entries, or provider records; the
+manual payment operation records only subscription date state.
+
+Reason: the platform must be able to operate the subscription lifecycle before
+the platform UI and platform identity exist, but tenant users must not receive
+self-service lifecycle controls. One-period advancement preserves the anchored
+schedule and makes forgiveness an explicit operator choice. The expected
+due-date confirmation is a cheap concurrency guard that matches the console
+workflow and avoids introducing a ledger before money exists.
+
+Rejected: advancing to the first non-overdue period, because that would hide
+missed periods; reactivating automatically on payment, because payment and
+tenant lifecycle remain separate operator decisions; adding money columns or a
+payment ledger now, because amounts and provider semantics are out of scope;
+using a fake system user for console audit rows, because no platform operator
+identity exists and `actor_id` is already nullable.
