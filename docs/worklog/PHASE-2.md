@@ -5055,16 +5055,19 @@ Plan:
 - [x] Step SUB-02.4: decisions, worklog, and focused checks. Record the manual
   operation decisions in `docs/DECISIONS.md`, keep this worklog current, run
   focused PostgreSQL tenancy tests and grep for `tenants.status` writers, then
-  commit the coherent implementation slice. Progress: recorded the console-only,
+  commit the coherent implementation slice. Result: recorded the console-only,
   one-period payment, optimistic concurrency, no-money, and audit context
-  decisions in `docs/DECISIONS.md`. Remaining result is final grep after Pint.
+  decisions in `docs/DECISIONS.md`; ran the broad required status grep and
+  confirmed the only new production tenant-status assignments are
+  `SuspendTenant` setting `status` to `suspended` and `ReactivateTenant`
+  setting `status` to `active`. The same grep also lists unrelated status
+  reads/messages and pre-existing seeder/default status assignments.
 - [ ] Step SUB-02.5: final gates, delivery, and draft PR. Run `make pint`,
   `make stan`, `make test`, `make tenant-isolation-pgsql`, and
   `make orders-concurrency-pgsql` sequentially at final head; collect required
   grep/stat/status/main evidence; push `feature/subscription-operations`; open
   a draft PR against `main`; do not merge.
 
-Next exact action: run Pint/PHPStan/full SQLite tests, run the final status
-writer grep, commit the scoped implementation/docs update, then run the final
-five gates at the final head before pushing a draft PR. No owner decision is
+Next exact action: commit this worklog checkpoint, then run the final five
+gates at the final head before pushing a draft PR. No owner decision is
 pending.
