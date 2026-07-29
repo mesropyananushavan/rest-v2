@@ -4671,7 +4671,152 @@ Stage 2.23 handoff:
 - Open owner decision: the S1/S2/S3 platform-operator account shape remains
   undecided.
 
-Next exact action: OWNER DECISION on payment tracking depth, which currently
-blocks the platform UI slice. Work not depending on it: implementing the
-feature-availability axis (Axis 1) from the BLUEPRINT authorization model. Do
-not pick one and do not start either.
+Task `SUB-00-tenant-status-enforcement` is active on branch
+`fix/tenant-status-enforcement`, based on `origin/main` at
+`7f3794a2b1f57886918fc5ac6292a30b594a8110`.
+
+Plan:
+
+- [x] Step SUB-00.1: tenant serviceability predicate and request middleware.
+  Add one Tenancy contract decision point for active tenants, implement
+  `EnsureTenantIsServiceable`, register alias `tenant.active`, and apply it
+  after `auth` on protected web/API routes except logout. Result: added
+  `TenantDirectory::isServiceable()`, implemented it with the same private
+  serviceable-tenant query used by `activeTenantIds()`, added
+  `EnsureTenantIsServiceable`, registered `tenant.active`, and applied it to
+  protected web/API routes while leaving logout unblocked.
+- [x] Step SUB-00.2: login path and translations. Filter resolver-supplied
+  login tenant ids through the serviceability predicate and add
+  `auth.tenant_suspended` plus `api.errors.tenant_suspended` in `hy`, `ru`,
+  and `en`. Result: `AuthenticateUser::tenantIdsForAttempt()` now returns an
+  empty list when the resolver already holds a non-serviceable tenant id, so
+  session and non-production header login paths fail with the existing generic
+  login error. Added all required `hy`, `ru`, and `en` translation keys.
+- [x] Step SUB-00.3: coverage. Add route middleware coverage and Tenancy
+  feature tests proving active login still works, suspended sessions are
+  blocked on the next request, JSON uses the existing API envelope, session and
+  header login paths fail, logout remains reachable, and login/health do not
+  loop. Result: added `TenantStatusEnforcementTest` with the required real
+  login/session/header/API/logout/guest-health cases and the route middleware
+  coverage guard. Initial full SQLite gate passed after implementation:
+  `make test` = `346 passed / 13 skipped / 3427 assertions`. Manual guard
+  proof: temporarily removed `tenant.active` from `admin.dashboard`; `make
+  test` failed with `admin.dashboard` reported missing and the suspended-session
+  regression returned `200`; route middleware was restored immediately.
+- [x] Step SUB-00.4: Livewire investigation and documentation. Determine
+  whether Livewire 4 update requests re-apply originating route middleware,
+  record the tenant lifecycle enforcement decision in `docs/DECISIONS.md`, and
+  keep this worklog current. Result: installed Livewire source shows update
+  requests reconstruct the original route but filter middleware through
+  Livewire's persistent middleware whitelist; this app does not add
+  `tenant.active` to that whitelist, so Livewire update actions are a newly
+  identified follow-up gap, not fixed in this slice. Added the dated
+  `docs/DECISIONS.md` entry.
+- [x] Step SUB-00.5: final verification and delivery. Run `make pint`,
+  `make stan`, `make test`, `make tenant-isolation-pgsql`, and
+  `make orders-concurrency-pgsql` sequentially as required, run the requested
+  grep proof, review the full diff file by file, commit, push the task branch,
+  and open a draft PR without merging. Result: final verification passed:
+  `make pint` = `PASS 323 files`; `make stan` = `192/192`, `[OK] No errors`;
+  `make test` = `346 passed / 13 skipped / 3427 assertions`;
+  `make tenant-isolation-pgsql` = `32 passed / 140 assertions`;
+  `make orders-concurrency-pgsql` = `6 passed / 43 assertions`. Ran
+  `rg -n "'active'" app --glob '*.php'`, `git diff --check`, and reviewed the
+  full task diff file by file.
+
+Delivery:
+
+- Implementation committed as `653b4d86d091026a7626a9978deaac35c1158fbe`
+  and pushed to `origin/fix/tenant-status-enforcement`.
+- Draft PR opened: `https://github.com/mesropyananushavan/rest-v2/pull/47`.
+- Nothing merged, nothing pushed to `main`, and no history was rewritten.
+
+Task `SUB-00-FIX-livewire-tenant-status` is active on branch
+`fix/tenant-status-enforcement` for draft PR #47.
+
+Plan:
+
+- [x] Step SUB-00-FIX.1: verify installed Livewire persistent middleware API
+  and update-route middleware. Result: installed Livewire exposes
+  `addPersistentMiddleware()`, `setPersistentMiddleware()`, and
+  `getPersistentMiddleware()`; the default update route is registered with
+  `web` plus `RequireLivewireHeaders`, and custom update routes are forced to
+  include `web`, so `AttachLogContext`, `ResolveTenant`, and `ResolveBranch`
+  still run on the real update request.
+- [x] Step SUB-00-FIX.2: close the Livewire bypass. Result: registered only
+  `EnsureTenantIsServiceable::class` through `Livewire::addPersistentMiddleware`
+  in `AppServiceProvider::boot()`. The middleware now uses the auth guard for
+  guest detection so Livewire's reconstructed request sees the authenticated
+  session, and throws the existing API envelope for `X-Livewire` JSON requests
+  because Livewire ignores non-redirect responses returned from persisted
+  middleware.
+- [x] Step SUB-00-FIX.3: add real HTTP Livewire coverage. Result: extended
+  `TenantStatusEnforcementTest` with real POSTs to `default-livewire.update`
+  using a rendered dashboard `wire:snapshot`; active tenants receive a normal
+  Livewire JSON response and suspended tenants receive the `tenant.suspended`
+  API envelope. Focused container Pest run for
+  `tests/Feature/Tenancy/TenantStatusEnforcementTest.php` passed:
+  `11 passed / 74 assertions`.
+- [x] Step SUB-00-FIX.4: final verification and delivery. Run `make pint`,
+  `make stan`, `make test`, `make tenant-isolation-pgsql`, and
+  `make orders-concurrency-pgsql` at the final head, collect the requested
+  evidence dump commands, review the diff, append commits, push the existing
+  branch, and leave draft PR #47 open without merging. Result: verification at
+  commit `979fdf9` passed: `make pint` = `PASS 323 files`; `make stan` =
+  `192/192`, `[OK] No errors`; `make test` = `349 passed / 13 skipped /
+  3460 assertions`; `make tenant-isolation-pgsql` = `35 passed / 173
+  assertions`; `make orders-concurrency-pgsql` = `6 passed / 43 assertions`.
+  After the verification handoff commit, the same required gates were rerun at
+  commit `88896c8` and passed with the same numbers.
+
+Task `SUB-00-FIX-2-livewire-deterministic-block` is active on branch
+`fix/tenant-status-enforcement` for draft PR #47.
+
+Plan:
+
+- [x] Step SUB-00-FIX-2.1: Livewire source evidence and response decision.
+  Inspect the installed Livewire dist client and persistent middleware source
+  to prove the real update headers, fetch redirect handling, non-2xx handling,
+  and middleware abort behavior before changing code.
+  Result: installed `vendor/livewire/livewire/dist/livewire.js` sends update
+  requests with `Content-type: application/json` and `X-Livewire: 1`, no
+  normal `Accept: application/json` header, and `fetch(request.uri,
+  request.options)` with default redirect following. Its non-OK path calls the
+  error handler/modal, while `response.redirected` calls the redirect handler,
+  which assigns `window.location.href = url`. Installed
+  `Utils::applyMiddleware()` aborts only `RedirectResponse` instances from
+  persistent middleware. Conclusion: a redirect to login is the deterministic
+  browser-navigation shape for suspended Livewire updates.
+- [x] Step SUB-00-FIX-2.2: deterministic Livewire tenant block. Make
+  `EnsureTenantIsServiceable` branch on the real Livewire signal before
+  JSON/API detection, terminate the session on that path, and return the
+  response shape the installed client navigates from.
+  Result: `EnsureTenantIsServiceable` now checks `X-Livewire` before
+  `expectsJson()` / `api/*`, uses the same logout/context-clear/session
+  invalidation routine as HTML, and returns a login redirect for Livewire.
+  API routes still return the existing `ApiResponse::error` envelope.
+- [x] Step SUB-00-FIX-2.3: real-header Livewire tests. Rewrite the Livewire
+  update tests to use the installed client headers and no JSON Accept header,
+  prove suspended Livewire updates terminate the session, prove active updates
+  still work, and add an Accept-precedence regression guard.
+  Result: Livewire update tests now POST a raw JSON body containing `_token`
+  and `components`, with only `Content-type: application/json` and
+  `X-Livewire: 1` by default. Suspended Livewire updates assert redirect to
+  login, missing tenant/branch session keys, and guest state. A separate
+  `Accept: application/json` regression case proves `X-Livewire` wins before
+  JSON/API detection. Early full `make test` passed: `350 passed / 13 skipped
+  / 3463 assertions`.
+- [x] Step SUB-00-FIX-2.4: docs, final gates, push, and evidence. Update
+  `docs/DECISIONS.md` and this worklog with the closed Accept-dependency
+  issue, commit, run the five required gates at final head, push normally, and
+  report the requested evidence without changing PR state.
+  Result: final-head gates passed at `2a34bde`: `make pint` =
+  `PASS 323 files`, `make stan` = `192/192`, `[OK] No errors`, `make test` =
+  `350 passed / 13 skipped / 3463 assertions`,
+  `make tenant-isolation-pgsql` = `36 passed / 176 assertions`, and
+  `make orders-concurrency-pgsql` = `6 passed / 43 assertions`.
+
+Next exact action: commit this final worklog correction, rerun Pint, PHPStan,
+the full SQLite Pest suite, and the two PostgreSQL gates sequentially at the
+actual final head, then push branch `fix/tenant-status-enforcement` and report
+the requested evidence for draft PR #47. No owner decision is pending.

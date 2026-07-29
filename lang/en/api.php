@@ -6,6 +6,7 @@ return [
     'errors' => [
         'forbidden' => 'You do not have permission to perform this action.',
         'not_found' => 'The requested resource was not found.',
+        'tenant_suspended' => 'This restaurant account is not active.',
         'unauthenticated' => 'Authentication is required.',
         'validation' => 'The submitted query parameters are invalid.',
     ],

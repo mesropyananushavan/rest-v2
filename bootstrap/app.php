@@ -8,6 +8,7 @@ use App\Console\Commands\MenuSeedLoadCommand;
 use App\Http\Middleware\AttachLogContext;
 use App\Modules\Menu\Domain\MenuDomainException;
 use App\Modules\Tables\Domain\TablesDomainException;
+use App\Modules\Tenancy\Http\Middleware\EnsureTenantIsServiceable;
 use App\Modules\Tenancy\Http\Middleware\ResolveBranch;
 use App\Modules\Tenancy\Http\Middleware\ResolveTenant;
 use App\Support\Api\ApiErrorRenderer;
@@ -33,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'tenant' => ResolveTenant::class,
             'branch' => ResolveBranch::class,
+            'tenant.active' => EnsureTenantIsServiceable::class,
         ]);
 
         $middleware->appendToGroup('web', [

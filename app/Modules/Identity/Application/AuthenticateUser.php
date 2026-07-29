@@ -71,7 +71,7 @@ final class AuthenticateUser
         $currentTenantId = $this->tenantResolver->id();
 
         if ($currentTenantId !== null) {
-            return [$currentTenantId];
+            return $this->tenants->isServiceable($currentTenantId) ? [$currentTenantId] : [];
         }
 
         return $this->tenants->activeTenantIds();

@@ -38,44 +38,44 @@ Route::post('/logout', LogoutController::class)
     ->name('logout');
 
 Route::get('/admin/branches/{branch}', BranchShowController::class)
-    ->middleware(['tenant', 'branch', 'auth'])
+    ->middleware(['tenant', 'branch', 'auth', 'tenant.active'])
     ->name('admin.branches.show');
 
 Route::get('/admin', AdminDashboardController::class)
-    ->middleware(['tenant', 'branch', 'auth'])
+    ->middleware(['tenant', 'branch', 'auth', 'tenant.active'])
     ->name('admin.dashboard');
 
 Route::post('/admin/branch', AdminBranchSwitchController::class)
-    ->middleware(['tenant', 'branch', 'auth'])
+    ->middleware(['tenant', 'branch', 'auth', 'tenant.active'])
     ->name('admin.branch.switch');
 
 Route::post('/admin/locale', AdminLocaleSwitchController::class)
-    ->middleware(['tenant', 'branch', 'auth'])
+    ->middleware(['tenant', 'branch', 'auth', 'tenant.active'])
     ->name('admin.locale.switch');
 
 Route::get('/admin/translation-overrides', AdminTranslationOverrideController::class)
-    ->middleware(['tenant', 'branch', 'auth', 'can:'.TenantTranslationOverridePermissions::MANAGE])
+    ->middleware(['tenant', 'branch', 'auth', 'tenant.active', 'can:'.TenantTranslationOverridePermissions::MANAGE])
     ->name('admin.translation-overrides.index');
 
 Route::get('/admin/audit-logs', [AdminAuditLogController::class, 'index'])
-    ->middleware(['tenant', 'branch', 'auth', 'can:'.AuditLogPermissions::VIEW])
+    ->middleware(['tenant', 'branch', 'auth', 'tenant.active', 'can:'.AuditLogPermissions::VIEW])
     ->name('admin.audit-logs.index');
 
 Route::get('/admin/audit-logs/{auditLog}', [AdminAuditLogController::class, 'show'])
     ->whereNumber('auditLog')
-    ->middleware(['tenant', 'branch', 'auth', 'can:'.AuditLogPermissions::VIEW])
+    ->middleware(['tenant', 'branch', 'auth', 'tenant.active', 'can:'.AuditLogPermissions::VIEW])
     ->name('admin.audit-logs.show');
 
 Route::get('/admin/orders/board', OrderBoardController::class)
-    ->middleware(['tenant', 'branch', 'auth', 'can:orders.take'])
+    ->middleware(['tenant', 'branch', 'auth', 'tenant.active', 'can:orders.take'])
     ->name('admin.orders.board');
 
 Route::get('/admin/orders/{order}/workspace', OrderWorkspaceController::class)
     ->whereNumber('order')
-    ->middleware(['tenant', 'branch', 'auth', 'can:orders.take'])
+    ->middleware(['tenant', 'branch', 'auth', 'tenant.active', 'can:orders.take'])
     ->name('admin.orders.workspace');
 
-Route::middleware(['tenant', 'branch', 'auth'])->prefix('/admin/menu')->name('admin.menu.')->group(function (): void {
+Route::middleware(['tenant', 'branch', 'auth', 'tenant.active'])->prefix('/admin/menu')->name('admin.menu.')->group(function (): void {
     Route::get('/', MenuIndexController::class)
         ->middleware('can:menu.items.manage')
         ->name('index');
@@ -131,7 +131,7 @@ Route::middleware(['tenant', 'branch', 'auth'])->prefix('/admin/menu')->name('ad
         ->name('items.force-delete');
 });
 
-Route::middleware(['tenant', 'branch', 'auth'])->prefix('/admin/tables/halls')->name('admin.tables.halls.')->group(function (): void {
+Route::middleware(['tenant', 'branch', 'auth', 'tenant.active'])->prefix('/admin/tables/halls')->name('admin.tables.halls.')->group(function (): void {
     Route::get('/', [HallController::class, 'index'])
         ->middleware('can:tables.halls.manage')
         ->name('index');
@@ -158,7 +158,7 @@ Route::middleware(['tenant', 'branch', 'auth'])->prefix('/admin/tables/halls')->
         ->name('force-delete');
 });
 
-Route::middleware(['tenant', 'branch', 'auth'])->prefix('/admin/tables/halls/{hall}/tables')->name('admin.tables.tables.')->group(function (): void {
+Route::middleware(['tenant', 'branch', 'auth', 'tenant.active'])->prefix('/admin/tables/halls/{hall}/tables')->name('admin.tables.tables.')->group(function (): void {
     Route::get('/', [TableController::class, 'index'])
         ->middleware('can:tables.tables.manage')
         ->name('index');

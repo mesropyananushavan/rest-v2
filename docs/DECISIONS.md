@@ -812,3 +812,69 @@ that decision must come from measurements, not speculation.
 Non-goals: no export, no CSV, no printing, no retention or purge policy, and no
 new audit write sites. The report reads existing audit records only and does
 not change audit recorders, audit models, schema, migrations, or indexes.
+
+## 2026-07-29 — Tenant lifecycle blocks authenticated restaurant traffic
+Decision: authenticated restaurant-admin and protected JSON/API routes require
+the resolved tenant to be serviceable through the Tenancy `TenantDirectory`
+contract. Serviceable means the existing `tenants.status` value is `active`;
+no additional lifecycle status vocabulary, subscription table, billing model,
+grace period, scheduler, or migration is introduced. The same predicate gates
+resolver-supplied login tenant ids so session and non-production
+`X-Tenant-ID` resolution cannot authenticate into a non-active tenant.
+
+The request gate is explicit route middleware, registered as `tenant.active`,
+and sits after authentication on protected routes. Guest requests and requests
+with no resolved tenant pass through unchanged so `/login`, guest redirects,
+and the `/up` health endpoint cannot redirect-loop. Logout is intentionally
+not behind the gate so a user can always terminate a suspended tenant session.
+HTML blocks log the user out, clear tenant and branch context, invalidate the
+session, and redirect to the existing login form with a translated error.
+JSON/API blocks return the existing `ApiResponse::error` envelope with
+`tenant.suspended`.
+
+Reason: tenant lifecycle is the coarse on/off switch for whether a restaurant
+can use SmartRest at all, and the 2026-07-28 platform decision separates it
+from feature availability and payment. Enforcing it only during login leaves
+already-authenticated sessions usable after a platform operator switches a
+tenant off. A single Tenancy contract predicate keeps the active-only rule in
+one decision point and adds one indexed lookup by tenant primary key and
+status to protected requests.
+
+Livewire closure: Livewire 4 update requests do not automatically replay every
+middleware from the original page route. The installed Livewire
+`PersistentMiddleware` mechanism reconstructs the originating route from the
+snapshot but filters it through Livewire's persistent middleware whitelist. The
+application closes that gap by registering only
+`EnsureTenantIsServiceable::class` through Livewire's supported
+`addPersistentMiddleware()` API in `AppServiceProvider`, where the project
+already wires global cross-cutting concerns. The Livewire update route itself
+still carries the `web` middleware group, so `AttachLogContext`,
+`ResolveTenant`, and `ResolveBranch` continue to run on the real update
+request and are not duplicated in the persistent list.
+
+Livewire update requests are detected by the installed client's guaranteed
+`X-Livewire` header, not by `Accept`. The installed client sends
+`Content-type: application/json` and `X-Livewire: 1`, but does not send
+`Accept: application/json` on normal update requests. Therefore Livewire must
+branch before the JSON/API branch. Suspended Livewire updates terminate the
+session exactly like HTML requests and return a normal redirect to login. The
+installed client uses `fetch()` with default redirect following and, when the
+final response is marked `redirected`, assigns `window.location.href` to the
+final response URL; this is the response shape that moves an already-open
+Livewire page to `/login`. Protected JSON/API routes continue to return the
+existing `ApiResponse::error` envelope unchanged.
+
+Livewire's persistent middleware runner ignores ordinary non-redirect responses
+returned from persisted middleware and aborts only redirect responses. That is
+why the Livewire block uses a redirect rather than returning the API envelope.
+This decision would silently reopen if a future route-level middleware is added
+after authentication and must also apply to already-mounted Livewire
+components, but that middleware is not added to Livewire's persistent list and
+covered by a real HTTP update test.
+
+Rejected: putting the check in the global `web` group, because that would
+block guests and can create login loops; adding status enums or a migration,
+because the existing `tenants.status` switch already exists; using billing or
+subscription concepts, because payment is a later driver of tenant lifecycle,
+not this enforcement mechanism; blocking logout, because users must be able to
+end a suspended session safely.
