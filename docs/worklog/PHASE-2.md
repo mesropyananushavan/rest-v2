@@ -4816,7 +4816,52 @@ Plan:
   `make tenant-isolation-pgsql` = `36 passed / 176 assertions`, and
   `make orders-concurrency-pgsql` = `6 passed / 43 assertions`.
 
-Next exact action: commit this final worklog correction, rerun Pint, PHPStan,
-the full SQLite Pest suite, and the two PostgreSQL gates sequentially at the
-actual final head, then push branch `fix/tenant-status-enforcement` and report
-the requested evidence for draft PR #47. No owner decision is pending.
+PR #47 merge correction: merge commit `fd48e21` landed
+`fix/tenant-status-enforcement` on `origin/main`, including the tenant status
+request gate and deterministic Livewire tenant block. Baseline after merge:
+Pint `323 files`, PHPStan `192/192`, SQLite Pest `350 passed / 13 skipped /
+3463 assertions`, PostgreSQL Tenancy `36 passed / 176 assertions`, and Orders
+concurrency PostgreSQL `6 passed / 43 assertions`.
+
+Task `TASK-SUB-01-subscription-schema-read-model` is active on branch
+`feature/subscription-schema`, based on verified `origin/main` at
+`fd48e21d160ded089b3407927dbd11072ee3bf3e`.
+
+Plan:
+
+- [x] Step SUB-01.1: schema, model, and RLS foundation. Add the additive
+  reversible `tenant_subscriptions` migration with one row per tenant,
+  PostgreSQL check constraints for `billing_anchor_day` and `grace_days`, exact
+  RLS enable/force/policy treatment, a tenant-scoped Eloquent model following
+  Tenancy conventions, schema tests, and PostgreSQL read/WITH CHECK tenant
+  isolation coverage. Result: added `tenant_subscriptions` with tenant FK,
+  unique one-row-per-tenant constraint, tenant index, suspendable lookup index,
+  PostgreSQL anchor/grace checks, and exact RLS policy. Added
+  `TenantSubscription` with `BelongsToTenant`, no `SoftDeletes`, date casts,
+  schema coverage, and PostgreSQL read visibility plus savepoint-wrapped
+  `WITH CHECK` write-block proof. Verification: `make test` passed
+  (`352 passed / 14 skipped / 3471 assertions`) and
+  `make tenant-isolation-pgsql` passed (`39 passed / 192 assertions`).
+- [ ] Step SUB-01.2: anchor date arithmetic. Add a pure dependency-free
+  Tenancy Domain class that advances due dates from immutable anchor day plus
+  current due date without reading the clock or touching Eloquent/facades, and
+  cover anchor 1/29/30/31, leap-year, year-crossing, and repeated clamped-date
+  advancement cases.
+- [ ] Step SUB-01.3: subscription read model. Add billing config, Tenancy
+  contract, readonly DTO, Eloquent reader implementation, and
+  `AppServiceProvider` binding. Prove grace inclusive boundaries, missing
+  subscription row behavior, injected-current-time determinism, and the
+  single-query suspendable tenant-id listing.
+- [ ] Step SUB-01.4: deterministic seeding. Extend the Tenancy demo seeder with
+  idempotent subscription rows for both demo tenants, and add focused demo
+  seeder coverage so the rows are visible after `make fresh`.
+- [ ] Step SUB-01.5: documentation, final verification, delivery. Record R1-R5
+  decisions in `docs/DECISIONS.md`, keep this worklog current, run
+  `make pint`, `make stan`, `make test`, `make tenant-isolation-pgsql`, and
+  `make orders-concurrency-pgsql` sequentially, run the required grep/stat
+  commands, review the final diff file by file, commit scoped paths, push
+  `feature/subscription-schema`, and open a draft PR without merging.
+
+Next exact action: implement Step SUB-01.2 anchor date arithmetic, then run
+focused deterministic tests before marking the step done.
+No owner decision is pending.

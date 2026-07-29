@@ -20,6 +20,7 @@ use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Modules\Tenancy\Contracts\TenantResolver;
 use App\Modules\Tenancy\Infrastructure\Models\Branch;
 use App\Modules\Tenancy\Infrastructure\Models\Tenant;
+use App\Modules\Tenancy\Infrastructure\Models\TenantSubscription;
 use App\Support\Audit\AuditLog;
 use App\Support\I18n\TenantTranslationOverride;
 use Illuminate\Database\QueryException;
@@ -395,6 +396,71 @@ it('enforces PostgreSQL row level security for tenant translation overrides', fu
     app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
 
     expect(rawTenantTranslationOverrideIds())->toBe([(int) $overrideB->id]);
+});
+
+it('enforces PostgreSQL row level security for tenant subscriptions', function (): void {
+    if (! usesPostgresRowLevelSecurity()) {
+        $this->markTestSkipped('PostgreSQL RLS coverage runs only on pgsql.');
+    }
+
+    $tenantA = tenantWithUser('tenant-a', 'manager-a', ['menu.items.manage']);
+    $tenantB = tenantWithUser('tenant-b', 'manager-b', ['menu.items.manage']);
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+
+    $subscriptionA = TenantSubscription::query()->create([
+        'billing_anchor_day' => 1,
+        'next_due_on' => '2026-08-01',
+        'grace_days' => 3,
+        'last_paid_on' => null,
+    ]);
+
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+
+    $subscriptionB = TenantSubscription::query()->create([
+        'billing_anchor_day' => 31,
+        'next_due_on' => '2026-08-31',
+        'grace_days' => 5,
+        'last_paid_on' => '2026-07-31',
+    ]);
+
+    app(TenantResolver::class)->clear();
+
+    expect(rawTenantSubscriptionIds())->toBe([]);
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+
+    expect(rawTenantSubscriptionIds())->toBe([(int) $subscriptionA->id]);
+
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+
+    expect(rawTenantSubscriptionIds())->toBe([(int) $subscriptionB->id]);
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+
+    $blocked = null;
+    DB::statement('SAVEPOINT tenant_subscriptions_rls_blocked_insert');
+
+    try {
+        DB::insert(
+            'insert into tenant_subscriptions (tenant_id, billing_anchor_day, next_due_on, grace_days, created_at, updated_at) values (?, ?, ?, ?, ?, ?)',
+            [
+                (int) $tenantB['tenant']->id,
+                15,
+                '2026-09-15',
+                3,
+                now(),
+                now(),
+            ],
+        );
+    } catch (QueryException $exception) {
+        $blocked = $exception;
+        DB::statement('ROLLBACK TO SAVEPOINT tenant_subscriptions_rls_blocked_insert');
+    } finally {
+        DB::statement('RELEASE SAVEPOINT tenant_subscriptions_rls_blocked_insert');
+    }
+
+    expect($blocked)->toBeInstanceOf(QueryException::class);
 });
 
 it('enforces PostgreSQL row level security for halls', function (): void {
@@ -931,6 +997,16 @@ function rawAuditLogIds(): array
 function rawTenantTranslationOverrideIds(): array
 {
     return collect(DB::select('select id from tenant_translation_overrides order by id'))
+        ->map(fn (object $row): int => (int) $row->id)
+        ->all();
+}
+
+/**
+ * @return list<int>
+ */
+function rawTenantSubscriptionIds(): array
+{
+    return collect(DB::select('select id from tenant_subscriptions order by id'))
         ->map(fn (object $row): int => (int) $row->id)
         ->all();
 }
