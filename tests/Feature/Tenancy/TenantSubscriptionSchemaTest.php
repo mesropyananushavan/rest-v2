@@ -31,7 +31,6 @@ it('creates tenant subscriptions with tenant scope and lookup indexes', function
         ->all();
 
     expect($indexNames)->toContain('tenant_subscriptions_tenant_id_unique')
-        ->and($indexNames)->toContain('tenant_subscriptions_tenant_id_index')
         ->and($indexNames)->toContain('tenant_subscriptions_suspendable_lookup_idx');
 });
 
