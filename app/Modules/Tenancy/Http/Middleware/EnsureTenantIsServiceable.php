@@ -10,6 +10,7 @@ use App\Modules\Tenancy\Contracts\TenantResolver;
 use App\Support\Api\ApiResponse;
 use App\Support\Logging\Redactor;
 use Closure;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -45,16 +46,20 @@ final class EnsureTenantIsServiceable
 
         $this->logBlockedTenant($tenantId);
 
-        if ($request->expectsJson() || $request->is('api/*')) {
-            $response = ApiResponse::error($request, 'tenant.suspended', __('api.errors.tenant_suspended'), null, 403);
-
-            if ($request->headers->has('X-Livewire')) {
-                abort($response);
-            }
-
-            return $response;
+        if ($request->headers->has('X-Livewire')) {
+            return $this->blockInteractiveSession($request);
         }
 
+        if ($request->expectsJson() || $request->is('api/*')) {
+            return ApiResponse::error($request, 'tenant.suspended', __('api.errors.tenant_suspended'), null, 403);
+        }
+
+        return $this->blockInteractiveSession($request)
+            ->withErrors(['email' => __('auth.tenant_suspended')]);
+    }
+
+    private function blockInteractiveSession(Request $request): RedirectResponse
+    {
         Auth::logout();
         $this->branches->clear();
         $this->tenantResolver->clear();
@@ -62,9 +67,7 @@ final class EnsureTenantIsServiceable
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()
-            ->route('login')
-            ->withErrors(['email' => __('auth.tenant_suspended')]);
+        return redirect()->route('login');
     }
 
     private function logBlockedTenant(int $tenantId): void

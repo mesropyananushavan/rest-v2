@@ -4769,7 +4769,57 @@ Plan:
   After the verification handoff commit, the same required gates were rerun at
   commit `88896c8` and passed with the same numbers.
 
-Next exact action: push branch `fix/tenant-status-enforcement` and report the
-requested evidence for draft PR #47 without merging. No local implementation
-work remains for `SUB-00-FIX-livewire-tenant-status` unless the owner requests
-PR revisions.
+Task `SUB-00-FIX-2-livewire-deterministic-block` is active on branch
+`fix/tenant-status-enforcement` for draft PR #47.
+
+Plan:
+
+- [x] Step SUB-00-FIX-2.1: Livewire source evidence and response decision.
+  Inspect the installed Livewire dist client and persistent middleware source
+  to prove the real update headers, fetch redirect handling, non-2xx handling,
+  and middleware abort behavior before changing code.
+  Result: installed `vendor/livewire/livewire/dist/livewire.js` sends update
+  requests with `Content-type: application/json` and `X-Livewire: 1`, no
+  normal `Accept: application/json` header, and `fetch(request.uri,
+  request.options)` with default redirect following. Its non-OK path calls the
+  error handler/modal, while `response.redirected` calls the redirect handler,
+  which assigns `window.location.href = url`. Installed
+  `Utils::applyMiddleware()` aborts only `RedirectResponse` instances from
+  persistent middleware. Conclusion: a redirect to login is the deterministic
+  browser-navigation shape for suspended Livewire updates.
+- [x] Step SUB-00-FIX-2.2: deterministic Livewire tenant block. Make
+  `EnsureTenantIsServiceable` branch on the real Livewire signal before
+  JSON/API detection, terminate the session on that path, and return the
+  response shape the installed client navigates from.
+  Result: `EnsureTenantIsServiceable` now checks `X-Livewire` before
+  `expectsJson()` / `api/*`, uses the same logout/context-clear/session
+  invalidation routine as HTML, and returns a login redirect for Livewire.
+  API routes still return the existing `ApiResponse::error` envelope.
+- [x] Step SUB-00-FIX-2.3: real-header Livewire tests. Rewrite the Livewire
+  update tests to use the installed client headers and no JSON Accept header,
+  prove suspended Livewire updates terminate the session, prove active updates
+  still work, and add an Accept-precedence regression guard.
+  Result: Livewire update tests now POST a raw JSON body containing `_token`
+  and `components`, with only `Content-type: application/json` and
+  `X-Livewire: 1` by default. Suspended Livewire updates assert redirect to
+  login, missing tenant/branch session keys, and guest state. A separate
+  `Accept: application/json` regression case proves `X-Livewire` wins before
+  JSON/API detection. Early full `make test` passed: `350 passed / 13 skipped
+  / 3463 assertions`.
+- [x] Step SUB-00-FIX-2.4: docs, final gates, push, and evidence. Update
+  `docs/DECISIONS.md` and this worklog with the closed Accept-dependency
+  issue, commit, run the five required gates at final head, push normally, and
+  report the requested evidence without changing PR state.
+  Result so far: pre-commit measurement pass is green with `make pint` =
+  `PASS 323 files`, `make stan` = `192/192`, `[OK] No errors`, `make test` =
+  `350 passed / 13 skipped / 3463 assertions`,
+  `make tenant-isolation-pgsql` = `36 passed / 176 assertions`, and
+  `make orders-concurrency-pgsql` = `6 passed / 43 assertions`. The same five
+  gates still need to be rerun after the final commit so the reported numbers
+  correspond to the final head.
+
+Next exact action: commit the deterministic Livewire tenant block, then rerun
+Pint, PHPStan, the full SQLite Pest suite, and the two PostgreSQL gates
+sequentially at that final committed head; push branch
+`fix/tenant-status-enforcement` and report the requested evidence for draft PR
+#47. No owner decision is pending.

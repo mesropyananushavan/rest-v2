@@ -852,12 +852,21 @@ still carries the `web` middleware group, so `AttachLogContext`,
 `ResolveTenant`, and `ResolveBranch` continue to run on the real update
 request and are not duplicated in the persistent list.
 
-Livewire update requests are legitimate JSON requests (`X-Livewire` and
-`Content-Type: application/json`), so suspended tenants receive the same
-`ApiResponse::error` envelope as protected JSON/API routes. Livewire's
-persistent middleware runner ignores ordinary non-redirect responses returned
-from persisted middleware, so the middleware throws that existing response for
-`X-Livewire` requests while continuing to return it normally for API routes.
+Livewire update requests are detected by the installed client's guaranteed
+`X-Livewire` header, not by `Accept`. The installed client sends
+`Content-type: application/json` and `X-Livewire: 1`, but does not send
+`Accept: application/json` on normal update requests. Therefore Livewire must
+branch before the JSON/API branch. Suspended Livewire updates terminate the
+session exactly like HTML requests and return a normal redirect to login. The
+installed client uses `fetch()` with default redirect following and, when the
+final response is marked `redirected`, assigns `window.location.href` to the
+final response URL; this is the response shape that moves an already-open
+Livewire page to `/login`. Protected JSON/API routes continue to return the
+existing `ApiResponse::error` envelope unchanged.
+
+Livewire's persistent middleware runner ignores ordinary non-redirect responses
+returned from persisted middleware and aborts only redirect responses. That is
+why the Livewire block uses a redirect rather than returning the API envelope.
 This decision would silently reopen if a future route-level middleware is added
 after authentication and must also apply to already-mounted Livewire
 components, but that middleware is not added to Livewire's persistent list and
