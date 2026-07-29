@@ -4881,7 +4881,7 @@ Plan:
   days, due dates, grace days, and informational paid dates for both seeded
   tenants. Verification: `make test` passed (`364 passed / 14 skipped /
   3537 assertions`) and `make stan` passed (`197/197`, `[OK] No errors`).
-- [ ] Step SUB-01.5: documentation, final verification, delivery. Record R1-R5
+- [x] Step SUB-01.5: documentation, final verification, delivery. Record R1-R5
   decisions in `docs/DECISIONS.md`, keep this worklog current, run
   `make pint`, `make stan`, `make test`, `make tenant-isolation-pgsql`, and
   `make orders-concurrency-pgsql` sequentially, run the required grep/stat
@@ -4889,9 +4889,22 @@ Plan:
   `feature/subscription-schema`, and open a draft PR without merging. Progress:
   added the R1-R5 subscription decisions entry covering anchored monthly
   billing, clamping without drift, inclusive grace, 05:00 quiet-hour suspension
-  intent, platform billing timezone, and Tenancy placement. Final exact-head
-  gates and delivery remain pending.
+  intent, platform billing timezone, and Tenancy placement. Result: final
+  local gates passed after the redundant plain tenant index was removed:
+  `make pint` passed (`334 files`), `make stan` passed (`197/197`,
+  `[OK] No errors`), `make test` passed (`364 passed / 14 skipped /
+  3536 assertions`), `make tenant-isolation-pgsql` passed (`39 passed /
+  191 assertions`), and `make orders-concurrency-pgsql` passed (`6 passed /
+  43 assertions`). Required `rg -n "status" app/Modules/Tenancy --glob
+  '*.php'` showed the existing tenant/branch fillable fields, the existing
+  `EloquentTenantDirectory::serviceableTenants()` active-status predicate,
+  demo active-status seed values, and subscription-reader status method names
+  only. Required `git diff origin/main...HEAD --stat` showed 16 files changed
+  for the Tenancy subscription schema/read model slice. Final diff reviewed
+  file by file; no `docs/BLUEPRINT.md`, `template/`, route, controller, UI,
+  scheduler, job, command, tenant-status writer, or tenant status value was
+  added.
 
-Next exact action: implement Step SUB-01.5 documentation, final verification,
-diff review, branch push, and draft PR creation.
+Next exact action: monitor the draft PR opened from `feature/subscription-schema`
+and address CI/review feedback if any.
 No owner decision is pending.
