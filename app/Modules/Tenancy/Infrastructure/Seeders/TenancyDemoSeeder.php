@@ -8,6 +8,7 @@ use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Modules\Tenancy\Contracts\TenantResolver;
 use App\Modules\Tenancy\Infrastructure\Models\Branch;
 use App\Modules\Tenancy\Infrastructure\Models\Tenant;
+use App\Modules\Tenancy\Infrastructure\Models\TenantSubscription;
 use Illuminate\Database\Seeder;
 
 final class TenancyDemoSeeder extends Seeder
@@ -36,6 +37,8 @@ final class TenancyDemoSeeder extends Seeder
 
             $tenants[$tenantRow['slug']] = (int) $tenant->id;
             $tenantResolver->set((int) $tenant->id);
+
+            $this->seedSubscription((int) $tenant->id, $tenantRow['subscription']);
 
             foreach ($tenantRow['branches'] as $branchRow) {
                 $branch = Branch::query()->updateOrCreate(
@@ -66,11 +69,31 @@ final class TenancyDemoSeeder extends Seeder
     }
 
     /**
+     * @param  array{billing_anchor_day: int, next_due_on: string, grace_days_offset: int, last_paid_on: string|null}  $subscriptionRow
+     */
+    private function seedSubscription(int $tenantId, array $subscriptionRow): void
+    {
+        $defaultGraceDays = config('billing.default_grace_days');
+        assert(is_int($defaultGraceDays));
+
+        TenantSubscription::query()->updateOrCreate(
+            ['tenant_id' => $tenantId],
+            [
+                'billing_anchor_day' => $subscriptionRow['billing_anchor_day'],
+                'next_due_on' => $subscriptionRow['next_due_on'],
+                'grace_days' => $defaultGraceDays + $subscriptionRow['grace_days_offset'],
+                'last_paid_on' => $subscriptionRow['last_paid_on'],
+            ],
+        );
+    }
+
+    /**
      * @return list<array{
      *     slug: string,
      *     name: string,
      *     default_locale: string,
      *     currency: string,
+     *     subscription: array{billing_anchor_day: int, next_due_on: string, grace_days_offset: int, last_paid_on: string|null},
      *     branches: list<array{key: string, name: string, address: string, phone: string, locale: string, timezone: string}>
      * }>
      */
@@ -82,6 +105,12 @@ final class TenancyDemoSeeder extends Seeder
                 'name' => 'Arat Riverside Restaurants',
                 'default_locale' => 'hy',
                 'currency' => 'AMD',
+                'subscription' => [
+                    'billing_anchor_day' => 1,
+                    'next_due_on' => '2026-08-01',
+                    'grace_days_offset' => 0,
+                    'last_paid_on' => '2026-07-01',
+                ],
                 'branches' => [
                     [
                         'key' => 'arat-kentron',
@@ -106,6 +135,12 @@ final class TenancyDemoSeeder extends Seeder
                 'name' => 'Northstar Bistro Group',
                 'default_locale' => 'en',
                 'currency' => 'USD',
+                'subscription' => [
+                    'billing_anchor_day' => 31,
+                    'next_due_on' => '2026-08-31',
+                    'grace_days_offset' => 2,
+                    'last_paid_on' => '2026-07-31',
+                ],
                 'branches' => [
                     [
                         'key' => 'northstar-downtown',

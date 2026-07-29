@@ -4871,9 +4871,15 @@ Plan:
   `make stan` passed (`197/197`, `[OK] No errors`), and after moving the
   reader behavior test out of the PostgreSQL tenant-isolation target,
   `make tenant-isolation-pgsql` passed (`39 passed / 192 assertions`).
-- [ ] Step SUB-01.4: deterministic seeding. Extend the Tenancy demo seeder with
+- [x] Step SUB-01.4: deterministic seeding. Extend the Tenancy demo seeder with
   idempotent subscription rows for both demo tenants, and add focused demo
-  seeder coverage so the rows are visible after `make fresh`.
+  seeder coverage so the rows are visible after `make fresh`. Result: added
+  deterministic `updateOrCreate` subscription rows to `TenancyDemoSeeder` for
+  both demo tenants, using configured default grace days plus tenant-specific
+  offsets. Added focused `DemoSeeder` coverage proving idempotency, anchor
+  days, due dates, grace days, and informational paid dates for both seeded
+  tenants. Verification: `make test` passed (`364 passed / 14 skipped /
+  3537 assertions`) and `make stan` passed (`197/197`, `[OK] No errors`).
 - [ ] Step SUB-01.5: documentation, final verification, delivery. Record R1-R5
   decisions in `docs/DECISIONS.md`, keep this worklog current, run
   `make pint`, `make stan`, `make test`, `make tenant-isolation-pgsql`, and
@@ -4881,6 +4887,6 @@ Plan:
   commands, review the final diff file by file, commit scoped paths, push
   `feature/subscription-schema`, and open a draft PR without merging.
 
-Next exact action: implement Step SUB-01.4 deterministic Tenancy demo seeding
-for subscription rows and focused seeder coverage.
+Next exact action: implement Step SUB-01.5 documentation, final verification,
+diff review, branch push, and draft PR creation.
 No owner decision is pending.
