@@ -4842,11 +4842,18 @@ Plan:
   `WITH CHECK` write-block proof. Verification: `make test` passed
   (`352 passed / 14 skipped / 3471 assertions`) and
   `make tenant-isolation-pgsql` passed (`39 passed / 192 assertions`).
-- [ ] Step SUB-01.2: anchor date arithmetic. Add a pure dependency-free
+- [x] Step SUB-01.2: anchor date arithmetic. Add a pure dependency-free
   Tenancy Domain class that advances due dates from immutable anchor day plus
   current due date without reading the clock or touching Eloquent/facades, and
   cover anchor 1/29/30/31, leap-year, year-crossing, and repeated clamped-date
-  advancement cases.
+  advancement cases. Result: added
+  `App\Modules\Tenancy\Domain\MonthlyBillingCycle::nextDueOn(int,
+  DateTimeInterface, DateTimeInterface): DateTimeImmutable`, preserving the
+  anchor and clamping only per target month. Covered anchor 1 regular/year
+  crossing, anchor 31 non-leap and leap non-drift cases, anchor 30 non-leap
+  and leap cases, anchor 29 non-leap/leap cases, repeated advancement from
+  clamped dates, and invalid anchor rejection. Verification: `make test`
+  passed (`359 passed / 14 skipped / 3504 assertions`).
 - [ ] Step SUB-01.3: subscription read model. Add billing config, Tenancy
   contract, readonly DTO, Eloquent reader implementation, and
   `AppServiceProvider` binding. Prove grace inclusive boundaries, missing
@@ -4862,6 +4869,6 @@ Plan:
   commands, review the final diff file by file, commit scoped paths, push
   `feature/subscription-schema`, and open a draft PR without merging.
 
-Next exact action: implement Step SUB-01.2 anchor date arithmetic, then run
-focused deterministic tests before marking the step done.
+Next exact action: implement Step SUB-01.3 subscription read model with config,
+contract, DTO, reader binding, and deterministic read tests.
 No owner decision is pending.
