@@ -4810,16 +4810,13 @@ Plan:
   `docs/DECISIONS.md` and this worklog with the closed Accept-dependency
   issue, commit, run the five required gates at final head, push normally, and
   report the requested evidence without changing PR state.
-  Result so far: pre-commit measurement pass is green with `make pint` =
+  Result: final-head gates passed at `2a34bde`: `make pint` =
   `PASS 323 files`, `make stan` = `192/192`, `[OK] No errors`, `make test` =
   `350 passed / 13 skipped / 3463 assertions`,
   `make tenant-isolation-pgsql` = `36 passed / 176 assertions`, and
-  `make orders-concurrency-pgsql` = `6 passed / 43 assertions`. The same five
-  gates still need to be rerun after the final commit so the reported numbers
-  correspond to the final head.
+  `make orders-concurrency-pgsql` = `6 passed / 43 assertions`.
 
-Next exact action: commit the deterministic Livewire tenant block, then rerun
-Pint, PHPStan, the full SQLite Pest suite, and the two PostgreSQL gates
-sequentially at that final committed head; push branch
-`fix/tenant-status-enforcement` and report the requested evidence for draft PR
-#47. No owner decision is pending.
+Next exact action: commit this final worklog correction, rerun Pint, PHPStan,
+the full SQLite Pest suite, and the two PostgreSQL gates sequentially at the
+actual final head, then push branch `fix/tenant-status-enforcement` and report
+the requested evidence for draft PR #47. No owner decision is pending.
