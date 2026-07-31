@@ -14,6 +14,7 @@ use App\Modules\Tenancy\Infrastructure\Models\Branch;
 use App\Modules\Tenancy\Infrastructure\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 
 uses(RefreshDatabase::class);
 
@@ -76,6 +77,14 @@ it('lists active branch assigned users with a permission without leaking other t
         expect($directory->isActiveUserAssignedToBranchWithPermission((int) $rejected->id, (int) $tenantA['branches'][0]->id, 'orders.take'))
             ->toBeFalse();
     }
+});
+
+it('creates the branch staff lookup index for permission-filtered assignment lists', function (): void {
+    $indexes = collect(Schema::getIndexes('user_branch_assignments'))
+        ->pluck('name')
+        ->all();
+
+    expect($indexes)->toContain('user_branch_assignments_tenant_branch_user_idx');
 });
 
 /**

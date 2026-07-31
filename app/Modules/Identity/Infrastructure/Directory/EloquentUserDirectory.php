@@ -40,16 +40,32 @@ final class EloquentUserDirectory implements UserDirectory
 
     public function activeUsersAssignedToBranchWithPermission(int $branchId, string $permissionCode): array
     {
-        return User::query()
-            ->where('active', true)
-            ->whereHas('branchAssignments', fn ($query) => $query->where('branch_id', $branchId))
-            ->whereHas('role.permissions', fn ($query) => $query->where('permissions.code', $permissionCode))
-            ->orderBy('name')
-            ->orderBy('id')
-            ->get(['id', 'name'])
-            ->map(fn (User $user): BranchAssignableUser => new BranchAssignableUser(
-                id: (int) $user->id,
-                displayName: (string) $user->name,
+        return UserBranchAssignment::query()
+            ->join('users', function ($join): void {
+                $join->on('users.id', '=', 'user_branch_assignments.user_id')
+                    ->on('users.tenant_id', '=', 'user_branch_assignments.tenant_id');
+            })
+            ->join('roles', function ($join): void {
+                $join->on('roles.id', '=', 'users.role_id')
+                    ->on('roles.tenant_id', '=', 'user_branch_assignments.tenant_id');
+            })
+            ->join('role_permissions', function ($join): void {
+                $join->on('role_permissions.role_id', '=', 'roles.id')
+                    ->on('role_permissions.tenant_id', '=', 'user_branch_assignments.tenant_id');
+            })
+            ->join('permissions', function ($join): void {
+                $join->on('permissions.id', '=', 'role_permissions.permission_id')
+                    ->on('permissions.tenant_id', '=', 'user_branch_assignments.tenant_id');
+            })
+            ->where('user_branch_assignments.branch_id', $branchId)
+            ->where('users.active', true)
+            ->where('permissions.code', $permissionCode)
+            ->orderBy('users.name')
+            ->orderBy('users.id')
+            ->get(['users.id', 'users.name'])
+            ->map(fn (UserBranchAssignment $assignment): BranchAssignableUser => new BranchAssignableUser(
+                id: (int) $assignment->id,
+                displayName: (string) $assignment->name,
             ))
             ->values()
             ->all();
@@ -57,11 +73,27 @@ final class EloquentUserDirectory implements UserDirectory
 
     public function isActiveUserAssignedToBranchWithPermission(int $userId, int $branchId, string $permissionCode): bool
     {
-        return User::query()
-            ->whereKey($userId)
-            ->where('active', true)
-            ->whereHas('branchAssignments', fn ($query) => $query->where('branch_id', $branchId))
-            ->whereHas('role.permissions', fn ($query) => $query->where('permissions.code', $permissionCode))
+        return UserBranchAssignment::query()
+            ->join('users', function ($join): void {
+                $join->on('users.id', '=', 'user_branch_assignments.user_id')
+                    ->on('users.tenant_id', '=', 'user_branch_assignments.tenant_id');
+            })
+            ->join('roles', function ($join): void {
+                $join->on('roles.id', '=', 'users.role_id')
+                    ->on('roles.tenant_id', '=', 'user_branch_assignments.tenant_id');
+            })
+            ->join('role_permissions', function ($join): void {
+                $join->on('role_permissions.role_id', '=', 'roles.id')
+                    ->on('role_permissions.tenant_id', '=', 'user_branch_assignments.tenant_id');
+            })
+            ->join('permissions', function ($join): void {
+                $join->on('permissions.id', '=', 'role_permissions.permission_id')
+                    ->on('permissions.tenant_id', '=', 'user_branch_assignments.tenant_id');
+            })
+            ->where('user_branch_assignments.user_id', $userId)
+            ->where('user_branch_assignments.branch_id', $branchId)
+            ->where('users.active', true)
+            ->where('permissions.code', $permissionCode)
             ->exists();
     }
 }

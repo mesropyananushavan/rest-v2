@@ -5193,10 +5193,90 @@ passed `343 files`; `make stan` analysed `205/205` with `[OK] No errors`;
   writes, preserved null clearing and non-open-order precedence, and added the
   explicit Orders-to-Identity-contracts architecture proof; focused check
   passed with `14 passed / 269 assertions`.
-- [ ] Step 2.24.3: branch lookup index and measurement. Add one reversible
+- [x] Step 2.24.3: branch lookup index and measurement. Add one reversible
   composite index migration only if PostgreSQL `EXPLAIN (ANALYZE, BUFFERS)` on
   a meaningful local dataset proves the new staff lookup uses it; paste the
   literal SQL and plan here, or remove the migration and record why.
+  Result: added reversible index
+  `user_branch_assignments_tenant_branch_user_idx` on
+  `(tenant_id, branch_id, user_id)`. Measurement used existing local
+  PostgreSQL test database `smartrest_test_local` with a synthetic tenant
+  `measure-waiter-assignment-20260731`, tenant id `71`, target branch id `60`,
+  and `50,000` user branch assignments where only `500` rows belonged to the
+  target branch. After `ANALYZE`, PostgreSQL chose
+  `Index Only Scan using user_branch_assignments_tenant_branch_user_idx`, so
+  the migration stays.
+
+  Literal index measurement SQL:
+
+  ```sql
+  explain (analyze, buffers)
+  select users.id, users.name
+  from user_branch_assignments
+  inner join users
+      on users.id = user_branch_assignments.user_id
+      and users.tenant_id = user_branch_assignments.tenant_id
+  inner join roles
+      on roles.id = users.role_id
+      and roles.tenant_id = user_branch_assignments.tenant_id
+  inner join role_permissions
+      on role_permissions.role_id = roles.id
+      and role_permissions.tenant_id = user_branch_assignments.tenant_id
+  inner join permissions
+      on permissions.id = role_permissions.permission_id
+      and permissions.tenant_id = user_branch_assignments.tenant_id
+  where user_branch_assignments.tenant_id = 71
+    and user_branch_assignments.branch_id = 60
+    and users.active = true
+    and permissions.code = 'orders.take'
+  order by users.name, users.id;
+  ```
+
+  Literal `EXPLAIN (ANALYZE, BUFFERS)` plan:
+
+  ```text
+                                                                                               QUERY PLAN
+  -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+   Sort  (cost=1240.57..1240.85 rows=112 width=27) (actual time=2.242..2.260 rows=415 loops=1)
+     Sort Key: users.name, users.id
+     Sort Method: quicksort  Memory: 44kB
+     Buffers: shared hit=1518
+     ->  Nested Loop  (cost=0.70..1236.76 rows=112 width=27) (actual time=0.120..2.047 rows=415 loops=1)
+           Join Filter: (roles.id = users.role_id)
+           Rows Removed by Join Filter: 35
+           Buffers: shared hit=1512
+           ->  Nested Loop  (cost=0.41..30.46 rows=249 width=32) (actual time=0.101..0.230 rows=500 loops=1)
+                 Buffers: shared hit=12
+                 ->  Nested Loop  (cost=0.00..3.10 rows=1 width=40) (actual time=0.032..0.035 rows=1 loops=1)
+                       Join Filter: (role_permissions.permission_id = permissions.id)
+                       Buffers: shared hit=3
+                       ->  Nested Loop  (cost=0.00..2.06 rows=1 width=40) (actual time=0.021..0.023 rows=1 loops=1)
+                             Join Filter: (roles.id = role_permissions.role_id)
+                             Buffers: shared hit=2
+                             ->  Seq Scan on role_permissions  (cost=0.00..1.01 rows=1 width=24) (actual time=0.014..0.016 rows=1 loops=1)
+                                   Filter: (tenant_id = 71)
+                                   Buffers: shared hit=1
+                             ->  Seq Scan on roles  (cost=0.00..1.02 rows=2 width=16) (actual time=0.005..0.005 rows=1 loops=1)
+                                   Filter: (tenant_id = 71)
+                                   Buffers: shared hit=1
+                       ->  Seq Scan on permissions  (cost=0.00..1.03 rows=1 width=16) (actual time=0.010..0.010 rows=1 loops=1)
+                             Filter: ((tenant_id = 71) AND ((code)::text = 'orders.take'::text))
+                             Buffers: shared hit=1
+                 ->  Index Only Scan using user_branch_assignments_tenant_branch_user_idx on user_branch_assignments  (cost=0.41..22.38 rows=498 width=16) (actual time=0.068..0.144 rows=500 loops=1)
+                       Index Cond: ((tenant_id = 71) AND (branch_id = 60))
+                       Heap Fetches: 0
+                       Buffers: shared hit=9
+           ->  Index Scan using users_pkey on users  (cost=0.29..4.83 rows=1 width=43) (actual time=0.001..0.001 rows=1 loops=500)
+                 Index Cond: (id = user_branch_assignments.user_id)
+                 Filter: (active AND (tenant_id = 71))
+                 Rows Removed by Filter: 0
+                 Buffers: shared hit=1500
+   Planning:
+     Buffers: shared hit=461
+   Planning Time: 6.195 ms
+   Execution Time: 2.530 ms
+  (38 rows)
+  ```
 - [ ] Step 2.24.4: workspace read model and Livewire adapter. Add assigned
   waiter id to the order workspace DTO/read model with no per-row query, load
   assignable staff through the Identity contract in the Livewire adapter, and
