@@ -236,6 +236,29 @@ it('enforces PostgreSQL row level security when tenant setting is missing', func
     expect(rawBranchIds())->toBe([(int) $tenantB['branch']->id]);
 });
 
+it('enforces PostgreSQL row level security for identity users by selected tenant context', function (): void {
+    if (! usesPostgresRowLevelSecurity()) {
+        $this->markTestSkipped('PostgreSQL RLS coverage runs only on pgsql.');
+    }
+
+    $tenantA = tenantWithUser('tenant-a', 'shared-user', ['menu.items.manage']);
+    $tenantB = tenantWithUser('tenant-b', 'shared-user', ['menu.items.manage']);
+
+    app(TenantResolver::class)->clear();
+
+    expect(rawUserEmails())->toBe([]);
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+
+    expect(rawUserEmails())->toBe(['shared-user@smartrest.test'])
+        ->and(rawUserIds())->toBe([(int) $tenantA['user']->id]);
+
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+
+    expect(rawUserEmails())->toBe(['shared-user@smartrest.test'])
+        ->and(rawUserIds())->toBe([(int) $tenantB['user']->id]);
+});
+
 it('enforces PostgreSQL row level security for menu tables', function (): void {
     if (! usesPostgresRowLevelSecurity()) {
         $this->markTestSkipped('PostgreSQL RLS coverage runs only on pgsql.');
@@ -902,6 +925,26 @@ function rawBranchIds(): array
 {
     return collect(DB::select('select id from branches order by id'))
         ->map(fn (object $row): int => (int) $row->id)
+        ->all();
+}
+
+/**
+ * @return list<int>
+ */
+function rawUserIds(): array
+{
+    return collect(DB::select('select id from users order by id'))
+        ->map(fn (object $row): int => (int) $row->id)
+        ->all();
+}
+
+/**
+ * @return list<string>
+ */
+function rawUserEmails(): array
+{
+    return collect(DB::select('select email from users order by id'))
+        ->map(fn (object $row): string => (string) $row->email)
         ->all();
 }
 
