@@ -5013,6 +5013,131 @@ Plan:
   225 assertions`, and `make orders-concurrency-pgsql` = `6 passed /
   43 assertions`.
 
-Next exact action: collect the required evidence commands, commit the scoped
-SUB-01-FIX changes, push `feature/subscription-schema`, and leave PR #48 draft.
-No owner decision is pending.
+PR #48 merge: merge commit `2bdb6ee` landed
+`feature/subscription-schema` on `origin/main`, including platform-owned
+tenant subscriptions, anchored billing dates, PostgreSQL fleet-scan coverage,
+and the subscription read model. Baseline after merge: Pint `334 files`,
+PHPStan `197/197`, SQLite Pest `366 passed / 13 skipped / 3540 assertions`,
+PostgreSQL Tenancy `45 passed / 225 assertions`, and Orders concurrency
+PostgreSQL `6 passed / 43 assertions`.
+
+Task `TASK-SUB-02-subscription-operations` is active on branch
+`feature/subscription-operations`, based on verified `origin/main` at
+`2bdb6ee3ef6f3bc0a07cdfbae9f93b9703fa585d`.
+
+Plan:
+
+- [x] Step SUB-02.1: domain exception and audited Tenancy action foundation.
+  Add `TenancyDomainException` with stable subscription/lifecycle error codes,
+  a Tenancy audit/logging trait, and the record-payment/suspend/reactivate
+  Application actions. Use transactions, row locks, explicit tenant filters,
+  existing `MonthlyBillingCycle`, no money, and no changes to the kill-switch
+  read path. Result: added the Tenancy domain exception, `RecordsTenantLifecycleAction`,
+  and `RecordTenantSubscriptionPayment`, `SuspendTenant`, and
+  `ReactivateTenant`. The actions set tenant context only around the audited
+  transaction, clear branch context for platform lifecycle rows, restore the
+  prior runtime context afterward, and leave console `actor_id` null.
+- [x] Step SUB-02.2: console command adapters. Add and register one command
+  per operation, with explicit confirmation before mutation, current and next
+  due-date output for payment, reactivation suspendable warning, non-zero
+  domain-failure exits, and error-code output. Result: added
+  `tenancy:subscription:record-payment`, `tenancy:tenant:suspend`, and
+  `tenancy:tenant:reactivate`, registered through `bootstrap/app.php`.
+  Console output follows existing command convention: plain English, explicit
+  confirmation, and `Domain failure: <error_code>` on domain rejection.
+- [x] Step SUB-02.3: PostgreSQL operation tests. Add `tests/Feature/Tenancy`
+  coverage for double-run stale due-date guard, one-period-only advancement,
+  no payment status mutation, suspend/reactivate no-op rejection, console
+  end-to-end behavior, and RLS-protected audit row insertion with correct
+  `tenant_id`. Result: added `TenantSubscriptionOperationsTest` under
+  `tests/Feature/Tenancy`; focused PostgreSQL target passed with the new tests:
+  `make tenant-isolation-pgsql` = `52 passed / 270 assertions`.
+- [x] Step SUB-02.4: decisions, worklog, and focused checks. Record the manual
+  operation decisions in `docs/DECISIONS.md`, keep this worklog current, run
+  focused PostgreSQL tenancy tests and grep for `tenants.status` writers, then
+  commit the coherent implementation slice. Result: recorded the console-only,
+  one-period payment, optimistic concurrency, no-money, and audit context
+  decisions in `docs/DECISIONS.md`; ran the broad required status grep and
+  confirmed the only new production tenant-status assignments are
+  `SuspendTenant` setting `status` to `suspended` and `ReactivateTenant`
+  setting `status` to `active`. The same grep also lists unrelated status
+  reads/messages and pre-existing seeder/default status assignments.
+- [x] Step SUB-02.5: final gates, delivery, and draft PR. Run `make pint`,
+  `make stan`, `make test`, `make tenant-isolation-pgsql`, and
+  `make orders-concurrency-pgsql` sequentially at final head; collect required
+  grep/stat/status/main evidence; push `feature/subscription-operations`; open
+  a draft PR against `main`; do not merge. Result: final implementation head
+  `ee91ce94c57bc2e2679d2f5c8c94110de63250f9` passed Pint `343 files`,
+  PHPStan `205/205`, SQLite Pest `372 passed / 14 skipped / 3583 assertions`,
+  PostgreSQL Tenancy `52 passed / 270 assertions`, and Orders concurrency
+  PostgreSQL `6 passed / 43 assertions`. The branch was pushed and draft PR
+  #49 was opened against `main`.
+
+End-of-day handoff for `TASK-SUB-02`:
+
+A. Current state
+
+- `origin/main` = `2bdb6ee` (merge of PR #48, subscription schema and read
+  model).
+- Open draft PR #49: branch `feature/subscription-operations`, implementation
+  head `ee91ce9`.
+- CI for `ee91ce9`: green. Runs
+  `https://github.com/mesropyananushavan/rest-v2/actions/runs/30450599745`
+  (pull_request) and
+  `https://github.com/mesropyananushavan/rest-v2/actions/runs/30450590513`
+  (push) completed successfully; jobs `tenant-isolation-pgsql`,
+  `orders-concurrency-pgsql`, and `quality` all succeeded in both runs.
+- Measured gates at `ee91ce9`: Pint `343 files`; PHPStan `205/205`;
+  SQLite Pest `372 passed / 14 skipped / 3583 assertions`;
+  `tenant-isolation-pgsql` `52 passed / 270 assertions`;
+  `orders-concurrency-pgsql` `6 passed / 43 assertions`.
+
+B. What shipped so far in the subscription line
+
+- PR #47 (`fd48e21`): tenant status enforcement - request gate, Livewire
+  persistent middleware, login path closed.
+- PR #48 (`2bdb6ee`): `tenant_subscriptions` schema (platform-owned, no RLS),
+  `MonthlyBillingCycle` anchor arithmetic, `TenantSubscriptionReader`, and
+  `config/billing.php`.
+- PR #49 (open): manual operations - record payment, suspend, reactivate,
+  console commands, and audit under RLS with null actor.
+
+C. Agreed business rules
+
+- Suspension runs at 05:00 platform time (`Asia/Yerevan`); grace is 3 days and
+  inclusive.
+- The billing anchor never drifts; one payment advances exactly one period; a
+  tenant two periods overdue stays overdue after one payment.
+- Paying does not reactivate; reactivation is a separate explicit operation.
+- The interface is console-only until the platform operator entity exists.
+- There is no money, amount, or ledger in this line yet.
+
+D. Next actions, in order
+
+1. Verify and merge PR #49 after owner review; merge commit only, never squash.
+2. Slice 3: scheduled suspension job - hourly, idempotent, quiet hour 05:00,
+   and calls the existing `SuspendTenant` action instead of writing
+   `tenants.status` itself.
+3. Slice 4: owner-facing warning in the UI during grace.
+4. Blocked on the S1/S2/S3 decision: platform operator identity, then
+   `/platform` UI.
+5. Later: payment ledger with amounts and card autocharge.
+
+E. Open debts and unverified items
+
+- Manual browser verification of the kill-switch on merged main is still
+  outstanding.
+- The Makefile Pint target has no `--test` variant; CI uses
+  `vendor/bin/pint --test`.
+- `is_superadmin` is still present in the User model and
+  `EloquentAuthorizer`; the seeder sets it false, but the bypass code path is
+  not removed.
+- `MenuSeedLoadCommand` writes `tenants.status` in seed/load paths
+  (pre-existing, seed-only).
+- PHPStan analyses `app/` only; tests are not statically checked.
+- `orders-concurrency-pgsql` can fail on a cold container with
+  "the database system is starting up"; rerun rather than treating it as a
+  test failure.
+
+Next exact action: owner reviews PR #49, then verify and merge it with a true
+merge commit if CI is green. No owner decision is pending before review.

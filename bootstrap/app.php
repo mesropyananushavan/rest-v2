@@ -5,6 +5,9 @@ declare(strict_types=1);
 use App\Console\Commands\MenuContextSmokeCommand;
 use App\Console\Commands\MenuLoadTestDataCommand;
 use App\Console\Commands\MenuSeedLoadCommand;
+use App\Console\Commands\ReactivateTenantCommand;
+use App\Console\Commands\RecordTenantSubscriptionPaymentCommand;
+use App\Console\Commands\SuspendTenantCommand;
 use App\Http\Middleware\AttachLogContext;
 use App\Modules\Menu\Domain\MenuDomainException;
 use App\Modules\Tables\Domain\TablesDomainException;
@@ -29,6 +32,9 @@ return Application::configure(basePath: dirname(__DIR__))
         MenuContextSmokeCommand::class,
         MenuLoadTestDataCommand::class,
         MenuSeedLoadCommand::class,
+        ReactivateTenantCommand::class,
+        RecordTenantSubscriptionPaymentCommand::class,
+        SuspendTenantCommand::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
