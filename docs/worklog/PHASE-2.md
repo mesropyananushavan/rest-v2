@@ -5336,10 +5336,33 @@ changed. PHPStan now analyses `207/207` app paths because this slice added two
 new app files. No README update was needed because setup, URLs, credentials,
 and commands did not change.
 
+- [x] Step 2.24.7: final PR #51 audit correction. Verify local and GitHub PR
+  state, review the full `main...feature/order-waiter-assignment` diff, fix
+  only blocking defects found during final audit, rerun the complete required
+  gate set, commit/push any real fix to the existing PR branch, and stop
+  without merging. Result: audit found the Identity waiter directory used
+  direct role-permission joins and therefore disagreed with the current
+  canonical `User::can()` / `EloquentAuthorizer` behavior for active assigned
+  superadmins. Fixed the directory to use the effective current Identity rule:
+  active assigned user plus active superadmin bypass or live role permission.
+  Added regression coverage in Identity and Orders. Final local gates after the
+  fix: `make pint` passed `347 files`; `make stan` analysed `207/207` with
+  `[OK] No errors`; `make test` passed `381 passed / 14 skipped /
+  3647 assertions`; `make tenant-isolation-pgsql` passed `52 passed /
+  270 assertions`; `make orders-concurrency-pgsql` passed `6 passed /
+  43 assertions`; `make build` passed Composer setup and Vite production build
+  with the known container-only Git dubious-ownership warning; `make fresh`
+  passed through the new index migration and DemoSeeder; targeted rollback and
+  re-apply of
+  `2026_07_31_000000_add_branch_staff_lookup_index_to_user_branch_assignments`
+  passed; `git diff --check` had no output; the component-tag directive audit
+  exited `1` with no matches; and the forbidden Orders-to-Identity internals
+  and table-access audits both exited `1` with no matches.
+
 ## Next Steps
 
-Next exact action: review the draft PR for
-`feature/order-waiter-assignment`; after it merges, the remaining
-subscription-line candidate slice is the scheduled suspension job - hourly,
-idempotent, quiet hour 05:00 platform time, and calling the existing
-`SuspendTenant` action instead of writing `tenants.status` itself.
+Next exact action: wait for owner approval on PR #51. Do not merge PR #51.
+After it merges, the remaining subscription-line candidate slice is the
+scheduled suspension job - hourly, idempotent, quiet hour 05:00 platform time,
+and calling the existing `SuspendTenant` action instead of writing
+`tenants.status` itself.

@@ -33,14 +33,18 @@ it('lists active branch assigned users with a permission without leaking other t
     $viewerRole = userDirectoryRole('viewer', []);
     $zara = userDirectoryUser($waiterRole, 'Zara Active', 'zara', active: true);
     $aram = userDirectoryUser($waiterRole, 'Aram Active', 'aram', active: true);
+    $breakGlass = userDirectoryUser($viewerRole, 'Break Glass', 'break-glass', active: true, superadmin: true);
     $wrongBranch = userDirectoryUser($waiterRole, 'Wrong Branch', 'wrong-branch', active: true);
     $inactive = userDirectoryUser($waiterRole, 'Inactive Staff', 'inactive', active: false);
+    $inactiveSuperadmin = userDirectoryUser($viewerRole, 'Inactive Break Glass', 'inactive-break-glass', active: false, superadmin: true);
     $noPermission = userDirectoryUser($viewerRole, 'No Permission', 'no-permission', active: true);
 
     userDirectoryAssign($aram, $tenantA['branches'][0]);
+    userDirectoryAssign($breakGlass, $tenantA['branches'][0]);
     userDirectoryAssign($zara, $tenantA['branches'][0]);
     userDirectoryAssign($wrongBranch, $tenantA['branches'][1]);
     userDirectoryAssign($inactive, $tenantA['branches'][0]);
+    userDirectoryAssign($inactiveSuperadmin, $tenantA['branches'][0]);
     userDirectoryAssign($noPermission, $tenantA['branches'][0]);
 
     app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
@@ -54,12 +58,16 @@ it('lists active branch assigned users with a permission without leaking other t
     $users = app(UserDirectory::class)
         ->activeUsersAssignedToBranchWithPermission((int) $tenantA['branches'][0]->id, 'orders.take');
 
-    expect($users)->toHaveCount(2)
+    expect($users)->toHaveCount(3)
         ->sequence(
             fn ($user) => $user
                 ->toBeInstanceOf(BranchAssignableUser::class)
                 ->id->toBe((int) $aram->id)
                 ->displayName->toBe('Aram Active'),
+            fn ($user) => $user
+                ->toBeInstanceOf(BranchAssignableUser::class)
+                ->id->toBe((int) $breakGlass->id)
+                ->displayName->toBe('Break Glass'),
             fn ($user) => $user
                 ->toBeInstanceOf(BranchAssignableUser::class)
                 ->id->toBe((int) $zara->id)
@@ -68,12 +76,12 @@ it('lists active branch assigned users with a permission without leaking other t
 
     $directory = app(UserDirectory::class);
 
-    foreach ([$aram, $zara] as $allowed) {
+    foreach ([$aram, $breakGlass, $zara] as $allowed) {
         expect($directory->isActiveUserAssignedToBranchWithPermission((int) $allowed->id, (int) $tenantA['branches'][0]->id, 'orders.take'))
             ->toBeTrue();
     }
 
-    foreach ([$wrongBranch, $inactive, $noPermission, $foreign] as $rejected) {
+    foreach ([$wrongBranch, $inactive, $inactiveSuperadmin, $noPermission, $foreign] as $rejected) {
         expect($directory->isActiveUserAssignedToBranchWithPermission((int) $rejected->id, (int) $tenantA['branches'][0]->id, 'orders.take'))
             ->toBeFalse();
     }
@@ -147,7 +155,7 @@ function userDirectoryRole(string $code, array $permissionCodes): Role
     return $role;
 }
 
-function userDirectoryUser(Role $role, string $name, string $username, bool $active): User
+function userDirectoryUser(Role $role, string $name, string $username, bool $active, bool $superadmin = false): User
 {
     return User::query()->create([
         'role_id' => (int) $role->id,
@@ -156,7 +164,7 @@ function userDirectoryUser(Role $role, string $name, string $username, bool $act
         'username' => $username,
         'default_locale' => 'en',
         'active' => $active,
-        'is_superadmin' => false,
+        'is_superadmin' => $superadmin,
         'password' => Hash::make('password'),
     ]);
 }

@@ -162,6 +162,22 @@ it('rejects assigning waiters that cannot take orders in the current tenant bran
         ->times(4);
 });
 
+it('allows assigning an active branch assigned superadmin through the effective authorization model', function (): void {
+    $record = ordersActionsUser('tenant-a', 'manager-a');
+    $waiter = ordersActionsStaffUser($record, 0, 'break-glass-waiter', [], superadmin: true);
+    $table = ordersActionsTable($record, 0, 'Superadmin Assign Table');
+
+    ordersActionsActingIn($record, 0, 'orders-assign-superadmin');
+    $order = app(OpenOrder::class)((int) $table->id);
+
+    expect($waiter->can('orders.take'))->toBeTrue();
+
+    $assigned = app(AssignWaiter::class)((int) $order->id, (int) $waiter->id);
+
+    expect((int) $assigned->waiter_id)->toBe((int) $waiter->id)
+        ->and((int) Order::query()->findOrFail((int) $order->id)->waiter_id)->toBe((int) $waiter->id);
+});
+
 it('requires branch context when assigning a waiter', function (): void {
     $record = ordersActionsUser('tenant-a', 'manager-a');
     $table = ordersActionsTable($record, 0, 'Assign Branch Context Table');
@@ -402,7 +418,7 @@ function ordersActionsUser(string $tenantSlug, string $username, int $branchCoun
  * @param  array{tenant: Tenant, branches: list<Branch>, user: User}  $record
  * @param  list<string>  $permissionCodes
  */
-function ordersActionsStaffUser(array $record, int $branchIndex, string $username, array $permissionCodes, bool $active = true): User
+function ordersActionsStaffUser(array $record, int $branchIndex, string $username, array $permissionCodes, bool $active = true, bool $superadmin = false): User
 {
     app(TenantResolver::class)->set((int) $record['tenant']->id);
     app(BranchContext::class)->set((int) $record['branches'][$branchIndex]->id);
@@ -432,7 +448,7 @@ function ordersActionsStaffUser(array $record, int $branchIndex, string $usernam
         'username' => $username,
         'default_locale' => 'en',
         'active' => $active,
-        'is_superadmin' => false,
+        'is_superadmin' => $superadmin,
         'password' => Hash::make('password'),
     ]);
 
