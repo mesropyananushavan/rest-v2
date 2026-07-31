@@ -5302,21 +5302,44 @@ passed `343 files`; `make stan` analysed `205/205` with `[OK] No errors`;
   Downtown has `Emma Brooks`, `Liam Reed`, `Noah Bennett`, and
   `Olivia Carter`, proving two-tenant branch-only visibility without seeder
   changes.
-- [ ] Step 2.24.6: final documentation, gates, and delivery. Record the
+- [x] Step 2.24.6: final documentation, gates, and delivery. Record the
   decision in `docs/DECISIONS.md`, keep this worklog current with measured
   results and gotchas, run the full required gate set including build,
   directive audit, diff review, grep, and migration reversibility, commit in
   small scoped commits, push the branch normally, and open a draft PR without
   merging.
+  Result: recorded the waiter-assignment rule in `docs/DECISIONS.md`, kept
+  worklog updates in the same scoped commits as code, and completed the final
+  gate set before pushing the branch. Final measured gates: `make pint` passed
+  `347 files`; `make stan` analysed `207/207` with `[OK] No errors`;
+  `make test` passed `380 passed / 14 skipped / 3639 assertions`;
+  `make tenant-isolation-pgsql` passed `52 passed / 270 assertions`;
+  `make orders-concurrency-pgsql` passed `6 passed / 43 assertions`;
+  `make build` completed Dockerized Composer setup and Vite production build;
+  `git diff --check` had no output; `git diff origin/main...HEAD --stat`
+  showed `23 files changed, 970 insertions(+), 19 deletions(-)`; the Orders
+  forbidden-internals grep exited `1` with no matches; and the migration
+  reversibility sequence passed with `migrate:fresh --seed`, rollback of
+  `2026_07_31_000000_add_branch_staff_lookup_index_to_user_branch_assignments`,
+  and re-apply. The worklog records the Stage 2.16 directive audit result but
+  not the literal command; the directive-only component-tag audit used for this
+  task was:
+  `rg -n --pcre2 '<x-[^>\n]*(?:@(js|json|class|style|lang|choice|checked|selected|disabled|readonly|required|error|props|aware|once|push|prepend|section|yield|include|each|extends|vite|livewireScriptConfig)\s*\(|\{\{|\{!!)' resources/views`,
+  and it exited `1` with no matches.
+
+Gotchas carried forward after TASK-2.24: the Stage 2.16 worklog entries record
+the component-attribute directive audit result but not the literal command, so
+future sessions should preserve the exact command text when adding required
+audits. `make build` still emits Git's container-only dubious-ownership warning
+for `/var/www/html` before completing successfully; no global Git config was
+changed. PHPStan now analyses `207/207` app paths because this slice added two
+new app files. No README update was needed because setup, URLs, credentials,
+and commands did not change.
 
 ## Next Steps
 
-Next exact action: choose one of two candidate Phase 2 slices, without starting
-either from this merge session:
-
-- Candidate slice A: scheduled suspension job - hourly, idempotent, quiet hour
-  05:00 platform time, and calls the existing `SuspendTenant` action instead
-  of writing `tenants.status` itself.
-- Candidate slice B: close the Phase 2 definition-of-done gap for waiter
-  assignment - an Application action exists, but there is no adapter and no
-  validation that the assigned user is valid for the assignment.
+Next exact action: review the draft PR for
+`feature/order-waiter-assignment`; after it merges, the remaining
+subscription-line candidate slice is the scheduled suspension job - hourly,
+idempotent, quiet hour 05:00 platform time, and calling the existing
+`SuspendTenant` action instead of writing `tenants.status` itself.
