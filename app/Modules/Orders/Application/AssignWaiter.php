@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Orders\Application;
 
+use App\Modules\Identity\Contracts\UserDirectory;
+use App\Modules\Orders\Contracts\OrderPermissions;
 use App\Modules\Orders\Domain\OrdersDomainException;
 use App\Modules\Orders\Infrastructure\Models\Order;
 use App\Modules\Tenancy\Contracts\BranchContext;
@@ -16,6 +18,7 @@ final class AssignWaiter
 
     public function __construct(
         private readonly BranchContext $branches,
+        private readonly UserDirectory $users,
     ) {}
 
     public function __invoke(int $orderId, ?int $waiterId): Order
@@ -30,6 +33,18 @@ final class AssignWaiter
             $order = $this->lockOpenOrderForUpdate($orderId, $branchId, 'orders.assign_waiter', $startedAt, [
                 'waiter_id' => $waiterId,
             ]);
+
+            if ($waiterId !== null && ! $this->users->isActiveUserAssignedToBranchWithPermission($waiterId, $branchId, OrderPermissions::TAKE)) {
+                $exception = OrdersDomainException::waiterNotAssignable();
+                $this->logDomainFailure('orders.assign_waiter', $exception, $startedAt, [
+                    'branch_id' => $branchId,
+                    'order_id' => $orderId,
+                    'waiter_id' => $waiterId,
+                ]);
+
+                throw $exception;
+            }
+
             $before = $this->orderAuditPayload($order);
 
             $order->update(['waiter_id' => $waiterId]);

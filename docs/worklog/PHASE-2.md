@@ -5162,14 +5162,207 @@ F. Open debts and unverified items
   "the database system is starting up"; rerun rather than treating it as a
   test failure.
 
+Task `TASK-2.24-order-waiter-assignment` is active on branch
+`feature/order-waiter-assignment`, based on `origin/main` at
+`3535d0aa7663f50217c68f1da69d8d8f782026d0`.
+
+Pre-change baselines at task start matched the current record: `make pint`
+passed `343 files`; `make stan` analysed `205/205` with `[OK] No errors`;
+`make test` passed `372 passed / 14 skipped / 3583 assertions`;
+`make tenant-isolation-pgsql` passed `52 passed / 270 assertions`; and
+`make orders-concurrency-pgsql` passed `6 passed / 43 assertions`.
+
+- [x] Step 2.24.1: Identity read boundary. Add the minimal Identity contract
+  DTO and two branch-permission staff lookup methods, implement them with
+  tenant-scoped Eloquent queries, and cover cross-tenant, wrong-branch,
+  inactive, no-permission, ordering, and boolean/list agreement cases.
+  Result: added `BranchAssignableUser`, extended `UserDirectory`, implemented
+  tenant-scoped Eloquent list/boolean lookups, and covered the exclusion and
+  list-order cases in `tests/Feature/Identity/UserDirectoryTest.php`; focused
+  check passed with `1 passed / 13 assertions`.
+- [x] Step 2.24.2: order permission constant and AssignWaiter validation.
+  Add one Orders permission-code constant for the existing `orders.take` code,
+  replace current literals in Orders routes/components/actions, validate
+  non-null waiter ids through `Identity\Contracts\UserDirectory` inside the
+  existing transaction after the open-order lock, add the new stable domain
+  error, keep the audit payload/action unchanged, and extend the architecture
+  proof for Orders-to-Identity contracts without weakening module boundaries.
+  Result: added `OrderPermissions::TAKE`, replaced route/component literals,
+  made `AssignWaiter` reject non-active, wrong-branch, cross-tenant, or
+  no-permission waiter ids with `orders.waiter_not_assignable` before audit
+  writes, preserved null clearing and non-open-order precedence, and added the
+  explicit Orders-to-Identity-contracts architecture proof; focused check
+  passed with `14 passed / 269 assertions`.
+- [x] Step 2.24.3: branch lookup index and measurement. Add one reversible
+  composite index migration only if PostgreSQL `EXPLAIN (ANALYZE, BUFFERS)` on
+  a meaningful local dataset proves the new staff lookup uses it; paste the
+  literal SQL and plan here, or remove the migration and record why.
+  Result: added reversible index
+  `user_branch_assignments_tenant_branch_user_idx` on
+  `(tenant_id, branch_id, user_id)`. Measurement used existing local
+  PostgreSQL test database `smartrest_test_local` with a synthetic tenant
+  `measure-waiter-assignment-20260731`, tenant id `71`, target branch id `60`,
+  and `50,000` user branch assignments where only `500` rows belonged to the
+  target branch. After `ANALYZE`, PostgreSQL chose
+  `Index Only Scan using user_branch_assignments_tenant_branch_user_idx`, so
+  the migration stays.
+
+  Literal index measurement SQL:
+
+  ```sql
+  explain (analyze, buffers)
+  select users.id, users.name
+  from user_branch_assignments
+  inner join users
+      on users.id = user_branch_assignments.user_id
+      and users.tenant_id = user_branch_assignments.tenant_id
+  inner join roles
+      on roles.id = users.role_id
+      and roles.tenant_id = user_branch_assignments.tenant_id
+  inner join role_permissions
+      on role_permissions.role_id = roles.id
+      and role_permissions.tenant_id = user_branch_assignments.tenant_id
+  inner join permissions
+      on permissions.id = role_permissions.permission_id
+      and permissions.tenant_id = user_branch_assignments.tenant_id
+  where user_branch_assignments.tenant_id = 71
+    and user_branch_assignments.branch_id = 60
+    and users.active = true
+    and permissions.code = 'orders.take'
+  order by users.name, users.id;
+  ```
+
+  Literal `EXPLAIN (ANALYZE, BUFFERS)` plan:
+
+  ```text
+                                                                                               QUERY PLAN
+  -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+   Sort  (cost=1240.57..1240.85 rows=112 width=27) (actual time=2.242..2.260 rows=415 loops=1)
+     Sort Key: users.name, users.id
+     Sort Method: quicksort  Memory: 44kB
+     Buffers: shared hit=1518
+     ->  Nested Loop  (cost=0.70..1236.76 rows=112 width=27) (actual time=0.120..2.047 rows=415 loops=1)
+           Join Filter: (roles.id = users.role_id)
+           Rows Removed by Join Filter: 35
+           Buffers: shared hit=1512
+           ->  Nested Loop  (cost=0.41..30.46 rows=249 width=32) (actual time=0.101..0.230 rows=500 loops=1)
+                 Buffers: shared hit=12
+                 ->  Nested Loop  (cost=0.00..3.10 rows=1 width=40) (actual time=0.032..0.035 rows=1 loops=1)
+                       Join Filter: (role_permissions.permission_id = permissions.id)
+                       Buffers: shared hit=3
+                       ->  Nested Loop  (cost=0.00..2.06 rows=1 width=40) (actual time=0.021..0.023 rows=1 loops=1)
+                             Join Filter: (roles.id = role_permissions.role_id)
+                             Buffers: shared hit=2
+                             ->  Seq Scan on role_permissions  (cost=0.00..1.01 rows=1 width=24) (actual time=0.014..0.016 rows=1 loops=1)
+                                   Filter: (tenant_id = 71)
+                                   Buffers: shared hit=1
+                             ->  Seq Scan on roles  (cost=0.00..1.02 rows=2 width=16) (actual time=0.005..0.005 rows=1 loops=1)
+                                   Filter: (tenant_id = 71)
+                                   Buffers: shared hit=1
+                       ->  Seq Scan on permissions  (cost=0.00..1.03 rows=1 width=16) (actual time=0.010..0.010 rows=1 loops=1)
+                             Filter: ((tenant_id = 71) AND ((code)::text = 'orders.take'::text))
+                             Buffers: shared hit=1
+                 ->  Index Only Scan using user_branch_assignments_tenant_branch_user_idx on user_branch_assignments  (cost=0.41..22.38 rows=498 width=16) (actual time=0.068..0.144 rows=500 loops=1)
+                       Index Cond: ((tenant_id = 71) AND (branch_id = 60))
+                       Heap Fetches: 0
+                       Buffers: shared hit=9
+           ->  Index Scan using users_pkey on users  (cost=0.29..4.83 rows=1 width=43) (actual time=0.001..0.001 rows=1 loops=500)
+                 Index Cond: (id = user_branch_assignments.user_id)
+                 Filter: (active AND (tenant_id = 71))
+                 Rows Removed by Filter: 0
+                 Buffers: shared hit=1500
+   Planning:
+     Buffers: shared hit=461
+   Planning Time: 6.195 ms
+   Execution Time: 2.530 ms
+  (38 rows)
+  ```
+- [x] Step 2.24.4: workspace read model and Livewire adapter. Add assigned
+  waiter id to the order workspace DTO/read model with no per-row query, load
+  assignable staff through the Identity contract in the Livewire adapter, and
+  render a compact assignment/clear control that preserves the existing POS
+  workspace layout and rendered-affordance safety rules.
+  Result: `FindOrderWorkspace` now selects `waiter_id` into the readonly DTO
+  without changing its 3-query read count; `OrderWorkspace` loads assignable
+  staff once per render through `UserDirectory`, shows the current waiter or a
+  translated not-assigned state in the right-side summary card, and calls
+  `AssignWaiter` for assign/clear with translated flash/error messages.
+- [x] Step 2.24.5: translations, demo verification, and feature coverage. Add
+  Armenian/Russian/English strings for all new UI/domain messages, verify
+  deterministic demo data already exposes at least two assignable staff in the
+  demo board branch or adjust seeders if needed, and add action/UI tests for
+  valid assignment, clear, invalid waiter rejection, route isolation, flashes,
+  and hidden cross-tenant/branch staff.
+  Result: added matching `hy`/`ru`/`en` keys for the domain error, UI labels,
+  validation messages, and clear flash. SQLite `make test` passed at the
+  current feature head with `380 passed / 14 skipped / 3639 assertions`.
+  `make fresh` passed; demo verification found Arat Kentron has assignable
+  `Ani Petrosyan`, `Gor Hakobyan`, and `Mariam Sargsyan`, Arat Dilijan has
+  `Ani Petrosyan`, `Gor Hakobyan`, and `Tigran Manukyan`, and Northstar
+  Downtown has `Emma Brooks`, `Liam Reed`, `Noah Bennett`, and
+  `Olivia Carter`, proving two-tenant branch-only visibility without seeder
+  changes.
+- [x] Step 2.24.6: final documentation, gates, and delivery. Record the
+  decision in `docs/DECISIONS.md`, keep this worklog current with measured
+  results and gotchas, run the full required gate set including build,
+  directive audit, diff review, grep, and migration reversibility, commit in
+  small scoped commits, push the branch normally, and open a draft PR without
+  merging.
+  Result: recorded the waiter-assignment rule in `docs/DECISIONS.md`, kept
+  worklog updates in the same scoped commits as code, and completed the final
+  gate set before pushing the branch. Final measured gates: `make pint` passed
+  `347 files`; `make stan` analysed `207/207` with `[OK] No errors`;
+  `make test` passed `380 passed / 14 skipped / 3639 assertions`;
+  `make tenant-isolation-pgsql` passed `52 passed / 270 assertions`;
+  `make orders-concurrency-pgsql` passed `6 passed / 43 assertions`;
+  `make build` completed Dockerized Composer setup and Vite production build;
+  `git diff --check` had no output; `git diff origin/main...HEAD --stat` and
+  the full file-by-file diff were reviewed; the Orders forbidden-internals
+  grep exited `1` with no matches; and the migration
+  reversibility sequence passed with `migrate:fresh --seed`, rollback of
+  `2026_07_31_000000_add_branch_staff_lookup_index_to_user_branch_assignments`,
+  and re-apply. The worklog records the Stage 2.16 directive audit result but
+  not the literal command; the directive-only component-tag audit used for this
+  task was:
+  `rg -n --pcre2 '<x-[^>\n]*(?:@(js|json|class|style|lang|choice|checked|selected|disabled|readonly|required|error|props|aware|once|push|prepend|section|yield|include|each|extends|vite|livewireScriptConfig)\s*\(|\{\{|\{!!)' resources/views`,
+  and it exited `1` with no matches.
+
+Gotchas carried forward after TASK-2.24: the Stage 2.16 worklog entries record
+the component-attribute directive audit result but not the literal command, so
+future sessions should preserve the exact command text when adding required
+audits. `make build` still emits Git's container-only dubious-ownership warning
+for `/var/www/html` before completing successfully; no global Git config was
+changed. PHPStan now analyses `207/207` app paths because this slice added two
+new app files. No README update was needed because setup, URLs, credentials,
+and commands did not change.
+
+- [x] Step 2.24.7: final PR #51 audit correction. Verify local and GitHub PR
+  state, review the full `main...feature/order-waiter-assignment` diff, fix
+  only blocking defects found during final audit, rerun the complete required
+  gate set, commit/push any real fix to the existing PR branch, and stop
+  without merging. Result: audit found the Identity waiter directory used
+  direct role-permission joins and therefore disagreed with the current
+  canonical `User::can()` / `EloquentAuthorizer` behavior for active assigned
+  superadmins. Fixed the directory to use the effective current Identity rule:
+  active assigned user plus active superadmin bypass or live role permission.
+  Added regression coverage in Identity and Orders. Final local gates after the
+  fix: `make pint` passed `347 files`; `make stan` analysed `207/207` with
+  `[OK] No errors`; `make test` passed `381 passed / 14 skipped /
+  3647 assertions`; `make tenant-isolation-pgsql` passed `52 passed /
+  270 assertions`; `make orders-concurrency-pgsql` passed `6 passed /
+  43 assertions`; `make build` passed Composer setup and Vite production build
+  with the known container-only Git dubious-ownership warning; `make fresh`
+  passed through the new index migration and DemoSeeder; targeted rollback and
+  re-apply of
+  `2026_07_31_000000_add_branch_staff_lookup_index_to_user_branch_assignments`
+  passed; `git diff --check` had no output; the component-tag directive audit
+  exited `1` with no matches; and the forbidden Orders-to-Identity internals
+  and table-access audits both exited `1` with no matches.
+
 ## Next Steps
 
-Next exact action: choose one of two candidate Phase 2 slices, without starting
-either from this merge session:
-
-- Candidate slice A: scheduled suspension job - hourly, idempotent, quiet hour
-  05:00 platform time, and calls the existing `SuspendTenant` action instead
-  of writing `tenants.status` itself.
-- Candidate slice B: close the Phase 2 definition-of-done gap for waiter
-  assignment - an Application action exists, but there is no adapter and no
-  validation that the assigned user is valid for the assignment.
+Next exact action: wait for owner approval on PR #51. Do not merge PR #51.
+After it merges, the remaining subscription-line candidate slice is the
+scheduled suspension job - hourly, idempotent, quiet hour 05:00 platform time,
+and calling the existing `SuspendTenant` action instead of writing
+`tenants.status` itself.

@@ -40,6 +40,11 @@ final class OrdersDomainException extends RuntimeException
         return new self('orders.order_not_open', 'Only open orders can be changed.');
     }
 
+    public static function waiterNotAssignable(): self
+    {
+        return new self('orders.waiter_not_assignable', 'The selected waiter cannot take orders in this branch.');
+    }
+
     public static function menuItemNotFound(): self
     {
         return new self('orders.menu_item_not_found', 'The selected menu item is not available for sale in this branch.');

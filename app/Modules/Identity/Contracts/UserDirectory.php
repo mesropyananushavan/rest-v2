@@ -14,4 +14,11 @@ interface UserDirectory
      * @return list<int>
      */
     public function assignedBranchIds(int $userId): array;
+
+    /**
+     * @return list<BranchAssignableUser>
+     */
+    public function activeUsersAssignedToBranchWithPermission(int $branchId, string $permissionCode): array;
+
+    public function isActiveUserAssignedToBranchWithPermission(int $userId, int $branchId, string $permissionCode): bool;
 }

@@ -8,6 +8,9 @@ declare(strict_types=1);
  *     type: string,
  *     status: string,
  *     table_id: int,
+ *     assigned_waiter_id: int|null,
+ *     assigned_waiter_name: string,
+ *     waiter_options: list<array{id: int, name: string}>,
  *     opened_at: string,
  *     client_count: int,
  *     comment: string|null,
@@ -371,6 +374,33 @@ declare(strict_types=1);
                                 {{ __('orders.status.'.$order['status']) }}
                             </span>
                         </dd>
+                    </div>
+                    <div class="rounded-2xl border border-amber-100 bg-amber-50/70 p-3">
+                        <dt class="text-xs font-black uppercase tracking-[0.16em] text-amber-900">{{ __('orders.workspace.waiter.label') }}</dt>
+                        <dd class="mt-1 text-base font-black text-smartrest-ink">{{ $order['assigned_waiter_name'] }}</dd>
+                        @if ($order['can_mutate'])
+                            <div class="mt-3 grid gap-2">
+                                <label for="order-workspace-waiter" class="sr-only">{{ __('orders.workspace.waiter.select_label') }}</label>
+                                <select
+                                    id="order-workspace-waiter"
+                                    wire:model="selectedWaiterId"
+                                    class="min-h-11 w-full rounded-2xl border border-amber-200 bg-white px-3 text-sm font-bold text-smartrest-ink shadow-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-200/70"
+                                >
+                                    <option value="">{{ __('orders.workspace.waiter.select_placeholder') }}</option>
+                                    @foreach ($order['waiter_options'] as $waiter)
+                                        <option value="{{ $waiter['id'] }}">{{ $waiter['name'] }}</option>
+                                    @endforeach
+                                </select>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <x-button type="button" variant="primary" size="sm" wire:click="assignWaiter">
+                                        {{ __('orders.workspace.actions.assign_waiter') }}
+                                    </x-button>
+                                    <x-button type="button" variant="outline-secondary" size="sm" wire:click="clearWaiter" :disabled="$order['assigned_waiter_id'] === null">
+                                        {{ __('orders.workspace.actions.clear_waiter') }}
+                                    </x-button>
+                                </div>
+                            </div>
+                        @endif
                     </div>
                     <div class="flex items-center justify-between gap-3">
                         <dt class="font-semibold text-smartrest-muted">{{ __('orders.workspace.fields.opened_at') }}</dt>

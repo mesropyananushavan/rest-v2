@@ -13,6 +13,7 @@ use App\Modules\Menu\Http\Controllers\MenuCategoryController;
 use App\Modules\Menu\Http\Controllers\MenuCategoryOptionController;
 use App\Modules\Menu\Http\Controllers\MenuIndexController;
 use App\Modules\Menu\Http\Controllers\MenuItemController;
+use App\Modules\Orders\Contracts\OrderPermissions;
 use App\Modules\Orders\Http\Controllers\OrderBoardController;
 use App\Modules\Orders\Http\Controllers\OrderWorkspaceController;
 use App\Modules\Tables\Http\Controllers\HallController;
@@ -67,12 +68,12 @@ Route::get('/admin/audit-logs/{auditLog}', [AdminAuditLogController::class, 'sho
     ->name('admin.audit-logs.show');
 
 Route::get('/admin/orders/board', OrderBoardController::class)
-    ->middleware(['tenant', 'branch', 'auth', 'tenant.active', 'can:orders.take'])
+    ->middleware(['tenant', 'branch', 'auth', 'tenant.active', 'can:'.OrderPermissions::TAKE])
     ->name('admin.orders.board');
 
 Route::get('/admin/orders/{order}/workspace', OrderWorkspaceController::class)
     ->whereNumber('order')
-    ->middleware(['tenant', 'branch', 'auth', 'tenant.active', 'can:orders.take'])
+    ->middleware(['tenant', 'branch', 'auth', 'tenant.active', 'can:'.OrderPermissions::TAKE])
     ->name('admin.orders.workspace');
 
 Route::middleware(['tenant', 'branch', 'auth', 'tenant.active'])->prefix('/admin/menu')->name('admin.menu.')->group(function (): void {

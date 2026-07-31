@@ -1014,3 +1014,27 @@ tenant lifecycle remain separate operator decisions; adding money columns or a
 payment ledger now, because amounts and provider semantics are out of scope;
 using a fake system user for console audit rows, because no platform operator
 identity exists and `actor_id` is already nullable.
+
+## 2026-07-31 — Order waiter assignment requires active branch staff with orders-take
+Decision: assigning a waiter to an order requires the selected user to be an
+active user in the current tenant, assigned to the current branch, and allowed
+by Identity's effective authorization model for the existing `orders.take`
+permission. In the current implementation that means the active superadmin
+bypass or the user's live role permission. The Orders Application action
+validates that rule through `Identity\Contracts\UserDirectory`; UI adapters
+only present the branch-scoped staff list and call the action. Clearing a
+waiter remains a valid null assignment.
+
+Reason: `orders.waiter_id` is an operational responsibility assignment, not a
+free-form user reference. The action must enforce tenant, branch, active-user,
+and capability boundaries even when called outside the current Livewire screen.
+Using the existing `orders.take` permission keeps assignment aligned with the
+same effective capability that allows a user to work in the order workspace,
+including the currently implemented superadmin bypass.
+
+Rejected: trusting Livewire or future HTTP/API callers to submit only valid
+ids, because Application actions are the business boundary; adding a new
+permission or changing demo role defaults, because the existing `orders.take`
+capability already models taking orders; querying Identity tables directly
+from Orders, because module boundaries require cross-module access through
+Contracts.

@@ -8,6 +8,7 @@ return [
     'table_not_found' => 'The selected table is not available in this branch.',
     'table_already_open' => 'This table already has an open order.',
     'order_not_open' => 'Only open orders can be changed.',
+    'waiter_not_assignable' => 'The selected waiter cannot take orders in this branch.',
     'menu_item_not_found' => 'The selected menu item is not available for sale in this branch.',
     'currency_mismatch' => 'The menu item currency does not match the order currency.',
     'item_not_in_order' => 'The selected order item is not available in this order.',
@@ -98,6 +99,8 @@ return [
         'actions' => [
             'add_menu_item' => 'Add',
             'create_subtable' => 'Create subtable',
+            'assign_waiter' => 'Assign',
+            'clear_waiter' => 'Clear',
             'increase_qty' => 'Increase quantity',
             'decrease_qty' => 'Decrease quantity',
             'move_item' => 'Move',
@@ -118,8 +121,17 @@ return [
             'subtable_name_required' => 'Enter a subtable name.',
             'subtable_name_max' => 'Subtable name may not be longer than :max characters.',
             'subtable_name_duplicate' => 'An open subtable with this name already exists on this order.',
+            'waiter_required' => 'Select a waiter before assigning.',
+            'waiter_invalid' => 'The selected waiter is invalid.',
             'move_target_required' => 'Select where to move the item.',
             'move_target_invalid' => 'The selected move target is invalid.',
+        ],
+        'waiter' => [
+            'label' => 'Waiter',
+            'select_label' => 'Assign waiter',
+            'select_placeholder' => 'Choose staff',
+            'not_assigned' => 'Not assigned',
+            'unknown' => 'Unknown waiter',
         ],
         'subtables' => [
             'create_label' => 'New subtable',
@@ -166,6 +178,7 @@ return [
     'flash' => [
         'opened' => 'Order opened.',
         'waiter_assigned' => 'Waiter assigned.',
+        'waiter_cleared' => 'Waiter cleared.',
         'subtable_added' => 'Subtable added.',
         'cancelled' => 'Order cancelled.',
         'item_added' => 'Item added.',
