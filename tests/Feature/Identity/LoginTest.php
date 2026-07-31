@@ -163,6 +163,28 @@ it('rate limits the login endpoint', function (): void {
         ->assertTooManyRequests();
 });
 
+it('rate limits login attempts even when the submitted tenant slug changes', function (): void {
+    for ($attempt = 1; $attempt <= 5; $attempt++) {
+        $this->withSession(['_token' => loginCsrfToken()])
+            ->withServerVariables(['REMOTE_ADDR' => '203.0.113.11'])
+            ->post(route('login.store'), loginPayload([
+                'tenant_slug' => "tenant-{$attempt}",
+                'email' => 'missing@smartrest.test',
+                'password' => 'wrong-password',
+            ]))
+            ->assertRedirect();
+    }
+
+    $this->withSession(['_token' => loginCsrfToken()])
+        ->withServerVariables(['REMOTE_ADDR' => '203.0.113.11'])
+        ->post(route('login.store'), loginPayload([
+            'tenant_slug' => 'tenant-6',
+            'email' => 'missing@smartrest.test',
+            'password' => 'wrong-password',
+        ]))
+        ->assertTooManyRequests();
+});
+
 it('requires a tenant slug without retaining selected tenant state or password input', function (): void {
     $record = loginTenantWithUser('tenant-a', 'manager-a', 'manager-a@smartrest.test');
 
@@ -204,6 +226,37 @@ it('renders tenant slug validation errors with localized field labels', function
 
         expect($error)->toContain(__('auth.fields.tenant_slug'));
     }
+});
+
+it('authenticates with trimmed exact tenant slugs and rejects case-mismatched slugs generically', function (): void {
+    $record = loginTenantWithUser('tenant-a', 'manager-a', 'manager-a@smartrest.test');
+
+    $this->withSession(['_token' => loginCsrfToken()])
+        ->post(route('login.store'), loginPayload([
+            'tenant_slug' => ' tenant-a ',
+            'email' => 'manager-a@smartrest.test',
+            'password' => 'password',
+        ]))
+        ->assertRedirect(route('admin.dashboard'))
+        ->assertSessionHas('tenant_id', (int) $record['tenant']->id);
+
+    $this->assertAuthenticatedAs($record['user']);
+
+    Auth::logout();
+
+    $this->withSession(['_token' => loginCsrfToken()])
+        ->post(route('login.store'), loginPayload([
+            'tenant_slug' => 'TENANT-A',
+            'email' => 'manager-a@smartrest.test',
+            'password' => 'password',
+        ]))
+        ->assertSessionHasErrors(['email' => __('auth.failed')])
+        ->assertSessionHasInput('tenant_slug', 'TENANT-A')
+        ->assertSessionHasInput('email', 'manager-a@smartrest.test')
+        ->assertSessionMissing('tenant_id')
+        ->assertSessionMissing('branch_id');
+
+    $this->assertGuest();
 });
 
 it('rejects unknown tenant slugs with the generic authentication error', function (): void {
@@ -259,6 +312,32 @@ it('rejects unknown and inactive users inside the selected tenant', function ():
     }
 });
 
+it('clears stale tenant and branch session state after failed authentication for another tenant', function (): void {
+    $tenantA = loginTenantWithUser('tenant-a', 'manager-a', 'manager-a@smartrest.test');
+    loginTenantWithUser('tenant-b', 'manager-b', 'manager-b@smartrest.test');
+
+    $this->withSession([
+        '_token' => loginCsrfToken(),
+        'tenant_id' => (int) $tenantA['tenant']->id,
+        'branch_id' => (int) $tenantA['branch']->id,
+    ])
+        ->post(route('login.store'), loginPayload([
+            'tenant_slug' => 'tenant-b',
+            'email' => 'manager-b@smartrest.test',
+            'password' => 'wrong-password',
+        ]))
+        ->assertSessionHasErrors(['email' => __('auth.failed')])
+        ->assertSessionMissing('tenant_id')
+        ->assertSessionMissing('branch_id');
+
+    expect(app(TenantResolver::class)->id())->toBeNull()
+        ->and(app(BranchContext::class)->id())->toBeNull()
+        ->and(LogContext::current()['tenant_id'])->toBeNull()
+        ->and(LogContext::current()['branch_id'])->toBeNull();
+
+    $this->assertGuest();
+});
+
 it('authenticates duplicate emails only inside the submitted tenant', function (): void {
     $tenantA = loginTenantWithUser('tenant-a', 'manager-a', 'shared@smartrest.test', password: 'tenant-a-password');
     $tenantB = loginTenantWithUser('tenant-b', 'manager-b', 'shared@smartrest.test', password: 'tenant-b-password');
@@ -288,6 +367,126 @@ it('authenticates duplicate emails only inside the submitted tenant', function (
         ->assertSessionMissing('branch_id');
 
     expect((int) $tenantA['user']->id)->not->toBe((int) $tenantB['user']->id);
+    $this->assertGuest();
+});
+
+it('clears stale branch session state when logging in to another tenant successfully', function (): void {
+    $tenantA = loginTenantWithUser('tenant-a', 'manager-a', 'manager-a@smartrest.test');
+    $tenantB = loginTenantWithUser('tenant-b', 'manager-b', 'manager-b@smartrest.test');
+
+    $this->withSession([
+        '_token' => loginCsrfToken(),
+        'tenant_id' => (int) $tenantA['tenant']->id,
+        'branch_id' => (int) $tenantA['branch']->id,
+    ])
+        ->post(route('login.store'), loginPayload([
+            'tenant_slug' => 'tenant-b',
+            'email' => 'manager-b@smartrest.test',
+            'password' => 'password',
+        ]))
+        ->assertRedirect(route('admin.dashboard'))
+        ->assertSessionHas('tenant_id', (int) $tenantB['tenant']->id)
+        ->assertSessionMissing('branch_id');
+
+    $this->assertAuthenticatedAs($tenantB['user']);
+    expect(app(TenantResolver::class)->id())->toBe((int) $tenantB['tenant']->id)
+        ->and(app(BranchContext::class)->id())->toBeNull()
+        ->and(LogContext::current()['tenant_id'])->toBe((int) $tenantB['tenant']->id)
+        ->and(LogContext::current()['branch_id'])->toBeNull();
+});
+
+it('logs out and then logs in to another tenant without carrying old branch state', function (): void {
+    $tenantA = loginTenantWithUser('tenant-a', 'manager-a', 'manager-a@smartrest.test');
+    $tenantB = loginTenantWithUser('tenant-b', 'manager-b', 'manager-b@smartrest.test');
+
+    $this->withSession(['_token' => loginCsrfToken()])
+        ->post(route('login.store'), loginPayload([
+            'tenant_slug' => 'tenant-a',
+            'email' => 'manager-a@smartrest.test',
+            'password' => 'password',
+        ]))
+        ->assertRedirect(route('admin.dashboard'))
+        ->assertSessionHas('tenant_id', (int) $tenantA['tenant']->id);
+
+    Auth::forgetGuards();
+
+    $this->get(route('admin.dashboard'))
+        ->assertOk()
+        ->assertSessionHas('branch_id', (int) $tenantA['branch']->id);
+
+    $this->withSession(['_token' => loginCsrfToken()])
+        ->post(route('logout'), ['_token' => loginCsrfToken()])
+        ->assertRedirect('/');
+
+    $this->withSession(['_token' => loginCsrfToken()])
+        ->post(route('login.store'), loginPayload([
+            'tenant_slug' => 'tenant-b',
+            'email' => 'manager-b@smartrest.test',
+            'password' => 'password',
+        ]))
+        ->assertRedirect(route('admin.dashboard'))
+        ->assertSessionHas('tenant_id', (int) $tenantB['tenant']->id)
+        ->assertSessionMissing('branch_id');
+
+    $this->assertAuthenticatedAs($tenantB['user']);
+});
+
+it('blocks a tenant that becomes suspended during authentication on the next protected request', function (): void {
+    $record = loginTenantWithUser('tenant-a', 'manager-a', 'manager-a@smartrest.test');
+
+    app()->instance(TenantDirectory::class, new class((int) $record['tenant']->id) implements TenantDirectory
+    {
+        public function __construct(private readonly int $tenantId) {}
+
+        public function activeTenantIds(): array
+        {
+            throw new RuntimeException('activeTenantIds must not be used for login.');
+        }
+
+        public function isServiceable(int $tenantId): bool
+        {
+            return Tenant::query()
+                ->whereKey($tenantId)
+                ->where('status', 'active')
+                ->exists();
+        }
+
+        public function serviceableTenantIdForSlug(string $slug): ?int
+        {
+            Tenant::query()
+                ->whereKey($this->tenantId)
+                ->update(['status' => 'suspended']);
+
+            return $slug === 'tenant-a' ? $this->tenantId : null;
+        }
+
+        public function tenantName(int $tenantId): ?string
+        {
+            return null;
+        }
+
+        public function branchSummariesForIds(array $branchIds): array
+        {
+            return [];
+        }
+    });
+
+    $this->withSession(['_token' => loginCsrfToken()])
+        ->post(route('login.store'), loginPayload([
+            'tenant_slug' => 'tenant-a',
+            'email' => 'manager-a@smartrest.test',
+            'password' => 'password',
+        ]))
+        ->assertRedirect(route('admin.dashboard'))
+        ->assertSessionHas('tenant_id', (int) $record['tenant']->id);
+
+    Auth::forgetGuards();
+
+    $this->get(route('admin.dashboard'))
+        ->assertRedirect(route('login'))
+        ->assertSessionMissing('tenant_id')
+        ->assertSessionMissing('branch_id');
+
     $this->assertGuest();
 });
 

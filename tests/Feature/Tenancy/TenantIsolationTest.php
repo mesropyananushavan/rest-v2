@@ -259,6 +259,38 @@ it('enforces PostgreSQL row level security for identity users by selected tenant
         ->and(rawUserIds())->toBe([(int) $tenantB['user']->id]);
 });
 
+it('keeps PostgreSQL tenant slug login query shape bounded with unrelated tenants', function (): void {
+    if (! usesPostgresRowLevelSecurity()) {
+        $this->markTestSkipped('PostgreSQL query-shape coverage runs only on pgsql.');
+    }
+
+    for ($tenant = 1; $tenant <= 20; $tenant++) {
+        tenantWithUser("noise-login-tenant-{$tenant}", "noise-login-user-{$tenant}", ['menu.items.manage']);
+    }
+
+    $record = tenantWithUser('tenant-login-target', 'tenant-login-manager', ['menu.items.manage']);
+
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+
+    $this->withSession(['_token' => 'tenant-login-token'])
+        ->post(route('login.store'), [
+            '_token' => 'tenant-login-token',
+            'tenant_slug' => 'tenant-login-target',
+            'email' => 'tenant-login-manager@smartrest.test',
+            'password' => 'password',
+        ])
+        ->assertRedirect(route('admin.dashboard'))
+        ->assertSessionHas('tenant_id', (int) $record['tenant']->id)
+        ->assertSessionMissing('branch_id');
+
+    $queries = collect(DB::getQueryLog())->pluck('query');
+
+    expect($queries->filter(fn (string $query): bool => str_contains($query, 'from "tenants"'))->count())->toBe(1)
+        ->and($queries->filter(fn (string $query): bool => str_contains($query, 'from "users"'))->count())->toBe(1)
+        ->and($queries->count())->toBeLessThanOrEqual(8);
+});
+
 it('enforces PostgreSQL row level security for menu tables', function (): void {
     if (! usesPostgresRowLevelSecurity()) {
         $this->markTestSkipped('PostgreSQL RLS coverage runs only on pgsql.');

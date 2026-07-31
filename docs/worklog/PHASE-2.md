@@ -5528,6 +5528,34 @@ Plan:
   Tenancy internal imports, no direct `tenants`/`branches` table access, and no
   rendered password retention. No migrations were added.
 
-Next immediate action: commit the tenant-scoped login changes on
-`feature/tenant-scoped-login`, push the branch, open a draft PR against `main`,
-wait for exact-head GitHub Actions, and stop for final audit.
+  Strict final audit correction: found and fixed one stale-session defect in
+  the PR head. Successful login regenerated the session and overwrote
+  `tenant_id` but did not remove an existing `branch_id`, so a branch selected
+  under an old tenant could survive the login response until protected-route
+  middleware later corrected it. `LoginController` now forgets `branch_id`
+  before session regeneration and defensively clears auth, tenant, branch, and
+  log context if post-auth session handling throws. Added regressions for
+  successful cross-tenant login with stale tenant/branch session values, failed
+  cross-tenant login cleanup, logout followed by login into another tenant,
+  tenant suspension between slug lookup and the next protected request, slug
+  trim/exact-case behavior, throttle resistance to slug variation, and
+  PostgreSQL login query shape. Focused reruns: pre-fix `make test` failed on
+  `assertSessionMissing('branch_id')` for the new stale-branch regression;
+  after the fix, `make test` passed (`410 passed / 19 skipped /
+  3871 assertions`) and `make tenant-isolation-pgsql` passed (`69 passed /
+  368 assertions`). Full final local gates after the correction: `make pint`
+  passed (`354 files`); `make stan` passed (`210/210`, `[OK] No errors`);
+  `make test` passed (`410 passed / 19 skipped / 3871 assertions`);
+  `make tenant-isolation-pgsql` passed (`69 passed / 368 assertions`);
+  `make orders-concurrency-pgsql` passed (`6 passed / 43 assertions`);
+  `make fresh` passed; `make build` passed with the known container-only Git
+  dubious-ownership warning; `make artisan ARGS="route:list --name=login"`
+  showed only the existing `GET|HEAD login` and `POST login` routes; `git diff
+  --check` had no output; the component-attribute directive audit exited `1`
+  with no matches; Identity production code still has no `activeTenantIds()`
+  call, no Tenancy internal imports, no direct `tenants`/`branches` table
+  access, and no rendered password retention.
+
+Next immediate action: push the strict final-audit correction commit to PR #53,
+wait for exact-head GitHub Actions, and report the final audit verdict. Leave
+PR #53 draft and do not merge without separate owner approval.
