@@ -5397,14 +5397,14 @@ Plan:
   tenancy:subscriptions:auto-suspend` and the scheduler name; the automated
   schedule test asserts the command, cron expression, `Asia/Yerevan` timezone,
   and overlap mutex metadata.
-- [ ] Step SUB-03.3: PostgreSQL/RLS proof, documentation, and delivery. Add or
+- [x] Step SUB-03.3: PostgreSQL/RLS proof, documentation, and delivery. Add or
   extend PostgreSQL Tenancy coverage proving suspension audit rows remain
   visible only in the target tenant context and hidden with no tenant context.
   Record the durable implementation decision only if needed, update this
   worklog with verified results, run all required gates, review the complete
   diff against `origin/main`, push the branch, open a draft PR, wait for
   exact-head CI, and stop without marking the PR merge-ready or merging.
-  Progress: added PostgreSQL-only RLS coverage in
+  Result: added PostgreSQL-only RLS coverage in
   `AutomaticTenantSuspensionTest` proving the automatic suspension audit row is
   hidden without tenant context and visible in the target tenant context with
   `tenant_id` set, `branch_id = null`, and `actor_id = null`. Local gates passed
@@ -5418,9 +5418,13 @@ Plan:
   no matches, and Tenancy/new-command forbidden cross-module-internals audits
   exited `1` with no matches. Two attempted inline `tinker --execute` scheduler
   metadata inspections failed because Make/shell interpolation stripped PHP
-  `$event` variables; no files were changed by those failed diagnostics.
+  `$event` variables; no files were changed by those failed diagnostics. The
+  implementation commit `37469a1561746fde5aa117e925e6ff8402ca0477` was pushed
+  to `feature/subscription-auto-suspension` and draft PR #52 was opened at
+  <https://github.com/mesropyananushavan/rest-v2/pull/52>. GitHub Actions on
+  exact head `37469a1561746fde5aa117e925e6ff8402ca0477` passed duplicate
+  reported runs for `quality`, `tenant-isolation-pgsql`, and
+  `orders-concurrency-pgsql`. PR #52 was left draft and was not merged.
 
-Next immediate action: review the full diff against
-`origin/main`, commit the implementation, push
-`feature/subscription-auto-suspension`, open a draft PR, wait for GitHub
-Actions on the exact pushed head, and stop for final audit without merging.
+Next immediate action: owner final-audit PR #52. Do not mark ready for review
+or merge without separate owner approval after that audit.
