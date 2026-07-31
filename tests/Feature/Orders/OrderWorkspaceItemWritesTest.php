@@ -117,7 +117,7 @@ it('changes quantities and removes a line only through the confirmed remove acti
         ->and((int) Order::query()->findOrFail((int) $order->id)->total_minor)->toBe(0);
 });
 
-it('keeps the workspace mutation boundary limited to item add quantity remove subtable creation move and cancel controls', function (): void {
+it('keeps the workspace mutation boundary limited to item add quantity remove subtable creation move waiter assignment and cancel controls', function (): void {
     $record = orderWorkspaceWritesUser('tenant-a', 'waiter-a', ['orders.take']);
 
     app()->setLocale('en');
@@ -133,6 +133,8 @@ it('keeps the workspace mutation boundary limited to item add quantity remove su
         ->assertSee('addMenuItem', false)
         ->assertSee('createSubtable', false)
         ->assertSee('moveLineToSelectedSubtable', false)
+        ->assertSee('assignWaiter', false)
+        ->assertSee('clearWaiter', false)
         ->assertSee('cancelOrder()', false)
         ->assertSee(__('orders.workspace.menu_picker.target_subtable_label'), false)
         ->assertDontSee('<form', false)
@@ -142,7 +144,6 @@ it('keeps the workspace mutation boundary limited to item add quantity remove su
         ->assertDontSee('openOrder', false)
         ->assertDontSee(__('orders.board.action_open'), false)
         ->assertDontSee('moveOrder', false)
-        ->assertDontSee('assignWaiter', false)
         ->assertDontSee('applyDiscount', false)
         ->assertDontSee('discountOrder', false)
         ->assertDontSee('discountItem', false)
@@ -643,13 +644,22 @@ it('rechecks orders take permission in new mounted component mutations', functio
             ->set('newSubtableName', 'Late Guest')
             ->call('createSubtable')
             ->assertStatus(403);
-    } else {
+    } elseif ($method === 'move') {
         $component
             ->set("moveTargetSubtableIds.{$line->id}", (string) $subtable->id)
             ->call('moveLineToSelectedSubtable', (int) $line->id)
             ->assertStatus(403);
+    } elseif ($method === 'assign') {
+        $component
+            ->set('selectedWaiterId', (string) $record['user']->id)
+            ->call('assignWaiter')
+            ->assertStatus(403);
+    } else {
+        $component
+            ->call('clearWaiter')
+            ->assertStatus(403);
     }
-})->with(['create', 'move']);
+})->with(['create', 'move', 'assign', 'clear']);
 
 it('keeps new mounted component mutations safe after the order is closed or cancelled elsewhere', function (string $status): void {
     $record = orderWorkspaceWritesUser("tenant-new-stale-{$status}", "waiter-new-stale-{$status}", ['orders.take']);
@@ -782,7 +792,8 @@ it('keeps new workspace Livewire expressions rendered encoded and only scoped li
         ->assertDontSee('renameSubtable', false)
         ->assertDontSee('targetOrderId', false)
         ->assertDontSee('moveOrder', false)
-        ->assertDontSee('assignWaiter', false)
+        ->assertSee('assignWaiter', false)
+        ->assertSee('clearWaiter', false)
         ->assertSee('cancelOrder()', false)
         ->assertDontSee('applyDiscount', false)
         ->assertDontSee('discountOrder', false)
@@ -811,9 +822,9 @@ it('keeps workspace render and new mutation query counts stable as lines and sub
     expect($largeLines)->toBe($small)
         ->and($largeSubtables)->toBe($small)
         ->and($small)->toBe([
-            'render' => 7,
-            'create_subtable' => 27,
-            'move_item' => 30,
+            'render' => 8,
+            'create_subtable' => 30,
+            'move_item' => 33,
         ]);
 });
 

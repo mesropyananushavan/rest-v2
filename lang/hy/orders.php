@@ -99,6 +99,8 @@ return [
         'actions' => [
             'add_menu_item' => 'Ավելացնել',
             'create_subtable' => 'Ստեղծել ենթասեղան',
+            'assign_waiter' => 'Նշանակել',
+            'clear_waiter' => 'Մաքրել',
             'increase_qty' => 'Ավելացնել քանակը',
             'decrease_qty' => 'Պակասեցնել քանակը',
             'move_item' => 'Տեղափոխել',
@@ -119,8 +121,17 @@ return [
             'subtable_name_required' => 'Մուտքագրեք ենթասեղանի անունը։',
             'subtable_name_max' => 'Ենթասեղանի անունը չի կարող գերազանցել :max նիշը։',
             'subtable_name_duplicate' => 'Այս պատվերում այդ անունով բաց ենթասեղան արդեն կա։',
+            'waiter_required' => 'Նշանակելու համար ընտրեք մատուցող։',
+            'waiter_invalid' => 'Ընտրված մատուցողը անվավեր է։',
             'move_target_required' => 'Ընտրեք, թե ուր տեղափոխել ապրանքը։',
             'move_target_invalid' => 'Տեղափոխման ընտրված ուղղությունը անվավեր է։',
+        ],
+        'waiter' => [
+            'label' => 'Մատուցող',
+            'select_label' => 'Նշանակել մատուցող',
+            'select_placeholder' => 'Ընտրել աշխատակից',
+            'not_assigned' => 'Նշանակված չէ',
+            'unknown' => 'Անհայտ մատուցող',
         ],
         'subtables' => [
             'create_label' => 'Նոր ենթասեղան',
@@ -167,6 +178,7 @@ return [
     'flash' => [
         'opened' => 'Պատվերը բացվեց։',
         'waiter_assigned' => 'Մատուցողը նշանակվեց։',
+        'waiter_cleared' => 'Մատուցողի նշանակումը մաքրվեց։',
         'subtable_added' => 'Ենթասեղանը ավելացվեց։',
         'cancelled' => 'Պատվերը չեղարկվեց։',
         'item_added' => 'Ապրանքը ավելացվեց։',

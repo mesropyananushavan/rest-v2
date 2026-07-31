@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Modules\Identity\Infrastructure\Models\Permission;
 use App\Modules\Identity\Infrastructure\Models\Role;
 use App\Modules\Identity\Infrastructure\Models\User;
 use App\Modules\Identity\Infrastructure\Models\UserBranchAssignment;
-use App\Modules\Identity\Infrastructure\Models\Permission;
 use App\Modules\Orders\Application\AddSubtable;
 use App\Modules\Orders\Application\AssignWaiter;
 use App\Modules\Orders\Application\CancelOrder;
@@ -160,6 +160,33 @@ it('rejects assigning waiters that cannot take orders in the current tenant bran
         ->with('action failed', Mockery::on(fn (array $context): bool => ($context['action'] ?? null) === 'orders.assign_waiter'
             && ($context['error_code'] ?? null) === 'orders.waiter_not_assignable'))
         ->times(4);
+});
+
+it('requires branch context when assigning a waiter', function (): void {
+    $record = ordersActionsUser('tenant-a', 'manager-a');
+    $table = ordersActionsTable($record, 0, 'Assign Branch Context Table');
+
+    ordersActionsActingIn($record, 0, 'orders-assign-branch-context-source');
+    $order = app(OpenOrder::class)((int) $table->id);
+
+    app(BranchContext::class)->clear();
+    Log::spy();
+
+    try {
+        app(AssignWaiter::class)((int) $order->id, null);
+    } catch (OrdersDomainException $exception) {
+        expect($exception->errorCode())->toBe('orders.branch_context_required')
+            ->and(AuditLog::query()->where('action', 'orders.order.waiter_assigned')->count())->toBe(0);
+
+        Log::shouldHaveReceived('warning')
+            ->with('action failed', Mockery::on(fn (array $context): bool => ($context['action'] ?? null) === 'orders.assign_waiter'
+                && ($context['error_code'] ?? null) === 'orders.branch_context_required'))
+            ->once();
+
+        return;
+    }
+
+    throw new RuntimeException('Expected AssignWaiter branch context guard to throw.');
 });
 
 it('uses tenant settings currency and tenant scoped models do not leak records', function (): void {

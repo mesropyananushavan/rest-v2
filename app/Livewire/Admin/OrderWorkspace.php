@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Livewire\Admin;
 
+use App\Modules\Identity\Contracts\BranchAssignableUser;
+use App\Modules\Identity\Contracts\UserDirectory;
 use App\Modules\Menu\Contracts\MenuCatalog;
 use App\Modules\Menu\Contracts\SellableMenuBrowseResult;
 use App\Modules\Menu\Contracts\SellableMenuCategory;
@@ -11,6 +13,7 @@ use App\Modules\Menu\Contracts\SellableMenuCategoryGroup;
 use App\Modules\Menu\Contracts\SellableMenuItem;
 use App\Modules\Orders\Application\AddItem;
 use App\Modules\Orders\Application\AddSubtable;
+use App\Modules\Orders\Application\AssignWaiter;
 use App\Modules\Orders\Application\CancelOrder;
 use App\Modules\Orders\Application\ChangeItemQty;
 use App\Modules\Orders\Application\FindOrderWorkspace;
@@ -60,6 +63,8 @@ final class OrderWorkspace extends Component
     public ?string $targetSubtableId = null;
 
     public string $newSubtableName = '';
+
+    public string $selectedWaiterId = '';
 
     /**
      * @var array<int, string>
@@ -111,8 +116,13 @@ final class OrderWorkspace extends Component
             ]);
         }
 
+        $branchId = $this->branchId();
+        $assignableWaiters = app(UserDirectory::class)
+            ->activeUsersAssignedToBranchWithPermission($branchId, OrderPermissions::TAKE);
+        $this->syncSelectedWaiterId($workspace->assignedWaiterId);
+
         $menu = app(MenuCatalog::class)->browseSellableInBranch(
-            branchId: $this->branchId(),
+            branchId: $branchId,
             categoryId: $this->menuCategoryId,
             search: $this->menuSearch,
             perPage: self::MENU_ITEM_PAGE_SIZE,
@@ -124,7 +134,7 @@ final class OrderWorkspace extends Component
         $this->menuPage = $menu->itemPage;
         $this->menuCategoryPage = $menu->categoryPage;
         $menuData = $this->menu($menu);
-        $orderData = $this->order($workspace);
+        $orderData = $this->order($workspace, $assignableWaiters);
         $this->lastMenu = $menuData;
         $this->lastOrder = $orderData;
         $this->workspaceLoaded = true;
@@ -308,6 +318,54 @@ final class OrderWorkspace extends Component
         $this->statusMessage = __('orders.flash.item_moved');
     }
 
+    public function assignWaiter(): void
+    {
+        $this->authorizeTakingOrders();
+        $this->resetFeedback();
+
+        $waiterId = $this->validatedSelectedWaiterId();
+
+        if ($waiterId === null) {
+            return;
+        }
+
+        try {
+            app(AssignWaiter::class)($this->orderId, $waiterId);
+        } catch (OrdersDomainException $exception) {
+            $this->errorMessage = $this->domainErrorMessage($exception);
+
+            return;
+        } catch (ModelNotFoundException) {
+            $this->errorMessage = __('orders.workspace.errors.generic');
+
+            return;
+        }
+
+        $this->selectedWaiterId = (string) $waiterId;
+        $this->statusMessage = __('orders.flash.waiter_assigned');
+    }
+
+    public function clearWaiter(): void
+    {
+        $this->authorizeTakingOrders();
+        $this->resetFeedback();
+
+        try {
+            app(AssignWaiter::class)($this->orderId, null);
+        } catch (OrdersDomainException $exception) {
+            $this->errorMessage = $this->domainErrorMessage($exception);
+
+            return;
+        } catch (ModelNotFoundException) {
+            $this->errorMessage = __('orders.workspace.errors.generic');
+
+            return;
+        }
+
+        $this->selectedWaiterId = '';
+        $this->statusMessage = __('orders.flash.waiter_cleared');
+    }
+
     public function cancelOrder(): void
     {
         $this->authorizeTakingOrders();
@@ -330,11 +388,15 @@ final class OrderWorkspace extends Component
     }
 
     /**
+     * @param  list<BranchAssignableUser>  $assignableWaiters
      * @return array{
      *     id: int,
      *     type: string,
      *     status: string,
      *     table_id: int,
+     *     assigned_waiter_id: int|null,
+     *     assigned_waiter_name: string,
+     *     waiter_options: list<array{id: int, name: string}>,
      *     opened_at: string,
      *     client_count: int,
      *     comment: string|null,
@@ -349,7 +411,7 @@ final class OrderWorkspace extends Component
      *     groups: list<array{id: int|null, name: string, items: list<array{id: int, current_subtable_id: int|null, name: string, qty: int, unit_price: string, discount: string, total: string, move_targets: list<array{value: string, label: string}>}>}>
      * }
      */
-    private function order(OrderWorkspaceData $workspace): array
+    private function order(OrderWorkspaceData $workspace, array $assignableWaiters): array
     {
         $locale = app()->getLocale();
         $lineCount = count($workspace->items);
@@ -359,6 +421,9 @@ final class OrderWorkspace extends Component
             'type' => $workspace->type,
             'status' => $workspace->status,
             'table_id' => $workspace->tableId,
+            'assigned_waiter_id' => $workspace->assignedWaiterId,
+            'assigned_waiter_name' => $this->assignedWaiterName($workspace->assignedWaiterId, $assignableWaiters),
+            'waiter_options' => $this->waiterOptions($assignableWaiters),
             'opened_at' => $workspace->openedAt->format('Y-m-d H:i'),
             'client_count' => $workspace->clientCount,
             'comment' => $workspace->comment,
@@ -388,6 +453,9 @@ final class OrderWorkspace extends Component
      *     type: string,
      *     status: string,
      *     table_id: int,
+     *     assigned_waiter_id: int|null,
+     *     assigned_waiter_name: string,
+     *     waiter_options: list<array{id: int, name: string}>,
      *     opened_at: string,
      *     client_count: int,
      *     comment: string|null,
@@ -409,6 +477,9 @@ final class OrderWorkspace extends Component
             'type' => '',
             'status' => '',
             'table_id' => 0,
+            'assigned_waiter_id' => null,
+            'assigned_waiter_name' => __('orders.workspace.waiter.not_assigned'),
+            'waiter_options' => [],
             'opened_at' => '',
             'client_count' => 0,
             'comment' => null,
@@ -677,6 +748,25 @@ final class OrderWorkspace extends Component
         return (int) trim($this->targetSubtableId);
     }
 
+    private function validatedSelectedWaiterId(): ?int
+    {
+        $waiterId = trim($this->selectedWaiterId);
+
+        if ($waiterId === '') {
+            $this->errorMessage = __('orders.workspace.validation.waiter_required');
+
+            return null;
+        }
+
+        if (! preg_match('/^[1-9][0-9]*$/', $waiterId)) {
+            $this->errorMessage = __('orders.workspace.validation.waiter_invalid');
+
+            return null;
+        }
+
+        return (int) $waiterId;
+    }
+
     private function validatedSubtableName(): ?string
     {
         $name = trim($this->newSubtableName);
@@ -748,6 +838,49 @@ final class OrderWorkspace extends Component
         }
 
         return (int) $target;
+    }
+
+    /**
+     * @param  list<BranchAssignableUser>  $waiters
+     * @return list<array{id: int, name: string}>
+     */
+    private function waiterOptions(array $waiters): array
+    {
+        return array_map(
+            fn (BranchAssignableUser $waiter): array => [
+                'id' => $waiter->id,
+                'name' => $waiter->displayName,
+            ],
+            $waiters,
+        );
+    }
+
+    /**
+     * @param  list<BranchAssignableUser>  $waiters
+     */
+    private function assignedWaiterName(?int $assignedWaiterId, array $waiters): string
+    {
+        if ($assignedWaiterId === null) {
+            return __('orders.workspace.waiter.not_assigned');
+        }
+
+        foreach ($waiters as $waiter) {
+            if ($waiter->id === $assignedWaiterId) {
+                return $waiter->displayName;
+            }
+        }
+
+        return app(UserDirectory::class)->findName($assignedWaiterId)
+            ?? __('orders.workspace.waiter.unknown');
+    }
+
+    private function syncSelectedWaiterId(?int $assignedWaiterId): void
+    {
+        if ($this->selectedWaiterId !== '') {
+            return;
+        }
+
+        $this->selectedWaiterId = $assignedWaiterId === null ? '' : (string) $assignedWaiterId;
     }
 
     private function resetFeedback(): void

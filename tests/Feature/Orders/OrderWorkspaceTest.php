@@ -21,6 +21,7 @@ use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Modules\Tenancy\Contracts\TenantResolver;
 use App\Modules\Tenancy\Infrastructure\Models\Branch;
 use App\Modules\Tenancy\Infrastructure\Models\Tenant;
+use App\Support\Audit\AuditLog;
 use App\Support\Logging\LogContext;
 use App\Support\Money\Money;
 use App\Support\Money\MoneyFormatter;
@@ -294,6 +295,65 @@ it('maps the branch context cancel domain error to a translated message', functi
     expect((string) $order->refresh()->status)->toBe('open');
 });
 
+it('assigns and clears branch scoped waiters through the workspace', function (): void {
+    $tenantA = orderWorkspaceUser('tenant-a', 'waiter-a', ['orders.take'], branchCount: 2);
+    $tenantB = orderWorkspaceUser('tenant-b', 'waiter-b', ['orders.take']);
+
+    $assignable = orderWorkspaceStaffUser($tenantA, 0, 'Assignable Waiter', ['orders.take']);
+    $otherBranch = orderWorkspaceStaffUser($tenantA, 1, 'Other Branch Waiter', ['orders.take']);
+    $noPermission = orderWorkspaceStaffUser($tenantA, 0, 'Viewer Only', []);
+    $foreign = orderWorkspaceStaffUser($tenantB, 0, 'Foreign Waiter', ['orders.take']);
+    $table = orderWorkspaceTable($tenantA, 0, 'Assignable Table');
+
+    app()->setLocale('en');
+    orderWorkspaceActingIn($tenantA, 0, 'orders-workspace-waiter-assignment');
+    $order = orderWorkspaceDineInOrder($table, null);
+
+    $component = Livewire::actingAs($tenantA['user'])
+        ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $order->id])
+        ->assertSee(__('orders.workspace.waiter.label'), false)
+        ->assertSee(__('orders.workspace.waiter.not_assigned'), false)
+        ->assertSee('Assignable Waiter', false)
+        ->assertDontSee('Other Branch Waiter', false)
+        ->assertDontSee('Viewer Only', false)
+        ->assertDontSee('Foreign Waiter', false);
+
+    assertRenderedHtmlHasNoUncompiledBladeDirectiveAttributes($component->html());
+    assertRenderedLivewireBindingsResolve($component->html(), OrderWorkspaceComponent::class);
+
+    $component
+        ->set('selectedWaiterId', (string) $assignable->id)
+        ->call('assignWaiter')
+        ->assertSet('statusMessage', __('orders.flash.waiter_assigned'))
+        ->assertSee('Assignable Waiter', false);
+
+    $freshOrder = Order::query()->findOrFail((int) $order->id);
+    $assignedAudit = AuditLog::query()->where('action', 'orders.order.waiter_assigned')->latest('id')->firstOrFail();
+
+    expect((int) $freshOrder->waiter_id)->toBe((int) $assignable->id)
+        ->and($assignedAudit->tenant_id)->toBe((int) $tenantA['tenant']->id)
+        ->and($assignedAudit->after_json['waiter_id'])->toBe((int) $assignable->id);
+
+    $component
+        ->call('clearWaiter')
+        ->assertSet('statusMessage', __('orders.flash.waiter_cleared'))
+        ->assertSee(__('orders.workspace.waiter.not_assigned'), false);
+
+    expect(Order::query()->findOrFail((int) $order->id)->waiter_id)->toBeNull()
+        ->and(AuditLog::query()->where('action', 'orders.order.waiter_assigned')->count())->toBe(2);
+
+    $component
+        ->set('selectedWaiterId', (string) $otherBranch->id)
+        ->call('assignWaiter')
+        ->assertSet('errorMessage', __('orders.waiter_not_assignable'));
+
+    expect(Order::query()->findOrFail((int) $order->id)->waiter_id)->toBeNull()
+        ->and(AuditLog::query()->where('action', 'orders.order.waiter_assigned')->count())->toBe(2);
+
+    expect($noPermission)->toBeInstanceOf(User::class)
+        ->and($foreign)->toBeInstanceOf(User::class);
+});
+
 it('forbids cancel mounting without the orders take permission', function (): void {
     $allowed = orderWorkspaceUser('tenant-a', 'waiter-a', ['orders.take']);
     $denied = orderWorkspaceUser('tenant-b', 'viewer-b', []);
@@ -314,8 +374,8 @@ it('keeps cancel-visible workspace render query count stable as line count grows
     $small = orderWorkspaceCancelRenderQueryCount(1, 'small');
     $large = orderWorkspaceCancelRenderQueryCount(8, 'large');
 
-    expect($small)->toBe(6)
-        ->and($large)->toBe(6);
+    expect($small)->toBe(7)
+        ->and($large)->toBe(7);
 });
 
 it('keeps order translation key sets identical and reuses the cancelled flash key', function (): void {
@@ -576,6 +636,56 @@ function orderWorkspaceUser(string $tenantSlug, string $username, array $permiss
         'branches' => $branches,
         'user' => $user,
     ];
+}
+
+/**
+ * @param  array{tenant: Tenant, branches: list<Branch>, user: User}  $record
+ * @param  list<string>  $permissionCodes
+ */
+function orderWorkspaceStaffUser(array $record, int $branchIndex, string $name, array $permissionCodes, bool $active = true): User
+{
+    app(TenantResolver::class)->set((int) $record['tenant']->id);
+    app(BranchContext::class)->set((int) $record['branches'][$branchIndex]->id);
+
+    $username = str($name)->slug('-')->toString();
+    $role = Role::query()->create([
+        'code' => "{$username}-role",
+        'name' => "{$name} Role",
+    ]);
+
+    $permissions = collect($permissionCodes)
+        ->map(fn (string $code): Permission => Permission::query()->firstOrCreate(
+            ['code' => $code],
+            ['name' => $code],
+        ));
+
+    if ($permissions->isNotEmpty()) {
+        $role->permissions()->attach(
+            $permissions->pluck('id')->all(),
+            ['tenant_id' => (int) $record['tenant']->id],
+        );
+    }
+
+    $user = User::query()->create([
+        'role_id' => (int) $role->id,
+        'name' => $name,
+        'email' => "{$username}@smartrest.test",
+        'username' => $username,
+        'default_locale' => 'en',
+        'active' => $active,
+        'is_superadmin' => false,
+        'password' => Hash::make('password'),
+    ]);
+
+    UserBranchAssignment::query()->create([
+        'user_id' => (int) $user->id,
+        'branch_id' => (int) $record['branches'][$branchIndex]->id,
+    ]);
+
+    app(BranchContext::class)->clear();
+    app(TenantResolver::class)->clear();
+
+    return $user;
 }
 
 /**

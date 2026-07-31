@@ -99,6 +99,8 @@ return [
         'actions' => [
             'add_menu_item' => 'Добавить',
             'create_subtable' => 'Создать подстол',
+            'assign_waiter' => 'Назначить',
+            'clear_waiter' => 'Очистить',
             'increase_qty' => 'Увеличить количество',
             'decrease_qty' => 'Уменьшить количество',
             'move_item' => 'Переместить',
@@ -119,8 +121,17 @@ return [
             'subtable_name_required' => 'Введите название подстола.',
             'subtable_name_max' => 'Название подстола не должно быть длиннее :max символов.',
             'subtable_name_duplicate' => 'В этом заказе уже есть открытый подстол с таким названием.',
+            'waiter_required' => 'Выберите официанта перед назначением.',
+            'waiter_invalid' => 'Выбранный официант недействителен.',
             'move_target_required' => 'Выберите, куда переместить позицию.',
             'move_target_invalid' => 'Выбранная цель перемещения недействительна.',
+        ],
+        'waiter' => [
+            'label' => 'Официант',
+            'select_label' => 'Назначить официанта',
+            'select_placeholder' => 'Выбрать сотрудника',
+            'not_assigned' => 'Не назначен',
+            'unknown' => 'Неизвестный официант',
         ],
         'subtables' => [
             'create_label' => 'Новый подстол',
@@ -167,6 +178,7 @@ return [
     'flash' => [
         'opened' => 'Заказ открыт.',
         'waiter_assigned' => 'Официант назначен.',
+        'waiter_cleared' => 'Назначение официанта очищено.',
         'subtable_added' => 'Подстол добавлен.',
         'cancelled' => 'Заказ отменен.',
         'item_added' => 'Позиция добавлена.',

@@ -17,6 +17,7 @@ final readonly class OrderWorkspace
         public string $type,
         public string $status,
         public int $tableId,
+        public ?int $assignedWaiterId,
         public DateTimeInterface $openedAt,
         public int $clientCount,
         public ?string $comment,

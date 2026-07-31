@@ -8,6 +8,7 @@ use App\Modules\Identity\Contracts\BranchAssignableUser;
 use App\Modules\Identity\Contracts\UserDirectory;
 use App\Modules\Identity\Infrastructure\Models\User;
 use App\Modules\Identity\Infrastructure\Models\UserBranchAssignment;
+use Illuminate\Database\Query\JoinClause;
 
 final class EloquentUserDirectory implements UserDirectory
 {
@@ -40,20 +41,20 @@ final class EloquentUserDirectory implements UserDirectory
 
     public function activeUsersAssignedToBranchWithPermission(int $branchId, string $permissionCode): array
     {
-        return UserBranchAssignment::query()
-            ->join('users', function ($join): void {
+        $users = UserBranchAssignment::query()
+            ->join('users', function (JoinClause $join): void {
                 $join->on('users.id', '=', 'user_branch_assignments.user_id')
                     ->on('users.tenant_id', '=', 'user_branch_assignments.tenant_id');
             })
-            ->join('roles', function ($join): void {
+            ->join('roles', function (JoinClause $join): void {
                 $join->on('roles.id', '=', 'users.role_id')
                     ->on('roles.tenant_id', '=', 'user_branch_assignments.tenant_id');
             })
-            ->join('role_permissions', function ($join): void {
+            ->join('role_permissions', function (JoinClause $join): void {
                 $join->on('role_permissions.role_id', '=', 'roles.id')
                     ->on('role_permissions.tenant_id', '=', 'user_branch_assignments.tenant_id');
             })
-            ->join('permissions', function ($join): void {
+            ->join('permissions', function (JoinClause $join): void {
                 $join->on('permissions.id', '=', 'role_permissions.permission_id')
                     ->on('permissions.tenant_id', '=', 'user_branch_assignments.tenant_id');
             })
@@ -63,30 +64,28 @@ final class EloquentUserDirectory implements UserDirectory
             ->orderBy('users.name')
             ->orderBy('users.id')
             ->get(['users.id', 'users.name'])
-            ->map(fn (UserBranchAssignment $assignment): BranchAssignableUser => new BranchAssignableUser(
-                id: (int) $assignment->id,
-                displayName: (string) $assignment->name,
-            ))
-            ->values()
+            ->map(fn (UserBranchAssignment $assignment): BranchAssignableUser => $this->branchAssignableUser($assignment))
             ->all();
+
+        return array_values($users);
     }
 
     public function isActiveUserAssignedToBranchWithPermission(int $userId, int $branchId, string $permissionCode): bool
     {
         return UserBranchAssignment::query()
-            ->join('users', function ($join): void {
+            ->join('users', function (JoinClause $join): void {
                 $join->on('users.id', '=', 'user_branch_assignments.user_id')
                     ->on('users.tenant_id', '=', 'user_branch_assignments.tenant_id');
             })
-            ->join('roles', function ($join): void {
+            ->join('roles', function (JoinClause $join): void {
                 $join->on('roles.id', '=', 'users.role_id')
                     ->on('roles.tenant_id', '=', 'user_branch_assignments.tenant_id');
             })
-            ->join('role_permissions', function ($join): void {
+            ->join('role_permissions', function (JoinClause $join): void {
                 $join->on('role_permissions.role_id', '=', 'roles.id')
                     ->on('role_permissions.tenant_id', '=', 'user_branch_assignments.tenant_id');
             })
-            ->join('permissions', function ($join): void {
+            ->join('permissions', function (JoinClause $join): void {
                 $join->on('permissions.id', '=', 'role_permissions.permission_id')
                     ->on('permissions.tenant_id', '=', 'user_branch_assignments.tenant_id');
             })
@@ -95,5 +94,19 @@ final class EloquentUserDirectory implements UserDirectory
             ->where('users.active', true)
             ->where('permissions.code', $permissionCode)
             ->exists();
+    }
+
+    private function branchAssignableUser(UserBranchAssignment $assignment): BranchAssignableUser
+    {
+        $id = $assignment->getAttribute('id');
+        $name = $assignment->getAttribute('name');
+
+        assert(is_numeric($id));
+        assert(is_string($name));
+
+        return new BranchAssignableUser(
+            id: (int) $id,
+            displayName: $name,
+        );
     }
 }

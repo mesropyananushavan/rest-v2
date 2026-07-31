@@ -5277,17 +5277,31 @@ passed `343 files`; `make stan` analysed `205/205` with `[OK] No errors`;
    Execution Time: 2.530 ms
   (38 rows)
   ```
-- [ ] Step 2.24.4: workspace read model and Livewire adapter. Add assigned
+- [x] Step 2.24.4: workspace read model and Livewire adapter. Add assigned
   waiter id to the order workspace DTO/read model with no per-row query, load
   assignable staff through the Identity contract in the Livewire adapter, and
   render a compact assignment/clear control that preserves the existing POS
   workspace layout and rendered-affordance safety rules.
-- [ ] Step 2.24.5: translations, demo verification, and feature coverage. Add
+  Result: `FindOrderWorkspace` now selects `waiter_id` into the readonly DTO
+  without changing its 3-query read count; `OrderWorkspace` loads assignable
+  staff once per render through `UserDirectory`, shows the current waiter or a
+  translated not-assigned state in the right-side summary card, and calls
+  `AssignWaiter` for assign/clear with translated flash/error messages.
+- [x] Step 2.24.5: translations, demo verification, and feature coverage. Add
   Armenian/Russian/English strings for all new UI/domain messages, verify
   deterministic demo data already exposes at least two assignable staff in the
   demo board branch or adjust seeders if needed, and add action/UI tests for
   valid assignment, clear, invalid waiter rejection, route isolation, flashes,
   and hidden cross-tenant/branch staff.
+  Result: added matching `hy`/`ru`/`en` keys for the domain error, UI labels,
+  validation messages, and clear flash. SQLite `make test` passed at the
+  current feature head with `380 passed / 14 skipped / 3639 assertions`.
+  `make fresh` passed; demo verification found Arat Kentron has assignable
+  `Ani Petrosyan`, `Gor Hakobyan`, and `Mariam Sargsyan`, Arat Dilijan has
+  `Ani Petrosyan`, `Gor Hakobyan`, and `Tigran Manukyan`, and Northstar
+  Downtown has `Emma Brooks`, `Liam Reed`, `Noah Bennett`, and
+  `Olivia Carter`, proving two-tenant branch-only visibility without seeder
+  changes.
 - [ ] Step 2.24.6: final documentation, gates, and delivery. Record the
   decision in `docs/DECISIONS.md`, keep this worklog current with measured
   results and gotchas, run the full required gate set including build,
