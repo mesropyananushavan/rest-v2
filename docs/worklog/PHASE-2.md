@@ -5425,6 +5425,42 @@ Plan:
   exact head `37469a1561746fde5aa117e925e6ff8402ca0477` passed duplicate
   reported runs for `quality`, `tenant-isolation-pgsql`, and
   `orders-concurrency-pgsql`. PR #52 was left draft and was not merged.
+- [ ] Step SUB-03.4: strict final-audit corrections. Verify PR #52 state and
+  review the full diff file by file. Fix only defects found by the audit:
+  production scheduler execution, scheduler overlap lock expiry, subscription
+  payment/suspension TOCTOU safety, config validation without production
+  `assert()`, and missing focused regressions. Rerun the full gate set, push to
+  the existing PR branch only, wait for exact-head GitHub Actions, and leave
+  PR #52 draft/unmerged. Result: strict audit found three blocking defects in
+  the PR head: repository-owned process configuration did not run Laravel
+  Scheduler, the scheduled event used Laravel's default 24-hour overlap mutex
+  for an hourly billing job, and payment could update a subscription after the
+  automatic batch had read eligibility but before `SuspendTenant` locked and
+  changed tenant status. Fixed by adding a dedicated `scheduler` Compose
+  process running `php artisan schedule:work`, setting the automatic suspension
+  schedule mutex expiry to 60 minutes, replacing scheduler/reader timezone
+  `assert()` calls with explicit production-safe validation, and making both
+  automatic suspension and payment recording serialize through the tenant row
+  before reading or mutating subscription status. Added regressions for
+  mid-batch unexpected failure cleanup, Artisan failure propagation,
+  multi-candidate query shape, scheduler process wiring, payment lock
+  behavior, and the payment-vs-auto-suspension race. Final local gates before
+  push: `make pint` passed with 4 style fixes applied; `make stan` analysed
+  `210/210` with `[OK] No errors`; `make test` passed `393 passed / 17 skipped
+  / 3715 assertions`; `make tenant-isolation-pgsql` passed `67 passed /
+  355 assertions`; `make orders-concurrency-pgsql` passed `6 passed /
+  43 assertions`; `make fresh` passed; `make build` passed with the known
+  container-only Git dubious-ownership warning; `make artisan
+  ARGS="schedule:list"` showed `0 * * * * php artisan
+  tenancy:subscriptions:auto-suspend`; `make artisan
+  ARGS="schedule:list -vvv"` showed the named
+  `tenancy.subscriptions.auto_suspend` event; `make artisan
+  ARGS="config:cache"`, cached `schedule:list -vvv`, and `config:clear` passed;
+  `git diff --check` had no output; the component-attribute directive audit
+  exited `1` with no matches; and the Tenancy/new-command forbidden-internals
+  audit exited `1` with no matches.
 
-Next immediate action: owner final-audit PR #52. Do not mark ready for review
-or merge without separate owner approval after that audit.
+Next immediate action: push the SUB-03.4 audit-fix commit to PR #52, wait for
+GitHub Actions on the exact pushed head, then report the strict final audit
+verdict. Do not mark PR #52 ready for review or merge without separate owner
+approval after that audit.

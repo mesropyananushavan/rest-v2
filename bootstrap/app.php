@@ -41,13 +41,16 @@ return Application::configure(basePath: dirname(__DIR__))
     ])
     ->withSchedule(function (Schedule $schedule): void {
         $timezone = config('billing.platform_timezone');
-        assert(is_string($timezone));
+
+        if (! is_string($timezone) || $timezone === '') {
+            throw new UnexpectedValueException('Billing platform timezone must be configured.');
+        }
 
         $schedule
             ->command('tenancy:subscriptions:auto-suspend')
             ->hourly()
             ->timezone($timezone)
-            ->withoutOverlapping()
+            ->withoutOverlapping(60)
             ->name('tenancy.subscriptions.auto_suspend');
     })
     ->withMiddleware(function (Middleware $middleware): void {

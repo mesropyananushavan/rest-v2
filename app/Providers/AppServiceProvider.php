@@ -50,6 +50,7 @@ use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
+use UnexpectedValueException;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -64,7 +65,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(TenantSettingsReader::class, EloquentTenantSettingsReader::class);
         $this->app->bind(TenantSubscriptionReader::class, function (): EloquentTenantSubscriptionReader {
             $platformTimezone = config('billing.platform_timezone');
-            assert(is_string($platformTimezone));
+
+            if (! is_string($platformTimezone) || $platformTimezone === '') {
+                throw new UnexpectedValueException('Billing platform timezone must be configured.');
+            }
 
             return new EloquentTenantSubscriptionReader($platformTimezone);
         });

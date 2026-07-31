@@ -1015,6 +1015,40 @@ payment ledger now, because amounts and provider semantics are out of scope;
 using a fake system user for console audit rows, because no platform operator
 identity exists and `actor_id` is already nullable.
 
+## 2026-07-31 — Automatic subscription suspension uses tenant-row lock boundary
+Decision: automatic overdue-subscription suspension runs through Laravel
+Scheduler hourly, with a repository-defined scheduler process executing
+`php artisan schedule:work`. The scheduled command still gates actual
+suspension until `05:00` in the platform billing timezone. The scheduler mutex
+expiry is 60 minutes, not Laravel's 1440-minute default, so a crashed run does
+not suppress the next operational suspension window for a full day.
+
+The automatic suspension batch uses
+`TenantSubscriptionReader::suspendableTenantIds()` only for the fleet candidate
+read. Before each actual tenant suspension it opens a transaction, locks the
+target `tenants` row, rechecks serviceability through `TenantDirectory`, and
+rechecks subscription status through `TenantSubscriptionReader`. Only then does
+it call the existing `SuspendTenant` action for the status write and audit row.
+Manual subscription payment now locks the same tenant row before locking and
+advancing `tenant_subscriptions`, so payment/renewal and automatic suspension
+share an effective concurrency boundary.
+
+Reason: schedule registration alone is not enough; an application process must
+actually execute Laravel's scheduler. The automatic suspension read model is a
+fleet scan, but the final eligibility decision must be atomic with the tenant
+status mutation so a just-recorded payment cannot be overwritten by a stale
+suspension run. A one-hour overlap mutex matches the hourly schedule better
+than the framework default: it still prevents concurrent scheduler executions
+but recovers at the next hourly tick after a crashed process.
+
+Rejected: duplicating tenant status mutation or audit logic in the batch,
+because `SuspendTenant` is the canonical writer; relying only on a
+pre-suspension `statusForTenant()` read, because that creates a TOCTOU race
+with payment recording; leaving the default 24-hour scheduler mutex, because
+one crashed run would delay suspension too long; adding a platform UI,
+operator identity, invoices, ledger, notification, or schema migration here,
+because those are outside this slice.
+
 ## 2026-07-31 — Order waiter assignment requires active branch staff with orders-take
 Decision: assigning a waiter to an order requires the selected user to be an
 active user in the current tenant, assigned to the current branch, and allowed

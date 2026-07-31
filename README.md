@@ -24,11 +24,12 @@ Use Docker through the Makefile; host PHP is not required.
 
 ## Scheduler
 
-Laravel scheduling includes `tenancy:subscriptions:auto-suspend`, which runs
-hourly in the platform billing timezone and only suspends eligible active
-tenants at or after the configured quiet hour. Inspect local scheduling with
-`make artisan ARGS="schedule:list"`; run one local scheduler tick with
-`make artisan ARGS="schedule:run"`.
+The Docker stack includes a dedicated `scheduler` process running
+`php artisan schedule:work`. Laravel scheduling includes
+`tenancy:subscriptions:auto-suspend`, which runs hourly in the platform billing
+timezone and only suspends eligible active tenants at or after the configured
+quiet hour. Inspect local scheduling with `make artisan ARGS="schedule:list"`;
+run one local scheduler tick with `make artisan ARGS="schedule:run"`.
 
 ## Horizon
 

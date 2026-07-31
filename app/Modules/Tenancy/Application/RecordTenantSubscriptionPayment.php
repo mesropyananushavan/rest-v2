@@ -26,11 +26,18 @@ final class RecordTenantSubscriptionPayment
         $startedAt = microtime(true);
 
         try {
-            $this->assertTenantExists($tenantId);
-
             $subscription = $this->withTenantAuditContext(
                 $tenantId,
                 fn (): TenantSubscription => DB::transaction(function () use ($expectedCurrentNextDueOn, $paymentDate, $tenantId): TenantSubscription {
+                    $tenant = Tenant::query()
+                        ->whereKey($tenantId)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (! $tenant instanceof Tenant) {
+                        throw TenancyDomainException::unknownTenant();
+                    }
+
                     $subscription = TenantSubscription::query()
                         ->where('tenant_id', $tenantId)
                         ->lockForUpdate()
@@ -80,13 +87,6 @@ final class RecordTenantSubscriptionPayment
             ]);
 
             throw $exception;
-        }
-    }
-
-    private function assertTenantExists(int $tenantId): void
-    {
-        if (! Tenant::query()->whereKey($tenantId)->exists()) {
-            throw TenancyDomainException::unknownTenant();
         }
     }
 

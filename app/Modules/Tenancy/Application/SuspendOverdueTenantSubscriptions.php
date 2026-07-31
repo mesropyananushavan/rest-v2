@@ -9,10 +9,12 @@ use App\Modules\Tenancy\Contracts\TenantDirectory;
 use App\Modules\Tenancy\Contracts\TenantResolver;
 use App\Modules\Tenancy\Contracts\TenantSubscriptionReader;
 use App\Modules\Tenancy\Domain\TenancyDomainException;
+use App\Modules\Tenancy\Infrastructure\Models\Tenant;
 use App\Support\Logging\LogContext;
 use DateTimeImmutable;
 use DateTimeInterface;
 use DateTimeZone;
+use Illuminate\Support\Facades\DB;
 use UnexpectedValueException;
 
 final class SuspendOverdueTenantSubscriptions
@@ -66,42 +68,13 @@ final class SuspendOverdueTenantSubscriptions
             $skippedUnknownTenantCount = 0;
 
             foreach ($tenantIds as $tenantId) {
-                if (! $this->tenants->isServiceable($tenantId)) {
-                    $skippedNotServiceableCount++;
-
-                    continue;
-                }
-
-                $status = $this->subscriptions->statusForTenant($tenantId, $evaluatedAt);
-
-                if ($status?->isSuspendable !== true) {
-                    $skippedNoLongerSuspendableCount++;
-
-                    continue;
-                }
-
-                try {
-                    ($this->suspendTenant)($tenantId);
-                    $suspendedCount++;
-                } catch (TenancyDomainException $exception) {
-                    if ($exception->errorCode() === 'tenancy.tenant_already_suspended') {
-                        $skippedAlreadySuspendedCount++;
-
-                        continue;
-                    }
-
-                    if ($exception->errorCode() === 'tenancy.unknown_tenant') {
-                        $skippedUnknownTenantCount++;
-
-                        continue;
-                    }
-
-                    $this->logDomainFailure('tenancy.subscriptions.auto_suspend', $exception, $startedAt, [
-                        'tenant_id' => $tenantId,
-                    ]);
-
-                    throw $exception;
-                }
+                match ($this->suspendTenantIfStillEligible($tenantId, $evaluatedAt, $startedAt)) {
+                    'suspended' => $suspendedCount++,
+                    'not_serviceable' => $skippedNotServiceableCount++,
+                    'no_longer_suspendable' => $skippedNoLongerSuspendableCount++,
+                    'already_suspended' => $skippedAlreadySuspendedCount++,
+                    'unknown_tenant' => $skippedUnknownTenantCount++,
+                };
             }
 
             $result = new AutomaticTenantSuspensionResult(
@@ -123,6 +96,53 @@ final class SuspendOverdueTenantSubscriptions
             $this->branches->set($previousBranchId);
             LogContext::restore($previousLogContext);
         }
+    }
+
+    /**
+     * @return 'suspended'|'not_serviceable'|'no_longer_suspendable'|'already_suspended'|'unknown_tenant'
+     */
+    private function suspendTenantIfStillEligible(int $tenantId, DateTimeImmutable $evaluatedAt, float $startedAt): string
+    {
+        return DB::transaction(function () use ($evaluatedAt, $startedAt, $tenantId): string {
+            $tenant = Tenant::query()
+                ->whereKey($tenantId)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $tenant instanceof Tenant) {
+                return 'unknown_tenant';
+            }
+
+            if (! $this->tenants->isServiceable($tenantId)) {
+                return 'not_serviceable';
+            }
+
+            $status = $this->subscriptions->statusForTenant($tenantId, $evaluatedAt);
+
+            if ($status?->isSuspendable !== true) {
+                return 'no_longer_suspendable';
+            }
+
+            try {
+                ($this->suspendTenant)($tenantId);
+
+                return 'suspended';
+            } catch (TenancyDomainException $exception) {
+                if ($exception->errorCode() === 'tenancy.tenant_already_suspended') {
+                    return 'already_suspended';
+                }
+
+                if ($exception->errorCode() === 'tenancy.unknown_tenant') {
+                    return 'unknown_tenant';
+                }
+
+                $this->logDomainFailure('tenancy.subscriptions.auto_suspend', $exception, $startedAt, [
+                    'tenant_id' => $tenantId,
+                ]);
+
+                throw $exception;
+            }
+        });
     }
 
     private function now(?DateTimeInterface $now): DateTimeImmutable

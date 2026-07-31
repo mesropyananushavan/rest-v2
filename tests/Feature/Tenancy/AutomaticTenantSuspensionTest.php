@@ -164,6 +164,52 @@ it('surfaces unexpected failures and restores tenant branch and log context', fu
         ->and($context['module'])->toBe('orders');
 });
 
+it('surfaces mid batch failures and restores tenant branch and log context after prior candidates', function (): void {
+    $processed = autoSuspensionTenant('auto-mid-batch-processed');
+    $failing = autoSuspensionTenant('auto-mid-batch-failing');
+    $previousTenant = autoSuspensionTenant('auto-mid-batch-previous');
+    autoSuspensionSubscription($processed, '2026-08-01', 3);
+    autoSuspensionInTenant($previousTenant);
+    $branch = Branch::query()->create([
+        'name' => 'Mid Batch Previous Branch',
+        'timezone' => 'Asia/Yerevan',
+        'status' => 'active',
+    ]);
+    app(BranchContext::class)->set((int) $branch->id);
+    LogContext::start('auto-mid-batch-request', 'orders');
+    $reader = autoSuspensionReader(
+        ids: [(int) $processed->id, (int) $failing->id],
+        statuses: [
+            (int) $processed->id => autoSuspensionStatus((int) $processed->id, suspendable: true),
+        ],
+        failingTenantId: (int) $failing->id,
+    );
+    $tenantDirectory = autoSuspensionTenantDirectory(serviceableTenantIds: [
+        (int) $processed->id,
+        (int) $failing->id,
+    ]);
+
+    expect(fn () => autoSuspensionAction($reader, $tenantDirectory)(autoSuspensionNow('2026-08-05 08:00:00')))
+        ->toThrow(RuntimeException::class, 'Subscription status read failed.');
+
+    $context = LogContext::current();
+
+    expect($processed->refresh()->status)->toBe('suspended')
+        ->and(app(TenantResolver::class)->id())->toBe((int) $previousTenant->id)
+        ->and(app(BranchContext::class)->id())->toBe((int) $branch->id)
+        ->and($context['request_id'])->toBe('auto-mid-batch-request')
+        ->and($context['tenant_id'])->toBe((int) $previousTenant->id)
+        ->and($context['branch_id'])->toBe((int) $branch->id)
+        ->and($context['module'])->toBe('orders');
+});
+
+it('surfaces unexpected failures through the Artisan command', function (): void {
+    config(['billing.automatic_suspension.quiet_hour' => 'invalid']);
+
+    expect(fn () => $this->artisan('tenancy:subscriptions:auto-suspend')->run())
+        ->toThrow(UnexpectedValueException::class);
+});
+
 it('uses the fleet reader without per-tenant queries when there are no candidates', function (): void {
     $tenant = autoSuspensionTenant('auto-query-count');
     autoSuspensionSubscription($tenant, '2026-08-04', 3);
@@ -181,6 +227,24 @@ it('uses the fleet reader without per-tenant queries when there are no candidate
         ->and($queryCount)->toBe($expectedQueryCount);
 });
 
+it('keeps multi candidate processing to a bounded per tenant query shape', function (): void {
+    foreach (range(1, 5) as $index) {
+        $tenant = autoSuspensionTenant("auto-query-scale-{$index}");
+        autoSuspensionSubscription($tenant, '2026-08-01', 3);
+    }
+
+    DB::enableQueryLog();
+
+    $result = app(SuspendOverdueTenantSubscriptions::class)(autoSuspensionNow('2026-08-05 08:00:00'));
+
+    $queryCount = count(DB::getQueryLog());
+    DB::disableQueryLog();
+
+    expect($result->candidateCount)->toBe(5)
+        ->and($result->suspendedCount)->toBe(5)
+        ->and($queryCount)->toBeLessThanOrEqual(DB::connection()->getDriverName() === 'pgsql' ? 75 : 55);
+});
+
 it('registers the automatic suspension schedule hourly in the platform timezone without overlap', function (): void {
     config(['billing.platform_timezone' => 'Asia/Yerevan']);
     $this->artisan('schedule:list')->assertSuccessful();
@@ -193,7 +257,15 @@ it('registers the automatic suspension schedule hourly in the platform timezone 
         ->and($event->expression)->toBe('0 * * * *')
         ->and($event->timezone)->toBe('Asia/Yerevan')
         ->and($event->withoutOverlapping)->toBeTrue()
-        ->and($event->expiresAt)->toBe(1440);
+        ->and($event->expiresAt)->toBe(60);
+});
+
+it('configures a scheduler process to execute Laravel scheduling', function (): void {
+    $compose = file_get_contents(base_path('docker-compose.yml'));
+
+    expect($compose)->toBeString()
+        ->and($compose)->toContain("\n  scheduler:\n")
+        ->and($compose)->toContain('command: php artisan schedule:work');
 });
 
 it('writes suspension audit rows visible only in the target tenant context under PostgreSQL RLS', function (): void {
@@ -272,9 +344,9 @@ function autoSuspensionStatus(int $tenantId, bool $suspendable): TenantSubscript
  * @param  list<int>  $ids
  * @param  array<int, TenantSubscriptionStatus|null>  $statuses
  */
-function autoSuspensionReader(array $ids, array $statuses): TenantSubscriptionReader
+function autoSuspensionReader(array $ids, array $statuses, ?int $failingTenantId = null): TenantSubscriptionReader
 {
-    return new class($ids, $statuses) implements TenantSubscriptionReader
+    return new class($ids, $statuses, $failingTenantId) implements TenantSubscriptionReader
     {
         /**
          * @param  list<int>  $ids
@@ -283,10 +355,15 @@ function autoSuspensionReader(array $ids, array $statuses): TenantSubscriptionRe
         public function __construct(
             private readonly array $ids,
             private readonly array $statuses,
+            private readonly ?int $failingTenantId,
         ) {}
 
         public function statusForTenant(int $tenantId, DateTimeInterface $now): ?TenantSubscriptionStatus
         {
+            if ($tenantId === $this->failingTenantId) {
+                throw new RuntimeException('Subscription status read failed.');
+            }
+
             return $this->statuses[$tenantId] ?? null;
         }
 

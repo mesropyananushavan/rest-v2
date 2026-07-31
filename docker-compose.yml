@@ -76,6 +76,28 @@ services:
       DB_PASSWORD: smartrest
       REDIS_HOST: redis
 
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    working_dir: /var/www/html
+    command: php artisan schedule:work
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - postgres
+      - redis
+      - mailpit
+    environment:
+      APP_ENV: local
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_DATABASE: smartrest
+      DB_USERNAME: smartrest
+      DB_PASSWORD: smartrest
+      REDIS_HOST: redis
+      MAIL_HOST: mailpit
+
   mailpit:
     image: axllent/mailpit:v1.27
     ports:
