@@ -19,14 +19,17 @@ final class LoginController
     public function store(LoginRequest $request, AuthenticateUser $authenticate): RedirectResponse
     {
         $user = $authenticate(
+            (string) $request->string('tenant_slug'),
             (string) $request->string('email'),
             (string) $request->string('password'),
         );
 
         if ($user === null) {
+            $request->session()->forget(['tenant_id', 'branch_id']);
+
             return back()
                 ->withErrors(['email' => __('auth.failed')])
-                ->onlyInput('email');
+                ->onlyInput('tenant_slug', 'email');
         }
 
         $request->session()->regenerate();

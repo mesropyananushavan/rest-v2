@@ -43,6 +43,7 @@ Dev-only password for all demo users: `password`.
 
 Tenant `Arat Riverside Restaurants`, locale `hy`, currency `AMD`:
 
+- Login tenant slug: `arat-riverside`
 - `arat-owner` / `owner@arat.test`
 - `arat-manager` / `manager@arat.test`
 - `arat-cashier` / `cashier@arat.test`
@@ -50,6 +51,7 @@ Tenant `Arat Riverside Restaurants`, locale `hy`, currency `AMD`:
 
 Tenant `Northstar Bistro Group`, locale `en`, currency `USD`:
 
+- Login tenant slug: `northstar-bistro`
 - `northstar-owner` / `owner@northstar.test`
 - `northstar-manager` / `manager@northstar.test`
 - `northstar-cashier` / `cashier@northstar.test`

@@ -36,6 +36,7 @@ it('allows an active tenant to log in and reach the admin dashboard', function (
     $this->withSession(['_token' => tenantStatusCsrfToken()])
         ->withServerVariables(['REMOTE_ADDR' => '203.0.113.101'])
         ->post(route('login.store'), tenantStatusLoginPayload([
+            'tenant_slug' => 'tenant-status-active',
             'email' => 'active-manager@smartrest.test',
             'password' => 'password',
         ]))
@@ -51,6 +52,7 @@ it('blocks an established html session on the next request when the tenant is su
     $this->withSession(['_token' => tenantStatusCsrfToken()])
         ->withServerVariables(['REMOTE_ADDR' => '203.0.113.102'])
         ->post(route('login.store'), tenantStatusLoginPayload([
+            'tenant_slug' => 'tenant-status-html',
             'email' => 'html-manager@smartrest.test',
             'password' => 'password',
         ]))
@@ -77,6 +79,7 @@ it('returns the existing json error envelope when an api tenant is suspended', f
     $this->withSession(['_token' => tenantStatusCsrfToken()])
         ->withServerVariables(['REMOTE_ADDR' => '203.0.113.103'])
         ->post(route('login.store'), tenantStatusLoginPayload([
+            'tenant_slug' => 'arat-riverside',
             'email' => 'manager@arat.test',
             'password' => 'password',
         ]))
@@ -104,6 +107,7 @@ it('allows an active tenant to complete a real http livewire update', function (
     $this->withSession(['_token' => tenantStatusCsrfToken()])
         ->withServerVariables(['REMOTE_ADDR' => '203.0.113.104'])
         ->post(route('login.store'), tenantStatusLoginPayload([
+            'tenant_slug' => 'tenant-status-livewire-active',
             'email' => 'livewire-active-manager@smartrest.test',
             'password' => 'password',
         ]))
@@ -126,6 +130,7 @@ it('blocks a real http livewire update when the tenant is suspended', function (
     $this->withSession(['_token' => tenantStatusCsrfToken()])
         ->withServerVariables(['REMOTE_ADDR' => '203.0.113.106'])
         ->post(route('login.store'), tenantStatusLoginPayload([
+            'tenant_slug' => 'tenant-status-livewire-suspended',
             'email' => 'livewire-suspended-manager@smartrest.test',
             'password' => 'password',
         ]))
@@ -149,6 +154,7 @@ it('routes livewire updates by the livewire signal before the accept header', fu
     $this->withSession(['_token' => tenantStatusCsrfToken()])
         ->withServerVariables(['REMOTE_ADDR' => '203.0.113.108'])
         ->post(route('login.store'), tenantStatusLoginPayload([
+            'tenant_slug' => 'tenant-status-livewire-accept',
             'email' => 'livewire-accept-manager@smartrest.test',
             'password' => 'password',
         ]))
@@ -177,6 +183,7 @@ it('rejects login when the session already carries a suspended tenant id', funct
     ])
         ->withServerVariables(['REMOTE_ADDR' => '203.0.113.110'])
         ->post(route('login.store'), tenantStatusLoginPayload([
+            'tenant_slug' => 'tenant-status-session',
             'email' => 'session-manager@smartrest.test',
             'password' => 'password',
         ]))
@@ -194,6 +201,7 @@ it('rejects login when a non-production tenant header names a suspended tenant',
         ->withHeader('X-Tenant-ID', (string) $record['tenant']->id)
         ->withServerVariables(['REMOTE_ADDR' => '203.0.113.111'])
         ->post(route('login.store'), tenantStatusLoginPayload([
+            'tenant_slug' => 'tenant-status-header',
             'email' => 'header-manager@smartrest.test',
             'password' => 'password',
         ]))
@@ -208,6 +216,7 @@ it('keeps logout reachable when the current tenant is suspended', function (): v
     $this->withSession(['_token' => tenantStatusCsrfToken()])
         ->withServerVariables(['REMOTE_ADDR' => '203.0.113.112'])
         ->post(route('login.store'), tenantStatusLoginPayload([
+            'tenant_slug' => 'tenant-status-logout',
             'email' => 'logout-manager@smartrest.test',
             'password' => 'password',
         ]))
