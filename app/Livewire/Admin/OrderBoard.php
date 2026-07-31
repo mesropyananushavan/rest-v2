@@ -86,7 +86,7 @@ final class OrderBoard extends Component
         $tableId = $this->selectedTableId();
 
         try {
-            app(OpenOrder::class)(
+            $order = app(OpenOrder::class)(
                 $tableId,
                 clientCount: $this->guestCount,
                 comment: $this->normalizedComment(),
@@ -110,7 +110,7 @@ final class OrderBoard extends Component
         }
 
         $this->resetOpenModal();
-        $this->statusMessage = __('orders.board.flash.opened');
+        $this->redirectRoute('admin.orders.workspace', ['order' => (int) $order->id]);
     }
 
     public function cancelOpen(): void

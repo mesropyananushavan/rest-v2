@@ -5556,6 +5556,71 @@ Plan:
   call, no Tenancy internal imports, no direct `tenants`/`branches` table
   access, and no rendered password retention.
 
-Next immediate action: push the strict final-audit correction commit to PR #53,
-wait for exact-head GitHub Actions, and report the final audit verdict. Leave
-PR #53 draft and do not merge without separate owner approval.
+PR #53 tenant-scoped login was merged on 2026-07-31. Verified before starting
+F1: GitHub reports PR #53 `MERGED`, merge commit
+`ca7862616630e27474239a7b45cb58c909ee9a22`, and merged head
+`4c383c6ed010e7c93f383bed5d5419c7d5d9cea9`; `origin/main` is
+`ca7862616630e27474239a7b45cb58c909ee9a22`; the merged head is reachable from
+`origin/main`; local `main` was clean and aligned with `origin/main`.
+
+Task `F1-orders-open-redirect-workspace` is active on branch
+`feature/orders-open-redirect-workspace`, based on verified `origin/main` at
+`ca7862616630e27474239a7b45cb58c909ee9a22`.
+
+Plan:
+
+- [x] Step F1.1: successful board-open redirect and focused regressions. Keep
+  the existing order-board modal and validation flow, call `OpenOrder` as the
+  canonical writer, use the returned order directly with Livewire's established
+  `redirectRoute()` convention to route to `admin.orders.workspace`, and add
+  focused board/workspace tests proving success, exact route target,
+  tenant/branch scoped created order shape, authorized workspace access,
+  non-redirecting failure paths, existing occupied-tile links, and bounded board
+  query behavior. Do not change `OpenOrder`, routes, permissions, middleware,
+  schema, seeders, or `FindOrderWorkspace`. Result: `OrderBoard::openOrder()`
+  now stores the `Order` returned by `OpenOrder` and redirects with
+  `redirectRoute('admin.orders.workspace', ['order' => $order->id])` only after
+  the action succeeds. The existing modal, validation, authorization, and
+  domain-error branches remain intact and non-redirecting. Regression coverage
+  now proves the created order is tenant scoped, branch scoped, dine-in, open,
+  assigned to the acting user, redirects to the exact returned order workspace,
+  and can be opened by the authorized acting user. It also proves other-branch
+  and other-tenant order ids are not used as the redirect target; occupied,
+  invalid guest count, missing table, inactive table, and out-of-branch table
+  paths do not redirect; occupied tables still do not create a second order; and
+  occupied board tiles still render workspace links. Focused checks passed:
+  `OrderBoardTest` `11 passed / 89 assertions`, workspace trio
+  `53 passed / 479 assertions`, and Orders action/occupancy tests
+  `14 passed / 133 assertions`.
+- [ ] Step F1.2: verification, delivery, and handoff. Run focused OrderBoard,
+  workspace, and Orders concurrency tests plus required repository gates:
+  `make pint`, `make stan`, `make test`, `make tenant-isolation-pgsql`,
+  `make orders-concurrency-pgsql`, `make fresh`, `make build`,
+  `make artisan ARGS="route:list --name=admin.orders"`, `git diff --check`,
+  component-attribute directive audit, Orders module-boundary and
+  forbidden-internals audits, migration audit, and complete diff review against
+  `origin/main`. Commit only the scoped changes, push
+  `feature/orders-open-redirect-workspace`, open a draft PR against `main`, wait
+  for exact-head GitHub Actions, and do not merge.
+  Result so far: local gates are green. `make pint` passed (`354 files`);
+  `make stan` analysed `210/210` with `[OK] No errors`; `make test` passed
+  (`410 passed / 19 skipped / 3889 assertions`); `make tenant-isolation-pgsql`
+  passed (`69 passed / 368 assertions`); `make orders-concurrency-pgsql` passed
+  (`6 passed / 43 assertions`); `make fresh` passed; `make build` passed with
+  the known container-only Git dubious-ownership warning and produced Vite
+  assets; `make artisan ARGS="route:list --name=admin.orders"` showed only
+  `admin.orders.board` and `admin.orders.workspace`; `git diff --check` had no
+  output; the component-attribute directive audit exited `1` with no matches;
+  Orders forbidden cross-module imports and direct cross-module table-access
+  audits exited `1` with no matches; the migration audit showed no migration
+  files; routes, permissions, language files, and migrations are unchanged; and
+  the uncommitted diff review showed only `OrderBoard.php`,
+  `OrderBoardTest.php`, and this worklog. Gotcha: `make artisan ARGS="test ..."`
+  is not a valid focused test runner because it uses the dev PostgreSQL
+  environment; rerun focused Pest checks through a Makefile-launched test shell
+  with explicit SQLite testing environment instead. `make fresh` was run after
+  that failed diagnostic and restored the dev database.
+
+Next immediate action: commit the scoped implementation/worklog diff, push
+`feature/orders-open-redirect-workspace`, open a draft PR against `main`, wait
+for exact-head GitHub Actions, then update this worklog with PR/CI results.
