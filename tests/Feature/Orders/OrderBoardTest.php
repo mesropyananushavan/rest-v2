@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Livewire\Admin\OrderBoard;
+use App\Livewire\Admin\OrderWorkspace as OrderWorkspaceComponent;
 use App\Modules\Identity\Infrastructure\Models\Permission;
 use App\Modules\Identity\Infrastructure\Models\Role;
 use App\Modules\Identity\Infrastructure\Models\User;
@@ -70,6 +71,7 @@ it('renders occupied active branch tables as read only tiles and free tables as 
         ->assertSee(__('orders.board.guests', ['count' => 4]), false)
         ->assertSee(__('orders.board.total'), false)
         ->assertSee('123 ֏', false)
+        ->assertSee(route('admin.orders.workspace', ['order' => (int) $order->id]), false)
         ->assertSee('selectTable('.((int) $freeTable->id).')', false)
         ->assertDontSee('selectTable('.((int) $occupiedTable->id).')', false);
 
@@ -107,9 +109,14 @@ it('keeps flashed board render query count stable as table count grows', functio
         ->and($large)->toBe(3);
 });
 
-it('opens a dine-in order from a free table and re-renders the table as occupied', function (): void {
-    $record = orderBoardUser('tenant-a', 'waiter-a', ['orders.take']);
+it('opens a dine-in order from a free table and redirects to that exact workspace', function (): void {
+    $record = orderBoardUser('tenant-a', 'waiter-a', ['orders.take'], branchCount: 2);
+    $foreign = orderBoardUser('tenant-b', 'waiter-b', ['orders.take']);
 
+    orderBoardContext($record, 1);
+    $otherBranchOrder = orderBoardDineInOrder(orderBoardTable(orderBoardHall($record['branches'][1], 'Other Branch Hall'), 'Other Branch Table'), $record['user']);
+    orderBoardContext($foreign, 0);
+    $otherTenantOrder = orderBoardDineInOrder(orderBoardTable(orderBoardHall($foreign['branches'][0], 'Other Tenant Hall'), 'Other Tenant Table'), $foreign['user']);
     orderBoardContext($record, 0);
 
     $hall = orderBoardHall($record['branches'][0], 'Main Hall');
@@ -128,11 +135,7 @@ it('opens a dine-in order from a free table and re-renders the table as occupied
         ->set('guestCount', 3)
         ->set('comment', 'Near the window')
         ->call('openOrder')
-        ->assertSet('openModalVisible', false)
-        ->assertSee(__('orders.board.flash.opened'), false)
-        ->assertSee(__('orders.board.occupied'), false)
-        ->assertSee(__('orders.board.guests', ['count' => 3]), false)
-        ->assertDontSee('selectTable('.((int) $table->id).')', false);
+        ->assertSet('openModalVisible', false);
 
     $order = Order::query()
         ->where('table_id', (int) $table->id)
@@ -140,9 +143,27 @@ it('opens a dine-in order from a free table and re-renders the table as occupied
         ->where('type', 'dine_in')
         ->sole();
 
-    expect((int) $order->waiter_id)->toBe((int) $record['user']->id)
+    $workspaceUrl = route('admin.orders.workspace', ['order' => (int) $order->id]);
+
+    $component->assertRedirect($workspaceUrl);
+
+    expect((int) $order->tenant_id)->toBe((int) $record['tenant']->id)
+        ->and((int) $order->branch_id)->toBe((int) $record['branches'][0]->id)
+        ->and((int) $order->table_id)->toBe((int) $table->id)
+        ->and((string) $order->type)->toBe('dine_in')
+        ->and((string) $order->status)->toBe('open')
+        ->and((int) $order->waiter_id)->toBe((int) $record['user']->id)
         ->and((int) $order->client_count)->toBe(3)
-        ->and($order->comment)->toBe('Near the window');
+        ->and($order->comment)->toBe('Near the window')
+        ->and($workspaceUrl)->not->toBe(route('admin.orders.workspace', ['order' => (int) $otherBranchOrder->id]))
+        ->and($workspaceUrl)->not->toBe(route('admin.orders.workspace', ['order' => (int) $otherTenantOrder->id]));
+
+    $this->actingAs($record['user'])
+        ->withSession(['branch_id' => (int) $record['branches'][0]->id])
+        ->get($workspaceUrl)
+        ->assertOk()
+        ->assertSeeLivewire(OrderWorkspaceComponent::class)
+        ->assertSee(__('orders.workspace.heading', ['id' => (int) $order->id]), false);
 });
 
 it('forbids opening from the board without the orders take permission', function (): void {
@@ -182,6 +203,7 @@ it('refreshes with an occupied message when a selected table is no longer free',
         ->set('guestCount', 4)
         ->call('openOrder')
         ->assertSet('openModalVisible', false)
+        ->assertNoRedirect()
         ->assertSee(__('orders.board.flash.already_occupied'), false)
         ->assertSee(__('orders.board.occupied'), false);
 
@@ -201,12 +223,13 @@ it('rejects opening with fewer than one guest', function (): void {
         ->call('selectTable', (int) $table->id)
         ->set('guestCount', 0)
         ->call('openOrder')
+        ->assertNoRedirect()
         ->assertHasErrors(['guestCount' => 'min']);
 
     expect(Order::query()->where('table_id', (int) $table->id)->exists())->toBeFalse();
 });
 
-it('does not open a table outside the active branch', function (): void {
+it('does not redirect or open missing inactive or out of active branch tables', function (): void {
     $record = orderBoardUser('tenant-a', 'waiter-a', ['orders.take'], branchCount: 2);
 
     orderBoardContext($record, 1);
@@ -216,8 +239,9 @@ it('does not open a table outside the active branch', function (): void {
     orderBoardContext($record, 0);
     $visibleHall = orderBoardHall($record['branches'][0], 'Main Hall');
     orderBoardTable($visibleHall, 'Visible Table');
+    $inactiveTable = orderBoardTable($visibleHall, 'Inactive Table', active: false);
 
-    Livewire::actingAs($record['user'])
+    $component = Livewire::actingAs($record['user'])
         ->test(OrderBoard::class)
         ->call('selectTable', (int) $otherBranchTable->id)
         ->assertSet('openModalVisible', false)
@@ -226,9 +250,26 @@ it('does not open a table outside the active branch', function (): void {
         ->set('guestCount', 2)
         ->call('openOrder')
         ->assertSet('openModalVisible', false)
+        ->assertNoRedirect()
         ->assertSee(__('orders.board.flash.table_not_found'), false);
 
-    expect(Order::query()->where('table_id', (int) $otherBranchTable->id)->exists())->toBeFalse();
+    $component
+        ->set('selectedTableId', (int) $inactiveTable->id)
+        ->set('guestCount', 2)
+        ->call('openOrder')
+        ->assertSet('openModalVisible', false)
+        ->assertNoRedirect()
+        ->assertSee(__('orders.board.flash.table_not_found'), false);
+
+    $component
+        ->set('selectedTableId', 999_999)
+        ->set('guestCount', 2)
+        ->call('openOrder')
+        ->assertSet('openModalVisible', false)
+        ->assertNoRedirect()
+        ->assertSee(__('orders.board.flash.table_not_found'), false);
+
+    expect(Order::query()->whereIn('table_id', [(int) $otherBranchTable->id, (int) $inactiveTable->id])->exists())->toBeFalse();
 });
 
 it('shows only the active branch layout and occupancy', function (): void {
