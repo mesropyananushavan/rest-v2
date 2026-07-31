@@ -5361,8 +5361,106 @@ and commands did not change.
 
 ## Next Steps
 
-Next exact action: wait for owner approval on PR #51. Do not merge PR #51.
-After it merges, the remaining subscription-line candidate slice is the
-scheduled suspension job - hourly, idempotent, quiet hour 05:00 platform time,
-and calling the existing `SuspendTenant` action instead of writing
-`tenants.status` itself.
+Task `TASK-SUB-03-automatic-subscription-suspension` is active on branch
+`feature/subscription-auto-suspension`, based on verified `origin/main` at
+`470197ed7d3637ebd9e7cb57a75081230f99cc90`.
+
+Plan:
+
+- [x] Step SUB-03.1: application batch/job and core behavior. Add the smallest
+  Tenancy-owned batch operation/job that uses
+  `TenantSubscriptionReader::suspendableTenantIds()` for the fleet read and
+  calls the existing `SuspendTenant` action for each actual suspension. Keep
+  quiet-hour configuration centralized, avoid new migrations, handle expected
+  stale/idempotent tenant-level no-ops locally, surface unexpected failures,
+  and prove before-quiet-hour no-op, at/after-quiet-hour suspension, missing
+  and non-eligible subscriptions, already-suspended tenants, repeated runs,
+  concurrent eligibility changes, no-op continuation, unexpected failure
+  surfacing, context cleanup, and bounded query behavior. Result: added
+  `SuspendOverdueTenantSubscriptions` and
+  `AutomaticTenantSuspensionResult`, plus the console adapter
+  `tenancy:subscriptions:auto-suspend`. The batch clears tenant/branch context
+  for the fleet read, gates all work before `05:00` in the configured platform
+  timezone, rechecks each candidate through `TenantSubscriptionReader`, calls
+  the existing `SuspendTenant` action for the actual status change/audit, handles
+  only expected `tenancy.tenant_already_suspended` and
+  `tenancy.unknown_tenant` races locally, and restores tenant, branch, and log
+  context in `finally`.
+- [x] Step SUB-03.2: scheduler wiring and schedule proof. Register the automatic
+  suspension through Laravel scheduling with hourly frequency, the configured
+  platform timezone, the 05:00 quiet-hour gate, and non-overlapping execution.
+  Add schedule registration coverage and inspect `schedule:list` output.
+  Result: registered the command in `bootstrap/app.php` with `hourly()`,
+  `timezone(config('billing.platform_timezone'))`, `withoutOverlapping()`, and
+  schedule name `tenancy.subscriptions.auto_suspend`. `make artisan
+  ARGS="schedule:list -vvv"` showed `0 * * * *  '/usr/local/bin/php' 'artisan'
+  tenancy:subscriptions:auto-suspend` and the scheduler name; the automated
+  schedule test asserts the command, cron expression, `Asia/Yerevan` timezone,
+  and overlap mutex metadata.
+- [x] Step SUB-03.3: PostgreSQL/RLS proof, documentation, and delivery. Add or
+  extend PostgreSQL Tenancy coverage proving suspension audit rows remain
+  visible only in the target tenant context and hidden with no tenant context.
+  Record the durable implementation decision only if needed, update this
+  worklog with verified results, run all required gates, review the complete
+  diff against `origin/main`, push the branch, open a draft PR, wait for
+  exact-head CI, and stop without marking the PR merge-ready or merging.
+  Result: added PostgreSQL-only RLS coverage in
+  `AutomaticTenantSuspensionTest` proving the automatic suspension audit row is
+  hidden without tenant context and visible in the target tenant context with
+  `tenant_id` set, `branch_id = null`, and `actor_id = null`. Local gates passed
+  so far: `make pint` (`351 files`), `make stan` (`210/210`, `[OK] No errors`),
+  `make test` (`389 passed / 15 skipped / 3698 assertions`),
+  `make tenant-isolation-pgsql` (`61 passed / 325 assertions`),
+  `make orders-concurrency-pgsql` (`6 passed / 43 assertions`), `make fresh`,
+  `make build` with the known container-only Git dubious-ownership warning,
+  `make artisan ARGS="schedule:list"`, `make artisan ARGS="schedule:list -vvv"`,
+  `git diff --check` with no output, component-attribute audit exited `1` with
+  no matches, and Tenancy/new-command forbidden cross-module-internals audits
+  exited `1` with no matches. Two attempted inline `tinker --execute` scheduler
+  metadata inspections failed because Make/shell interpolation stripped PHP
+  `$event` variables; no files were changed by those failed diagnostics. The
+  implementation commit `37469a1561746fde5aa117e925e6ff8402ca0477` was pushed
+  to `feature/subscription-auto-suspension` and draft PR #52 was opened at
+  <https://github.com/mesropyananushavan/rest-v2/pull/52>. GitHub Actions on
+  exact head `37469a1561746fde5aa117e925e6ff8402ca0477` passed duplicate
+  reported runs for `quality`, `tenant-isolation-pgsql`, and
+  `orders-concurrency-pgsql`. PR #52 was left draft and was not merged.
+- [ ] Step SUB-03.4: strict final-audit corrections. Verify PR #52 state and
+  review the full diff file by file. Fix only defects found by the audit:
+  production scheduler execution, scheduler overlap lock expiry, subscription
+  payment/suspension TOCTOU safety, config validation without production
+  `assert()`, and missing focused regressions. Rerun the full gate set, push to
+  the existing PR branch only, wait for exact-head GitHub Actions, and leave
+  PR #52 draft/unmerged. Result: strict audit found three blocking defects in
+  the PR head: repository-owned process configuration did not run Laravel
+  Scheduler, the scheduled event used Laravel's default 24-hour overlap mutex
+  for an hourly billing job, and payment could update a subscription after the
+  automatic batch had read eligibility but before `SuspendTenant` locked and
+  changed tenant status. Fixed by adding a dedicated `scheduler` Compose
+  process running `php artisan schedule:work`, setting the automatic suspension
+  schedule mutex expiry to 60 minutes, replacing scheduler/reader timezone
+  `assert()` calls with explicit production-safe validation, and making both
+  automatic suspension and payment recording serialize through the tenant row
+  before reading or mutating subscription status. Added regressions for
+  mid-batch unexpected failure cleanup, Artisan failure propagation,
+  multi-candidate query shape, scheduler process wiring, payment lock
+  behavior, and the payment-vs-auto-suspension race. Final local gates before
+  push: `make pint` passed with 4 style fixes applied; `make stan` analysed
+  `210/210` with `[OK] No errors`; `make test` passed `393 passed / 17 skipped
+  / 3715 assertions`; `make tenant-isolation-pgsql` passed `67 passed /
+  355 assertions`; `make orders-concurrency-pgsql` passed `6 passed /
+  43 assertions`; `make fresh` passed; `make build` passed with the known
+  container-only Git dubious-ownership warning; `make artisan
+  ARGS="schedule:list"` showed `0 * * * * php artisan
+  tenancy:subscriptions:auto-suspend`; `make artisan
+  ARGS="schedule:list -vvv"` showed the named
+  `tenancy.subscriptions.auto_suspend` event; `make artisan
+  ARGS="config:cache"`, cached `schedule:list -vvv`, and `config:clear` passed;
+  `git diff --check` had no output; the component-attribute directive audit
+  exited `1` with no matches; and the Tenancy/new-command forbidden-internals
+  audit exited `1` with no matches.
+
+Next immediate action: push the SUB-03.4 audit-fix commit to PR #52, wait for
+GitHub Actions on the exact pushed head, then report the strict final audit
+verdict. Do not mark PR #52 ready for review or merge without separate owner
+approval after that audit.

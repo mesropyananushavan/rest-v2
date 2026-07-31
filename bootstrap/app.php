@@ -7,6 +7,7 @@ use App\Console\Commands\MenuLoadTestDataCommand;
 use App\Console\Commands\MenuSeedLoadCommand;
 use App\Console\Commands\ReactivateTenantCommand;
 use App\Console\Commands\RecordTenantSubscriptionPaymentCommand;
+use App\Console\Commands\SuspendOverdueTenantSubscriptionsCommand;
 use App\Console\Commands\SuspendTenantCommand;
 use App\Http\Middleware\AttachLogContext;
 use App\Modules\Menu\Domain\MenuDomainException;
@@ -15,6 +16,7 @@ use App\Modules\Tenancy\Http\Middleware\EnsureTenantIsServiceable;
 use App\Modules\Tenancy\Http\Middleware\ResolveBranch;
 use App\Modules\Tenancy\Http\Middleware\ResolveTenant;
 use App\Support\Api\ApiErrorRenderer;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -34,8 +36,23 @@ return Application::configure(basePath: dirname(__DIR__))
         MenuSeedLoadCommand::class,
         ReactivateTenantCommand::class,
         RecordTenantSubscriptionPaymentCommand::class,
+        SuspendOverdueTenantSubscriptionsCommand::class,
         SuspendTenantCommand::class,
     ])
+    ->withSchedule(function (Schedule $schedule): void {
+        $timezone = config('billing.platform_timezone');
+
+        if (! is_string($timezone) || $timezone === '') {
+            throw new UnexpectedValueException('Billing platform timezone must be configured.');
+        }
+
+        $schedule
+            ->command('tenancy:subscriptions:auto-suspend')
+            ->hourly()
+            ->timezone($timezone)
+            ->withoutOverlapping(60)
+            ->name('tenancy.subscriptions.auto_suspend');
+    })
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'tenant' => ResolveTenant::class,
