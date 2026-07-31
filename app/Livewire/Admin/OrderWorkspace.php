@@ -19,6 +19,7 @@ use App\Modules\Orders\Application\OrderWorkspace as OrderWorkspaceData;
 use App\Modules\Orders\Application\OrderWorkspaceItem;
 use App\Modules\Orders\Application\OrderWorkspaceSubtable;
 use App\Modules\Orders\Application\RemoveItem;
+use App\Modules\Orders\Contracts\OrderPermissions;
 use App\Modules\Orders\Domain\OrdersDomainException;
 use App\Modules\Orders\Infrastructure\Models\OrderItem;
 use App\Modules\Orders\Infrastructure\Models\OrderSubtable;
@@ -757,7 +758,7 @@ final class OrderWorkspace extends Component
 
     private function authorizeTakingOrders(): void
     {
-        abort_unless(auth()->user()?->can('orders.take') ?? false, 403);
+        abort_unless(auth()->user()?->can(OrderPermissions::TAKE) ?? false, 403);
     }
 
     private function domainErrorMessage(OrdersDomainException $exception): string

@@ -5180,13 +5180,19 @@ passed `343 files`; `make stan` analysed `205/205` with `[OK] No errors`;
   tenant-scoped Eloquent list/boolean lookups, and covered the exclusion and
   list-order cases in `tests/Feature/Identity/UserDirectoryTest.php`; focused
   check passed with `1 passed / 13 assertions`.
-- [ ] Step 2.24.2: order permission constant and AssignWaiter validation.
+- [x] Step 2.24.2: order permission constant and AssignWaiter validation.
   Add one Orders permission-code constant for the existing `orders.take` code,
   replace current literals in Orders routes/components/actions, validate
   non-null waiter ids through `Identity\Contracts\UserDirectory` inside the
   existing transaction after the open-order lock, add the new stable domain
   error, keep the audit payload/action unchanged, and extend the architecture
   proof for Orders-to-Identity contracts without weakening module boundaries.
+  Result: added `OrderPermissions::TAKE`, replaced route/component literals,
+  made `AssignWaiter` reject non-active, wrong-branch, cross-tenant, or
+  no-permission waiter ids with `orders.waiter_not_assignable` before audit
+  writes, preserved null clearing and non-open-order precedence, and added the
+  explicit Orders-to-Identity-contracts architecture proof; focused check
+  passed with `14 passed / 269 assertions`.
 - [ ] Step 2.24.3: branch lookup index and measurement. Add one reversible
   composite index migration only if PostgreSQL `EXPLAIN (ANALYZE, BUFFERS)` on
   a meaningful local dataset proves the new staff lookup uses it; paste the

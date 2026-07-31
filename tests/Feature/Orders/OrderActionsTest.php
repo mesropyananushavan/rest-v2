@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Identity\Infrastructure\Models\Role;
 use App\Modules\Identity\Infrastructure\Models\User;
 use App\Modules\Identity\Infrastructure\Models\UserBranchAssignment;
+use App\Modules\Identity\Infrastructure\Models\Permission;
 use App\Modules\Orders\Application\AddSubtable;
 use App\Modules\Orders\Application\AssignWaiter;
 use App\Modules\Orders\Application\CancelOrder;
@@ -41,6 +42,7 @@ it('opens assigns subtables reads and cancels dine-in orders with audit rows', f
     $record = ordersActionsUser('tenant-a', 'manager-a', branchCount: 2);
     $table = ordersActionsTable($record, 0, 'Table 1');
     $hiddenBranchTable = ordersActionsTable($record, 1, 'Branch 2 Table');
+    $waiter = ordersActionsStaffUser($record, 0, 'assignable-waiter', ['orders.take']);
 
     ordersActionsActingIn($record, 0, 'orders-actions-request');
 
@@ -81,12 +83,14 @@ it('opens assigns subtables reads and cancels dine-in orders with audit rows', f
     expect(fn () => app(OpenOrder::class)((int) $hiddenBranchTable->id))
         ->toThrow(OrdersDomainException::class, 'The selected table is not available in the current branch.');
 
-    $assigned = app(AssignWaiter::class)((int) $order->id, null);
+    $assigned = app(AssignWaiter::class)((int) $order->id, (int) $waiter->id);
+    $cleared = app(AssignWaiter::class)((int) $order->id, null);
     $subtable = app(AddSubtable::class)((int) $order->id, 'Guest 1');
     $found = app(FindOrder::class)((int) $order->id);
     $openOrders = app(ListOpenOrders::class)(perPage: 25);
 
-    expect($assigned->waiter_id)->toBeNull()
+    expect((int) $assigned->waiter_id)->toBe((int) $waiter->id)
+        ->and($cleared->waiter_id)->toBeNull()
         ->and((int) $subtable->order_id)->toBe((int) $order->id)
         ->and($subtable->name)->toBe('Guest 1')
         ->and($found->subtables)->toHaveCount(1)
@@ -106,11 +110,56 @@ it('opens assigns subtables reads and cancels dine-in orders with audit rows', f
     expect(AuditLog::query()->where('target_type', 'orders_order')->orderBy('id')->pluck('action')->all())->toBe([
         'orders.order.opened',
         'orders.order.waiter_assigned',
+        'orders.order.waiter_assigned',
         'orders.order.cancelled',
         'orders.order.opened',
     ])->and(AuditLog::query()->where('target_type', 'orders_subtable')->pluck('action')->all())->toBe([
         'orders.subtable.added',
     ]);
+});
+
+it('rejects assigning waiters that cannot take orders in the current tenant branch', function (): void {
+    $tenantA = ordersActionsUser('tenant-a', 'manager-a', branchCount: 2);
+    $tenantB = ordersActionsUser('tenant-b', 'manager-b');
+
+    $wrongBranch = ordersActionsStaffUser($tenantA, 1, 'wrong-branch-waiter', ['orders.take']);
+    $inactive = ordersActionsStaffUser($tenantA, 0, 'inactive-waiter', ['orders.take'], active: false);
+    $noPermission = ordersActionsStaffUser($tenantA, 0, 'viewer-a', []);
+    $foreign = ordersActionsStaffUser($tenantB, 0, 'foreign-waiter', ['orders.take']);
+    $table = ordersActionsTable($tenantA, 0, 'Assign Guard Table');
+
+    ordersActionsActingIn($tenantA, 0, 'orders-assign-invalid');
+    $order = app(OpenOrder::class)((int) $table->id);
+    $initialWaiterId = (int) $order->waiter_id;
+
+    Log::spy();
+
+    foreach ([
+        'wrong branch' => $wrongBranch,
+        'inactive' => $inactive,
+        'no permission' => $noPermission,
+        'foreign tenant' => $foreign,
+    ] as $case => $waiter) {
+        try {
+            app(AssignWaiter::class)((int) $order->id, (int) $waiter->id);
+        } catch (OrdersDomainException $exception) {
+            expect($exception->errorCode(), $case)->toBe('orders.waiter_not_assignable');
+
+            continue;
+        }
+
+        throw new RuntimeException("Expected waiter rejection for {$case}.");
+    }
+
+    $freshOrder = Order::query()->findOrFail((int) $order->id);
+
+    expect((int) $freshOrder->waiter_id)->toBe($initialWaiterId)
+        ->and(AuditLog::query()->where('action', 'orders.order.waiter_assigned')->count())->toBe(0);
+
+    Log::shouldHaveReceived('warning')
+        ->with('action failed', Mockery::on(fn (array $context): bool => ($context['action'] ?? null) === 'orders.assign_waiter'
+            && ($context['error_code'] ?? null) === 'orders.waiter_not_assignable'))
+        ->times(4);
 });
 
 it('uses tenant settings currency and tenant scoped models do not leak records', function (): void {
@@ -320,6 +369,55 @@ function ordersActionsUser(string $tenantSlug, string $username, int $branchCoun
         'branches' => $branches,
         'user' => $user,
     ];
+}
+
+/**
+ * @param  array{tenant: Tenant, branches: list<Branch>, user: User}  $record
+ * @param  list<string>  $permissionCodes
+ */
+function ordersActionsStaffUser(array $record, int $branchIndex, string $username, array $permissionCodes, bool $active = true): User
+{
+    app(TenantResolver::class)->set((int) $record['tenant']->id);
+    app(BranchContext::class)->set((int) $record['branches'][$branchIndex]->id);
+
+    $role = Role::query()->create([
+        'code' => "{$username}-role",
+        'name' => "{$username} Role",
+    ]);
+
+    $permissions = collect($permissionCodes)
+        ->map(fn (string $code): Permission => Permission::query()->firstOrCreate(
+            ['code' => $code],
+            ['name' => $code],
+        ));
+
+    if ($permissions->isNotEmpty()) {
+        $role->permissions()->attach(
+            $permissions->pluck('id')->all(),
+            ['tenant_id' => (int) $record['tenant']->id],
+        );
+    }
+
+    $user = User::query()->create([
+        'role_id' => (int) $role->id,
+        'name' => $username,
+        'email' => "{$username}@smartrest.test",
+        'username' => $username,
+        'default_locale' => 'en',
+        'active' => $active,
+        'is_superadmin' => false,
+        'password' => Hash::make('password'),
+    ]);
+
+    UserBranchAssignment::query()->create([
+        'user_id' => (int) $user->id,
+        'branch_id' => (int) $record['branches'][$branchIndex]->id,
+    ]);
+
+    app(BranchContext::class)->clear();
+    app(TenantResolver::class)->clear();
+
+    return $user;
 }
 
 /**

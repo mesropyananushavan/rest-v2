@@ -34,3 +34,15 @@ foreach (['Tenancy', 'Identity', 'Menu', 'Orders', 'Tables'] as $module) {
         ->expect("App\Modules\\{$module}")
         ->not->toUse($forbiddenNamespaces);
 }
+
+it('keeps Orders dependency on Identity limited to contracts', function (): void {
+    $ordersSources = collect(File::allFiles(app_path('Modules/Orders')))
+        ->map(fn (SplFileInfo $file): string => $file->getContents())
+        ->implode("\n");
+
+    expect($ordersSources)->toContain('App\Modules\Identity\Contracts\UserDirectory')
+        ->and($ordersSources)->not->toContain('App\Modules\Identity\Domain')
+        ->and($ordersSources)->not->toContain('App\Modules\Identity\Application')
+        ->and($ordersSources)->not->toContain('App\Modules\Identity\Infrastructure')
+        ->and($ordersSources)->not->toContain('App\Modules\Identity\Http');
+});

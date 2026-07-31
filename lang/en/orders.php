@@ -8,6 +8,7 @@ return [
     'table_not_found' => 'The selected table is not available in this branch.',
     'table_already_open' => 'This table already has an open order.',
     'order_not_open' => 'Only open orders can be changed.',
+    'waiter_not_assignable' => 'The selected waiter cannot take orders in this branch.',
     'menu_item_not_found' => 'The selected menu item is not available for sale in this branch.',
     'currency_mismatch' => 'The menu item currency does not match the order currency.',
     'item_not_in_order' => 'The selected order item is not available in this order.',

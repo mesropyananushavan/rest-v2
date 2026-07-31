@@ -7,6 +7,7 @@ namespace App\Livewire\Admin;
 use App\Modules\Orders\Application\ListTableOccupancy;
 use App\Modules\Orders\Application\OpenOrder;
 use App\Modules\Orders\Application\TableOccupancy;
+use App\Modules\Orders\Contracts\OrderPermissions;
 use App\Modules\Orders\Domain\OrdersDomainException;
 use App\Modules\Tables\Contracts\HallLayout;
 use App\Modules\Tables\Contracts\HallLayoutReader;
@@ -300,6 +301,6 @@ final class OrderBoard extends Component
 
     private function authorizeTakingOrders(): void
     {
-        abort_unless(auth()->user()?->can('orders.take') ?? false, 403);
+        abort_unless(auth()->user()?->can(OrderPermissions::TAKE) ?? false, 403);
     }
 }
