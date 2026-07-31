@@ -5073,36 +5073,70 @@ Plan:
   PostgreSQL `6 passed / 43 assertions`. The branch was pushed and draft PR
   #49 was opened against `main`.
 
-End-of-day handoff for `TASK-SUB-02`:
+Merge handoff for `TASK-SUB-02`:
 
 A. Current state
 
-- `origin/main` = `2bdb6ee` (merge of PR #48, subscription schema and read
-  model).
-- Open draft PR #49: branch `feature/subscription-operations`, implementation
-  head `ee91ce9`.
-- CI for `ee91ce9`: green. Runs
-  `https://github.com/mesropyananushavan/rest-v2/actions/runs/30450599745`
-  (pull_request) and
-  `https://github.com/mesropyananushavan/rest-v2/actions/runs/30450590513`
-  (push) completed successfully; jobs `tenant-isolation-pgsql`,
-  `orders-concurrency-pgsql`, and `quality` all succeeded in both runs.
-- Measured gates at `ee91ce9`: Pint `343 files`; PHPStan `205/205`;
-  SQLite Pest `372 passed / 14 skipped / 3583 assertions`;
-  `tenant-isolation-pgsql` `52 passed / 270 assertions`;
-  `orders-concurrency-pgsql` `6 passed / 43 assertions`.
+- PR #49 was marked ready and merged into `main` with a true merge commit.
+- Merge commit: `cd9d6dd872eb85451522970c520feee006b3e5b6`.
+- Parent 1: `2bdb6ee3ef6f3bc0a07cdfbae9f93b9703fa585d`
+  (`origin/main` before merge, PR #48 baseline).
+- Parent 2: `7ebd328d63e6a794b266385cbb7cb494282d0cc5`
+  (`feature/subscription-operations` head).
+- Inclusion proof after merge:
+  `git merge-base --is-ancestor 7ebd328d63e6a794b266385cbb7cb494282d0cc5 origin/main`
+  returned exit `0`.
+- PR #49 state after merge: `MERGED`, not draft. The local and remote
+  `feature/subscription-operations` branches were not deleted.
+- CI for exact head `7ebd328`: green before merge. Required check runs
+  `quality`, `tenant-isolation-pgsql`, and `orders-concurrency-pgsql` completed
+  successfully on run `30451249875` and run `30451248607`.
 
-B. What shipped so far in the subscription line
+B. Post-merge baselines of record
+
+- `make pint`: `PASS 343 files`.
+- `make stan`: `205/205`, `[OK] No errors`.
+- `make test`: `372 passed / 14 skipped / 3583 assertions`.
+- `make tenant-isolation-pgsql`: `52 passed / 270 assertions`.
+- `make orders-concurrency-pgsql`: `6 passed / 43 assertions`.
+- `make fresh`: passed before console smoke.
+
+C. Console smoke result
+
+- Demo tenant ids read after `make fresh`: `1|arat-riverside|active|2026-08-01|3|1`
+  and `2|northstar-bistro|active|2026-08-31|5|31`.
+- To make the reactivation suspendable-warning path applicable, tenant `1`
+  `arat-riverside` was set overdue in the local demo database:
+  `next_due_on=2026-06-01`, `last_paid_on=2026-05-01`, `grace_days=3`.
+- `tenancy:tenant:suspend 1`: declined confirmation returned exit `0`, left
+  tenant `1` `active`, and wrote no `tenancy.%` audit row; accepted
+  confirmation returned exit `0`, set tenant `1` to `suspended`, and wrote
+  `tenancy.tenant.suspended|1|1`.
+- `tenancy:tenant:reactivate 1`: both declined and accepted runs printed
+  `WARNING: this tenant is still suspendable...`; declined confirmation
+  returned exit `0`, left tenant `1` `suspended`, and wrote no reactivation
+  audit row; accepted confirmation returned exit `0`, set tenant `1` to
+  `active`, and wrote `tenancy.tenant.reactivated|1|1`.
+- `tenancy:subscription:record-payment 1 2026-07-31`: declined confirmation
+  returned exit `0`, left `next_due_on=2026-06-01` and
+  `last_paid_on=2026-05-01`, and wrote no payment audit row; accepted
+  confirmation returned exit `0`, advanced `next_due_on` to `2026-07-01`, set
+  `last_paid_on=2026-07-31`, and wrote
+  `tenancy.subscription.payment_recorded|1|1`.
+- Final demo tenant statuses: `1|arat-riverside|active` and
+  `2|northstar-bistro|active`.
+
+D. What shipped so far in the subscription line
 
 - PR #47 (`fd48e21`): tenant status enforcement - request gate, Livewire
   persistent middleware, login path closed.
 - PR #48 (`2bdb6ee`): `tenant_subscriptions` schema (platform-owned, no RLS),
   `MonthlyBillingCycle` anchor arithmetic, `TenantSubscriptionReader`, and
   `config/billing.php`.
-- PR #49 (open): manual operations - record payment, suspend, reactivate,
-  console commands, and audit under RLS with null actor.
+- PR #49 (`cd9d6dd`): manual operations - record payment, suspend,
+  reactivate, console commands, and audit under RLS with null actor.
 
-C. Agreed business rules
+E. Agreed business rules
 
 - Suspension runs at 05:00 platform time (`Asia/Yerevan`); grace is 3 days and
   inclusive.
@@ -5112,18 +5146,7 @@ C. Agreed business rules
 - The interface is console-only until the platform operator entity exists.
 - There is no money, amount, or ledger in this line yet.
 
-D. Next actions, in order
-
-1. Verify and merge PR #49 after owner review; merge commit only, never squash.
-2. Slice 3: scheduled suspension job - hourly, idempotent, quiet hour 05:00,
-   and calls the existing `SuspendTenant` action instead of writing
-   `tenants.status` itself.
-3. Slice 4: owner-facing warning in the UI during grace.
-4. Blocked on the S1/S2/S3 decision: platform operator identity, then
-   `/platform` UI.
-5. Later: payment ledger with amounts and card autocharge.
-
-E. Open debts and unverified items
+F. Open debts and unverified items
 
 - Manual browser verification of the kill-switch on merged main is still
   outstanding.
@@ -5139,5 +5162,14 @@ E. Open debts and unverified items
   "the database system is starting up"; rerun rather than treating it as a
   test failure.
 
-Next exact action: owner reviews PR #49, then verify and merge it with a true
-merge commit if CI is green. No owner decision is pending before review.
+## Next Steps
+
+Next exact action: choose one of two candidate Phase 2 slices, without starting
+either from this merge session:
+
+- Candidate slice A: scheduled suspension job - hourly, idempotent, quiet hour
+  05:00 platform time, and calls the existing `SuspendTenant` action instead
+  of writing `tenants.status` itself.
+- Candidate slice B: close the Phase 2 definition-of-done gap for waiter
+  assignment - an Application action exists, but there is no adapter and no
+  validation that the assigned user is valid for the assignment.
