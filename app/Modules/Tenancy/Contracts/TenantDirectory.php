@@ -13,6 +13,8 @@ interface TenantDirectory
 
     public function isServiceable(int $tenantId): bool;
 
+    public function serviceableTenantIdForSlug(string $slug): ?int;
+
     public function tenantName(int $tenantId): ?string;
 
     /**

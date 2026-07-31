@@ -6,13 +6,14 @@ return [
     'login' => [
         'title' => 'Sign in',
         'heading' => 'Sign in to SmartRest',
-        'subtitle' => 'Use your workspace email and password.',
+        'subtitle' => 'Use your restaurant slug, workspace email, and password.',
         'submit' => 'Sign in',
     ],
     'logout' => [
         'submit' => 'Sign out',
     ],
     'fields' => [
+        'tenant_slug' => 'Restaurant slug',
         'email' => 'Email address',
         'password' => 'Password',
     ],

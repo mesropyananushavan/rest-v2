@@ -145,6 +145,7 @@ function tablesDemoLoginPayload(string $email): array
 {
     return [
         '_token' => tablesDemoCsrfToken(),
+        'tenant_slug' => str_contains($email, '@arat.') ? 'arat-riverside' : 'northstar-bistro',
         'email' => $email,
         'password' => 'password',
     ];

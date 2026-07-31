@@ -29,6 +29,15 @@ final class EloquentTenantDirectory implements TenantDirectory
             ->exists();
     }
 
+    public function serviceableTenantIdForSlug(string $slug): ?int
+    {
+        $tenantId = $this->serviceableTenants()
+            ->where('slug', $slug)
+            ->value('id');
+
+        return is_numeric($tenantId) ? (int) $tenantId : null;
+    }
+
     public function tenantName(int $tenantId): ?string
     {
         $name = Tenant::query()

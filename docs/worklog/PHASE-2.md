@@ -5361,9 +5361,15 @@ and commands did not change.
 
 ## Next Steps
 
-Task `TASK-SUB-03-automatic-subscription-suspension` is active on branch
-`feature/subscription-auto-suspension`, based on verified `origin/main` at
-`470197ed7d3637ebd9e7cb57a75081230f99cc90`.
+Task `TASK-SUB-03-automatic-subscription-suspension` was merged via PR #52.
+Verified merge state before starting the next task: PR #52 is merged with merge
+commit `5d1f0e2333572d4ed4e84fd97eb1375dc9f8734b`; `origin/main` and local
+`main` were clean and aligned at that SHA; merged head
+`1516465f553c74dbad72173691a0d9adb49bcb4a` is reachable from `origin/main`.
+
+Task `TASK-AUTH-01-tenant-scoped-login` is active on branch
+`feature/tenant-scoped-login`, based on verified `origin/main` at
+`5d1f0e2333572d4ed4e84fd97eb1375dc9f8734b`.
 
 Plan:
 
@@ -5425,7 +5431,7 @@ Plan:
   exact head `37469a1561746fde5aa117e925e6ff8402ca0477` passed duplicate
   reported runs for `quality`, `tenant-isolation-pgsql`, and
   `orders-concurrency-pgsql`. PR #52 was left draft and was not merged.
-- [ ] Step SUB-03.4: strict final-audit corrections. Verify PR #52 state and
+- [x] Step SUB-03.4: strict final-audit corrections. Verify PR #52 state and
   review the full diff file by file. Fix only defects found by the audit:
   production scheduler execution, scheduler overlap lock expiry, subscription
   payment/suspension TOCTOU safety, config validation without production
@@ -5460,7 +5466,96 @@ Plan:
   exited `1` with no matches; and the Tenancy/new-command forbidden-internals
   audit exited `1` with no matches.
 
-Next immediate action: push the SUB-03.4 audit-fix commit to PR #52, wait for
-GitHub Actions on the exact pushed head, then report the strict final audit
-verdict. Do not mark PR #52 ready for review or merge without separate owner
-approval after that audit.
+  The final audit verdict was `MERGE READY`; PR #52 was then marked ready and
+  merged by explicit owner approval. Result after merge: `origin/main` is
+  `5d1f0e2333572d4ed4e84fd97eb1375dc9f8734b`, and the preserved feature branch
+  remains untouched.
+
+Plan:
+
+- [x] Step AUTH-01.1: Tenancy slug-resolution contract and tenant-scoped
+  credential lookup. Add the smallest `TenantDirectory` slug lookup returning a
+  tenant id only, keep serviceability rules inside Tenancy, update
+  `AuthenticateUser` to require a submitted tenant slug, clear tenant/branch/log
+  context before each attempt, set tenant context before querying `users`, remove
+  the fleet-wide `activeTenantIds()` fallback from the credential path, and add
+  core tests for unknown/non-serviceable tenants, wrong credentials,
+  duplicate-email isolation, context cleanup, query bounds, and no
+  `activeTenantIds()` authentication call. Result: added
+  `TenantDirectory::serviceableTenantIdForSlug()` and the Eloquent
+  implementation using the canonical serviceable-tenant query plus exact slug
+  matching. `AuthenticateUser` now starts each attempt from clean tenant, branch,
+  auth, and log context; resolves one serviceable tenant by submitted slug;
+  establishes tenant context before querying the tenant-scoped `users` table;
+  logs in only the selected tenant's active user; and clears context on every
+  expected failure or unexpected exception. The authentication credential path no
+  longer calls `activeTenantIds()`.
+- [x] Step AUTH-01.2: login request, controller, Blade form, translations, and
+  HTTP regressions. Add required `tenant_slug` validation and field rendering to
+  existing GET/POST `/login`, preserve submitted tenant slug and email on
+  ordinary failures while never preserving password, keep throttling and redirect
+  behavior, add `hy`/`ru`/`en` labels/errors, update README only for changed
+  login instructions, and prove rendered form/accessibility plus failure session
+  cleanup. Result: the existing `/login` GET/POST routes now render and validate
+  a required tenant slug while preserving only tenant slug and email after
+  ordinary failures. Unknown tenant slugs, suspended/non-serviceable tenants,
+  unknown or inactive users, and wrong passwords all return the generic
+  authentication failure message without storing an authenticated user or
+  selected tenant/branch session state. Armenian, Russian, and English login
+  labels/subtitles were updated; demo login tests use the deterministic seeded
+  tenant slugs.
+- [x] Step AUTH-01.3: PostgreSQL RLS/query proof, final documentation, delivery,
+  and PR. Add PostgreSQL coverage proving users are invisible without tenant
+  context and duplicate-email users in other tenants remain hidden under the
+  selected tenant context, run the full required gate set and audits, review the
+  complete diff against `origin/main`, push the branch, open a draft PR, wait for
+  exact-head GitHub Actions, and stop without marking the PR ready or merging.
+  Result so far: added PostgreSQL RLS coverage proving tenant-scoped users are
+  hidden with no tenant context and duplicate-email users remain isolated to the
+  selected tenant. Local gates are green: `make pint` passed (`354 files`, one
+  style issue fixed during the first run); `make stan` passed (`210/210`,
+  `[OK] No errors`) after replacing mixed casts in `LoginRequest` with the
+  request string helper; `make test` passed (`404 passed / 18 skipped /
+  3810 assertions`); `make tenant-isolation-pgsql` passed (`68 passed /
+  360 assertions`) after rerunning serially because a parallel local invocation
+  with `orders-concurrency-pgsql` hit PostgreSQL role setup contention;
+  `make orders-concurrency-pgsql` passed (`6 passed / 43 assertions`);
+  `make fresh` passed; `make build` passed with the known container-only Git
+  dubious-ownership warning; `make artisan ARGS="route:list --name=login"`
+  showed only the existing `GET|HEAD login` and `POST login` routes; `git diff
+  --check` had no output; the component-attribute directive audit exited `1`
+  with no matches; Identity production code has no `activeTenantIds()` call, no
+  Tenancy internal imports, no direct `tenants`/`branches` table access, and no
+  rendered password retention. No migrations were added.
+
+  Strict final audit correction: found and fixed one stale-session defect in
+  the PR head. Successful login regenerated the session and overwrote
+  `tenant_id` but did not remove an existing `branch_id`, so a branch selected
+  under an old tenant could survive the login response until protected-route
+  middleware later corrected it. `LoginController` now forgets `branch_id`
+  before session regeneration and defensively clears auth, tenant, branch, and
+  log context if post-auth session handling throws. Added regressions for
+  successful cross-tenant login with stale tenant/branch session values, failed
+  cross-tenant login cleanup, logout followed by login into another tenant,
+  tenant suspension between slug lookup and the next protected request, slug
+  trim/exact-case behavior, throttle resistance to slug variation, and
+  PostgreSQL login query shape. Focused reruns: pre-fix `make test` failed on
+  `assertSessionMissing('branch_id')` for the new stale-branch regression;
+  after the fix, `make test` passed (`410 passed / 19 skipped /
+  3871 assertions`) and `make tenant-isolation-pgsql` passed (`69 passed /
+  368 assertions`). Full final local gates after the correction: `make pint`
+  passed (`354 files`); `make stan` passed (`210/210`, `[OK] No errors`);
+  `make test` passed (`410 passed / 19 skipped / 3871 assertions`);
+  `make tenant-isolation-pgsql` passed (`69 passed / 368 assertions`);
+  `make orders-concurrency-pgsql` passed (`6 passed / 43 assertions`);
+  `make fresh` passed; `make build` passed with the known container-only Git
+  dubious-ownership warning; `make artisan ARGS="route:list --name=login"`
+  showed only the existing `GET|HEAD login` and `POST login` routes; `git diff
+  --check` had no output; the component-attribute directive audit exited `1`
+  with no matches; Identity production code still has no `activeTenantIds()`
+  call, no Tenancy internal imports, no direct `tenants`/`branches` table
+  access, and no rendered password retention.
+
+Next immediate action: push the strict final-audit correction commit to PR #53,
+wait for exact-head GitHub Actions, and report the final audit verdict. Leave
+PR #53 draft and do not merge without separate owner approval.

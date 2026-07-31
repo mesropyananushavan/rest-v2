@@ -27,6 +27,19 @@
                         @csrf
 
                         <div class="mb-4">
+                            <label for="tenant_slug" class="mb-1.5 block text-sm font-semibold text-slate-700">{{ __('auth.fields.tenant_slug') }}</label>
+                            <input
+                                id="tenant_slug"
+                                name="tenant_slug"
+                                type="text"
+                                value="{{ old('tenant_slug') }}"
+                                class="block w-full rounded-sr-control border bg-white px-3 py-2 text-sm text-smartrest-text shadow-sm outline-none transition focus:border-smartrest-success focus:ring-4 focus:ring-smartrest-success/10 @error('tenant_slug') border-smartrest-danger @else border-slate-200 @enderror"
+                                autocomplete="organization"
+                                required
+                            >
+                        </div>
+
+                        <div class="mb-4">
                             <label for="email" class="mb-1.5 block text-sm font-semibold text-slate-700">{{ __('auth.fields.email') }}</label>
                             <input
                                 id="email"

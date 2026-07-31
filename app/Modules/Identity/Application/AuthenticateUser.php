@@ -13,6 +13,7 @@ use App\Support\Logging\Redactor;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 final class AuthenticateUser
 {
@@ -22,12 +23,22 @@ final class AuthenticateUser
         private readonly BranchContext $branches,
     ) {}
 
-    public function __invoke(string $email, string $password): ?User
+    public function __invoke(string $tenantSlug, string $email, string $password): ?User
     {
+        $normalizedTenantSlug = trim($tenantSlug);
         $normalizedEmail = strtolower(trim($email));
 
-        foreach ($this->tenantIdsForAttempt() as $tenantId) {
+        $this->clearAttemptContext();
+
+        try {
+            $tenantId = $this->tenants->serviceableTenantIdForSlug($normalizedTenantSlug);
+
+            if ($tenantId === null) {
+                return $this->failedAttempt($normalizedEmail);
+            }
+
             $this->tenantResolver->set($tenantId);
+            LogContext::refreshRuntimeContext('identity');
 
             $user = User::query()
                 ->where('email', $normalizedEmail)
@@ -35,7 +46,7 @@ final class AuthenticateUser
                 ->first();
 
             if (! $user instanceof User || ! Hash::check($password, (string) $user->password)) {
-                continue;
+                return $this->failedAttempt($normalizedEmail);
             }
 
             Auth::login($user);
@@ -48,12 +59,16 @@ final class AuthenticateUser
             ]));
 
             return $user;
-        }
+        } catch (Throwable $exception) {
+            $this->clearAttemptContext();
 
-        Auth::logout();
-        $this->branches->clear();
-        $this->tenantResolver->clear();
-        LogContext::refreshRuntimeContext('identity');
+            throw $exception;
+        }
+    }
+
+    private function failedAttempt(string $normalizedEmail): null
+    {
+        $this->clearAttemptContext();
 
         Log::warning('login failure', Redactor::context([
             'auth_event' => 'login_failure',
@@ -63,17 +78,11 @@ final class AuthenticateUser
         return null;
     }
 
-    /**
-     * @return list<int>
-     */
-    private function tenantIdsForAttempt(): array
+    private function clearAttemptContext(): void
     {
-        $currentTenantId = $this->tenantResolver->id();
-
-        if ($currentTenantId !== null) {
-            return $this->tenants->isServiceable($currentTenantId) ? [$currentTenantId] : [];
-        }
-
-        return $this->tenants->activeTenantIds();
+        Auth::logout();
+        $this->branches->clear();
+        $this->tenantResolver->clear();
+        LogContext::refreshRuntimeContext('identity');
     }
 }

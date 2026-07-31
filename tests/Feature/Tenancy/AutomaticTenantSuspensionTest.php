@@ -398,6 +398,11 @@ function autoSuspensionTenantDirectory(array $serviceableTenantIds): TenantDirec
             return in_array($tenantId, $this->serviceableTenantIds, true);
         }
 
+        public function serviceableTenantIdForSlug(string $slug): ?int
+        {
+            return null;
+        }
+
         public function tenantName(int $tenantId): ?string
         {
             return null;

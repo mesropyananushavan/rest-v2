@@ -5,6 +5,11 @@ Task: `2.20-spike-platform-operator-identity`
 Base inspected: `origin/main` at
 `bb3c3a2fd8cd7d340cb03bd5cd0bdf6d18b172c3`.
 
+Update on 2026-07-31: ADR-011 tenant slug login later removed the
+fleet-wide `TenantDirectory::activeTenantIds()` scan from credential
+verification. Platform-operator identity remains undecided; this spike's
+account-shape tradeoffs still apply to the platform-authentication work.
+
 ## The question
 
 `docs/BLUEPRINT.md` section 5 leaves one authorization question open: where

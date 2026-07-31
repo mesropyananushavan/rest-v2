@@ -1049,6 +1049,28 @@ one crashed run would delay suspension too long; adding a platform UI,
 operator identity, invoices, ledger, notification, or schema migration here,
 because those are outside this slice.
 
+## 2026-07-31 — Tenant-scoped login uses explicit tenant slug field
+Decision: the ADR-011 tenant-aware login slice keeps the existing `GET /login`
+and `POST /login` routes and requires users to submit a `tenant_slug` field
+alongside email and password. Authentication resolves exactly one serviceable
+tenant by slug through the Tenancy `TenantDirectory` contract, sets that tenant
+context, and then queries the tenant-owned `users` table only inside that
+context. The fleet-wide `activeTenantIds()` credential scan is not used for
+login.
+
+Reason: this closes the immediate scale and duplicate-email ambiguity in the
+current shared-DB login flow without introducing domain, subdomain, or
+path-based tenant discovery before production routing is decided. It also keeps
+Identity dependent only on Tenancy contracts, so Identity does not import
+Tenancy infrastructure or query Tenancy-owned tables directly.
+
+Rejected: domain/subdomain/path discovery in this slice, because the owner
+explicitly deferred it; a global login identity table, because ADR-011 deferred
+that design; platform-operator authentication, because platform identity remains
+undecided; and treating a stale session tenant or non-production tenant header
+as credential-verification context, because the submitted slug must be the
+single source for this login attempt.
+
 ## 2026-07-31 — Order waiter assignment requires active branch staff with orders-take
 Decision: assigning a waiter to an order requires the selected user to be an
 active user in the current tenant, assigned to the current branch, and allowed

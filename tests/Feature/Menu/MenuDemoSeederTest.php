@@ -172,6 +172,7 @@ function menuDemoLoginPayload(string $email): array
 {
     return [
         '_token' => menuDemoCsrfToken(),
+        'tenant_slug' => str_contains($email, '@arat.') ? 'arat-riverside' : 'northstar-bistro',
         'email' => $email,
         'password' => 'password',
     ];
