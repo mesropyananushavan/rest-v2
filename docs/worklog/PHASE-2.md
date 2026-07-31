@@ -5316,9 +5316,9 @@ passed `343 files`; `make stan` analysed `205/205` with `[OK] No errors`;
   `make tenant-isolation-pgsql` passed `52 passed / 270 assertions`;
   `make orders-concurrency-pgsql` passed `6 passed / 43 assertions`;
   `make build` completed Dockerized Composer setup and Vite production build;
-  `git diff --check` had no output; `git diff origin/main...HEAD --stat`
-  showed `23 files changed, 970 insertions(+), 19 deletions(-)`; the Orders
-  forbidden-internals grep exited `1` with no matches; and the migration
+  `git diff --check` had no output; `git diff origin/main...HEAD --stat` and
+  the full file-by-file diff were reviewed; the Orders forbidden-internals
+  grep exited `1` with no matches; and the migration
   reversibility sequence passed with `migrate:fresh --seed`, rollback of
   `2026_07_31_000000_add_branch_staff_lookup_index_to_user_branch_assignments`,
   and re-apply. The worklog records the Stage 2.16 directive audit result but
