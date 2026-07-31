@@ -5162,6 +5162,53 @@ F. Open debts and unverified items
   "the database system is starting up"; rerun rather than treating it as a
   test failure.
 
+Task `TASK-2.24-order-waiter-assignment` is active on branch
+`feature/order-waiter-assignment`, based on `origin/main` at
+`3535d0aa7663f50217c68f1da69d8d8f782026d0`.
+
+Pre-change baselines at task start matched the current record: `make pint`
+passed `343 files`; `make stan` analysed `205/205` with `[OK] No errors`;
+`make test` passed `372 passed / 14 skipped / 3583 assertions`;
+`make tenant-isolation-pgsql` passed `52 passed / 270 assertions`; and
+`make orders-concurrency-pgsql` passed `6 passed / 43 assertions`.
+
+- [x] Step 2.24.1: Identity read boundary. Add the minimal Identity contract
+  DTO and two branch-permission staff lookup methods, implement them with
+  tenant-scoped Eloquent queries, and cover cross-tenant, wrong-branch,
+  inactive, no-permission, ordering, and boolean/list agreement cases.
+  Result: added `BranchAssignableUser`, extended `UserDirectory`, implemented
+  tenant-scoped Eloquent list/boolean lookups, and covered the exclusion and
+  list-order cases in `tests/Feature/Identity/UserDirectoryTest.php`; focused
+  check passed with `1 passed / 13 assertions`.
+- [ ] Step 2.24.2: order permission constant and AssignWaiter validation.
+  Add one Orders permission-code constant for the existing `orders.take` code,
+  replace current literals in Orders routes/components/actions, validate
+  non-null waiter ids through `Identity\Contracts\UserDirectory` inside the
+  existing transaction after the open-order lock, add the new stable domain
+  error, keep the audit payload/action unchanged, and extend the architecture
+  proof for Orders-to-Identity contracts without weakening module boundaries.
+- [ ] Step 2.24.3: branch lookup index and measurement. Add one reversible
+  composite index migration only if PostgreSQL `EXPLAIN (ANALYZE, BUFFERS)` on
+  a meaningful local dataset proves the new staff lookup uses it; paste the
+  literal SQL and plan here, or remove the migration and record why.
+- [ ] Step 2.24.4: workspace read model and Livewire adapter. Add assigned
+  waiter id to the order workspace DTO/read model with no per-row query, load
+  assignable staff through the Identity contract in the Livewire adapter, and
+  render a compact assignment/clear control that preserves the existing POS
+  workspace layout and rendered-affordance safety rules.
+- [ ] Step 2.24.5: translations, demo verification, and feature coverage. Add
+  Armenian/Russian/English strings for all new UI/domain messages, verify
+  deterministic demo data already exposes at least two assignable staff in the
+  demo board branch or adjust seeders if needed, and add action/UI tests for
+  valid assignment, clear, invalid waiter rejection, route isolation, flashes,
+  and hidden cross-tenant/branch staff.
+- [ ] Step 2.24.6: final documentation, gates, and delivery. Record the
+  decision in `docs/DECISIONS.md`, keep this worklog current with measured
+  results and gotchas, run the full required gate set including build,
+  directive audit, diff review, grep, and migration reversibility, commit in
+  small scoped commits, push the branch normally, and open a draft PR without
+  merging.
+
 ## Next Steps
 
 Next exact action: choose one of two candidate Phase 2 slices, without starting
