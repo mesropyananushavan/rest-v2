@@ -5892,15 +5892,15 @@ Plan:
   separate documentation commit. After pushing the branch, stop for owner review
   without opening or merging a PR.
 
-Data migration note to resolve in report: existing tenant roles store
+Data migration note resolved by review fix: existing tenant roles store
 permissions in database rows. Adding `orders.cancel` to demo seeding affects
-fresh/local seeded tenants after `make fresh`, but existing databases will not
-automatically receive the new permission row or owner/manager role attachments.
-Proposed follow-up: an owner-approved backfill migration or console command
-should create the `orders.cancel` permission for each existing tenant and attach
-it to only the intended managing roles, most likely roles with code `owner` and
-`manager`, after confirming real tenant role naming policy. Do not add it in
-this slice without that approval.
+fresh/local seeded tenants after `make fresh`, while existing databases needed a
+backfill. Owner review explicitly approved adding it in this branch. Commit
+`949c0f6 fix(orders): backfill cancel permission for managers` adds an
+idempotent data migration that creates `orders.cancel` per tenant and attaches
+it only to existing `owner` and `manager` roles. It does not grant `cashier` or
+`waiter`. Rollback is intentionally no-op because the migration cannot safely
+distinguish backfilled grants from intentional grants created later.
 
 Gotcha: the first intermediate `make test` run failed only because the new
 explicit cancel permission check changed exact query-count contracts. Counts
@@ -5910,3 +5910,41 @@ passed.
 Next immediate action after branch push: owner reviews
 `feature/orders-cancel-permission`; no PR has been opened by Codex and nothing
 has been merged.
+
+## 2026-08-03 Slice A review fixes
+
+Owner review requested evidence and one code change only: implement an
+idempotent backfill for existing databases, then rerun the required gates.
+
+Plan:
+- [x] Step R1: provide the full test diff evidence for
+  `git diff 3abf9dd..e88edf1 -- tests/` and identify whether old guarantees
+  were removed.
+  Result: evidence confirms several existing cancel tests previously proved a
+  user with only `orders.take` could cancel; those fixtures now use
+  `orders.cancel` by design, and new negative tests cover `orders.take` alone.
+- [x] Step R2: prove the added permission query is constant, not per line item.
+  Result: exact contracts changed from `7/7` to `8/8` in
+  `OrderWorkspaceTest`, and from `8/30/33` to `9/33/36` in
+  `OrderWorkspaceItemWritesTest`. A container probe rendered the same workspace
+  with `1`, `5`, and `20` order lines and produced `9`, `9`, and `9` render
+  queries.
+- [x] Step R3: add the backfill migration and regression test.
+  Result: commit `949c0f6 fix(orders): backfill cancel permission for managers`
+  adds `2026_08_03_000000_backfill_orders_cancel_permission.php` and
+  `OrdersCancelPermissionBackfillTest`. Running the migration twice creates one
+  permission row, grants owner/manager, and does not grant cashier/waiter.
+- [x] Step R4: rerun required gates after the review fix.
+  Result: `make pint` passed (`356 files`); `make stan` analysed `210/210` with
+  `[OK] No errors`; `make test` passed (`413 passed / 19 skipped / 3906
+  assertions`); `make tenant-isolation-pgsql` passed (`69 passed / 368
+  assertions`); `make orders-concurrency-pgsql` passed (`6 passed / 43
+  assertions`); `make fresh` passed and ran the new backfill migration.
+- [x] Step R5: commit this worklog update separately, push
+  `feature/orders-cancel-permission`, and stop without opening or merging a PR.
+  Result: this worklog update is the separate documentation commit for the
+  review-fix round. Branch push follows immediately after the commit; no PR is
+  opened and nothing is merged.
+
+Next immediate action: owner reviews `feature/orders-cancel-permission` after
+the review-fix push. Do not create a PR and do not merge.
