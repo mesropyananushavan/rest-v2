@@ -1094,3 +1094,20 @@ permission or changing demo role defaults, because the existing `orders.take`
 capability already models taking orders; querying Identity tables directly
 from Orders, because module boundaries require cross-module access through
 Contracts.
+
+## 2026-08-03 — Pre-production data migration policy
+Decision: while SmartRest v2 has no real tenant data that must be preserved,
+permission, reference/dictionary, and seed-data changes are made in
+deterministic seeders and the database is recreated with `make fresh`; new
+backfill/data migrations are not written for those changes.
+
+Trigger to cancel: the first tenant with non-disposable real data. From that
+point onward, any change that would break or omit existing data requires a
+backfill/data migration.
+
+Reason: the project is still pre-production, so maintaining future backfills
+for disposable seed/local data adds migration risk and review overhead without
+protecting client data.
+
+Owner responsibility: the project owner declares when the first
+non-disposable tenant exists. Agents must not infer that state.
