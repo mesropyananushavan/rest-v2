@@ -11,6 +11,7 @@ return [
         'dashboard' => 'Dashboard',
         'menu' => 'Menu',
         'orders_board' => 'Table board',
+        'cashboxes' => 'Cashboxes',
         'translation_overrides' => 'Translations',
         'audit_logs' => 'Audit log',
         'tables' => 'Halls & Tables',

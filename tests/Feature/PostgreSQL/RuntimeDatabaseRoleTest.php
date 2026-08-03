@@ -9,6 +9,9 @@ use App\Modules\Identity\Infrastructure\Models\User;
 use App\Modules\Identity\Infrastructure\Models\UserBranchAssignment;
 use App\Modules\Orders\Infrastructure\Models\Order;
 use App\Modules\Orders\Infrastructure\Models\OrderSubtable;
+use App\Modules\Payments\Application\CreateCashbox;
+use App\Modules\Payments\Application\SelectDefaultCashbox;
+use App\Modules\Payments\Infrastructure\Models\Cashbox;
 use App\Modules\Tables\Infrastructure\Models\Table as RestaurantTable;
 use App\Modules\Tenancy\Application\SuspendOverdueTenantSubscriptions;
 use App\Modules\Tenancy\Contracts\BranchContext;
@@ -18,6 +21,7 @@ use App\Modules\Tenancy\Infrastructure\Models\Tenant;
 use App\Modules\Tenancy\Infrastructure\Models\TenantSubscription;
 use App\Support\I18n\TenantTranslationOverride;
 use App\Support\I18n\TenantTranslationOverrides;
+use App\Support\Logging\LogContext;
 use Illuminate\Database\QueryException;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
@@ -299,6 +303,17 @@ it('runs translation, orders, queue, and scheduler smoke paths under the runtime
     expect(OrderSubtable::query()
         ->where('order_id', (int) $order->id)
         ->where('name', 'Runtime Smoke')
+        ->exists())->toBeTrue();
+
+    LogContext::start('runtime-role-cashbox-smoke', 'payments');
+    $cashbox = app(CreateCashbox::class)('Runtime role register');
+    app(SelectDefaultCashbox::class)((int) $cashbox->id);
+
+    expect(Cashbox::query()
+        ->where('branch_id', $context['branch_id'])
+        ->where('name', 'Runtime role register')
+        ->where('is_active', true)
+        ->where('is_default', true)
         ->exists())->toBeTrue();
 
     runtimeRoleRunDatabaseQueueSmoke((int) $context['tenant']->id, $context['branch_id'], $context['visible_branch_ids']);

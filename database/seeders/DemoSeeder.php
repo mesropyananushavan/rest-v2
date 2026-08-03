@@ -6,6 +6,7 @@ namespace Database\Seeders;
 
 use App\Modules\Identity\Infrastructure\Seeders\IdentityDemoSeeder;
 use App\Modules\Menu\Infrastructure\Seeders\MenuDemoSeeder;
+use App\Modules\Payments\Infrastructure\Seeders\PaymentsDemoSeeder;
 use App\Modules\Tables\Infrastructure\Seeders\TablesDemoSeeder;
 use App\Modules\Tenancy\Infrastructure\Seeders\TenancyDemoSeeder;
 use Illuminate\Database\Seeder;
@@ -19,5 +20,6 @@ final class DemoSeeder extends Seeder
         app(IdentityDemoSeeder::class)->seed($demo);
         app(MenuDemoSeeder::class)->seed($demo);
         app(TablesDemoSeeder::class)->seed($demo);
+        app(PaymentsDemoSeeder::class)->seed($demo);
     }
 }

@@ -21,7 +21,7 @@ APP_TEST_PGSQL_RUNTIME := $(RUN_DB_ROLE) runtime-test
 APP_TEST_PGSQL_MIGRATION := $(RUN_DB_ROLE) runtime-test-migration
 NODE := docker run --rm -u $$(id -u):$$(id -g) -v "$$(pwd)":/app -w /app node:24-alpine
 
-.PHONY: up down restart shell artisan pgsql pgsql-runtime test tenant-isolation-pgsql orders-concurrency-pgsql runtime-role-pgsql prepare-pgsql-test-db prepare-runtime-pgsql-test-db provision-runtime-db-role grant-runtime-db-privileges wait-postgres ensure-config-uncached config-clear stan pint fresh build smoke-menu-context tools logs logs-queue
+.PHONY: up down restart shell artisan pgsql pgsql-runtime test tenant-isolation-pgsql orders-concurrency-pgsql cashboxes-concurrency-pgsql runtime-role-pgsql prepare-pgsql-test-db prepare-runtime-pgsql-test-db provision-runtime-db-role grant-runtime-db-privileges wait-postgres ensure-config-uncached config-clear stan pint fresh build smoke-menu-context tools logs logs-queue
 
 up:
 	@$(CONFIG_GUARD)
@@ -64,6 +64,11 @@ orders-concurrency-pgsql:
 	@$(CONFIG_GUARD)
 	@$(MAKE) prepare-pgsql-test-db
 	@$(APP_TEST_PGSQL) vendor/bin/pest tests/Feature/Orders/OrderConcurrencyTest.php
+
+cashboxes-concurrency-pgsql:
+	@$(CONFIG_GUARD)
+	@$(MAKE) prepare-pgsql-test-db
+	@$(APP_TEST_PGSQL) vendor/bin/pest tests/Feature/Payments/CashboxConcurrencyTest.php
 
 runtime-role-pgsql:
 	@$(CONFIG_GUARD)

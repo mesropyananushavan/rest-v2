@@ -16,6 +16,8 @@ use App\Modules\Menu\Http\Controllers\MenuItemController;
 use App\Modules\Orders\Contracts\OrderPermissions;
 use App\Modules\Orders\Http\Controllers\OrderBoardController;
 use App\Modules\Orders\Http\Controllers\OrderWorkspaceController;
+use App\Modules\Payments\Contracts\PaymentPermissions;
+use App\Modules\Payments\Http\Controllers\CashboxController;
 use App\Modules\Tables\Http\Controllers\HallController;
 use App\Modules\Tables\Http\Controllers\TableController;
 use App\Modules\Tenancy\Http\Controllers\BranchShowController;
@@ -75,6 +77,17 @@ Route::get('/admin/orders/{order}/workspace', OrderWorkspaceController::class)
     ->whereNumber('order')
     ->middleware(['tenant', 'branch', 'auth', 'tenant.active', 'can:'.OrderPermissions::TAKE])
     ->name('admin.orders.workspace');
+
+Route::middleware(['tenant', 'branch', 'auth', 'tenant.active', 'can:'.PaymentPermissions::MANAGE_CASHBOXES])->prefix('/admin/payments/cashboxes')->name('admin.payments.cashboxes.')->group(function (): void {
+    Route::get('/', [CashboxController::class, 'index'])->name('index');
+    Route::get('/create', [CashboxController::class, 'create'])->name('create');
+    Route::post('/', [CashboxController::class, 'store'])->name('store');
+    Route::get('/{cashbox}/edit', [CashboxController::class, 'edit'])->whereNumber('cashbox')->name('edit');
+    Route::put('/{cashbox}', [CashboxController::class, 'update'])->whereNumber('cashbox')->name('update');
+    Route::post('/{cashbox}/activate', [CashboxController::class, 'activate'])->whereNumber('cashbox')->name('activate');
+    Route::post('/{cashbox}/deactivate', [CashboxController::class, 'deactivate'])->whereNumber('cashbox')->name('deactivate');
+    Route::post('/{cashbox}/default', [CashboxController::class, 'selectDefault'])->whereNumber('cashbox')->name('default');
+});
 
 Route::middleware(['tenant', 'branch', 'auth', 'tenant.active'])->prefix('/admin/menu')->name('admin.menu.')->group(function (): void {
     Route::get('/', MenuIndexController::class)

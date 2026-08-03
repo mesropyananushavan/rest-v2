@@ -11,6 +11,7 @@ return [
         'dashboard' => 'Վահանակ',
         'menu' => 'Մենյու',
         'orders_board' => 'Սեղանների տախտակ',
+        'cashboxes' => 'Դրամարկղեր',
         'translation_overrides' => 'Թարգմանություններ',
         'audit_logs' => 'Աուդիտի մատյան',
         'tables' => 'Սրահներ եւ սեղաններ',
