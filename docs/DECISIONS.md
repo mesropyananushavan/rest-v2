@@ -1188,3 +1188,38 @@ runtime credentials only, restart long-running workers/scheduler after
 credential or config-cache changes, and verify production runtime processes use
 the restricted role. This repository does not create or rotate production
 credentials.
+
+## 2026-08-03 — Management-role marker is bootstrap metadata only
+Decision: Identity owns a durable `roles.is_management_role` boolean marker for
+deterministic bootstrap/seeding logic. The marker identifies roles that should
+receive baseline management permissions during fresh database creation or
+pre-production bootstrap backfills. Runtime authorization must not consult this
+marker; it remains permission-only through effective role permissions and the
+existing superadmin bypass.
+
+Role `code` and display `name` have no security meaning. Demo `owner` and
+`manager` roles are marked as management roles; demo `cashier` and `waiter`
+roles are not. A classified role with any tenant-local code may receive the
+`orders.cancel` bootstrap grant. A role whose code is `owner` or `manager` but
+is not classified must not receive that grant. Multiple management roles per
+tenant are allowed, and no tenant is required to have exactly one owner role.
+
+Migration policy: because the owner has declared the project pre-production
+with no non-disposable tenant data, this change edits the original roles table
+migration and the existing `orders.cancel` bootstrap backfill instead of adding
+a forward-only production data migration. There is no code/name compatibility
+fallback. Once the pre-production data policy is cancelled, similar changes
+must use explicit forward migrations/backfills.
+
+Reason: tenant-local role codes are mutable business labels, not an
+authorization taxonomy. Keeping the marker bootstrap-only fixes the grant
+selection problem without adding a second runtime authorization system or
+turning display names/codes into security semantics.
+
+Rejected: granting by `owner`/`manager` codes, because those values are
+tenant-local text; an owner/manager enum classification, because the approved
+behavior does not require one owner role or distinguish owner from manager for
+this bootstrap grant; runtime authorization from the marker, because that would
+bypass administrator-managed effective permissions; a forward-only production
+data migration, because the repository remains under the disposable
+pre-production data policy.

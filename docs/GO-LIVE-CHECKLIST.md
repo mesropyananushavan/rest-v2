@@ -51,16 +51,25 @@ data that cannot be recreated with `make fresh`.
   Sources: `AGENTS.md:52-64`,
   `docs/DECISIONS.md#2026-08-03-pre-production-data-migration-policy`.
 
-- [ ] Stop using only string role codes as the signal for managing roles.
-  Description: introduce a durable way to identify managing roles that is not
-  tied only to tenant-local string codes such as `owner` and `manager`.
+- [x] Stop using only string role codes as the signal for managing roles.
+  Description: Identity roles now carry `is_management_role` bootstrap metadata
+  that is not tied to tenant-local string codes such as `owner` and `manager`.
+  Runtime authorization does not use this marker; it continues to use effective
+  permissions.
   Reason: `roles.code` is only unique per tenant and is not enum-constrained.
   A tenant without roles whose codes are exactly `owner` or `manager` can miss
   permission grants such as `orders.cancel`.
+  Local/CI status: implemented locally for deterministic demo seeding and the
+  existing `orders.cancel` bootstrap backfill. Verified on the
+  `feature/identity-managing-role-marker` review branch with `make pint`,
+  `make stan`, `make test`, `make tenant-isolation-pgsql`, and
+  `make runtime-role-pgsql`. No production verification or deployment has been
+  performed.
   Sources: `database/migrations/0001_01_01_000000_create_users_table.php:41-49`,
   `app/Modules/Identity/Infrastructure/Seeders/IdentityDemoSeeder.php:90-115`,
   `app/Modules/Identity/Infrastructure/Seeders/IdentityDemoSeeder.php:152-159`,
-  `docs/worklog/PHASE-2.md:5974-5979`.
+  `docs/DECISIONS.md#2026-08-03-management-role-marker-is-bootstrap-metadata-only`,
+  `docs/worklog/PHASE-2.md`.
 
 - [ ] Decide and implement platform operator identity and platform admin
   authorization.

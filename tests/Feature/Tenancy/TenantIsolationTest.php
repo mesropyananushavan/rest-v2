@@ -244,10 +244,24 @@ it('backfills orders cancel permission for every tenant under PostgreSQL row lev
     $tenantIds = [];
 
     foreach ([
-        'legacy-alpha' => ['owner', 'manager', 'cashier', 'waiter'],
-        'legacy-beta' => ['owner', 'manager', 'cashier', 'waiter'],
-        'custom-only' => ['administrator'],
-    ] as $slug => $roleCodes) {
+        'legacy-alpha' => [
+            'owner' => false,
+            'manager' => false,
+            'administrator' => true,
+            'cashier' => false,
+            'waiter' => false,
+        ],
+        'legacy-beta' => [
+            'owner' => false,
+            'manager' => false,
+            'branch-lead' => true,
+            'cashier' => false,
+            'waiter' => false,
+        ],
+        'custom-only' => [
+            'administrator' => false,
+        ],
+    ] as $slug => $roleClassifications) {
         $tenant = Tenant::query()->create([
             'name' => str($slug)->headline()->toString(),
             'slug' => $slug,
@@ -264,10 +278,11 @@ it('backfills orders cancel permission for every tenant under PostgreSQL row lev
             'name' => 'Take orders',
         ]);
 
-        foreach ($roleCodes as $roleCode) {
+        foreach ($roleClassifications as $roleCode => $isManagementRole) {
             $role = Role::query()->create([
                 'code' => $roleCode,
                 'name' => str($roleCode)->headline()->toString(),
+                'is_management_role' => $isManagementRole,
             ]);
 
             $role->permissions()->attach((int) $takePermission->id, [
@@ -283,13 +298,17 @@ it('backfills orders cancel permission for every tenant under PostgreSQL row lev
     $migration->up();
 
     expect(app(TenantResolver::class)->id())->toBe($tenantIds['legacy-alpha']);
+    expect(currentPostgresTenantSetting())->toBe((string) $tenantIds['legacy-alpha']);
 
-    foreach (['legacy-alpha', 'legacy-beta'] as $slug) {
-        app(TenantResolver::class)->set($tenantIds[$slug]);
+    app(TenantResolver::class)->set($tenantIds['legacy-alpha']);
 
-        expect(DB::table('permissions')->where('code', 'orders.cancel')->count())->toBe(1)
-            ->and(rolesWithOrdersCancelPermission())->toBe(['manager', 'owner']);
-    }
+    expect(DB::table('permissions')->where('code', 'orders.cancel')->count())->toBe(1)
+        ->and(rolesWithOrdersCancelPermission())->toBe(['administrator']);
+
+    app(TenantResolver::class)->set($tenantIds['legacy-beta']);
+
+    expect(DB::table('permissions')->where('code', 'orders.cancel')->count())->toBe(1)
+        ->and(rolesWithOrdersCancelPermission())->toBe(['branch-lead']);
 
     app(TenantResolver::class)->set($tenantIds['custom-only']);
 
@@ -1056,6 +1075,13 @@ function rolesWithOrdersCancelPermission(): array
         SQL))
         ->map(fn (object $row): string => (string) $row->code)
         ->all();
+}
+
+function currentPostgresTenantSetting(): string
+{
+    $row = DB::selectOne("select current_setting('smartrest.tenant_id', true) as tenant_id");
+
+    return (string) ($row?->tenant_id ?? '');
 }
 
 /**

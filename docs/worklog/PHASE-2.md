@@ -6182,8 +6182,75 @@ Plan:
   concurrency in parallel failed because both mutate `smartrest_test_local`; they
   passed when rerun sequentially.
 
-Next immediate action: owner performs final read-only review of the local-only
-diff on `feature/runtime-rls-role-readiness`. Do not commit or push.
+Historical RLS9 next action at that time, superseded by the MRM verification
+section below: owner performs final read-only review of the local-only diff on
+`feature/runtime-rls-role-readiness`. Do not commit or push.
+
+## 2026-08-03 Slice: Identity management-role bootstrap marker
+
+Owner approved a bounded Identity slice on branch
+`feature/identity-managing-role-marker`.
+
+Root problem:
+- The `orders.cancel` bootstrap/backfill path grants by tenant-local role codes
+  `owner` and `manager`.
+- Runtime authorization already uses effective permissions, not role codes.
+  The gap is the bootstrap selector: `roles.code` is tenant-local text and must
+  not carry security semantics.
+
+Approved semantics:
+- Add `roles.is_management_role` as Identity-owned bootstrap metadata:
+  boolean, non-null, default false.
+- The marker may be used only by deterministic seed/backfill logic.
+- Runtime authorization must remain permission-only through effective role
+  permissions and the existing superadmin bypass.
+- Role code/name has no security meaning. A classified role with any code may
+  receive bootstrap grants; a role named `owner` or `manager` without the
+  marker must not receive them.
+- Multiple management roles per tenant are allowed; no tenant is required to
+  have exactly one owner role.
+
+Migration strategy:
+- The repository is still explicitly pre-production with disposable local/test
+  data, so edit the original role-table migration and the existing
+  `orders.cancel` backfill instead of adding a forward-only production data
+  migration.
+- Preserve tenant-by-tenant PostgreSQL RLS context set/restore behavior in the
+  backfill.
+- Do not add a code/name compatibility fallback.
+
+Plan:
+- [x] Step MRM1: add the worklog plan, schema column, Role model fill/cast,
+  deterministic demo role marker values, and marker-based `orders.cancel`
+  backfill selection.
+  Result: added `roles.is_management_role` as a non-null boolean defaulting
+  false, cast/fillable support on the Identity Role model, deterministic demo
+  markers for owner/manager only, and marker-based `orders.cancel` backfill
+  selection with existing tenant-by-tenant RLS set/restore behavior preserved.
+- [x] Step MRM2: update SQLite and PostgreSQL/RLS tests proving custom-code
+  classified roles receive bootstrap grants, unclassified `owner`/`manager`
+  roles do not, unrelated roles do not, demo role markers are deterministic,
+  runtime authorization ignores the marker, and load-test scaffolding does not
+  accidentally classify its synthetic manager role.
+  Result: added/updated focused Identity, backfill, tenant-isolation, and load
+  seeder safety tests for bootstrap-only marker semantics and permission-only
+  runtime authorization.
+- [x] Step MRM3: update `docs/DECISIONS.md` and
+  `docs/GO-LIVE-CHECKLIST.md`, then run `make pint`, `make stan`,
+  `make test`, `make tenant-isolation-pgsql`, and `make runtime-role-pgsql`.
+  Review the final diff and stop without commit, push, PR, merge, or deploy.
+  Result: documentation updated for bootstrap-only semantics, code/name
+  non-security semantics, and pre-production migration-editing rationale.
+  Verification passed: focused `make test ARGS='tests/Feature/Identity/OrdersCancelPermissionBackfillTest.php tests/Feature/Identity/RoleManagementMarkerTest.php tests/Feature/Menu/MenuSeedLoadCommandSafetyTest.php'`
+  (`8 passed / 28 assertions`), `make tenant-isolation-pgsql`
+  (`70 passed / 376 assertions`), `make pint` (`359 files`), `make stan`
+  (`210/210`, no errors), `make test` (`418 passed / 24 skipped / 3919
+  assertions`), and `make runtime-role-pgsql` (`4 passed / 65 assertions`).
+
+Non-goals:
+- No role-management UI, platform-operator identity, permission deviations,
+  production credentials, deployment, or Orders close/payment/fiscal/printing
+  work.
 
 - [x] Step RLS9: apply focused final-review corrections only. Guard direct and
   parallel role-sensitive Make targets before their first mutating command,
@@ -6217,5 +6284,43 @@ diff on `feature/runtime-rls-role-readiness`. Do not commit or push.
   no errors); `make pint` (`358` files). `shellcheck` is not installed. No
   commit or push was performed.
 
-Next immediate action: owner performs final read-only review of the local-only
-diff on `feature/runtime-rls-role-readiness`. Do not commit or push.
+Historical RLS9 next action at that time, superseded by the MRM verification
+section below: owner performs final read-only review of the local-only diff on
+`feature/runtime-rls-role-readiness`. Do not commit or push.
+
+## 2026-08-03 Slice: Identity management-role bootstrap marker verification
+
+The approved branch `feature/identity-managing-role-marker` implements
+`roles.is_management_role` as Identity-owned bootstrap metadata only. Runtime
+authorization remains permission-only through effective role permissions and
+the existing superadmin bypass; no Gate, Authorizer, policy, Livewire action,
+or Application service authorizes directly from the marker. Tenant-local role
+codes and names have no security semantics in the `orders.cancel` bootstrap
+path.
+
+Verification passed:
+- `make test ARGS='tests/Feature/Identity/OrdersCancelPermissionBackfillTest.php tests/Feature/Identity/RoleManagementMarkerTest.php tests/Feature/Menu/MenuSeedLoadCommandSafetyTest.php'`
+  (`8 passed / 28 assertions`)
+- `make tenant-isolation-pgsql` (`70 passed / 376 assertions`)
+- `make pint` (`359 files`)
+- `make stan` (`210/210`, no errors)
+- `make test` (`418 passed / 24 skipped / 3919 assertions`)
+- `make runtime-role-pgsql` (`4 passed / 65 assertions`)
+
+Independent-review low corrections before commit:
+- Added direct SQLite database-behavior coverage proving an explicit
+  `roles.is_management_role = null` insert is rejected and leaves no partial
+  role row, while omitted values still default false.
+- Relabeled stale runtime-RLS next-action lines in the nearby chronology as
+  historical/superseded so the final MRM next action is authoritative.
+- Verification passed: `make test ARGS='tests/Feature/Identity/RoleManagementMarkerTest.php'`
+  (`3 passed / 10 assertions`), `make test ARGS='tests/Feature/Identity'`
+  (`31 passed / 253 assertions`), `make pint` (`359 files`), and
+  `git diff --check`.
+
+No production verification, deployment, push, PR, merge, or commit was
+performed.
+
+Next immediate action: owner reviews the local-only diff on
+`feature/identity-managing-role-marker`. If approved, the next session can
+commit, push, and open a review PR for this branch.

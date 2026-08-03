@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 
 uses(RefreshDatabase::class);
 
@@ -46,6 +47,26 @@ it('requires confirmation before schema recreation unless force suppresses it', 
         ->expectsConfirmation('This will delete the entire local database, including demo tenants. Continue?', 'no')
         ->expectsOutputToContain('Fresh load cleanup cancelled before recreating the local schema.')
         ->assertFailed();
+});
+
+it('does not classify synthetic load manager roles as management bootstrap roles', function (): void {
+    $this->artisan('menu:seed-load', [
+        '--restaurants' => 1,
+        '--categories' => 1,
+        '--subcategories' => 1,
+        '--items' => 1,
+        '--batch' => 5000,
+    ])
+        ->expectsOutputToContain('menu:seed-load complete.')
+        ->assertSuccessful();
+
+    $managementMarkers = DB::table('roles')
+        ->where('code', 'manager')
+        ->pluck('is_management_role')
+        ->map(fn (mixed $value): bool => (bool) $value)
+        ->all();
+
+    expect($managementMarkers)->toBe([false]);
 });
 
 function menuSeedLoadPgsqlConfig(string $host, string $database): void
