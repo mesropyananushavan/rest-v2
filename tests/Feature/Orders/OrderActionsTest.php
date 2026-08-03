@@ -118,6 +118,68 @@ it('opens assigns subtables reads and cancels dine-in orders with audit rows', f
     ]);
 });
 
+it('enforces subtable name invariants in the application action', function (): void {
+    $record = ordersActionsUser('tenant-subtable-invariants', 'manager-subtable-invariants', branchCount: 2);
+    $table = ordersActionsTable($record, 0, 'Invariant Table 1');
+    $otherTable = ordersActionsTable($record, 0, 'Invariant Table 2');
+    $otherBranchTable = ordersActionsTable($record, 1, 'Invariant Branch 2 Table');
+
+    ordersActionsActingIn($record, 0, 'orders-subtable-invariants');
+    $order = app(OpenOrder::class)((int) $table->id);
+    $otherOrder = app(OpenOrder::class)((int) $otherTable->id);
+
+    $subtable = app(AddSubtable::class)((int) $order->id, ' Guest A ');
+
+    expect($subtable->name)->toBe('Guest A')
+        ->and(OrderSubtable::query()->where('order_id', (int) $order->id)->pluck('name')->all())->toBe(['Guest A'])
+        ->and(AuditLog::query()->where('action', 'orders.subtable.added')->where('target_id', (int) $subtable->id)->exists())->toBeTrue();
+
+    OrderSubtable::query()->create([
+        'branch_id' => (int) $order->branch_id,
+        'order_id' => (int) $order->id,
+        'name' => 'Former Guest',
+        'status' => 'closed',
+    ]);
+
+    $subtableCount = OrderSubtable::query()->where('order_id', (int) $order->id)->count();
+    $successAuditCount = AuditLog::query()
+        ->where('action', 'orders.subtable.added')
+        ->where('target_type', 'orders_subtable')
+        ->count();
+
+    foreach ([
+        'empty trimmed name' => ['   ', 'orders.subtable_name_required'],
+        'over length name' => [str_repeat('A', 61), 'orders.subtable_name_too_long'],
+        'case insensitive duplicate' => ['guest a', 'orders.subtable_name_duplicate'],
+        'surrounding whitespace duplicate' => ['   Guest A   ', 'orders.subtable_name_duplicate'],
+    ] as $case => [$name, $code]) {
+        ordersActionsExpectSubtableDomainCode(
+            fn () => app(AddSubtable::class)((int) $order->id, $name),
+            $code,
+            $case,
+        );
+
+        expect(OrderSubtable::query()->where('order_id', (int) $order->id)->count(), $case)->toBe($subtableCount)
+            ->and(AuditLog::query()
+                ->where('action', 'orders.subtable.added')
+                ->where('target_type', 'orders_subtable')
+                ->count(), $case)->toBe($successAuditCount);
+    }
+
+    $sameNameOtherOrder = app(AddSubtable::class)((int) $otherOrder->id, ' guest a ');
+    $sameNameClosedOnly = app(AddSubtable::class)((int) $order->id, ' former guest ');
+
+    expect($sameNameOtherOrder->name)->toBe('guest a')
+        ->and($sameNameClosedOnly->name)->toBe('former guest');
+
+    ordersActionsActingIn($record, 1, 'orders-subtable-invariants-other-branch');
+    $otherBranchOrder = app(OpenOrder::class)((int) $otherBranchTable->id);
+    $sameNameOtherBranch = app(AddSubtable::class)((int) $otherBranchOrder->id, ' GUEST A ');
+
+    expect($sameNameOtherBranch->name)->toBe('GUEST A')
+        ->and(OrderSubtable::query()->where('order_id', (int) $otherBranchOrder->id)->pluck('name')->all())->toBe(['GUEST A']);
+});
+
 it('rejects assigning waiters that cannot take orders in the current tenant branch', function (): void {
     $tenantA = ordersActionsUser('tenant-a', 'manager-a', branchCount: 2);
     $tenantB = ordersActionsUser('tenant-b', 'manager-b');
@@ -527,4 +589,17 @@ function ordersActionsExpectMoveDomainCode(Closure $callback, string $errorCode)
     }
 
     throw new RuntimeException("Expected {$errorCode}.");
+}
+
+function ordersActionsExpectSubtableDomainCode(Closure $callback, string $errorCode, string $case): void
+{
+    try {
+        $callback();
+    } catch (OrdersDomainException $exception) {
+        expect($exception->errorCode(), $case)->toBe($errorCode);
+
+        return;
+    }
+
+    throw new RuntimeException("Expected {$errorCode} for {$case}.");
 }

@@ -70,6 +70,21 @@ final class OrdersDomainException extends RuntimeException
         return new self('orders.subtable_not_in_order', 'The selected subtable does not belong to this order.');
     }
 
+    public static function subtableNameRequired(): self
+    {
+        return new self('orders.subtable_name_required', 'Subtable name is required.');
+    }
+
+    public static function subtableNameTooLong(): self
+    {
+        return new self('orders.subtable_name_too_long', 'Subtable name is too long.');
+    }
+
+    public static function subtableNameDuplicate(): self
+    {
+        return new self('orders.subtable_name_duplicate', 'An open subtable with this name already exists on this order.');
+    }
+
     public static function invalidOrderType(): self
     {
         return new self('orders.invalid_order_type', 'Unsupported order type.');
