@@ -1,6 +1,6 @@
 # Worklog — Phase 3: Payments/Cashbox/Fiscal/Printing
 
-Status: Cashbox Configuration Foundation approved
+Status: Draft PR #60 opened for Cashbox Configuration Foundation review
 Branch: feature/payments-cashbox-foundation
 
 Phase 2 was closed by merge commit
@@ -128,14 +128,16 @@ Explicit deferred work:
   cashbox concurrency Make target if required by test organization.
   Result: added cashbox RLS/runtime-role coverage, concurrent worker harness,
   PostgreSQL concurrency tests, and `make cashboxes-concurrency-pgsql`.
-- [ ] Step CB5: verification, commit, push, and draft PR. Run focused tests
+- [x] Step CB5: verification, commit, push, and draft PR. Run focused tests
   first, then `make pint`, `make stan`, `make test`,
   `make tenant-isolation-pgsql`, `make orders-concurrency-pgsql`,
   `make runtime-role-pgsql`, the new cashbox PostgreSQL target if added, and
   `make fresh`; review the full diff; commit scoped logical changes; push the
   branch; open a draft PR against `main`; do not mark ready and do not merge.
-  Result: verification is green through `make fresh`; commit, push, and draft
-  PR remain.
+  Result: verification is green through `make fresh`; implementation commit
+  `4b7576d` was pushed; draft PR #60 was opened at
+  https://github.com/mesropyananushavan/rest-v2/pull/60 and was not marked
+  ready or merged.
 
 ## Gotchas
 
@@ -159,11 +161,18 @@ Explicit deferred work:
 - `make stan` passed with no errors.
 - `make test` passed with 435 tests, 29 skipped PostgreSQL-only tests, and
   4140 assertions.
+- Post-review focused rerun after tightening the duplicate-name precheck to a
+  SQL predicate:
+  `make test ARGS='tests/Feature/Payments/CashboxActionsTest.php tests/Feature/Payments/CashboxBladeTest.php tests/Feature/Payments/CashboxConcurrencyTest.php tests/Architecture/ModuleBoundariesTest.php'`
+  passed with 21 tests, 3 skipped PostgreSQL-only tests, and 344 assertions.
+- Post-review reruns: `make pint`, `make stan`,
+  `make cashboxes-concurrency-pgsql`, `make test`, `make runtime-role-pgsql`,
+  and `make fresh` all passed on the final source state.
 - `make fresh` passed, including the `cashboxes` migration and deterministic
   Payments demo seeder.
 
 ## Next Steps
 
-Finish Step CB5: review the final diff, commit the scoped slice, push
-`feature/payments-cashbox-foundation`, and open a draft PR against `main`
-without marking it ready or merging it.
+Review draft PR #60. If approved, mark it Ready only after the owner explicitly
+authorizes that transition; do not merge or implement the deferred payment,
+fiscal, printing, provider, device, or ledger work in this slice.
