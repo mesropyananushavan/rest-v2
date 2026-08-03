@@ -5848,3 +5848,65 @@ payment.
 
 Next immediate action: STOP for owner decision. Choose one proposed slice or
 provide another scope. Do not start implementation until explicit `go`.
+
+## 2026-08-03 Slice A execution plan: order cancel permission split
+
+Owner approved Slice A with explicit scope: do not include MoveOrder UI,
+close/payment, or platform admin work.
+
+Plan:
+- [x] Step A0: keep the prior PR #54 reconciliation/proposed-slices worklog
+  change isolated in its own commit before implementation.
+  Result: committed as `3abf9dd docs(worklog): reconcile PR #54 status and
+  propose next slices`; no code was included.
+- [x] Step A1: create `feature/orders-cancel-permission` from current `main`.
+  Result: branch created from `main` after `3abf9dd`.
+- [x] Step A2: add `orders.cancel` to the Orders public permission contract,
+  gate the workspace cancel UI and Livewire method with that permission, update
+  demo role defaults so waiter does not receive it, and audit the repository for
+  other cancel paths still gated by `orders.take`.
+  Result: implementation commit `e88edf1 feat(orders): split cancel permission`
+  added `OrderPermissions::CANCEL`, `OrderWorkspace::authorizeCancellingOrders`,
+  Blade `can_cancel` gating, and demo seeding for owner/manager only. Repository
+  search found no other UI/Livewire cancel gate still using `orders.take`.
+- [x] Step A3: add/adjust tests proving: `orders.take` alone hides the cancel
+  control; direct cancel invocation with only `orders.take` is forbidden; a user
+  with `orders.cancel` can cancel; and cross-tenant/cross-branch cancellation is
+  blocked even with `orders.cancel`.
+  Result: `OrderWorkspaceTest` now covers all four required cases; existing
+  rendered-affordance and query-count contracts were updated for the explicit
+  cancel permission check.
+- [x] Step A4: run required gates: `make pint`, `make stan`, `make test`,
+  `make tenant-isolation-pgsql`, `make orders-concurrency-pgsql`,
+  `make fresh`, and `make build` only if assets changed.
+  Result: `make pint` passed (`354 files`); `make stan` analysed `210/210` with
+  `[OK] No errors`; `make test` passed (`412 passed / 19 skipped / 3896
+  assertions`); `make tenant-isolation-pgsql` passed (`69 passed / 368
+  assertions`); `make orders-concurrency-pgsql` passed (`6 passed / 43
+  assertions`); `make fresh` passed with migrations and `DemoSeeder` complete.
+  `make build` was not run because no assets changed.
+- [x] Step A5: commit implementation, update this worklog with factual results
+  in a separate branch commit, push `feature/orders-cancel-permission`, and stop
+  without opening or merging a PR.
+  Result so far: implementation commit is complete; this worklog update is the
+  separate documentation commit. After pushing the branch, stop for owner review
+  without opening or merging a PR.
+
+Data migration note to resolve in report: existing tenant roles store
+permissions in database rows. Adding `orders.cancel` to demo seeding affects
+fresh/local seeded tenants after `make fresh`, but existing databases will not
+automatically receive the new permission row or owner/manager role attachments.
+Proposed follow-up: an owner-approved backfill migration or console command
+should create the `orders.cancel` permission for each existing tenant and attach
+it to only the intended managing roles, most likely roles with code `owner` and
+`manager`, after confirming real tenant role naming policy. Do not add it in
+this slice without that approval.
+
+Gotcha: the first intermediate `make test` run failed only because the new
+explicit cancel permission check changed exact query-count contracts. Counts
+were updated to the new stable values, and the required final `make test` run
+passed.
+
+Next immediate action after branch push: owner reviews
+`feature/orders-cancel-permission`; no PR has been opened by Codex and nothing
+has been merged.
