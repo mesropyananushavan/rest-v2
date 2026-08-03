@@ -368,7 +368,7 @@ final class OrderWorkspace extends Component
 
     public function cancelOrder(): void
     {
-        $this->authorizeTakingOrders();
+        $this->authorizeCancellingOrders();
         $this->resetFeedback();
 
         try {
@@ -404,6 +404,7 @@ final class OrderWorkspace extends Component
      *     discount: string,
      *     total: string,
      *     can_mutate: bool,
+     *     can_cancel: bool,
      *     stale_unavailable: bool,
      *     line_count: int,
      *     cancel_confirmation_message: string,
@@ -431,6 +432,7 @@ final class OrderWorkspace extends Component
             'discount' => $this->money($workspace->discountMinor, $workspace->currency, $locale),
             'total' => $this->money($workspace->totalMinor, $workspace->currency, $locale),
             'can_mutate' => $workspace->status === 'open',
+            'can_cancel' => $workspace->status === 'open' && $this->canCancelOrders(),
             'stale_unavailable' => false,
             'line_count' => $lineCount,
             'cancel_confirmation_message' => $lineCount > 0
@@ -463,6 +465,7 @@ final class OrderWorkspace extends Component
      *     discount: string,
      *     total: string,
      *     can_mutate: bool,
+     *     can_cancel: bool,
      *     stale_unavailable: bool,
      *     line_count: int,
      *     cancel_confirmation_message: string,
@@ -487,6 +490,7 @@ final class OrderWorkspace extends Component
             'discount' => '',
             'total' => '',
             'can_mutate' => false,
+            'can_cancel' => false,
             'stale_unavailable' => true,
             'line_count' => 0,
             'cancel_confirmation_message' => '',
@@ -892,6 +896,16 @@ final class OrderWorkspace extends Component
     private function authorizeTakingOrders(): void
     {
         abort_unless(auth()->user()?->can(OrderPermissions::TAKE) ?? false, 403);
+    }
+
+    private function authorizeCancellingOrders(): void
+    {
+        abort_unless($this->canCancelOrders(), 403);
+    }
+
+    private function canCancelOrders(): bool
+    {
+        return auth()->user()?->can(OrderPermissions::CANCEL) ?? false;
     }
 
     private function domainErrorMessage(OrdersDomainException $exception): string

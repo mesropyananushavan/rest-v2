@@ -5627,6 +5627,365 @@ Plan:
   reported runs for `quality`, `tenant-isolation-pgsql`, and
   `orders-concurrency-pgsql`.
 
-Next immediate action: final audit PR #54. Confirm the worklog-only CI update
-commit is pushed, wait for exact-head GitHub Actions on that final head, and
-report READY FOR FINAL AUDIT if green. Leave PR #54 draft and do not merge.
+Superseded by 2026-08-03 reconciliation: this final action was stale. PR #54 is
+no longer draft/unmerged; it was merged into `main` as
+`b9c1f9b46c6916467293d3132b6b2832f8486a66` on 2026-07-31, with implementation
+commit `c9463a4` and worklog verification commit `d07a3fc`. This correction is
+limited to the erroneous PR state; the preceding F1 implementation history is
+left intact.
+
+## 2026-08-03 reconciliation: PR #54 merged and Phase 2 factual state
+
+Reason for entry: the previous "Next immediate action" still said to leave PR
+#54 draft/unmerged, but the repository is already on clean `main` with PR #54
+merged. This entry records the current facts and replaces the stale next action.
+
+Git facts:
+- Current branch/status: `main...origin/main`, clean working tree.
+- Merge commit: `b9c1f9b Merge pull request #54 from
+  mesropyananushavan/feature/orders-open-redirect-workspace`.
+- Merge parents: `ca7862616630e27474239a7b45cb58c909ee9a22` and
+  `d07a3fca40517975acc4675bd013f3e94463e270`.
+- PR implementation commit: `c9463a4 Redirect opened orders to workspace`.
+- Files changed by the merge: `app/Livewire/Admin/OrderBoard.php`,
+  `tests/Feature/Orders/OrderBoardTest.php`, and this worklog.
+
+Code verification for PR #54:
+- `routes/web.php` defines `admin.orders.board` and
+  `admin.orders.workspace` under tenant/branch/auth/active-tenant middleware.
+- `app/Livewire/Admin/OrderBoard.php` calls `OpenOrder`, resets the modal, and
+  redirects successful opens to `admin.orders.workspace` with the returned order
+  id. The occupied-table DTO also exposes `workspace_url` for existing open
+  orders.
+- `resources/views/livewire/admin/order-board.blade.php` renders occupied
+  tables as workspace links and free tables as `selectTable(...)` buttons.
+- `app/Modules/Orders/Http/Controllers/OrderWorkspaceController.php` returns
+  the workspace view, and `resources/views/modules/orders/workspace.blade.php`
+  mounts `livewire:admin.order-workspace`.
+- `tests/Feature/Orders/OrderBoardTest.php` covers opening a free table and
+  redirecting to the exact returned order workspace, while proving the redirect
+  is not to another branch or another tenant order. The same file covers
+  occupied-table race, invalid guest count, missing table, inactive table, and
+  out-of-branch table no-redirect paths.
+- `tests/Feature/Orders/OrderWorkspaceTest.php` covers occupied board tiles
+  linking to the workspace while free tiles still open the modal.
+
+Verification run:
+- Command attempted: `make test ARGS="tests/Feature/Orders/OrderBoardTest.php
+  tests/Feature/Orders/OrderWorkspaceTest.php"`.
+- Makefile behavior: the target did not forward `ARGS`; it ran the full SQLite
+  Pest suite instead of only the two requested files.
+- Result: `410 passed`, `19 skipped`, `3889 assertions`.
+- Working tree remained clean after the run.
+
+Current factual Phase 2 state confirmed from code:
+- Tenancy: tenant/branch request context, active-tenant gate, subscription
+  schema/read model, manual subscription payment command, auto-suspension
+  scheduler, and tenant-scoped login are present.
+- Identity: tenant users, roles, permissions, branch assignments, and demo role
+  permission seeding are present. Feature availability/deviation evaluation and
+  a separate platform-operator guard/UI are not present.
+- Menu: admin CRUD, archive policy, tenant isolation, public menu catalog
+  contract, sellable lookup, and session-authenticated menu-items API index are
+  present. API write endpoints and a dedicated `PriceResolver` contract are not
+  present.
+- Audit: append-only audit log recording and admin report routes are present.
+  Export, retention, and purge tooling are not present.
+- Halls/Tables: admin halls/tables CRUD, archive policy, deterministic seed
+  data, branch-scoped board layout, and table metadata used by the board are
+  present. Rich floor-plan geometry and table-type/commission/preparation-place
+  catalogs are not present.
+- Orders: dine-in/tableless open flows, one-open-order-per-table protection,
+  order items, item quantity/remove/move actions, waiter assignment, cancel,
+  table board, order workspace, and workspace redirect after open are present.
+  Close/payment/cashbox/fiscal/print flows are not present. Whole-order move has
+  an Application action but no UI affordance yet.
+- Tenant subscriptions: platform-owned subscription status storage, due/grace
+  logic, manual payment recording command, audit logging, and scheduled overdue
+  suspension are present. Billing amounts/invoices, platform admin UI, and
+  platform guard decisions are not present.
+
+Confirmed gaps / tails:
+- Orders cancellation uses only `orders.take`: `app/Livewire/Admin/OrderWorkspace.php`
+  gates `cancelOrder()` through `authorizeTakingOrders()`, and
+  `app/Modules/Orders/Contracts/OrderPermissions.php` only declares
+  `orders.take`. `database/seeders/IdentityDemoSeeder.php` grants that permission
+  to the waiter role, so waiter-level users can reach cancellation today.
+- Whole-order move is backend-only: `app/Modules/Orders/Application/MoveOrder.php`
+  exists, but the workspace and board views do not expose a move-order control.
+- Close/payment/fiscal lifecycle is absent from Orders: order statuses include
+  `open`, `closed`, and `cancelled` in
+  `database/migrations/2026_07_25_000000_create_orders_table.php`, but no
+  `CloseOrder` action or Orders payment/cashbox/fiscal/print integration exists.
+- Platform-operator surface is absent: `config/auth.php` only defines the `web`
+  guard and `routes/web.php` has no platform admin routes.
+- Feature availability/deviation logic is absent: Identity authorization checks
+  tenant active state and role permissions, but no feature availability or
+  tenant deviation mechanism exists in `app/Modules/Identity` or database
+  migrations.
+- Runtime PostgreSQL role separation remains incomplete: app config still uses
+  `DB_USERNAME=smartrest` from `.env.example` / `docker-compose.yml`, while the
+  app/test DB roles exist mainly in Makefile/CI workflows.
+- Audit reporting has no export/retention tooling: audit report routes and
+  browse action exist, but no export, retention, or purge commands are present.
+
+Proposed next slices (not approved):
+
+### Proposed slice A — split order cancellation permission
+
+Goal/product value: prevent ordinary order-taking staff from voiding/cancelling
+orders unless the tenant explicitly grants that higher-risk permission. This is a
+small, high-value control before adding more order lifecycle operations.
+
+Modules/files likely touched:
+- Orders: `app/Modules/Orders/Contracts/OrderPermissions.php`,
+  `app/Livewire/Admin/OrderWorkspace.php`,
+  `resources/views/livewire/admin/order-workspace.blade.php`,
+  `tests/Feature/Orders/OrderWorkspaceTest.php`.
+- Identity/demo data: `database/seeders/IdentityDemoSeeder.php` and possibly
+  permission translation files if permission labels are surfaced.
+
+Boundaries: Orders may depend on Identity only through permission strings and
+existing authorization contracts/facades already used by adapters. No Orders
+code may import Identity infrastructure models.
+
+Tenancy/index requirements: no new tenant-owned tables expected. Tests must
+still prove cross-tenant/cross-branch order access remains 404 and that cancel
+controls are not rendered without the new permission.
+
+Tests to add/update:
+- User with `orders.take` but without the new cancel permission cannot see or
+  invoke cancellation.
+- User with the new cancel permission can cancel an open tenant/branch order.
+- Cross-tenant or cross-branch cancel attempts remain isolated.
+- Rendered-affordance contract continues to cover Livewire bindings.
+
+Risks:
+- Existing demo waiter workflows may lose cancel visibility by design.
+- If cancellation is currently expected by cashier/manager roles, role defaults
+  need an explicit owner decision before implementation.
+
+Estimated size: small, one coherent commit.
+
+### Proposed slice B — expose whole-order move in the workspace
+
+Goal/product value: allow staff to move an open dine-in order from one table to
+another when guests change seats, using the existing backend `MoveOrder` action
+instead of manual cancellation/reopen workarounds.
+
+Modules/files likely touched:
+- Orders: `app/Livewire/Admin/OrderWorkspace.php`,
+  `resources/views/livewire/admin/order-workspace.blade.php`,
+  `app/Modules/Orders/Application/MoveOrder.php`,
+  `tests/Feature/Orders/OrderWorkspaceTest.php`, concurrency tests if needed.
+- Tables contracts only if the workspace needs a branch-scoped target-table
+  list.
+- Translation files for `hy`, `ru`, and `en`.
+
+Boundaries: Orders must read target-table availability only through Tables
+Contracts/Application services already intended for board layout or table
+lookup; it must not query Tables infrastructure tables/models directly.
+
+Tenancy/index requirements: no schema expected. Reuse existing
+`tenant_id`/`branch_id` indexes and partial open-order uniqueness. Add tests for
+target table in another tenant/branch returning a safe domain error/404.
+
+Tests to add/update:
+- Moving an order to a free table updates the open order and board occupancy.
+- Moving to an occupied table fails without changing either order.
+- Moving to an inactive/out-of-branch/out-of-tenant table fails.
+- Rendered-affordance contract covers the new Livewire controls.
+- PostgreSQL concurrency check if the slice touches locking behavior.
+
+Risks:
+- UI can become too busy if target selection is not kept minimal.
+- Race conditions are possible if two users move into the same table
+  concurrently; rely on the existing partial unique index and add regression
+  tests around the failure path.
+
+Estimated size: medium, likely one to two commits depending on UI/test scope.
+
+### Proposed slice C — platform subscription/admin decision slice
+
+Goal/product value: close the platform-operation ambiguity before adding more
+subscription or billing features. Decide whether platform operators use a
+separate guard/UI, a tenant-scoped owner UI, or console-only operations for the
+rest of Phase 2.
+
+Modules/files likely touched:
+- Documentation: `docs/DECISIONS.md` and this worklog.
+- If approved for implementation later: `routes/web.php`, `config/auth.php`,
+  Tenancy subscription read models/controllers/views, and Identity platform
+  operator model/permissions if a separate guard is chosen.
+
+Boundaries: Platform subscription administration must not bypass tenant module
+rules accidentally. If a platform guard is added, tenant-owned data access needs
+explicit read models or contracts; no module should query another module's
+tables directly.
+
+Tenancy/index requirements: if implementation follows the decision, every
+tenant-owned table already touched must continue to use `tenant_id` indexes and
+tenant scopes. Platform-owned subscription tables need explicit comments/tests
+documenting why they are not `BelongsToTenant` scoped.
+
+Tests to add/update after approval:
+- Platform operator authorization/denial tests.
+- Tenant user denial tests for platform routes.
+- Subscription visibility and tenant isolation tests.
+- Scheduler/command tests remain green.
+
+Risks:
+- This can grow beyond a small slice if guard, UI, and subscription billing are
+  mixed. Keep the first step as a decision plus the smallest read-only surface,
+  or defer implementation entirely.
+
+Estimated size: decision-only small; implementation medium.
+
+Recommendation: take proposed slice A first. It is the smallest verified change,
+reduces a real operational/theft-risk gap, and tightens authorization before the
+workspace gains more high-impact actions such as whole-order move, close, and
+payment.
+
+Next immediate action: STOP for owner decision. Choose one proposed slice or
+provide another scope. Do not start implementation until explicit `go`.
+
+## 2026-08-03 Slice A execution plan: order cancel permission split
+
+Owner approved Slice A with explicit scope: do not include MoveOrder UI,
+close/payment, or platform admin work.
+
+Plan:
+- [x] Step A0: keep the prior PR #54 reconciliation/proposed-slices worklog
+  change isolated in its own commit before implementation.
+  Result: committed as `3abf9dd docs(worklog): reconcile PR #54 status and
+  propose next slices`; no code was included.
+- [x] Step A1: create `feature/orders-cancel-permission` from current `main`.
+  Result: branch created from `main` after `3abf9dd`.
+- [x] Step A2: add `orders.cancel` to the Orders public permission contract,
+  gate the workspace cancel UI and Livewire method with that permission, update
+  demo role defaults so waiter does not receive it, and audit the repository for
+  other cancel paths still gated by `orders.take`.
+  Result: implementation commit `e88edf1 feat(orders): split cancel permission`
+  added `OrderPermissions::CANCEL`, `OrderWorkspace::authorizeCancellingOrders`,
+  Blade `can_cancel` gating, and demo seeding for owner/manager only. Repository
+  search found no other UI/Livewire cancel gate still using `orders.take`.
+- [x] Step A3: add/adjust tests proving: `orders.take` alone hides the cancel
+  control; direct cancel invocation with only `orders.take` is forbidden; a user
+  with `orders.cancel` can cancel; and cross-tenant/cross-branch cancellation is
+  blocked even with `orders.cancel`.
+  Result: `OrderWorkspaceTest` now covers all four required cases; existing
+  rendered-affordance and query-count contracts were updated for the explicit
+  cancel permission check.
+- [x] Step A4: run required gates: `make pint`, `make stan`, `make test`,
+  `make tenant-isolation-pgsql`, `make orders-concurrency-pgsql`,
+  `make fresh`, and `make build` only if assets changed.
+  Result: `make pint` passed (`354 files`); `make stan` analysed `210/210` with
+  `[OK] No errors`; `make test` passed (`412 passed / 19 skipped / 3896
+  assertions`); `make tenant-isolation-pgsql` passed (`69 passed / 368
+  assertions`); `make orders-concurrency-pgsql` passed (`6 passed / 43
+  assertions`); `make fresh` passed with migrations and `DemoSeeder` complete.
+  `make build` was not run because no assets changed.
+- [x] Step A5: commit implementation, update this worklog with factual results
+  in a separate branch commit, push `feature/orders-cancel-permission`, and stop
+  without opening or merging a PR.
+  Result so far: implementation commit is complete; this worklog update is the
+  separate documentation commit. After pushing the branch, stop for owner review
+  without opening or merging a PR.
+
+Data migration note resolved by review fix: existing tenant roles store
+permissions in database rows. Adding `orders.cancel` to demo seeding affects
+fresh/local seeded tenants after `make fresh`, while existing databases needed a
+backfill. Owner review explicitly approved adding it in this branch. Commit
+`949c0f6 fix(orders): backfill cancel permission for managers` adds an
+idempotent data migration that creates `orders.cancel` per tenant and attaches
+it only to existing `owner` and `manager` roles. It does not grant `cashier` or
+`waiter`. Rollback is intentionally no-op because the migration cannot safely
+distinguish backfilled grants from intentional grants created later.
+
+Gotcha: the first intermediate `make test` run failed only because the new
+explicit cancel permission check changed exact query-count contracts. Counts
+were updated to the new stable values, and the required final `make test` run
+passed.
+
+Next immediate action after branch push: owner reviews
+`feature/orders-cancel-permission`; no PR has been opened by Codex and nothing
+has been merged.
+
+## 2026-08-03 Slice A review fixes
+
+Owner review requested evidence and one code change only: implement an
+idempotent backfill for existing databases, then rerun the required gates.
+
+Plan:
+- [x] Step R1: provide the full test diff evidence for
+  `git diff 3abf9dd..e88edf1 -- tests/` and identify whether old guarantees
+  were removed.
+  Result: evidence confirms several existing cancel tests previously proved a
+  user with only `orders.take` could cancel; those fixtures now use
+  `orders.cancel` by design, and new negative tests cover `orders.take` alone.
+- [x] Step R2: prove the added permission query is constant, not per line item.
+  Result: exact contracts changed from `7/7` to `8/8` in
+  `OrderWorkspaceTest`, and from `8/30/33` to `9/33/36` in
+  `OrderWorkspaceItemWritesTest`. A container probe rendered the same workspace
+  with `1`, `5`, and `20` order lines and produced `9`, `9`, and `9` render
+  queries.
+- [x] Step R3: add the backfill migration and regression test.
+  Result: commit `949c0f6 fix(orders): backfill cancel permission for managers`
+  adds `2026_08_03_000000_backfill_orders_cancel_permission.php` and
+  `OrdersCancelPermissionBackfillTest`. Running the migration twice creates one
+  permission row, grants owner/manager, and does not grant cashier/waiter.
+- [x] Step R4: rerun required gates after the review fix.
+  Result: `make pint` passed (`356 files`); `make stan` analysed `210/210` with
+  `[OK] No errors`; `make test` passed (`413 passed / 19 skipped / 3906
+  assertions`); `make tenant-isolation-pgsql` passed (`69 passed / 368
+  assertions`); `make orders-concurrency-pgsql` passed (`6 passed / 43
+  assertions`); `make fresh` passed and ran the new backfill migration.
+- [x] Step R5: commit this worklog update separately, push
+  `feature/orders-cancel-permission`, and stop without opening or merging a PR.
+  Result: this worklog update is the separate documentation commit for the
+  review-fix round. Branch push follows immediately after the commit; no PR is
+  opened and nothing is merged.
+
+Next immediate action: owner reviews `feature/orders-cancel-permission` after
+the review-fix push. Do not create a PR and do not merge.
+
+## 2026-08-03 Slice A pre-merge PostgreSQL verification
+
+Owner requested two pre-merge checks without adding new functionality:
+PostgreSQL backfill behavior under RLS and factual role-code stability.
+
+Result:
+- The initial manual PostgreSQL run reproduced a real bug. With clean
+  `smartrest_test_local` data containing multiple tenants and legacy roles
+  without `orders.cancel`, running the backfill as `smartrest_app_test`
+  (`NOBYPASSRLS`) failed on `permissions` because `permissions`, `roles`, and
+  `role_permissions` have forced tenant RLS and no tenant setting was active.
+- The migration was fixed to read all tenant ids from unscoped `tenants`, then
+  set `smartrest.tenant_id` to each tenant id before touching tenant-owned
+  permission/role tables, and finally restore the previous setting.
+- A PostgreSQL-only regression test was added to
+  `tests/Feature/Tenancy/TenantIsolationTest.php`, so it runs in
+  `make tenant-isolation-pgsql`. The test starts with an active tenant context,
+  runs the backfill twice, proves both legacy tenants get owner/manager grants,
+  and proves a tenant with only a custom `administrator` role gets no role grant.
+- Manual SQL verification after the fix showed `legacy-alpha` and `legacy-beta`
+  owner/manager have `orders.cancel`, while cashier/waiter and custom-only
+  administrator do not.
+- Role facts: `roles.code` is only unique per tenant, not enum-constrained.
+  Demo/new seeded tenants get stable role codes from
+  `IdentityDemoSeeder::rolePermissions()` (`owner`, `manager`, `cashier`,
+  `waiter`), but the schema allows tenant-specific arbitrary role codes/names.
+  A tenant without `owner` or `manager` role codes receives the permission row
+  but no role grant.
+
+Checks after the RLS bugfix:
+- `make pint`: passed (`356 files`).
+- `make stan`: passed (`210/210`, `[OK] No errors`).
+- `make test`: passed (`413 passed / 20 skipped / 3906 assertions`).
+- `make tenant-isolation-pgsql`: passed (`70 passed / 375 assertions`).
+- `make fresh`: passed, including
+  `2026_08_03_000000_backfill_orders_cancel_permission`.
+
+Next immediate action: owner reviews `feature/orders-cancel-permission` after
+the RLS bugfix push and decides whether to merge. Do not create a PR and do not
+merge.

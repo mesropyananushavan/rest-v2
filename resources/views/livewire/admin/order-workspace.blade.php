@@ -18,6 +18,7 @@ declare(strict_types=1);
  *     discount: string,
  *     total: string,
  *     can_mutate: bool,
+ *     can_cancel: bool,
  *     stale_unavailable: bool,
  *     line_count: int,
  *     cancel_confirmation_message: string,
@@ -49,7 +50,7 @@ declare(strict_types=1);
             <x-button :href="route('admin.orders.board')" variant="outline-secondary" size="sm">
                 {{ __('orders.workspace.back_to_board') }}
             </x-button>
-            @if ($order['can_mutate'])
+            @if ($order['can_cancel'])
                 <x-confirm-modal
                     id="cancel_order_{{ (int) $order['id'] }}"
                     livewire-method="cancelOrder"
