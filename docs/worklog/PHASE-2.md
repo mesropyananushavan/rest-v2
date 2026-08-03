@@ -1,7 +1,18 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.14 tenant translation override editing screen in progress
-Branch: phase-2-stage-1.14-tenant-translation-ui
+Last merged PR snapshot: PR #56 (`7b3bc40`, 2026-08-03 11:54 +0400) merged
+`feature/makefile-test-args` into `main`.
+
+Current status: `main` is reconciled through PR #56. This header intentionally
+does not name an active branch or permanent "in progress" state; current
+promises and owner decisions live only in the latest bottom `Next immediate
+action`.
+
+Stage numbering note: Stage 1.14 was used twice historically. The API
+foundation block is `Stage 1.14.1` through `Stage 1.14.4` below, and the tenant
+translation override editing-screen block is separately recorded as
+`Stage 1.14.1` through `Stage 1.14.8`. Do not infer active work from either
+historical numbering block.
 
 PR state: Codex may create and merge PRs after exact-head green CI; direct
 pushes to `main`, force-push, history rewriting, and branch deletion remain
