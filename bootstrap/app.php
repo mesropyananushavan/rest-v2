@@ -11,6 +11,7 @@ use App\Console\Commands\SuspendOverdueTenantSubscriptionsCommand;
 use App\Console\Commands\SuspendTenantCommand;
 use App\Http\Middleware\AttachLogContext;
 use App\Modules\Menu\Domain\MenuDomainException;
+use App\Modules\Payments\Domain\PaymentsDomainException;
 use App\Modules\Tables\Domain\TablesDomainException;
 use App\Modules\Tenancy\Http\Middleware\EnsureTenantIsServiceable;
 use App\Modules\Tenancy\Http\Middleware\ResolveBranch;
@@ -90,6 +91,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (TablesDomainException $exception, Request $request) {
             return back()
                 ->withErrors(['tables' => __($exception->errorCode())])
+                ->withInput();
+        });
+
+        $exceptions->render(function (PaymentsDomainException $exception, Request $request) {
+            return back()
+                ->withErrors(['payments' => __($exception->errorCode())])
                 ->withInput();
         });
 

@@ -8,6 +8,7 @@ use App\Modules\Identity\Infrastructure\Models\Permission;
 use App\Modules\Identity\Infrastructure\Models\Role;
 use App\Modules\Identity\Infrastructure\Models\User;
 use App\Modules\Identity\Infrastructure\Models\UserBranchAssignment;
+use App\Modules\Payments\Contracts\PaymentPermissions;
 use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Modules\Tenancy\Contracts\TenantResolver;
 use App\Support\Audit\AuditLogPermissions;
@@ -143,7 +144,8 @@ final class IdentityDemoSeeder extends Seeder
             'tables.tables.force_delete' => 'Permanently delete archived tables',
             'orders.take' => 'Take orders',
             'orders.cancel' => 'Cancel orders',
-            'payments.capture' => 'Capture payments',
+            PaymentPermissions::CAPTURE => 'Capture payments',
+            PaymentPermissions::MANAGE_CASHBOXES => 'Manage cashboxes',
         ];
     }
 
@@ -155,15 +157,15 @@ final class IdentityDemoSeeder extends Seeder
         return [
             'owner' => [
                 'is_management_role' => true,
-                'permissions' => ['tenancy.manage', AuditLogPermissions::VIEW, TenantTranslationOverridePermissions::MANAGE, 'identity.manage', 'menu.archive.view', 'menu.categories.manage', 'menu.categories.restore', 'menu.categories.force_delete', 'menu.items.manage', 'menu.items.restore', 'menu.items.force_delete', 'tables.halls.archive.view', 'tables.halls.manage', 'tables.halls.restore', 'tables.halls.force_delete', 'tables.tables.archive.view', 'tables.tables.manage', 'tables.tables.restore', 'tables.tables.force_delete', 'orders.take', 'orders.cancel', 'payments.capture'],
+                'permissions' => ['tenancy.manage', AuditLogPermissions::VIEW, TenantTranslationOverridePermissions::MANAGE, 'identity.manage', 'menu.archive.view', 'menu.categories.manage', 'menu.categories.restore', 'menu.categories.force_delete', 'menu.items.manage', 'menu.items.restore', 'menu.items.force_delete', 'tables.halls.archive.view', 'tables.halls.manage', 'tables.halls.restore', 'tables.halls.force_delete', 'tables.tables.archive.view', 'tables.tables.manage', 'tables.tables.restore', 'tables.tables.force_delete', 'orders.take', 'orders.cancel', PaymentPermissions::CAPTURE, PaymentPermissions::MANAGE_CASHBOXES],
             ],
             'manager' => [
                 'is_management_role' => true,
-                'permissions' => [TenantTranslationOverridePermissions::MANAGE, 'identity.manage', 'menu.archive.view', 'menu.categories.manage', 'menu.categories.restore', 'menu.items.manage', 'menu.items.restore', 'tables.halls.archive.view', 'tables.halls.manage', 'tables.halls.restore', 'tables.tables.archive.view', 'tables.tables.manage', 'tables.tables.restore', 'orders.take', 'orders.cancel', 'payments.capture'],
+                'permissions' => [TenantTranslationOverridePermissions::MANAGE, 'identity.manage', 'menu.archive.view', 'menu.categories.manage', 'menu.categories.restore', 'menu.items.manage', 'menu.items.restore', 'tables.halls.archive.view', 'tables.halls.manage', 'tables.halls.restore', 'tables.tables.archive.view', 'tables.tables.manage', 'tables.tables.restore', 'orders.take', 'orders.cancel', PaymentPermissions::CAPTURE, PaymentPermissions::MANAGE_CASHBOXES],
             ],
             'cashier' => [
                 'is_management_role' => false,
-                'permissions' => ['orders.take', 'payments.capture'],
+                'permissions' => ['orders.take', PaymentPermissions::CAPTURE],
             ],
             'waiter' => [
                 'is_management_role' => false,

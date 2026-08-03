@@ -14,6 +14,7 @@ use App\Modules\Orders\Infrastructure\Models\OrderItem;
 use App\Modules\Orders\Infrastructure\Models\OrderItemMove;
 use App\Modules\Orders\Infrastructure\Models\OrderMove;
 use App\Modules\Orders\Infrastructure\Models\OrderSubtable;
+use App\Modules\Payments\Infrastructure\Models\Cashbox;
 use App\Modules\Tables\Infrastructure\Models\Hall;
 use App\Modules\Tables\Infrastructure\Models\Table;
 use App\Modules\Tenancy\Contracts\BranchContext;
@@ -337,6 +338,61 @@ it('enforces PostgreSQL row level security for identity users by selected tenant
 
     expect(rawUserEmails())->toBe(['shared-user@smartrest.test'])
         ->and(rawUserIds())->toBe([(int) $tenantB['user']->id]);
+});
+
+it('enforces PostgreSQL row level security for cashbox select insert and update operations', function (): void {
+    if (! usesPostgresRowLevelSecurity()) {
+        $this->markTestSkipped('PostgreSQL RLS coverage runs only on pgsql.');
+    }
+
+    $tenantA = tenantWithUser('tenant-cashbox-a', 'cashbox-manager-a', ['payments.cashboxes.manage']);
+    $tenantB = tenantWithUser('tenant-cashbox-b', 'cashbox-manager-b', ['payments.cashboxes.manage']);
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+    $cashboxA = Cashbox::query()->create([
+        'branch_id' => (int) $tenantA['branch']->id,
+        'name' => 'Tenant A Register',
+        'is_active' => true,
+        'is_default' => true,
+    ]);
+
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+    $cashboxB = Cashbox::query()->create([
+        'branch_id' => (int) $tenantB['branch']->id,
+        'name' => 'Tenant B Register',
+        'is_active' => true,
+        'is_default' => true,
+    ]);
+
+    app(TenantResolver::class)->clear();
+
+    expect(rawCashboxIds())->toBe([]);
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+
+    expect(rawCashboxIds())->toBe([(int) $cashboxA->id])
+        ->and(DB::table('cashboxes')->where('id', (int) $cashboxA->id)->update(['name' => 'Tenant A Updated']))->toBe(1)
+        ->and(DB::table('cashboxes')->where('id', (int) $cashboxB->id)->update(['name' => 'Tenant B Leaked']))->toBe(0);
+
+    DB::statement('SAVEPOINT cashbox_rls_insert');
+
+    try {
+        DB::insert(
+            'insert into cashboxes (tenant_id, branch_id, name, is_active, is_default, created_at, updated_at) values (?, ?, ?, ?, ?, ?, ?)',
+            [(int) $tenantB['tenant']->id, (int) $tenantB['branch']->id, 'Forged Register', true, false, now(), now()],
+        );
+        $this->fail('Expected PostgreSQL RLS to reject the forged cashbox insert.');
+    } catch (QueryException) {
+        expect(true)->toBeTrue();
+    } finally {
+        DB::statement('ROLLBACK TO SAVEPOINT cashbox_rls_insert');
+        DB::statement('RELEASE SAVEPOINT cashbox_rls_insert');
+    }
+
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+
+    expect(rawCashboxIds())->toBe([(int) $cashboxB->id])
+        ->and(Cashbox::query()->findOrFail((int) $cashboxB->id)->name)->toBe('Tenant B Register');
 });
 
 it('keeps PostgreSQL tenant slug login query shape bounded with unrelated tenants', function (): void {
@@ -1130,6 +1186,16 @@ function rawHallIds(): array
 function rawTableIds(): array
 {
     return collect(DB::select('select id from tables order by id'))
+        ->map(fn (object $row): int => (int) $row->id)
+        ->all();
+}
+
+/**
+ * @return list<int>
+ */
+function rawCashboxIds(): array
+{
+    return collect(DB::select('select id from cashboxes order by id'))
         ->map(fn (object $row): int => (int) $row->id)
         ->all();
 }

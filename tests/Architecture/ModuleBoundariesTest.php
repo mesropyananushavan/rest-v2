@@ -13,11 +13,11 @@ it('contains only the current module directories', function (): void {
         ->values()
         ->all();
 
-    expect($modules)->toBe(['Identity', 'Menu', 'Orders', 'Tables', 'Tenancy']);
+    expect($modules)->toBe(['Identity', 'Menu', 'Orders', 'Payments', 'Tables', 'Tenancy']);
 });
 
-foreach (['Tenancy', 'Identity', 'Menu', 'Orders', 'Tables'] as $module) {
-    $otherModules = collect(['Tenancy', 'Identity', 'Menu', 'Orders', 'Tables'])
+foreach (['Tenancy', 'Identity', 'Menu', 'Orders', 'Payments', 'Tables'] as $module) {
+    $otherModules = collect(['Tenancy', 'Identity', 'Menu', 'Orders', 'Payments', 'Tables'])
         ->reject(fn (string $candidate): bool => $candidate === $module);
 
     $forbiddenNamespaces = $otherModules
@@ -45,4 +45,15 @@ it('keeps Orders dependency on Identity limited to contracts', function (): void
         ->and($ordersSources)->not->toContain('App\Modules\Identity\Application')
         ->and($ordersSources)->not->toContain('App\Modules\Identity\Infrastructure')
         ->and($ordersSources)->not->toContain('App\Modules\Identity\Http');
+});
+
+it('keeps Orders free of direct Payments infrastructure dependencies', function (): void {
+    $ordersSources = collect(File::allFiles(app_path('Modules/Orders')))
+        ->map(fn (SplFileInfo $file): string => $file->getContents())
+        ->implode("\n");
+
+    expect($ordersSources)->not->toContain('App\Modules\Payments\Infrastructure')
+        ->and($ordersSources)->not->toContain('App\Modules\Payments\Http')
+        ->and($ordersSources)->not->toContain('cashboxes')
+        ->and($ordersSources)->not->toContain('payments.cashboxes');
 });

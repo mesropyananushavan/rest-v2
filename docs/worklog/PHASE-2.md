@@ -6434,8 +6434,17 @@ Remaining non-blocking enhancement: whole-order move UI still has no workspace
 or board affordance; backend `MoveOrder` support remains unchanged and this is
 not required for the approved closure slice.
 
-Phase 3 status: not started. No Payments, Cashbox, Fiscal, Printing, order
-closing, provider, fiscal-device, or printer integration work was implemented.
+Phase 2 closure update: draft PR #59 was merged into `main` as true merge
+commit `085759f4c929e9f9ebf2fe551314996b58a95f0a`
+(`Merge pull request #59 from
+mesropyananushavan/feature/orders-subtable-invariants`). Phase 2 is formally
+closed at this merge. No Payments, Cashbox, Fiscal, Printing, order closing,
+provider, fiscal-device, or printer integration work was implemented during
+Phase 2.
 
-Next immediate action: owner reviews draft PR #59. Do not mark it ready, merge
-it, or start Phase 3 without explicit owner approval.
+Remaining optional non-blocking enhancement: whole-order move UI still has no
+workspace or board affordance; backend `MoveOrder` support remains unchanged
+and this is not required to open Phase 3.
+
+Next immediate action: Phase 3 starts in `docs/worklog/PHASE-3.md` with the
+approved Cashbox Configuration Foundation slice.

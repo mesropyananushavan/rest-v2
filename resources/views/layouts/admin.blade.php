@@ -63,6 +63,12 @@ $locale = $adminShell['locale'] ?? app()->getLocale();
                             <span>{{ __('admin.nav.orders_board') }}</span>
                         </a>
                     @endcan
+                    @can('payments.cashboxes.manage')
+                        <a href="{{ route('admin.payments.cashboxes.index') }}" class="flex items-center gap-3 rounded-sr-brand px-3 py-3 text-sm font-semibold no-underline transition {{ request()->routeIs('admin.payments.*') ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white' }}">
+                            <span class="h-2 w-2 rounded-full {{ request()->routeIs('admin.payments.*') ? 'bg-smartrest-success' : 'bg-current opacity-50' }}"></span>
+                            <span>{{ __('admin.nav.cashboxes') }}</span>
+                        </a>
+                    @endcan
                     @can('tenancy.translation_overrides.manage')
                         <a href="{{ route('admin.translation-overrides.index') }}" class="flex items-center gap-3 rounded-sr-brand px-3 py-3 text-sm font-semibold no-underline transition {{ request()->routeIs('admin.translation-overrides.*') ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white' }}">
                             <span class="h-2 w-2 rounded-full {{ request()->routeIs('admin.translation-overrides.*') ? 'bg-smartrest-success' : 'bg-current opacity-50' }}"></span>

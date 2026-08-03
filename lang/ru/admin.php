@@ -11,6 +11,7 @@ return [
         'dashboard' => 'Панель',
         'menu' => 'Меню',
         'orders_board' => 'План столов',
+        'cashboxes' => 'Кассы',
         'translation_overrides' => 'Переводы',
         'audit_logs' => 'Журнал аудита',
         'tables' => 'Залы и столы',
