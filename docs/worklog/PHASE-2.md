@@ -6405,7 +6405,7 @@ Plan:
   PostgreSQL concurrency coverage now proves two concurrent same-name creators
   normalize to exactly one success and one `orders.subtable_name_duplicate`
   domain failure.
-- [ ] Step OSI5: verification, commit, push, and draft PR. Run narrow relevant
+- [x] Step OSI5: verification, commit, push, and draft PR. Run narrow relevant
   tests first, then `make pint`, `make stan`, `make test`,
   `make tenant-isolation-pgsql`, `make orders-concurrency-pgsql`,
   `make runtime-role-pgsql`, and `make fresh`; review the full diff, commit
@@ -6421,7 +6421,14 @@ Plan:
   `make tenant-isolation-pgsql` (`70 passed / 376 assertions`),
   `make orders-concurrency-pgsql` (`7 passed / 47 assertions`),
   `make runtime-role-pgsql` (`4 passed / 65 assertions`), and `make fresh`.
-  Commit, push, and draft PR remain pending in this session.
+  `git diff --check` passed. Full diff review showed exactly 10 files scoped
+  to Orders action/component/tests/translations and this worklog, with no
+  schema migration, Phase 3, platform-operator identity, production credential,
+  template, or unrelated module changes. Implementation commit
+  `406c19e4b0c60870b3da1a8e2e1077eae534453c` was pushed to
+  `origin/feature/orders-subtable-invariants`, and draft PR #59 was opened at
+  <https://github.com/mesropyananushavan/rest-v2/pull/59>. The PR remains
+  draft and was not merged.
 
 Remaining non-blocking enhancement: whole-order move UI still has no workspace
 or board affordance; backend `MoveOrder` support remains unchanged and this is
@@ -6430,6 +6437,5 @@ not required for the approved closure slice.
 Phase 3 status: not started. No Payments, Cashbox, Fiscal, Printing, order
 closing, provider, fiscal-device, or printer integration work was implemented.
 
-Next immediate action: review the scoped diff, commit, push
-`feature/orders-subtable-invariants`, open a draft PR against `main`, and stop
-without marking it ready or merging.
+Next immediate action: owner reviews draft PR #59. Do not mark it ready, merge
+it, or start Phase 3 without explicit owner approval.
