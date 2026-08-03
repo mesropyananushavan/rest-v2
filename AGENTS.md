@@ -48,6 +48,34 @@
 - Seeders must be deterministic, cover two tenants, and refuse to run
   outside local/testing environments.
 
+## Data migrations
+- **Pre-production data policy:** SmartRest v2 is currently in pre-production:
+  there are no real client data sets, and local/test data is recreated through
+  `make fresh`.
+- **No future backfills yet:** until the first real tenant with data that must
+  not be recreated exists, do not write backfill/data migrations for permission,
+  dictionary/reference, or seed-data changes. Put the change in deterministic
+  seeders and recreate the database with `make fresh`.
+- **Cancellation trigger:** this no-backfill rule is cancelled as soon as the
+  first non-disposable tenant exists. From that point onward, any change that
+  would break existing data requires an explicit backfill/data migration.
+- **Owner responsibility:** the project owner is responsible for declaring when
+  the first non-disposable tenant exists and this rule is cancelled. Agents must
+  not infer or silently change that state.
+- **PostgreSQL RLS migration pattern:** independently of the temporary
+  no-backfill policy, any migration or script that touches tenant-owned tables
+  protected by `FORCE ROW LEVEL SECURITY` (`permissions`, `roles`,
+  `role_permissions`, `branches`, `users`, `user_branch_assignments`) must set
+  `smartrest.tenant_id` to the current tenant before accessing those tables and
+  restore the previous setting afterwards. Tenant ids are enumerated from
+  `tenants`, which does not have RLS enabled.
+- Reason for the RLS pattern: under a `NOBYPASSRLS` PostgreSQL role, writes
+  without the tenant setting fail with SQLSTATE `42501`
+  (`new row violates row-level security policy`). This was confirmed on
+  PostgreSQL.
+- Reference implementation:
+  `database/migrations/2026_08_03_000000_backfill_orders_cancel_permission.php`.
+
 ## Product Principles
 - **Simplicity is the competitive advantage:** frontend is never built for
   frontend's sake. Every screen must be as simple and convenient as possible
