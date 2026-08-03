@@ -99,14 +99,24 @@ jobs:
       - name: Prepare PostgreSQL App Role
         env:
           PGPASSWORD: smartrest
+          TARGET_DATABASE: smartrest_test
+          TARGET_RUNTIME_PASSWORD: smartrest_app
+          TARGET_RUNTIME_USERNAME: smartrest_app
         run: |
           psql -h 127.0.0.1 -U smartrest -d smartrest_test <<'SQL'
-          CREATE ROLE smartrest_app LOGIN PASSWORD 'smartrest_app';
-          ALTER ROLE smartrest_app NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
+          \getenv target_runtime_username TARGET_RUNTIME_USERNAME
+          \getenv target_runtime_password TARGET_RUNTIME_PASSWORD
+          \getenv target_database TARGET_DATABASE
+          SELECT format('CREATE ROLE %I LOGIN PASSWORD %L', :'target_runtime_username', :'target_runtime_password')
+          WHERE NOT EXISTS (
+              SELECT 1 FROM pg_roles WHERE rolname = :'target_runtime_username'
+          )
+          \gexec
+          ALTER ROLE :"target_runtime_username" NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS PASSWORD :'target_runtime_password';
           CREATE EXTENSION IF NOT EXISTS pg_trgm;
-          GRANT CONNECT ON DATABASE smartrest_test TO smartrest_app;
-          GRANT USAGE, CREATE ON SCHEMA public TO smartrest_app;
-          ALTER SCHEMA public OWNER TO smartrest_app;
+          GRANT CONNECT ON DATABASE :"target_database" TO :"target_runtime_username";
+          GRANT USAGE, CREATE ON SCHEMA public TO :"target_runtime_username";
+          ALTER SCHEMA public OWNER TO :"target_runtime_username";
           SQL
 
       - name: Install PHP Dependencies
@@ -168,14 +178,24 @@ jobs:
       - name: Prepare PostgreSQL App Role
         env:
           PGPASSWORD: smartrest
+          TARGET_DATABASE: smartrest_test
+          TARGET_RUNTIME_PASSWORD: smartrest_app
+          TARGET_RUNTIME_USERNAME: smartrest_app
         run: |
           psql -h 127.0.0.1 -U smartrest -d smartrest_test <<'SQL'
-          CREATE ROLE smartrest_app LOGIN PASSWORD 'smartrest_app';
-          ALTER ROLE smartrest_app NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
+          \getenv target_runtime_username TARGET_RUNTIME_USERNAME
+          \getenv target_runtime_password TARGET_RUNTIME_PASSWORD
+          \getenv target_database TARGET_DATABASE
+          SELECT format('CREATE ROLE %I LOGIN PASSWORD %L', :'target_runtime_username', :'target_runtime_password')
+          WHERE NOT EXISTS (
+              SELECT 1 FROM pg_roles WHERE rolname = :'target_runtime_username'
+          )
+          \gexec
+          ALTER ROLE :"target_runtime_username" NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS PASSWORD :'target_runtime_password';
           CREATE EXTENSION IF NOT EXISTS pg_trgm;
-          GRANT CONNECT ON DATABASE smartrest_test TO smartrest_app;
-          GRANT USAGE, CREATE ON SCHEMA public TO smartrest_app;
-          ALTER SCHEMA public OWNER TO smartrest_app;
+          GRANT CONNECT ON DATABASE :"target_database" TO :"target_runtime_username";
+          GRANT USAGE, CREATE ON SCHEMA public TO :"target_runtime_username";
+          ALTER SCHEMA public OWNER TO :"target_runtime_username";
           SQL
 
       - name: Install PHP Dependencies
@@ -183,3 +203,95 @@ jobs:
 
       - name: Orders Concurrency Pest On PostgreSQL
         run: vendor/bin/pest tests/Feature/Orders/OrderConcurrencyTest.php
+
+  runtime-role-pgsql:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: smartrest_runtime_test
+          POSTGRES_USER: smartrest
+          POSTGRES_PASSWORD: smartrest
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U smartrest -d smartrest_runtime_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      APP_MAINTENANCE_DRIVER: file
+      BCRYPT_ROUNDS: 4
+      BROADCAST_CONNECTION: null
+      CACHE_STORE: array
+      DB_CONNECTION: pgsql
+      DB_DATABASE: smartrest_runtime_test
+      DB_HOST: 127.0.0.1
+      DB_MIGRATION_PASSWORD: smartrest
+      DB_MIGRATION_USERNAME: smartrest
+      DB_PASSWORD: smartrest_app
+      DB_PORT: 5432
+      DB_URL: ""
+      DB_USERNAME: smartrest_app
+      MAIL_MAILER: array
+      NIGHTWATCH_ENABLED: false
+      PULSE_ENABLED: false
+      QUEUE_CONNECTION: database
+      SESSION_DRIVER: array
+      TELESCOPE_ENABLED: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, intl, pdo_pgsql, redis, zip, pcntl
+          coverage: none
+
+      - name: Install PHP Dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare Privileged Schema And Runtime Grants
+        env:
+          PGPASSWORD: smartrest
+          TARGET_DATABASE: smartrest_runtime_test
+          TARGET_RUNTIME_PASSWORD: smartrest_app
+          TARGET_RUNTIME_USERNAME: smartrest_app
+        run: |
+          psql -h 127.0.0.1 -U smartrest -d smartrest_runtime_test <<'SQL'
+          \getenv target_runtime_username TARGET_RUNTIME_USERNAME
+          \getenv target_runtime_password TARGET_RUNTIME_PASSWORD
+          \getenv target_database TARGET_DATABASE
+          \getenv migration_role DB_MIGRATION_USERNAME
+          SELECT format('CREATE ROLE %I LOGIN PASSWORD %L', :'target_runtime_username', :'target_runtime_password')
+          WHERE NOT EXISTS (
+              SELECT 1 FROM pg_roles WHERE rolname = :'target_runtime_username'
+          )
+          \gexec
+          ALTER ROLE :"target_runtime_username" NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS PASSWORD :'target_runtime_password';
+          CREATE EXTENSION IF NOT EXISTS pg_trgm;
+          GRANT CONNECT ON DATABASE :"target_database" TO :"target_runtime_username";
+          SQL
+          DB_USERNAME="$DB_MIGRATION_USERNAME" DB_PASSWORD="$DB_MIGRATION_PASSWORD" QUEUE_CONNECTION=sync php artisan migrate:fresh --seed --force
+          psql -h 127.0.0.1 -U smartrest -d smartrest_runtime_test <<'SQL'
+          \getenv target_runtime_username TARGET_RUNTIME_USERNAME
+          \getenv migration_role DB_MIGRATION_USERNAME
+          GRANT USAGE ON SCHEMA public TO :"target_runtime_username";
+          GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO :"target_runtime_username";
+          GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO :"target_runtime_username";
+          ALTER DEFAULT PRIVILEGES FOR ROLE :"migration_role" IN SCHEMA public
+              GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO :"target_runtime_username";
+          ALTER DEFAULT PRIVILEGES FOR ROLE :"migration_role" IN SCHEMA public
+              GRANT USAGE, SELECT ON SEQUENCES TO :"target_runtime_username";
+          SQL
+
+      - name: Runtime Role Pest On PostgreSQL
+        run: vendor/bin/pest tests/Feature/PostgreSQL/RuntimeDatabaseRoleTest.php

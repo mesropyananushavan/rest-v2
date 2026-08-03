@@ -9,12 +9,37 @@ data that cannot be recreated with `make fresh`.
   Description: application runtime containers must stop using the privileged
   `smartrest` database role and must use a dedicated runtime role with no
   `SUPERUSER` and no `BYPASSRLS`.
+  Local/CI status: implemented for local Docker and CI verification. Local
+  `php-fpm`, queue worker, scheduler, and ordinary Artisan commands use
+  `smartrest_app`; `make up` creates/updates the runtime role and refreshes
+  current-object grants before application containers start; `make fresh` runs
+  migrations/seeding with privileged local credentials and then grants runtime
+  access. Future migration-created tables and sequences are covered locally/CI
+  by default privileges for the actual migration object-creating role.
+  `DB_DATABASE` is the canonical local database variable for both Make and
+  Docker Compose; local role-sensitive Make targets guard themselves before
+  their first database, Docker, grant, migration, seeding, or runtime-start
+  command if Laravel config cache exists so stale cached credentials cannot
+  select a different role.
+  `make runtime-role-pgsql` proves the runtime role is not superuser, not
+  `BYPASSRLS`, not inherited into a privileged role, not schema/table owner,
+  cannot run DDL, remains RLS-isolated, receives expected future-object DML and
+  sequence usage, and can still perform representative runtime reads and
+  writes including deterministic scheduler database access.
+  Remaining production owner action: provision equivalent production
+  privileged/runtime roles and credentials outside the repository, configure
+  production runtime processes to use the restricted role, build production
+  config cache with runtime credentials only, restart php-fpm/workers/scheduler
+  after credential or config-cache changes, run the same verification against a
+  non-production clone or staging-equivalent local environment, and confirm no
+  production runtime process uses the privileged role.
   Reason: PostgreSQL RLS tenant isolation is not an effective runtime boundary
   while application traffic uses a role that bypasses row-level security.
-  Sources: `.env.example:24-29`, `docker-compose.yml:13-19`,
+  Sources: `.env.example:24-33`, `docker-compose.yml:13-19`,
   `docker-compose.yml:70-77`, `docker-compose.yml:91-98`,
   `config/database.php:89-96`,
-  `docs/DECISIONS.md#2026-07-22-runtime-database-role-must-not-bypass-rls`.
+  `docs/DECISIONS.md#2026-07-22-runtime-database-role-must-not-bypass-rls`,
+  `docs/DECISIONS.md#2026-08-03-runtime-postgresql-access-uses-a-non-owner-nobypassrls-role`.
 
 - [ ] Cancel the pre-production "no data backfills" rule.
   Description: from the first non-disposable tenant onward, permission,

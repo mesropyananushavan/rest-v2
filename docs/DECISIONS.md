@@ -1113,3 +1113,78 @@ protecting client data.
 Owner responsibility: the project owner declares when the first
 non-disposable tenant exists. Agents must not infer that state.
 Go-live gate: see `docs/GO-LIVE-CHECKLIST.md`.
+
+## 2026-08-03 — Runtime PostgreSQL access uses a non-owner NOBYPASSRLS role
+Decision: local development and CI split PostgreSQL responsibilities into a
+privileged migration/provisioning role and a restricted application runtime
+role. The privileged role (`smartrest` in local/CI) creates databases,
+extensions, schema objects, runs migrations and seeders, and grants runtime
+access. The runtime role (`smartrest_app` locally and in CI) is used by HTTP,
+Livewire, queue workers, scheduler, and ordinary Artisan commands. It must be
+`NOSUPERUSER`, `NOCREATEDB`, `NOCREATEROLE`, `NOBYPASSRLS`, must not own the
+schema or protected tenant tables, and must not receive schema `CREATE`.
+
+Runtime grants are intentionally DML-focused: schema usage, table
+`SELECT/INSERT/UPDATE/DELETE`, and sequence usage/select. Ownership, superuser,
+`BYPASSRLS`, role inheritance, and broad DDL privileges remain outside runtime.
+`make up` creates/updates the local runtime role and refreshes current-object
+table/sequence grants before application containers start, without running
+migrations implicitly. `make fresh` uses privileged credentials for
+`migrate:fresh --seed`, then explicitly grants runtime privileges. Future
+schema objects created by the migration/provisioning role receive runtime DML
+and sequence usage through `ALTER DEFAULT PRIVILEGES FOR ROLE <migration role>`;
+default privileges must target the actual PostgreSQL role that creates future
+migration objects.
+
+Credential precedence is intentionally explicit. `DB_DATABASE` is the canonical
+local database name across Make, Docker Compose, Laravel runtime, migrations,
+and grants. `DB_NAME` is only a compatibility alias when `DB_DATABASE` is
+omitted; conflicting values fail instead of granting one database and starting
+runtime containers on another. Make targets and Docker Compose use
+`DB_MIGRATION_USERNAME`, `DB_MIGRATION_PASSWORD`, `DB_RUNTIME_USERNAME`, and
+`DB_RUNTIME_PASSWORD`, with precedence of `make VARIABLE=value`, then exported
+environment values, then project `.env`, then repository local-development
+defaults. The Make-managed `.env` reader is deliberately limited to a safe,
+non-executing subset for local database variables: optional leading/trailing
+whitespace, optional `export`, unquoted values without whitespace, quotes,
+backticks, backslashes, or `#`, and single-quoted literal values without
+embedded single quotes. Unsupported syntax fails fast rather than risking Make
+and Docker Compose interpreting credentials differently. Docker Compose maps
+`DB_RUNTIME_*` into Laravel's `DB_USERNAME`/`DB_PASSWORD` for runtime
+containers. PostgreSQL runtime-role verification uses a dedicated fresh test
+database prepared by the privileged role before running smoke tests as the
+restricted role.
+
+Role-sensitive local Make targets fail fast when `bootstrap/cache/config.php`
+exists and guard themselves before their first database, Docker, grant,
+migration, seeding, or runtime-start command instead of rebuilding a shared
+config cache alternately with privileged and runtime credentials. Local
+recovery is to run `make config-clear`, then rerun the role-sensitive target.
+Production config cache must be built only with runtime credentials, and
+php-fpm, queue workers, and scheduler processes must be restarted after
+credential or config-cache changes. Local role bootstrap and grant scripts pass
+passwords through process environment into stdin-fed `psql` sessions and rely
+on PostgreSQL/psql identifier and literal quoting; passwords are not embedded
+in Make recipe command strings.
+
+Reason: PostgreSQL RLS is only a meaningful tenant-isolation boundary when
+runtime traffic cannot bypass policies through superuser, table ownership, or
+`BYPASSRLS`. Creating PostgreSQL roles inside tenant migrations would mix
+cluster-level bootstrap with application schema changes and would be brittle for
+repeatability, CI, and ownership. Keeping bootstrap in local/CI orchestration
+makes the role shape explicit and testable.
+
+Rejected: letting application runtime fall back to the privileged role when
+runtime credentials are missing, because that silently disables the isolation
+boundary; granting schema ownership or `CREATE` to runtime so tests can run
+`RefreshDatabase`, because that proves the wrong role shape; creating roles in
+tenant migrations, because PostgreSQL role lifecycle is cluster/bootstrap
+concern rather than tenant-owned schema concern.
+
+Production note: this decision proves the local/CI pattern. Before onboarding
+the first non-disposable tenant, the owner must provision equivalent production
+roles and credentials outside the repository, build production config cache with
+runtime credentials only, restart long-running workers/scheduler after
+credential or config-cache changes, and verify production runtime processes use
+the restricted role. This repository does not create or rotate production
+credentials.
