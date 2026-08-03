@@ -50,7 +50,7 @@ pgsql:
 	$(COMPOSE) exec -T postgres psql -U smartrest -d smartrest $(ARGS)
 
 test:
-	$(APP_TEST) vendor/bin/pest
+	$(APP_TEST) vendor/bin/pest $(ARGS)
 
 tenant-isolation-pgsql: prepare-pgsql-test-db
 	$(APP_TEST_PGSQL) vendor/bin/pest tests/Feature/Tenancy
