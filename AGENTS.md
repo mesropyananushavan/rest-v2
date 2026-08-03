@@ -62,6 +62,8 @@
 - **Owner responsibility:** the project owner is responsible for declaring when
   the first non-disposable tenant exists and this rule is cancelled. Agents must
   not infer or silently change that state.
+- Go-live gate: see `docs/GO-LIVE-CHECKLIST.md` before onboarding the first
+  non-disposable tenant.
 - **PostgreSQL RLS migration pattern:** independently of the temporary
   no-backfill policy, any migration or script that touches tenant-owned tables
   protected by `FORCE ROW LEVEL SECURITY` (`permissions`, `roles`,
@@ -75,6 +77,7 @@
   PostgreSQL.
 - Reference implementation:
   `database/migrations/2026_08_03_000000_backfill_orders_cancel_permission.php`.
+- Go-live gate for RLS/runtime-role readiness: see `docs/GO-LIVE-CHECKLIST.md`.
 
 ## Product Principles
 - **Simplicity is the competitive advantage:** frontend is never built for

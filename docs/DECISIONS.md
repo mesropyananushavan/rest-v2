@@ -249,6 +249,7 @@ Operational note: `smartrest_app` was mentioned earlier in the Phase 1 worklog,
 but current migrations and configuration do not create or use it. Current
 `docker-compose.yml`, `.env.example`, and `config/database.php` point
 application runtime traffic at `smartrest`.
+Go-live gate: see `docs/GO-LIVE-CHECKLIST.md`.
 
 ## 2026-07-23 — Branch header policy requires assignment authorization
 Decision: branch resolution ignores `X-Branch-ID` in production. Outside
@@ -1111,3 +1112,4 @@ protecting client data.
 
 Owner responsibility: the project owner declares when the first
 non-disposable tenant exists. Agents must not infer that state.
+Go-live gate: see `docs/GO-LIVE-CHECKLIST.md`.
