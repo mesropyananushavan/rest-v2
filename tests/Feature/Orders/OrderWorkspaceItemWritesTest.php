@@ -118,7 +118,7 @@ it('changes quantities and removes a line only through the confirmed remove acti
 });
 
 it('keeps the workspace mutation boundary limited to item add quantity remove subtable creation move waiter assignment and cancel controls', function (): void {
-    $record = orderWorkspaceWritesUser('tenant-a', 'waiter-a', ['orders.take']);
+    $record = orderWorkspaceWritesUser('tenant-a', 'manager-a', ['orders.take', 'orders.cancel']);
 
     app()->setLocale('en');
     orderWorkspaceWritesActingIn($record, 0, 'workspace-writes-boundary');
@@ -774,7 +774,7 @@ it('preserves menu picker state after successful and failed subtable and move mu
 });
 
 it('keeps new workspace Livewire expressions rendered encoded and only scoped lifecycle affordances present', function (): void {
-    $record = orderWorkspaceWritesUser('tenant-boundary-moves', 'waiter-boundary-moves', ['orders.take']);
+    $record = orderWorkspaceWritesUser('tenant-boundary-moves', 'manager-boundary-moves', ['orders.take', 'orders.cancel']);
 
     app()->setLocale('en');
     orderWorkspaceWritesActingIn($record, 0, 'workspace-boundary-moves');
@@ -822,9 +822,9 @@ it('keeps workspace render and new mutation query counts stable as lines and sub
     expect($largeLines)->toBe($small)
         ->and($largeSubtables)->toBe($small)
         ->and($small)->toBe([
-            'render' => 8,
-            'create_subtable' => 30,
-            'move_item' => 33,
+            'render' => 9,
+            'create_subtable' => 33,
+            'move_item' => 36,
         ]);
 });
 

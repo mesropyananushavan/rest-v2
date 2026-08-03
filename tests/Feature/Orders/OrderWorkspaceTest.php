@@ -12,6 +12,7 @@ use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use App\Modules\Orders\Application\FindOrderWorkspace;
 use App\Modules\Orders\Application\OrderWorkspace;
+use App\Modules\Orders\Contracts\OrderPermissions;
 use App\Modules\Orders\Infrastructure\Models\Order;
 use App\Modules\Orders\Infrastructure\Models\OrderItem;
 use App\Modules\Orders\Infrastructure\Models\OrderSubtable;
@@ -136,8 +137,40 @@ it('links occupied board tiles to the workspace while preserving free table moda
         ->assertSet('openModalVisible', true);
 });
 
+it('hides cancel controls from users that can only take orders', function (): void {
+    $record = orderWorkspaceUser('tenant-a', 'waiter-a', [OrderPermissions::TAKE]);
+
+    app()->setLocale('en');
+    orderWorkspaceActingIn($record, 0, 'orders-workspace-cancel-hidden');
+    $order = orderWorkspaceDineInOrder(orderWorkspaceTable($record, 0, 'Hidden Cancel Table'), $record['user']);
+    orderWorkspaceItem($order, ['hy' => 'Ապուր', 'ru' => 'Суп', 'en' => 'Soup'], 1, 1000, 0, 1000);
+
+    $component = Livewire::actingAs($record['user'])
+        ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $order->id])
+        ->assertSee(__('orders.workspace.heading', ['id' => (int) $order->id]), false)
+        ->assertDontSee(__('orders.workspace.actions.cancel_order'), false)
+        ->assertDontSee(__('orders.workspace.confirm.cancel_order_message_with_lines', ['count' => 1]), false)
+        ->assertDontSee('cancelOrder', false);
+
+    assertRenderedLivewireBindingsResolve($component->html(), OrderWorkspaceComponent::class);
+});
+
+it('forbids direct cancel calls from users that can only take orders', function (): void {
+    $record = orderWorkspaceUser('tenant-a', 'waiter-a', [OrderPermissions::TAKE]);
+
+    orderWorkspaceActingIn($record, 0, 'orders-workspace-cancel-direct-denied');
+    $order = orderWorkspaceDineInOrder(orderWorkspaceTable($record, 0, 'Direct Denied Cancel Table'), $record['user']);
+
+    Livewire::actingAs($record['user'])
+        ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $order->id])
+        ->call('cancelOrder')
+        ->assertStatus(403);
+
+    expect((string) $order->refresh()->status)->toBe('open');
+});
+
 it('cancels an open workspace order redirects to the board with flash and frees the table', function (): void {
-    $record = orderWorkspaceUser('tenant-a', 'waiter-a', ['orders.take']);
+    $record = orderWorkspaceUser('tenant-a', 'manager-a', [OrderPermissions::TAKE, OrderPermissions::CANCEL]);
 
     app()->setLocale('en');
     orderWorkspaceActingIn($record, 0, 'orders-workspace-cancel-success');
@@ -182,7 +215,7 @@ it('cancels an open workspace order redirects to the board with flash and frees 
 });
 
 it('renders cancel confirmation consequence and line count in every locale', function (string $locale): void {
-    $record = orderWorkspaceUser("tenant-{$locale}", "waiter-{$locale}", ['orders.take']);
+    $record = orderWorkspaceUser("tenant-{$locale}", "manager-{$locale}", [OrderPermissions::TAKE, OrderPermissions::CANCEL]);
 
     app()->setLocale($locale);
     orderWorkspaceActingIn($record, 0, "orders-workspace-cancel-copy-{$locale}");
@@ -202,8 +235,8 @@ it('renders cancel confirmation consequence and line count in every locale', fun
 })->with(['hy', 'ru', 'en']);
 
 it('returns translated errors for stale and out of scope cancel attempts without changing data', function (): void {
-    $tenantA = orderWorkspaceUser('tenant-a', 'waiter-a', ['orders.take'], branchCount: 2);
-    $tenantB = orderWorkspaceUser('tenant-b', 'waiter-b', ['orders.take']);
+    $tenantA = orderWorkspaceUser('tenant-a', 'manager-a', [OrderPermissions::TAKE, OrderPermissions::CANCEL], branchCount: 2);
+    $tenantB = orderWorkspaceUser('tenant-b', 'manager-b', [OrderPermissions::TAKE, OrderPermissions::CANCEL]);
 
     app()->setLocale('en');
     orderWorkspaceActingIn($tenantA, 0, 'orders-workspace-cancel-scope-a');
@@ -248,7 +281,7 @@ it('returns translated errors for stale and out of scope cancel attempts without
 });
 
 it('keeps mounted cancel safe after the order is closed or cancelled elsewhere', function (string $status): void {
-    $record = orderWorkspaceUser('tenant-a', 'waiter-a', ['orders.take']);
+    $record = orderWorkspaceUser('tenant-a', 'manager-a', [OrderPermissions::TAKE, OrderPermissions::CANCEL]);
 
     app()->setLocale('en');
     orderWorkspaceActingIn($record, 0, "orders-workspace-cancel-stale-{$status}");
@@ -276,7 +309,7 @@ it('keeps mounted cancel safe after the order is closed or cancelled elsewhere',
 })->with(['closed', 'cancelled']);
 
 it('maps the branch context cancel domain error to a translated message', function (): void {
-    $record = orderWorkspaceUser('tenant-a', 'waiter-a', ['orders.take']);
+    $record = orderWorkspaceUser('tenant-a', 'manager-a', [OrderPermissions::TAKE, OrderPermissions::CANCEL]);
 
     app()->setLocale('en');
     orderWorkspaceActingIn($record, 0, 'orders-workspace-cancel-branch-context');
@@ -374,8 +407,8 @@ it('keeps cancel-visible workspace render query count stable as line count grows
     $small = orderWorkspaceCancelRenderQueryCount(1, 'small');
     $large = orderWorkspaceCancelRenderQueryCount(8, 'large');
 
-    expect($small)->toBe(7)
-        ->and($large)->toBe(7);
+    expect($small)->toBe(8)
+        ->and($large)->toBe(8);
 });
 
 it('keeps order translation key sets identical and reuses the cancelled flash key', function (): void {
@@ -923,7 +956,7 @@ function orderWorkspaceTranslations(string $text): array
 
 function orderWorkspaceCancelRenderQueryCount(int $lineCount, string $label): int
 {
-    $record = orderWorkspaceUser("tenant-cancel-query-{$label}", "waiter-cancel-query-{$label}", ['orders.take']);
+    $record = orderWorkspaceUser("tenant-cancel-query-{$label}", "manager-cancel-query-{$label}", [OrderPermissions::TAKE, OrderPermissions::CANCEL]);
 
     orderWorkspaceActingIn($record, 0, "orders-workspace-cancel-query-{$label}");
     $order = orderWorkspaceDineInOrder(orderWorkspaceTable($record, 0, "Cancel Query {$label}"), $record['user']);
