@@ -228,6 +228,34 @@ it('normalizes concurrent open-order occupancy to exactly one success and one do
         ->and(Order::query()->where('table_id', (int) $record['tables'][0]->id)->where('status', 'open')->count())->toBe(1);
 });
 
+it('normalizes concurrent duplicate subtable creation to exactly one success and one domain failure', function (): void {
+    $record = ordersConcurrencyFixture();
+    ordersConcurrencyActingIn($record);
+    $order = app(OpenOrder::class)((int) $record['tables'][0]->id);
+    $prefix = ordersConcurrencyPrefix('subtable-duplicate');
+    $startFile = "{$prefix}.start";
+
+    $workerA = ordersConcurrencyStartWorker(ordersConcurrencyPayload($record, $startFile, [
+        'mode' => 'add_subtable',
+        'order_id' => (int) $order->id,
+        'name' => ' Guest A ',
+    ]));
+    $workerB = ordersConcurrencyStartWorker(ordersConcurrencyPayload($record, $startFile, [
+        'mode' => 'add_subtable',
+        'order_id' => (int) $order->id,
+        'name' => 'guest a',
+    ]));
+
+    touch($startFile);
+
+    $results = [ordersConcurrencyWaitFor($workerA), ordersConcurrencyWaitFor($workerB)];
+
+    expect(ordersConcurrencyCountSuccesses($results))->toBe(1)
+        ->and(ordersConcurrencyCountDomainCode($results, 'orders.subtable_name_duplicate'))->toBe(1)
+        ->and(OrderSubtable::query()->where('order_id', (int) $order->id)->where('status', 'open')->count())->toBe(1)
+        ->and(mb_strtolower(trim((string) OrderSubtable::query()->where('order_id', (int) $order->id)->value('name'))))->toBe('guest a');
+});
+
 it('normalizes concurrent whole-order moves to the same target table to exactly one success and one domain failure', function (): void {
     $record = ordersConcurrencyFixture(tableCount: 3);
     ordersConcurrencyActingIn($record);

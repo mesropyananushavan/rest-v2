@@ -12,7 +12,9 @@ use App\Modules\Menu\Application\CreateMenuItem;
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use App\Modules\Orders\Application\AddItem;
+use App\Modules\Orders\Application\AddSubtable;
 use App\Modules\Orders\Application\MoveItem;
+use App\Modules\Orders\Domain\OrdersDomainException;
 use App\Modules\Orders\Infrastructure\Models\Order;
 use App\Modules\Orders\Infrastructure\Models\OrderItem;
 use App\Modules\Orders\Infrastructure\Models\OrderSubtable;
@@ -466,7 +468,7 @@ it('keeps add item query count stable as order lines and picked menu items grow'
         ->and($tenPickedItemQueries)->toBeLessThanOrEqual(45);
 });
 
-it('creates subtables through the workspace and validates names before calling the action', function (): void {
+it('creates subtables through the workspace and renders validation messages', function (): void {
     $record = orderWorkspaceWritesUser('tenant-subtables', 'waiter-subtables', ['orders.take']);
 
     app()->setLocale('en');
@@ -479,15 +481,19 @@ it('creates subtables through the workspace and validates names before calling t
         ->set('newSubtableName', '')
         ->call('createSubtable')
         ->assertSet('errorMessage', __('orders.workspace.validation.subtable_name_required'))
+        ->assertSee(__('orders.workspace.validation.subtable_name_required'), false)
         ->set('newSubtableName', '   ')
         ->call('createSubtable')
         ->assertSet('errorMessage', __('orders.workspace.validation.subtable_name_required'))
+        ->assertSee(__('orders.workspace.validation.subtable_name_required'), false)
         ->set('newSubtableName', str_repeat('A', 61))
         ->call('createSubtable')
         ->assertSet('errorMessage', __('orders.workspace.validation.subtable_name_max', ['max' => 60]))
+        ->assertSee(__('orders.workspace.validation.subtable_name_max', ['max' => 60]), false)
         ->set('newSubtableName', ' guest a ')
         ->call('createSubtable')
         ->assertSet('errorMessage', __('orders.workspace.validation.subtable_name_duplicate'))
+        ->assertSee(__('orders.workspace.validation.subtable_name_duplicate'), false)
         ->set('newSubtableName', ' Guest B ')
         ->call('createSubtable')
         ->assertSet('statusMessage', __('orders.flash.subtable_added'))
@@ -497,6 +503,57 @@ it('creates subtables through the workspace and validates names before calling t
     expect(OrderSubtable::query()->where('order_id', (int) $order->id)->pluck('name')->all())
         ->toBe(['Guest A', 'Guest B'])
         ->and(substr_count($component->html(), 'Guest B'))->toBeGreaterThanOrEqual(2);
+});
+
+it('maps application subtable validation domain errors in the workspace', function (): void {
+    $record = orderWorkspaceWritesUser('tenant-subtable-domain-errors', 'waiter-subtable-domain-errors', ['orders.take']);
+
+    app()->setLocale('en');
+    orderWorkspaceWritesActingIn($record, 0, 'workspace-subtable-domain-errors');
+    $order = orderWorkspaceWritesOrder($record, 0);
+
+    foreach ([
+        'required' => [
+            fn (): OrdersDomainException => OrdersDomainException::subtableNameRequired(),
+            __('orders.workspace.validation.subtable_name_required'),
+        ],
+        'too long' => [
+            fn (): OrdersDomainException => OrdersDomainException::subtableNameTooLong(),
+            __('orders.workspace.validation.subtable_name_max', ['max' => 60]),
+        ],
+        'duplicate' => [
+            fn (): OrdersDomainException => OrdersDomainException::subtableNameDuplicate(),
+            __('orders.workspace.validation.subtable_name_duplicate'),
+        ],
+    ] as $case => [$exceptionFactory, $message]) {
+        app()->instance(AddSubtable::class, new class($exceptionFactory)
+        {
+            /**
+             * @param  Closure(): OrdersDomainException  $exceptionFactory
+             */
+            public function __construct(
+                private readonly Closure $exceptionFactory,
+            ) {}
+
+            public function __invoke(int $orderId, string $name): never
+            {
+                throw ($this->exceptionFactory)();
+            }
+        });
+
+        try {
+            Livewire::actingAs($record['user'])
+                ->test(OrderWorkspaceComponent::class, ['orderId' => (int) $order->id])
+                ->set('newSubtableName', 'Valid Guest')
+                ->call('createSubtable')
+                ->assertSet('errorMessage', $message)
+                ->assertSee($message, false);
+        } finally {
+            app()->forgetInstance(AddSubtable::class);
+        }
+
+        expect(OrderSubtable::query()->where('order_id', (int) $order->id)->count(), $case)->toBe(0);
+    }
 });
 
 it('moves a line from without subtable to a subtable and between subtables while excluding the current target', function (): void {
@@ -823,7 +880,7 @@ it('keeps workspace render and new mutation query counts stable as lines and sub
         ->and($largeSubtables)->toBe($small)
         ->and($small)->toBe([
             'render' => 9,
-            'create_subtable' => 33,
+            'create_subtable' => 30,
             'move_item' => 36,
         ]);
 });

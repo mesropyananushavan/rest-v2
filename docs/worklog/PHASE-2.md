@@ -6324,3 +6324,112 @@ performed.
 Next immediate action: owner reviews the local-only diff on
 `feature/identity-managing-role-marker`. If approved, the next session can
 commit, push, and open a review PR for this branch.
+
+Superseded by 2026-08-03 repository reconciliation: PR #58 was merged into
+`main` as `eb55e7a7965f8f96252ee3d153b004b0bea1e53a`. The stale local-only
+MRM review instruction above is historical and must not be resumed.
+
+## 2026-08-03 Slice: Orders subtable Application invariants
+
+Owner approved the bounded Phase 2 closure slice on
+`feature/orders-subtable-invariants`.
+
+Scope:
+- Move subtable name invariants from `OrderWorkspace` into the
+  `AddSubtable` Application action.
+- Keep Livewire only as a thin UX adapter around the authoritative action.
+- Preserve tenant/branch isolation, order locking, audit behavior, and existing
+  workspace mutation flow.
+- Add direct Application-action and Livewire coverage for trim, empty, length,
+  duplicate, branch/order scoping, failed-attempt side effects, and domain error
+  mapping.
+
+Non-goals:
+- No Phase 3 Payments/Cashbox/Fiscal/Printing work.
+- No whole-order move UI.
+- No platform-operator identity work.
+- No production database credential changes.
+- No schema migration unless implementation proves the existing lock boundary
+  is insufficient.
+
+Plan:
+- [x] Step OSI1: precondition verification and worklog plan. Re-read required
+  docs, fetch `origin`, verify clean `main` equals `origin/main`, verify no
+  unexpected open PRs, confirm Livewire owns current subtable validation while
+  `AddSubtable` does not, create the feature branch from exact `origin/main`,
+  and record this plan before code.
+  Result: required docs were re-read, `origin` fetched, working tree was clean
+  on `main...origin/main`, both heads were
+  `eb55e7a7965f8f96252ee3d153b004b0bea1e53a`, open PR list was empty, and the
+  precondition was confirmed: Livewire enforced required/max-length/duplicate
+  subtable validation while `AddSubtable` only trimmed and created. Branch
+  `feature/orders-subtable-invariants` was created from exact `origin/main`,
+  and this plan was written before code.
+- [x] Step OSI2: Application invariant enforcement. Make `AddSubtable` trim
+  names, reject empty names, reject names longer than 60 characters, reject
+  case-insensitive duplicate open-subtable names in the same locked order and
+  branch, preserve audit-on-success only, and return stable
+  `OrdersDomainException` codes for callers.
+  Result: `AddSubtable` now trims input, rejects empty names with
+  `orders.subtable_name_required`, rejects over-60-character names with
+  `orders.subtable_name_too_long`, and rejects duplicate open-subtable names
+  with `orders.subtable_name_duplicate` after locking the parent order inside
+  the existing transaction. Duplicate comparison stays PHP-side, case
+  insensitive, whitespace-normalized, and scoped to the same order, branch, and
+  open status. Successful creates still write `orders.subtable.added` audit
+  rows; failed attempts do not.
+- [x] Step OSI3: Livewire adapter and translation mapping. Remove direct
+  `OrderSubtable` duplicate enforcement from the component, keep only useful
+  immediate field validation if it does not become authoritative business
+  logic, and map the new domain error codes to existing translated workspace
+  validation messages in `hy`, `ru`, and `en`.
+  Result: `OrderWorkspace` no longer queries `OrderSubtable` for duplicate
+  enforcement. It keeps required/max-length prechecks only for immediate field
+  feedback, calls `AddSubtable` as the authoritative writer, and maps the new
+  stable domain codes to the existing workspace validation messages. Matching
+  top-level domain translations were added for `hy`, `ru`, and `en`.
+- [x] Step OSI4: focused tests and concurrency assessment. Add direct
+  Application-action tests for trim/empty/length/duplicates/order/branch/audit
+  behavior; update Livewire tests for rendered messages, valid creation, domain
+  error mapping, and no workspace mutation regression; assess concurrent
+  duplicate creation against the existing order lock architecture.
+  Result: direct action tests now prove whitespace trimming, empty rejection,
+  over-60 rejection, case-insensitive duplicate rejection, surrounding-
+  whitespace duplicate rejection, same-name allowance in another order, same-
+  name allowance in another branch, closed-subtable names not blocking new open
+  subtables, no subtable/audit side effects on failed attempts, and valid audit
+  creation. Livewire tests prove rendered validation messages, valid creation,
+  and domain-code mapping. Concurrency decision: no schema migration or
+  PostgreSQL-specific unique expression was added because the existing parent
+  order row lock is the correct serialization boundary for same-order subtables.
+  PostgreSQL concurrency coverage now proves two concurrent same-name creators
+  normalize to exactly one success and one `orders.subtable_name_duplicate`
+  domain failure.
+- [ ] Step OSI5: verification, commit, push, and draft PR. Run narrow relevant
+  tests first, then `make pint`, `make stan`, `make test`,
+  `make tenant-isolation-pgsql`, `make orders-concurrency-pgsql`,
+  `make runtime-role-pgsql`, and `make fresh`; review the full diff, commit
+  scoped paths only, push the branch, open a draft PR against `main`, and stop
+  without marking it ready or merging.
+  Result so far: focused `make test ARGS='tests/Feature/Orders/OrderActionsTest.php tests/Feature/Orders/OrderWorkspaceItemWritesTest.php'`
+  passed (`37 passed / 414 assertions`) after updating the query-count
+  baseline from `33` to `30` because the component no longer performs a
+  duplicate-read precheck. `make orders-concurrency-pgsql` passed (`7 passed /
+  47 assertions`). Full required gates passed: `make pint` (`359 files`, one
+  style issue fixed), `make stan` (`210/210`, no errors), `make test`
+  (`420 passed / 25 skipped / 3953 assertions`),
+  `make tenant-isolation-pgsql` (`70 passed / 376 assertions`),
+  `make orders-concurrency-pgsql` (`7 passed / 47 assertions`),
+  `make runtime-role-pgsql` (`4 passed / 65 assertions`), and `make fresh`.
+  Commit, push, and draft PR remain pending in this session.
+
+Remaining non-blocking enhancement: whole-order move UI still has no workspace
+or board affordance; backend `MoveOrder` support remains unchanged and this is
+not required for the approved closure slice.
+
+Phase 3 status: not started. No Payments, Cashbox, Fiscal, Printing, order
+closing, provider, fiscal-device, or printer integration work was implemented.
+
+Next immediate action: review the scoped diff, commit, push
+`feature/orders-subtable-invariants`, open a draft PR against `main`, and stop
+without marking it ready or merging.

@@ -25,7 +25,6 @@ use App\Modules\Orders\Application\RemoveItem;
 use App\Modules\Orders\Contracts\OrderPermissions;
 use App\Modules\Orders\Domain\OrdersDomainException;
 use App\Modules\Orders\Infrastructure\Models\OrderItem;
-use App\Modules\Orders\Infrastructure\Models\OrderSubtable;
 use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Support\I18n\LocalizedText;
 use App\Support\Money\Money;
@@ -256,18 +255,6 @@ final class OrderWorkspace extends Component
         $name = $this->validatedSubtableName();
 
         if ($name === null) {
-            return;
-        }
-
-        $workspace = $this->openWorkspaceForMutation();
-
-        if (! $workspace instanceof OrderWorkspaceData) {
-            return;
-        }
-
-        if ($this->subtableNameExists($workspace, $name)) {
-            $this->errorMessage = __('orders.workspace.validation.subtable_name_duplicate');
-
             return;
         }
 
@@ -792,35 +779,6 @@ final class OrderWorkspace extends Component
         return $name;
     }
 
-    private function openWorkspaceForMutation(): ?OrderWorkspaceData
-    {
-        try {
-            return app(FindOrderWorkspace::class)($this->orderId);
-        } catch (OrdersDomainException $exception) {
-            $this->errorMessage = $this->domainErrorMessage($exception);
-
-            return null;
-        } catch (ModelNotFoundException) {
-            $this->errorMessage = __('orders.order_not_open');
-
-            return null;
-        }
-    }
-
-    private function subtableNameExists(OrderWorkspaceData $workspace, string $name): bool
-    {
-        $normalizedName = mb_strtolower($name);
-
-        return OrderSubtable::query()
-            ->where('branch_id', $this->branchId())
-            ->where('order_id', $workspace->id)
-            ->where('status', 'open')
-            ->get(['name'])
-            ->contains(
-                fn (OrderSubtable $subtable): bool => mb_strtolower(trim((string) $subtable->name)) === $normalizedName,
-            );
-    }
-
     private function selectedMoveTargetSubtableId(int $orderItemId): ?int
     {
         if (! array_key_exists($orderItemId, $this->moveTargetSubtableIds)) {
@@ -911,6 +869,20 @@ final class OrderWorkspace extends Component
     private function domainErrorMessage(OrdersDomainException $exception): string
     {
         $code = $exception->errorCode();
+
+        if ($code === 'orders.subtable_name_required') {
+            return __('orders.workspace.validation.subtable_name_required');
+        }
+
+        if ($code === 'orders.subtable_name_too_long') {
+            return __('orders.workspace.validation.subtable_name_max', [
+                'max' => self::SUBTABLE_NAME_MAX_LENGTH,
+            ]);
+        }
+
+        if ($code === 'orders.subtable_name_duplicate') {
+            return __('orders.workspace.validation.subtable_name_duplicate');
+        }
 
         if (Lang::has($code)) {
             return __($code);
