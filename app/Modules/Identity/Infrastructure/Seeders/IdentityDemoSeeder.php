@@ -91,7 +91,7 @@ final class IdentityDemoSeeder extends Seeder
     {
         $roles = [];
 
-        foreach ($this->rolePermissions() as $roleCode => $permissionCodes) {
+        foreach ($this->roleDefaults() as $roleCode => $roleConfig) {
             $role = Role::query()->updateOrCreate(
                 [
                     'tenant_id' => $tenantId,
@@ -99,13 +99,14 @@ final class IdentityDemoSeeder extends Seeder
                 ],
                 [
                     'name' => ucfirst($roleCode),
+                    'is_management_role' => $roleConfig['is_management_role'],
                 ],
             );
 
             $roles[$roleCode] = $role;
 
             $role->permissions()->syncWithPivotValues(
-                collect($permissionCodes)
+                collect($roleConfig['permissions'])
                     ->map(fn (string $code): int => (int) $permissions[$code]->id)
                     ->all(),
                 ['tenant_id' => $tenantId],
@@ -147,15 +148,27 @@ final class IdentityDemoSeeder extends Seeder
     }
 
     /**
-     * @return array<string, list<string>>
+     * @return array<string, array{is_management_role: bool, permissions: list<string>}>
      */
-    private function rolePermissions(): array
+    private function roleDefaults(): array
     {
         return [
-            'owner' => ['tenancy.manage', AuditLogPermissions::VIEW, TenantTranslationOverridePermissions::MANAGE, 'identity.manage', 'menu.archive.view', 'menu.categories.manage', 'menu.categories.restore', 'menu.categories.force_delete', 'menu.items.manage', 'menu.items.restore', 'menu.items.force_delete', 'tables.halls.archive.view', 'tables.halls.manage', 'tables.halls.restore', 'tables.halls.force_delete', 'tables.tables.archive.view', 'tables.tables.manage', 'tables.tables.restore', 'tables.tables.force_delete', 'orders.take', 'orders.cancel', 'payments.capture'],
-            'manager' => [TenantTranslationOverridePermissions::MANAGE, 'identity.manage', 'menu.archive.view', 'menu.categories.manage', 'menu.categories.restore', 'menu.items.manage', 'menu.items.restore', 'tables.halls.archive.view', 'tables.halls.manage', 'tables.halls.restore', 'tables.tables.archive.view', 'tables.tables.manage', 'tables.tables.restore', 'orders.take', 'orders.cancel', 'payments.capture'],
-            'cashier' => ['orders.take', 'payments.capture'],
-            'waiter' => ['orders.take'],
+            'owner' => [
+                'is_management_role' => true,
+                'permissions' => ['tenancy.manage', AuditLogPermissions::VIEW, TenantTranslationOverridePermissions::MANAGE, 'identity.manage', 'menu.archive.view', 'menu.categories.manage', 'menu.categories.restore', 'menu.categories.force_delete', 'menu.items.manage', 'menu.items.restore', 'menu.items.force_delete', 'tables.halls.archive.view', 'tables.halls.manage', 'tables.halls.restore', 'tables.halls.force_delete', 'tables.tables.archive.view', 'tables.tables.manage', 'tables.tables.restore', 'tables.tables.force_delete', 'orders.take', 'orders.cancel', 'payments.capture'],
+            ],
+            'manager' => [
+                'is_management_role' => true,
+                'permissions' => [TenantTranslationOverridePermissions::MANAGE, 'identity.manage', 'menu.archive.view', 'menu.categories.manage', 'menu.categories.restore', 'menu.items.manage', 'menu.items.restore', 'tables.halls.archive.view', 'tables.halls.manage', 'tables.halls.restore', 'tables.tables.archive.view', 'tables.tables.manage', 'tables.tables.restore', 'orders.take', 'orders.cancel', 'payments.capture'],
+            ],
+            'cashier' => [
+                'is_management_role' => false,
+                'permissions' => ['orders.take', 'payments.capture'],
+            ],
+            'waiter' => [
+                'is_management_role' => false,
+                'permissions' => ['orders.take'],
+            ],
         ];
     }
 

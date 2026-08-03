@@ -43,6 +43,7 @@ return new class extends Migration
             $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
             $table->string('code');
             $table->string('name');
+            $table->boolean('is_management_role')->default(false);
             $table->timestamps();
 
             $table->unique(['tenant_id', 'code']);

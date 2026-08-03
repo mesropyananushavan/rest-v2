@@ -11,11 +11,6 @@ return new class extends Migration
 
     private const string PERMISSION_NAME = 'Cancel orders';
 
-    /**
-     * @var list<string>
-     */
-    private const array MANAGING_ROLE_CODES = ['owner', 'manager'];
-
     public function up(): void
     {
         $now = now();
@@ -43,7 +38,7 @@ return new class extends Migration
 
                 $roleIds = DB::table('roles')
                     ->where('tenant_id', $tenantId)
-                    ->whereIn('code', self::MANAGING_ROLE_CODES)
+                    ->where('is_management_role', true)
                     ->pluck('id');
 
                 foreach ($roleIds as $roleId) {
