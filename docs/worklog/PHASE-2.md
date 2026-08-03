@@ -5627,6 +5627,224 @@ Plan:
   reported runs for `quality`, `tenant-isolation-pgsql`, and
   `orders-concurrency-pgsql`.
 
-Next immediate action: final audit PR #54. Confirm the worklog-only CI update
-commit is pushed, wait for exact-head GitHub Actions on that final head, and
-report READY FOR FINAL AUDIT if green. Leave PR #54 draft and do not merge.
+Superseded by 2026-08-03 reconciliation: this final action was stale. PR #54 is
+no longer draft/unmerged; it was merged into `main` as
+`b9c1f9b46c6916467293d3132b6b2832f8486a66` on 2026-07-31, with implementation
+commit `c9463a4` and worklog verification commit `d07a3fc`. This correction is
+limited to the erroneous PR state; the preceding F1 implementation history is
+left intact.
+
+## 2026-08-03 reconciliation: PR #54 merged and Phase 2 factual state
+
+Reason for entry: the previous "Next immediate action" still said to leave PR
+#54 draft/unmerged, but the repository is already on clean `main` with PR #54
+merged. This entry records the current facts and replaces the stale next action.
+
+Git facts:
+- Current branch/status: `main...origin/main`, clean working tree.
+- Merge commit: `b9c1f9b Merge pull request #54 from
+  mesropyananushavan/feature/orders-open-redirect-workspace`.
+- Merge parents: `ca7862616630e27474239a7b45cb58c909ee9a22` and
+  `d07a3fca40517975acc4675bd013f3e94463e270`.
+- PR implementation commit: `c9463a4 Redirect opened orders to workspace`.
+- Files changed by the merge: `app/Livewire/Admin/OrderBoard.php`,
+  `tests/Feature/Orders/OrderBoardTest.php`, and this worklog.
+
+Code verification for PR #54:
+- `routes/web.php` defines `admin.orders.board` and
+  `admin.orders.workspace` under tenant/branch/auth/active-tenant middleware.
+- `app/Livewire/Admin/OrderBoard.php` calls `OpenOrder`, resets the modal, and
+  redirects successful opens to `admin.orders.workspace` with the returned order
+  id. The occupied-table DTO also exposes `workspace_url` for existing open
+  orders.
+- `resources/views/livewire/admin/order-board.blade.php` renders occupied
+  tables as workspace links and free tables as `selectTable(...)` buttons.
+- `app/Modules/Orders/Http/Controllers/OrderWorkspaceController.php` returns
+  the workspace view, and `resources/views/modules/orders/workspace.blade.php`
+  mounts `livewire:admin.order-workspace`.
+- `tests/Feature/Orders/OrderBoardTest.php` covers opening a free table and
+  redirecting to the exact returned order workspace, while proving the redirect
+  is not to another branch or another tenant order. The same file covers
+  occupied-table race, invalid guest count, missing table, inactive table, and
+  out-of-branch table no-redirect paths.
+- `tests/Feature/Orders/OrderWorkspaceTest.php` covers occupied board tiles
+  linking to the workspace while free tiles still open the modal.
+
+Verification run:
+- Command attempted: `make test ARGS="tests/Feature/Orders/OrderBoardTest.php
+  tests/Feature/Orders/OrderWorkspaceTest.php"`.
+- Makefile behavior: the target did not forward `ARGS`; it ran the full SQLite
+  Pest suite instead of only the two requested files.
+- Result: `410 passed`, `19 skipped`, `3889 assertions`.
+- Working tree remained clean after the run.
+
+Current factual Phase 2 state confirmed from code:
+- Tenancy: tenant/branch request context, active-tenant gate, subscription
+  schema/read model, manual subscription payment command, auto-suspension
+  scheduler, and tenant-scoped login are present.
+- Identity: tenant users, roles, permissions, branch assignments, and demo role
+  permission seeding are present. Feature availability/deviation evaluation and
+  a separate platform-operator guard/UI are not present.
+- Menu: admin CRUD, archive policy, tenant isolation, public menu catalog
+  contract, sellable lookup, and session-authenticated menu-items API index are
+  present. API write endpoints and a dedicated `PriceResolver` contract are not
+  present.
+- Audit: append-only audit log recording and admin report routes are present.
+  Export, retention, and purge tooling are not present.
+- Halls/Tables: admin halls/tables CRUD, archive policy, deterministic seed
+  data, branch-scoped board layout, and table metadata used by the board are
+  present. Rich floor-plan geometry and table-type/commission/preparation-place
+  catalogs are not present.
+- Orders: dine-in/tableless open flows, one-open-order-per-table protection,
+  order items, item quantity/remove/move actions, waiter assignment, cancel,
+  table board, order workspace, and workspace redirect after open are present.
+  Close/payment/cashbox/fiscal/print flows are not present. Whole-order move has
+  an Application action but no UI affordance yet.
+- Tenant subscriptions: platform-owned subscription status storage, due/grace
+  logic, manual payment recording command, audit logging, and scheduled overdue
+  suspension are present. Billing amounts/invoices, platform admin UI, and
+  platform guard decisions are not present.
+
+Confirmed gaps / tails:
+- Orders cancellation uses only `orders.take`: `app/Livewire/Admin/OrderWorkspace.php`
+  gates `cancelOrder()` through `authorizeTakingOrders()`, and
+  `app/Modules/Orders/Contracts/OrderPermissions.php` only declares
+  `orders.take`. `database/seeders/IdentityDemoSeeder.php` grants that permission
+  to the waiter role, so waiter-level users can reach cancellation today.
+- Whole-order move is backend-only: `app/Modules/Orders/Application/MoveOrder.php`
+  exists, but the workspace and board views do not expose a move-order control.
+- Close/payment/fiscal lifecycle is absent from Orders: order statuses include
+  `open`, `closed`, and `cancelled` in
+  `database/migrations/2026_07_25_000000_create_orders_table.php`, but no
+  `CloseOrder` action or Orders payment/cashbox/fiscal/print integration exists.
+- Platform-operator surface is absent: `config/auth.php` only defines the `web`
+  guard and `routes/web.php` has no platform admin routes.
+- Feature availability/deviation logic is absent: Identity authorization checks
+  tenant active state and role permissions, but no feature availability or
+  tenant deviation mechanism exists in `app/Modules/Identity` or database
+  migrations.
+- Runtime PostgreSQL role separation remains incomplete: app config still uses
+  `DB_USERNAME=smartrest` from `.env.example` / `docker-compose.yml`, while the
+  app/test DB roles exist mainly in Makefile/CI workflows.
+- Audit reporting has no export/retention tooling: audit report routes and
+  browse action exist, but no export, retention, or purge commands are present.
+
+Proposed next slices (not approved):
+
+### Proposed slice A — split order cancellation permission
+
+Goal/product value: prevent ordinary order-taking staff from voiding/cancelling
+orders unless the tenant explicitly grants that higher-risk permission. This is a
+small, high-value control before adding more order lifecycle operations.
+
+Modules/files likely touched:
+- Orders: `app/Modules/Orders/Contracts/OrderPermissions.php`,
+  `app/Livewire/Admin/OrderWorkspace.php`,
+  `resources/views/livewire/admin/order-workspace.blade.php`,
+  `tests/Feature/Orders/OrderWorkspaceTest.php`.
+- Identity/demo data: `database/seeders/IdentityDemoSeeder.php` and possibly
+  permission translation files if permission labels are surfaced.
+
+Boundaries: Orders may depend on Identity only through permission strings and
+existing authorization contracts/facades already used by adapters. No Orders
+code may import Identity infrastructure models.
+
+Tenancy/index requirements: no new tenant-owned tables expected. Tests must
+still prove cross-tenant/cross-branch order access remains 404 and that cancel
+controls are not rendered without the new permission.
+
+Tests to add/update:
+- User with `orders.take` but without the new cancel permission cannot see or
+  invoke cancellation.
+- User with the new cancel permission can cancel an open tenant/branch order.
+- Cross-tenant or cross-branch cancel attempts remain isolated.
+- Rendered-affordance contract continues to cover Livewire bindings.
+
+Risks:
+- Existing demo waiter workflows may lose cancel visibility by design.
+- If cancellation is currently expected by cashier/manager roles, role defaults
+  need an explicit owner decision before implementation.
+
+Estimated size: small, one coherent commit.
+
+### Proposed slice B — expose whole-order move in the workspace
+
+Goal/product value: allow staff to move an open dine-in order from one table to
+another when guests change seats, using the existing backend `MoveOrder` action
+instead of manual cancellation/reopen workarounds.
+
+Modules/files likely touched:
+- Orders: `app/Livewire/Admin/OrderWorkspace.php`,
+  `resources/views/livewire/admin/order-workspace.blade.php`,
+  `app/Modules/Orders/Application/MoveOrder.php`,
+  `tests/Feature/Orders/OrderWorkspaceTest.php`, concurrency tests if needed.
+- Tables contracts only if the workspace needs a branch-scoped target-table
+  list.
+- Translation files for `hy`, `ru`, and `en`.
+
+Boundaries: Orders must read target-table availability only through Tables
+Contracts/Application services already intended for board layout or table
+lookup; it must not query Tables infrastructure tables/models directly.
+
+Tenancy/index requirements: no schema expected. Reuse existing
+`tenant_id`/`branch_id` indexes and partial open-order uniqueness. Add tests for
+target table in another tenant/branch returning a safe domain error/404.
+
+Tests to add/update:
+- Moving an order to a free table updates the open order and board occupancy.
+- Moving to an occupied table fails without changing either order.
+- Moving to an inactive/out-of-branch/out-of-tenant table fails.
+- Rendered-affordance contract covers the new Livewire controls.
+- PostgreSQL concurrency check if the slice touches locking behavior.
+
+Risks:
+- UI can become too busy if target selection is not kept minimal.
+- Race conditions are possible if two users move into the same table
+  concurrently; rely on the existing partial unique index and add regression
+  tests around the failure path.
+
+Estimated size: medium, likely one to two commits depending on UI/test scope.
+
+### Proposed slice C — platform subscription/admin decision slice
+
+Goal/product value: close the platform-operation ambiguity before adding more
+subscription or billing features. Decide whether platform operators use a
+separate guard/UI, a tenant-scoped owner UI, or console-only operations for the
+rest of Phase 2.
+
+Modules/files likely touched:
+- Documentation: `docs/DECISIONS.md` and this worklog.
+- If approved for implementation later: `routes/web.php`, `config/auth.php`,
+  Tenancy subscription read models/controllers/views, and Identity platform
+  operator model/permissions if a separate guard is chosen.
+
+Boundaries: Platform subscription administration must not bypass tenant module
+rules accidentally. If a platform guard is added, tenant-owned data access needs
+explicit read models or contracts; no module should query another module's
+tables directly.
+
+Tenancy/index requirements: if implementation follows the decision, every
+tenant-owned table already touched must continue to use `tenant_id` indexes and
+tenant scopes. Platform-owned subscription tables need explicit comments/tests
+documenting why they are not `BelongsToTenant` scoped.
+
+Tests to add/update after approval:
+- Platform operator authorization/denial tests.
+- Tenant user denial tests for platform routes.
+- Subscription visibility and tenant isolation tests.
+- Scheduler/command tests remain green.
+
+Risks:
+- This can grow beyond a small slice if guard, UI, and subscription billing are
+  mixed. Keep the first step as a decision plus the smallest read-only surface,
+  or defer implementation entirely.
+
+Estimated size: decision-only small; implementation medium.
+
+Recommendation: take proposed slice A first. It is the smallest verified change,
+reduces a real operational/theft-risk gap, and tightens authorization before the
+workspace gains more high-impact actions such as whole-order move, close, and
+payment.
+
+Next immediate action: STOP for owner decision. Choose one proposed slice or
+provide another scope. Do not start implementation until explicit `go`.
