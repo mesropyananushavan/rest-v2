@@ -5989,3 +5989,38 @@ Checks after the RLS bugfix:
 Next immediate action: owner reviews `feature/orders-cancel-permission` after
 the RLS bugfix push and decides whether to merge. Do not create a PR and do not
 merge.
+
+## 2026-08-03 Slice: Makefile test ARGS passthrough
+
+Owner requested a narrow Makefile-only behavior fix plus this separate worklog
+commit. Branch: `feature/makefile-test-args`.
+
+Plan:
+- [x] Step M1: update only the `test` Makefile target so
+  `make test ARGS="..."` forwards arguments to Pest while `make test` without
+  `ARGS` still runs the full suite.
+  Result: commit `ec4ceff fix(makefile): pass args to pest test target`
+  changed `test` from `vendor/bin/pest` to `vendor/bin/pest $(ARGS)`.
+- [x] Step M2: audit `pgsql`, `tenant-isolation-pgsql`, and
+  `orders-concurrency-pgsql` for the same ARGS behavior and record the result.
+  Result: `pgsql` already accepts `ARGS` correctly because it appends
+  `$(ARGS)` to `psql`; `tenant-isolation-pgsql` does not accept `ARGS` and is
+  intentionally fixed to `tests/Feature/Tenancy`; `orders-concurrency-pgsql`
+  does not accept `ARGS` and is intentionally fixed to
+  `tests/Feature/Orders/OrderConcurrencyTest.php`.
+- [x] Step M3: prove focused file, multiple files, `--filter`, and full-suite
+  runs through make targets; commit the Makefile change separately.
+  Result: `make test ARGS="tests/Feature/Orders/OrderWorkspaceTest.php"` ran
+  `vendor/bin/pest tests/Feature/Orders/OrderWorkspaceTest.php` and passed
+  `22` tests / `152` assertions; multi-file ARGS for `OrderWorkspaceTest.php`
+  plus `OrderBoardTest.php` passed `33` tests / `241` assertions; filter ARGS
+  `tests/Feature/Orders/OrderWorkspaceTest.php --filter='hides cancel controls'`
+  passed `1` test / `5` assertions; `make test` without ARGS still ran the full
+  suite and passed `413` tests with `20` skipped / `3906` assertions.
+- [x] Step M4: update this worklog with factual results and commit it
+  separately. Push `feature/makefile-test-args`; do not create a PR.
+  Result: this worklog update is the separate documentation commit for the
+  slice. Push follows after commit; no PR is opened.
+
+Next immediate action: owner reviews `feature/makefile-test-args`; no PR has
+been opened by Codex.
