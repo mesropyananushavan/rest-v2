@@ -1,6 +1,12 @@
 COMPOSE := docker compose
-APP := $(COMPOSE) run --rm php-fpm
-APP_NO_DEPS := $(COMPOSE) run --rm --no-deps php-fpm
+LOCAL_DB_ENV := sh scripts/local-db-env.sh
+CONFIG_CACHE_PATH ?= bootstrap/cache/config.php
+CONFIG_GUARD := CONFIG_CACHE_PATH='$(CONFIG_CACHE_PATH)' sh scripts/ensure-config-uncached.sh
+RUN_DB_ROLE := $(LOCAL_DB_ENV) sh scripts/docker-compose-run-db-role.sh
+PG_ROLE := $(LOCAL_DB_ENV) sh scripts/postgres/runtime-role-privileges.sh
+APP := $(LOCAL_DB_ENV) $(COMPOSE) run --rm php-fpm
+APP_NO_DEPS := $(LOCAL_DB_ENV) $(COMPOSE) run --rm --no-deps php-fpm
+APP_MIGRATION := $(RUN_DB_ROLE) migration
 APP_TEST := $(COMPOSE) run --rm --no-deps \
 	-e APP_ENV=testing \
 	-e CACHE_STORE=array \
@@ -10,63 +16,88 @@ APP_TEST := $(COMPOSE) run --rm --no-deps \
 	-e QUEUE_CONNECTION=sync \
 	-e SESSION_DRIVER=array \
 	php-fpm
-PGSQL_TEST_DB := smartrest_test_local
-PGSQL_TEST_USER := smartrest_app_test
-PGSQL_TEST_PASSWORD := smartrest_app_test
-APP_TEST_PGSQL := $(COMPOSE) run --rm --no-deps \
-	-e APP_ENV=testing \
-	-e CACHE_STORE=array \
-	-e DB_CONNECTION=pgsql \
-	-e DB_HOST=postgres \
-	-e DB_PORT=5432 \
-	-e DB_DATABASE=$(PGSQL_TEST_DB) \
-	-e DB_USERNAME=$(PGSQL_TEST_USER) \
-	-e DB_PASSWORD=$(PGSQL_TEST_PASSWORD) \
-	-e DB_URL= \
-	-e QUEUE_CONNECTION=sync \
-	-e SESSION_DRIVER=array \
-	php-fpm
+APP_TEST_PGSQL := $(RUN_DB_ROLE) tenant-test
+APP_TEST_PGSQL_RUNTIME := $(RUN_DB_ROLE) runtime-test
+APP_TEST_PGSQL_MIGRATION := $(RUN_DB_ROLE) runtime-test-migration
 NODE := docker run --rm -u $$(id -u):$$(id -g) -v "$$(pwd)":/app -w /app node:24-alpine
 
-.PHONY: up down restart shell artisan pgsql test tenant-isolation-pgsql orders-concurrency-pgsql prepare-pgsql-test-db stan pint fresh build smoke-menu-context tools logs logs-queue
+.PHONY: up down restart shell artisan pgsql pgsql-runtime test tenant-isolation-pgsql orders-concurrency-pgsql runtime-role-pgsql prepare-pgsql-test-db prepare-runtime-pgsql-test-db provision-runtime-db-role grant-runtime-db-privileges wait-postgres ensure-config-uncached config-clear stan pint fresh build smoke-menu-context tools logs logs-queue
 
 up:
-	$(COMPOSE) up -d --build
+	@$(CONFIG_GUARD)
+	@$(MAKE) grant-runtime-db-privileges
+	$(LOCAL_DB_ENV) $(COMPOSE) up -d --build
 
 down:
 	$(COMPOSE) down
 
 restart:
+	@$(CONFIG_GUARD)
 	$(COMPOSE) down
-	$(COMPOSE) up -d --build
+	$(MAKE) up
 
 shell:
+	@$(CONFIG_GUARD)
 	$(APP) bash
 
 artisan:
+	@$(CONFIG_GUARD)
 	$(APP) php artisan $(ARGS)
 
 pgsql:
-	$(COMPOSE) exec -T postgres psql -U smartrest -d smartrest $(ARGS)
+	@$(LOCAL_DB_ENV) sh -c 'docker compose exec -T postgres psql -U "$$DB_MIGRATION_USERNAME" -d "$$DB_DATABASE" "$$@"' sh $(ARGS)
+
+pgsql-runtime:
+	@$(CONFIG_GUARD)
+	$(APP) php artisan db:show --connection=pgsql
 
 test:
+	@$(CONFIG_GUARD)
 	$(APP_TEST) vendor/bin/pest $(ARGS)
 
-tenant-isolation-pgsql: prepare-pgsql-test-db
-	$(APP_TEST_PGSQL) vendor/bin/pest tests/Feature/Tenancy
+tenant-isolation-pgsql:
+	@$(CONFIG_GUARD)
+	@$(MAKE) prepare-pgsql-test-db
+	@$(APP_TEST_PGSQL) vendor/bin/pest tests/Feature/Tenancy
 
-orders-concurrency-pgsql: prepare-pgsql-test-db
-	$(APP_TEST_PGSQL) vendor/bin/pest tests/Feature/Orders/OrderConcurrencyTest.php
+orders-concurrency-pgsql:
+	@$(CONFIG_GUARD)
+	@$(MAKE) prepare-pgsql-test-db
+	@$(APP_TEST_PGSQL) vendor/bin/pest tests/Feature/Orders/OrderConcurrencyTest.php
+
+runtime-role-pgsql:
+	@$(CONFIG_GUARD)
+	@$(MAKE) prepare-runtime-pgsql-test-db
+	@$(APP_TEST_PGSQL_RUNTIME) vendor/bin/pest tests/Feature/PostgreSQL/RuntimeDatabaseRoleTest.php
 
 prepare-pgsql-test-db:
-	$(COMPOSE) up -d postgres
-	$(COMPOSE) exec -T postgres sh -lc "psql -v ON_ERROR_STOP=1 -U smartrest -d postgres -tc \"SELECT 1 FROM pg_roles WHERE rolname = '$(PGSQL_TEST_USER)'\" | grep -q 1 || psql -v ON_ERROR_STOP=1 -U smartrest -d postgres -c \"CREATE ROLE $(PGSQL_TEST_USER) LOGIN PASSWORD '$(PGSQL_TEST_PASSWORD)'\""
-	$(COMPOSE) exec -T postgres sh -lc "psql -v ON_ERROR_STOP=1 -U smartrest -d postgres -c \"ALTER ROLE $(PGSQL_TEST_USER) WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS PASSWORD '$(PGSQL_TEST_PASSWORD)'\""
-	$(COMPOSE) exec -T postgres sh -lc "psql -v ON_ERROR_STOP=1 -U smartrest -d postgres -tc \"SELECT 1 FROM pg_database WHERE datname = '$(PGSQL_TEST_DB)'\" | grep -q 1 || psql -v ON_ERROR_STOP=1 -U smartrest -d postgres -c \"CREATE DATABASE $(PGSQL_TEST_DB) OWNER smartrest\""
-	$(COMPOSE) exec -T postgres sh -lc "psql -v ON_ERROR_STOP=1 -U smartrest -d $(PGSQL_TEST_DB) -c \"CREATE EXTENSION IF NOT EXISTS pg_trgm\""
-	$(COMPOSE) exec -T postgres sh -lc "psql -v ON_ERROR_STOP=1 -U smartrest -d $(PGSQL_TEST_DB) -c \"GRANT CONNECT ON DATABASE $(PGSQL_TEST_DB) TO $(PGSQL_TEST_USER)\""
-	$(COMPOSE) exec -T postgres sh -lc "psql -v ON_ERROR_STOP=1 -U smartrest -d $(PGSQL_TEST_DB) -c \"GRANT USAGE, CREATE ON SCHEMA public TO $(PGSQL_TEST_USER)\""
-	$(COMPOSE) exec -T postgres sh -lc "psql -v ON_ERROR_STOP=1 -U smartrest -d $(PGSQL_TEST_DB) -c \"ALTER SCHEMA public OWNER TO $(PGSQL_TEST_USER)\""
+	@$(CONFIG_GUARD)
+	$(LOCAL_DB_ENV) $(COMPOSE) up -d postgres
+	@$(PG_ROLE) prepare-tenant-test-db
+
+wait-postgres:
+	@$(CONFIG_GUARD)
+	@$(LOCAL_DB_ENV) $(COMPOSE) up -d postgres
+	@$(PG_ROLE) wait
+
+provision-runtime-db-role: wait-postgres
+	@$(CONFIG_GUARD)
+	@$(PG_ROLE) grant-runtime
+
+grant-runtime-db-privileges: provision-runtime-db-role
+	@$(CONFIG_GUARD)
+
+prepare-runtime-pgsql-test-db: wait-postgres
+	@$(CONFIG_GUARD)
+	@$(PG_ROLE) prepare-runtime-test-db
+	@$(APP_TEST_PGSQL_MIGRATION) php artisan migrate:fresh --seed --force
+	@$(PG_ROLE) grant-runtime-test-db
+
+ensure-config-uncached:
+	@$(CONFIG_GUARD)
+
+config-clear:
+	$(APP_NO_DEPS) php artisan config:clear
 
 stan:
 	$(APP_NO_DEPS) vendor/bin/phpstan analyse --memory-limit=1G
@@ -75,8 +106,10 @@ pint:
 	$(APP_NO_DEPS) vendor/bin/pint
 
 fresh:
+	@$(CONFIG_GUARD)
 	$(APP) php artisan storage:link --force
-	$(APP) php artisan migrate:fresh --seed
+	@$(APP_MIGRATION) php artisan migrate:fresh --seed
+	$(MAKE) grant-runtime-db-privileges
 
 build:
 	$(APP_NO_DEPS) composer install
@@ -86,7 +119,8 @@ build:
 	$(NODE) npm run build
 
 smoke-menu-context:
-	$(COMPOSE) up -d nginx
+	@$(CONFIG_GUARD)
+	$(LOCAL_DB_ENV) $(COMPOSE) up -d nginx
 	$(APP) php artisan smoke:menu-context
 
 tools:

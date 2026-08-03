@@ -1,7 +1,7 @@
 # Worklog — Phase 2: Admin UI Foundation
 
-Status: Stage 1.14 tenant translation override editing screen in progress
-Branch: phase-2-stage-1.14-tenant-translation-ui
+Status: Runtime PostgreSQL RLS role readiness in progress
+Branch: feature/runtime-rls-role-readiness
 
 PR state: Codex may create and merge PRs after exact-head green CI; direct
 pushes to `main`, force-push, history rewriting, and branch deletion remain
@@ -6024,3 +6024,198 @@ Plan:
 
 Next immediate action: owner reviews `feature/makefile-test-args`; no PR has
 been opened by Codex.
+
+## 2026-08-03 Slice: runtime PostgreSQL RLS role readiness
+
+Owner approved this as the next production-readiness slice after PR #55
+(`orders.cancel`) and PR #56 (`make test ARGS` passthrough). This supersedes
+the stale Stage 1.14 translation-override header; do not revive or reuse Stage
+1.14 numbering for this work.
+
+Design note:
+- Privileged migration/provisioning role: local and CI bootstrap use the
+  existing PostgreSQL owner role (`smartrest` locally/CI) only for database
+  creation, extensions, migrations, deterministic seeding, and explicit runtime
+  privilege grants.
+- Restricted runtime role: HTTP, Livewire, queue workers, scheduler, and
+  ordinary application commands use `smartrest_app` locally and an equivalent
+  non-owner role in other environments. The role must be `NOBYPASSRLS`, not
+  superuser, not table owner, not schema owner, and not granted `BYPASSRLS`.
+- Process split: `make fresh` and PostgreSQL test bootstrap run migrations and
+  seeders with privileged credentials, then grant only schema usage, table DML,
+  and sequence usage to the runtime role. `make up` creates/updates the runtime
+  role and refreshes existing-object grants before application containers start,
+  without running migrations implicitly. Normal application containers keep
+  runtime credentials.
+- Bootstrap responsibility: local/CI bootstrap creates or updates the runtime
+  role idempotently before application containers or runtime-role tests depend
+  on it. Tenant migrations must not try to create PostgreSQL roles.
+- Verification strategy: add a focused PostgreSQL runtime-role test target that
+  prepares the schema with privileged credentials, runs application smoke tests
+  with runtime credentials, and proves the runtime role is non-superuser,
+  `NOBYPASSRLS`, non-owner, not inherited into privileged roles,
+  tenant-isolated, covered for future migration-created objects, and still able
+  to perform expected same-tenant reads/writes.
+- Rollback/recovery: disabling the split for a broken local environment should
+  be an explicit local credential change, not an application fallback. Recovery
+  is to rerun bootstrap/grant targets with privileged local credentials; do not
+  grant runtime ownership, superuser, or `BYPASSRLS`.
+
+Plan:
+- [x] Step RLS1: inspect current route, Livewire, queue, scheduler, seeder, and
+  PostgreSQL test entry points needed for runtime-role verification. Result:
+  `/admin/translation-overrides`, `/admin/orders/board`,
+  `/admin/orders/{order}/workspace`, `TranslationOverridesEditor`,
+  `OrderBoard`, `OrderWorkspace`, database queue restore, and
+  `tenancy:subscriptions:auto-suspend` are the representative runtime paths.
+  Seeded `manager@arat.test` has the permissions needed after
+  `migrate:fresh --seed`.
+- [x] Step RLS2: add idempotent local/CI PostgreSQL runtime-role bootstrap and
+  post-migration runtime privilege grants without transferring ownership or
+  granting schema creation. Result: `Makefile` provisions/updates
+  `smartrest_app` and the strict runtime test role with `NOSUPERUSER`,
+  `NOCREATEDB`, `NOCREATEROLE`, `NOBYPASSRLS`; grants only database connect,
+  schema usage, table DML, and sequence usage/select after privileged
+  migrations/seeding. It does not grant schema `CREATE`, table ownership, or
+  `BYPASSRLS` to the runtime role.
+- [x] Step RLS3: split local application runtime credentials from privileged
+  migration/provisioning credentials in Compose, Make targets, environment
+  example, and database defaults. Result: `php-fpm`, queue worker, scheduler,
+  ordinary `make artisan`, `.env.example`, and the PostgreSQL config default
+  now use runtime credentials; `make fresh` runs `migrate:fresh --seed` with
+  privileged local credentials and then grants runtime access.
+- [x] Step RLS4: add PostgreSQL-focused automated tests for role attributes,
+  ownership, tenant isolation, Orders, translation overrides, and representative
+  Livewire/database access under the runtime role. Result: added
+  `tests/Feature/PostgreSQL/RuntimeDatabaseRoleTest.php` and
+  `make runtime-role-pgsql`. It proves the connected runtime user is not
+  superuser, not `BYPASSRLS`, not owner of protected tenant tables, lacks schema
+  `CREATE`, cannot run DDL, remains RLS-isolated across tenants, can perform
+  same-tenant DML, and can run translation override, order board, order
+  workspace, queue, and scheduler smoke paths.
+- [x] Step RLS5: update `docs/DECISIONS.md`, `docs/GO-LIVE-CHECKLIST.md`, and
+  setup documentation with only verified facts and remaining owner actions.
+  Result: `docs/DECISIONS.md` records the runtime role split and rejected
+  fallbacks; `docs/GO-LIVE-CHECKLIST.md` keeps the production RLS role gate
+  open while recording local/CI proof and required production owner actions;
+  `README.md` documents the local Make targets and credential split.
+- [x] Step RLS6: run focused checks, then required gates (`make pint`,
+  `make stan`, `make test`, `make tenant-isolation-pgsql`,
+  `make orders-concurrency-pgsql`, `make runtime-role-pgsql`, `make fresh`),
+  review the diff for privilege escalation/secrets/unrelated changes, and stop
+  without committing or pushing. Result: focused runtime-role run initially
+  exposed two test-fixture mistakes, then passed after fixing them. Moving the
+  strict runtime test out of `tests/Feature/Tenancy` was required because the
+  legacy tenant-isolation target intentionally runs `RefreshDatabase` with a
+  schema-owning PostgreSQL test role. Final checks passed: `make pint` (`357
+  files`), `make stan` (`210/210`, no errors), `make test` (`413 passed / 23
+  skipped / 3906 assertions`), `make tenant-isolation-pgsql` (`70 passed / 375
+  assertions`), `make orders-concurrency-pgsql` (`6 passed / 43 assertions`),
+  `make runtime-role-pgsql` (`3 passed / 39 assertions`), `make fresh`, and
+  `make up`. `docker compose ps` showed `php-fpm`, queue worker, and scheduler
+  running after the role split. `git diff --check` passed. No commit or push
+  was performed.
+
+- [x] Step RLS7: apply read-only review corrections and rerun verification.
+  Fix the PostgreSQL/MySQL database username defaults, make `make up` refresh
+  existing-object runtime grants before starting application containers, align
+  Make/Compose credential variables and precedence docs, add role-membership
+  and future-object default-privilege assertions, replace time-dependent
+  scheduler smoke with deterministic scheduler DB access, update docs only for
+  proven behavior, run the requested focused/full local checks, inspect the
+  final diff, and stop without committing or pushing. Result: PostgreSQL
+  runtime username fallback is `smartrest_app`; MySQL fallback remains
+  `smartrest`; `make up` depends on the idempotent runtime-grant target and
+  refreshes current table/sequence grants before app containers start;
+  `DB_MIGRATION_USERNAME`, `DB_MIGRATION_PASSWORD`, `DB_RUNTIME_USERNAME`, and
+  `DB_RUNTIME_PASSWORD` are the Make/Compose credential contract; the runtime
+  test now proves no direct or inherited privileged-role membership, default
+  privileges for future migration-created tables/sequences, deterministic
+  scheduler DB access through `SuspendOverdueTenantSubscriptions`, and cleanup
+  of temporary future-object fixtures. Focused and full verification passed:
+  `git diff --check`; `make test ARGS=tests/Feature/DatabaseConfigurationTest.php`;
+  `make runtime-role-pgsql` (`4 passed / 65 assertions`);
+  `make tenant-isolation-pgsql` (`70 passed / 375 assertions`);
+  `make orders-concurrency-pgsql` (`6 passed / 43 assertions`);
+  `make test` (`414 passed / 24 skipped / 3908 assertions`);
+  `make stan` (`210/210`, no errors); `make pint` (`358 files`, one style
+  issue fixed and affected focused checks rerun). Existing local database
+  upgrade proof: after revoking `SELECT` on `tenants` from `smartrest_app`,
+  runtime access failed with SQLSTATE `42501`; corrected `make up` restored
+  grants before starting `php-fpm`, queue worker, and scheduler; runtime
+  `current_user` was `smartrest_app` and tenant count was `2`. Fresh bootstrap
+  proof: `make fresh` passed and post-fresh runtime access as `smartrest_app`
+  returned tenant count `2`.
+
+- [x] Step RLS8: apply final read-only review corrections only. Unify Make and
+  Docker Compose on canonical `DB_DATABASE` with `.env` support below explicit
+  Make/exported values, fail fast on conflicting `DB_NAME`, add role-sensitive
+  config-cache guard, move PostgreSQL role password handling out of Make command
+  strings into stdin-fed `psql` scripts using PostgreSQL/psql quoting, update
+  docs/tests, rerun focused and applicable local gates, and stop without
+  committing or pushing. Result: `Makefile` now invokes `scripts/local-db-env.sh`
+  so Make and Docker Compose share `DB_DATABASE`, `DB_MIGRATION_*`, and
+  `DB_RUNTIME_*` with precedence `make VARIABLE=value`, exported environment,
+  `.env`, then local defaults; conflicting `DB_NAME`/`DB_DATABASE` fails fast.
+  Role-sensitive Make targets refuse to run when `bootstrap/cache/config.php`
+  exists instead of rebuilding shared config under alternating roles.
+  PostgreSQL role/grant setup moved into `scripts/postgres/runtime-role-privileges.sh`
+  and passes passwords through process environment to stdin-fed `psql` sessions
+  using `\getenv`, `:"identifier"`, and `:'literal'` quoting. Verification:
+  `git diff --check`; shell syntax checks for the new scripts; PHP syntax checks
+  for the two untracked PHP tests; `sh tests/Scripts/runtime-db-env-contract.sh`
+  passed, with the cache fixture skipped because `bootstrap/cache` is not
+  host-writable and no `config.php` exists; sanitized `docker compose config`
+  checks proved defaults, explicit environment values, and exported values map
+  app/Postgres services to the same database/user contract; `make test
+  ARGS=tests/Feature/DatabaseConfigurationTest.php` passed (`1` test / `2`
+  assertions); `make runtime-role-pgsql` passed with a disposable
+  special-character runtime-test password (`4` tests / `65` assertions) and
+  again with defaults after Pint (`4` tests / `65` assertions); `make up`
+  passed and read-only checks showed runtime `current_user = smartrest_app`,
+  database `smartrest`, expected table/sequence privileges, and no membership in
+  `smartrest`; `make tenant-isolation-pgsql` passed (`70` tests / `375`
+  assertions); `make orders-concurrency-pgsql` passed (`6` tests / `43`
+  assertions); `make test` passed (`414` passed / `24` skipped / `3908`
+  assertions); `make stan` passed (`210/210`, no errors); `make pint` passed
+  (`358` files). An initial attempt to run tenant isolation and orders
+  concurrency in parallel failed because both mutate `smartrest_test_local`; they
+  passed when rerun sequentially.
+
+Next immediate action: owner performs final read-only review of the local-only
+diff on `feature/runtime-rls-role-readiness`. Do not commit or push.
+
+- [x] Step RLS9: apply focused final-review corrections only. Guard direct and
+  parallel role-sensitive Make targets before their first mutating command,
+  define the supported Make-managed `.env` grammar with fail-fast rejection of
+  ambiguous syntax, make config-cache guard tests deterministic with disposable
+  fixtures, rerun focused/static/local verification, and stop without
+  committing or pushing. Result: added `scripts/ensure-config-uncached.sh` with
+  an overridable test path; role-sensitive Make recipes now run the guard as
+  their first command instead of relying on prerequisite ordering; direct guarded
+  target invocations with a disposable cache fixture fail before Docker,
+  PostgreSQL, grant, migration, seeding, or runtime-start commands; `make -n`
+  and `make -n -j4 up` both start with the guard. `scripts/local-db-env.sh`
+  now supports only a non-executing safe `.env` subset for Make-managed database
+  variables and rejects ambiguous syntax instead of silently falling back.
+  `tests/Scripts/runtime-db-env-contract.sh` now uses trap cleanup, never touches
+  the real Laravel config cache, proves absent/present cache behavior, proves
+  `config-clear` is unguarded, proves Make/exported/`.env` precedence and
+  `DB_NAME` conflicts, covers supported special characters through single-quoted
+  literals, rejects unsupported double quotes/unquoted whitespace/#/backslash
+  and empty assignments, and proves `.env` command content is not executed.
+  Verification passed: `git diff --check`; shell syntax checks for changed/new
+  scripts; PHP syntax checks for the two PHP tests; `sh
+  tests/Scripts/runtime-db-env-contract.sh`; sanitized `make -n up`; sanitized
+  `make -n -j4 up`; sanitized direct guarded-target fixture loop; sanitized
+  `docker compose --env-file ... config` DB/user inspection; `make test
+  ARGS=tests/Feature/DatabaseConfigurationTest.php` (`1` passed / `2`
+  assertions); `make runtime-role-pgsql` (`4` passed / `65` assertions);
+  `make tenant-isolation-pgsql` (`70` passed / `375` assertions);
+  `make orders-concurrency-pgsql` (`6` passed / `43` assertions); `make test`
+  (`414` passed / `24` skipped / `3908` assertions); `make stan` (`210/210`,
+  no errors); `make pint` (`358` files). `shellcheck` is not installed. No
+  commit or push was performed.
+
+Next immediate action: owner performs final read-only review of the local-only
+diff on `feature/runtime-rls-role-readiness`. Do not commit or push.
