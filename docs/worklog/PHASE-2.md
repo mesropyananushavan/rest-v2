@@ -5948,3 +5948,44 @@ Plan:
 
 Next immediate action: owner reviews `feature/orders-cancel-permission` after
 the review-fix push. Do not create a PR and do not merge.
+
+## 2026-08-03 Slice A pre-merge PostgreSQL verification
+
+Owner requested two pre-merge checks without adding new functionality:
+PostgreSQL backfill behavior under RLS and factual role-code stability.
+
+Result:
+- The initial manual PostgreSQL run reproduced a real bug. With clean
+  `smartrest_test_local` data containing multiple tenants and legacy roles
+  without `orders.cancel`, running the backfill as `smartrest_app_test`
+  (`NOBYPASSRLS`) failed on `permissions` because `permissions`, `roles`, and
+  `role_permissions` have forced tenant RLS and no tenant setting was active.
+- The migration was fixed to read all tenant ids from unscoped `tenants`, then
+  set `smartrest.tenant_id` to each tenant id before touching tenant-owned
+  permission/role tables, and finally restore the previous setting.
+- A PostgreSQL-only regression test was added to
+  `tests/Feature/Tenancy/TenantIsolationTest.php`, so it runs in
+  `make tenant-isolation-pgsql`. The test starts with an active tenant context,
+  runs the backfill twice, proves both legacy tenants get owner/manager grants,
+  and proves a tenant with only a custom `administrator` role gets no role grant.
+- Manual SQL verification after the fix showed `legacy-alpha` and `legacy-beta`
+  owner/manager have `orders.cancel`, while cashier/waiter and custom-only
+  administrator do not.
+- Role facts: `roles.code` is only unique per tenant, not enum-constrained.
+  Demo/new seeded tenants get stable role codes from
+  `IdentityDemoSeeder::rolePermissions()` (`owner`, `manager`, `cashier`,
+  `waiter`), but the schema allows tenant-specific arbitrary role codes/names.
+  A tenant without `owner` or `manager` role codes receives the permission row
+  but no role grant.
+
+Checks after the RLS bugfix:
+- `make pint`: passed (`356 files`).
+- `make stan`: passed (`210/210`, `[OK] No errors`).
+- `make test`: passed (`413 passed / 20 skipped / 3906 assertions`).
+- `make tenant-isolation-pgsql`: passed (`70 passed / 375 assertions`).
+- `make fresh`: passed, including
+  `2026_08_03_000000_backfill_orders_cancel_permission`.
+
+Next immediate action: owner reviews `feature/orders-cancel-permission` after
+the RLS bugfix push and decides whether to merge. Do not create a PR and do not
+merge.

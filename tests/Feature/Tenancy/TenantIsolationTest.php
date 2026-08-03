@@ -236,6 +236,67 @@ it('enforces PostgreSQL row level security when tenant setting is missing', func
     expect(rawBranchIds())->toBe([(int) $tenantB['branch']->id]);
 });
 
+it('backfills orders cancel permission for every tenant under PostgreSQL row level security', function (): void {
+    if (! usesPostgresRowLevelSecurity()) {
+        $this->markTestSkipped('PostgreSQL RLS coverage runs only on pgsql.');
+    }
+
+    $tenantIds = [];
+
+    foreach ([
+        'legacy-alpha' => ['owner', 'manager', 'cashier', 'waiter'],
+        'legacy-beta' => ['owner', 'manager', 'cashier', 'waiter'],
+        'custom-only' => ['administrator'],
+    ] as $slug => $roleCodes) {
+        $tenant = Tenant::query()->create([
+            'name' => str($slug)->headline()->toString(),
+            'slug' => $slug,
+            'default_locale' => 'en',
+            'currency' => 'AMD',
+            'status' => 'active',
+        ]);
+        $tenantIds[$slug] = (int) $tenant->id;
+
+        app(TenantResolver::class)->set((int) $tenant->id);
+
+        $takePermission = Permission::query()->create([
+            'code' => 'orders.take',
+            'name' => 'Take orders',
+        ]);
+
+        foreach ($roleCodes as $roleCode) {
+            $role = Role::query()->create([
+                'code' => $roleCode,
+                'name' => str($roleCode)->headline()->toString(),
+            ]);
+
+            $role->permissions()->attach((int) $takePermission->id, [
+                'tenant_id' => (int) $tenant->id,
+            ]);
+        }
+    }
+
+    app(TenantResolver::class)->set($tenantIds['legacy-alpha']);
+
+    $migration = require database_path('migrations/2026_08_03_000000_backfill_orders_cancel_permission.php');
+    $migration->up();
+    $migration->up();
+
+    expect(app(TenantResolver::class)->id())->toBe($tenantIds['legacy-alpha']);
+
+    foreach (['legacy-alpha', 'legacy-beta'] as $slug) {
+        app(TenantResolver::class)->set($tenantIds[$slug]);
+
+        expect(DB::table('permissions')->where('code', 'orders.cancel')->count())->toBe(1)
+            ->and(rolesWithOrdersCancelPermission())->toBe(['manager', 'owner']);
+    }
+
+    app(TenantResolver::class)->set($tenantIds['custom-only']);
+
+    expect(DB::table('permissions')->where('code', 'orders.cancel')->count())->toBe(1)
+        ->and(rolesWithOrdersCancelPermission())->toBe([]);
+});
+
 it('enforces PostgreSQL row level security for identity users by selected tenant context', function (): void {
     if (! usesPostgresRowLevelSecurity()) {
         $this->markTestSkipped('PostgreSQL RLS coverage runs only on pgsql.');
@@ -977,6 +1038,23 @@ function rawUserEmails(): array
 {
     return collect(DB::select('select email from users order by id'))
         ->map(fn (object $row): string => (string) $row->email)
+        ->all();
+}
+
+/**
+ * @return list<string>
+ */
+function rolesWithOrdersCancelPermission(): array
+{
+    return collect(DB::select(<<<'SQL'
+        select roles.code
+        from roles
+        join role_permissions on role_permissions.role_id = roles.id
+        join permissions on permissions.id = role_permissions.permission_id
+        where permissions.code = 'orders.cancel'
+        order by roles.code
+        SQL))
+        ->map(fn (object $row): string => (string) $row->code)
         ->all();
 }
 
