@@ -9,6 +9,7 @@ use App\Modules\Identity\Infrastructure\Models\User;
 use App\Modules\Identity\Infrastructure\Models\UserBranchAssignment;
 use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
+use App\Modules\Orders\Contracts\PayableOrderReader;
 use App\Modules\Orders\Infrastructure\Models\Order;
 use App\Modules\Orders\Infrastructure\Models\OrderItem;
 use App\Modules\Orders\Infrastructure\Models\OrderItemMove;
@@ -23,6 +24,7 @@ use App\Modules\Tenancy\Infrastructure\Models\Branch;
 use App\Modules\Tenancy\Infrastructure\Models\Tenant;
 use App\Support\Audit\AuditLog;
 use App\Support\I18n\TenantTranslationOverride;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Queue\Events\JobProcessed;
@@ -991,6 +993,55 @@ it('enforces PostgreSQL row level security for orders and order subtables', func
             now(),
         ],
     )))->toThrow(QueryException::class);
+});
+
+it('enforces PostgreSQL row level security for payable order reads', function (): void {
+    if (! usesPostgresRowLevelSecurity()) {
+        $this->markTestSkipped('PostgreSQL RLS coverage runs only on pgsql.');
+    }
+
+    $tenantA = tenantWithUser('tenant-payable-a', 'manager-payable-a', ['orders.take']);
+    $tenantB = tenantWithUser('tenant-payable-b', 'manager-payable-b', ['orders.take']);
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+    $orderA = Order::query()->create([
+        'branch_id' => (int) $tenantA['branch']->id,
+        'type' => 'fast_food',
+        'status' => 'open',
+        'opened_at' => now(),
+        'client_count' => 1,
+        'subtotal_minor' => 2100,
+        'discount_minor' => 0,
+        'total_minor' => 2100,
+        'currency' => 'AMD',
+    ]);
+
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+    $orderB = Order::query()->create([
+        'branch_id' => (int) $tenantB['branch']->id,
+        'type' => 'fast_food',
+        'status' => 'open',
+        'opened_at' => now(),
+        'client_count' => 1,
+        'subtotal_minor' => 3200,
+        'discount_minor' => 0,
+        'total_minor' => 3200,
+        'currency' => 'AMD',
+    ]);
+
+    app(TenantResolver::class)->clear();
+    app(BranchContext::class)->clear();
+
+    expect(DB::table('orders')->pluck('id')->all())->toBe([]);
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+    app(BranchContext::class)->set((int) $tenantA['branch']->id);
+
+    expect(DB::table('orders')->where('id', (int) $orderA->id)->count())->toBe(1)
+        ->and(DB::table('orders')->where('id', (int) $orderB->id)->count())->toBe(0)
+        ->and(app(PayableOrderReader::class)->findPayable((int) $orderA->id)->totalMinor)->toBe(2100)
+        ->and(fn () => app(PayableOrderReader::class)->findPayable((int) $orderB->id))
+        ->toThrow(ModelNotFoundException::class);
 });
 
 it('checks action permissions through the identity authorizer contract', function (): void {

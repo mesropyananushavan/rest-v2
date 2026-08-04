@@ -9,6 +9,7 @@ use App\Modules\Menu\Infrastructure\Models\MenuCategory;
 use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use App\Modules\Orders\Application\AddItem;
 use App\Modules\Orders\Application\OpenOrder;
+use App\Modules\Orders\Contracts\PayableOrderReader;
 use App\Modules\Orders\Infrastructure\Models\Order;
 use App\Modules\Orders\Infrastructure\Models\OrderItem;
 use App\Modules\Orders\Infrastructure\Models\OrderSubtable;
@@ -161,6 +162,87 @@ it('rechecks open status under lock after a concurrent cancellation', function (
             ->and(OrderItem::query()->count())->toBe($initialItemCount)
             ->and(OrderSubtable::query()->count())->toBe($initialSubtableCount);
     }
+});
+
+it('holds the payable order lock across a caller owned transaction before item mutation continues', function (): void {
+    $record = ordersConcurrencyFixture();
+    ordersConcurrencyActingIn($record);
+    $order = app(OpenOrder::class)((int) $record['tables'][0]->id);
+    app(AddItem::class)((int) $order->id, (int) $record['menu_item']->id, 1);
+    $prefix = ordersConcurrencyPrefix('payable-lock-add-item');
+    $startFile = "{$prefix}.start";
+    $backendPidFile = "{$prefix}.pid";
+
+    DB::beginTransaction();
+
+    try {
+        $parentBackendPid = (int) DB::scalar('select pg_backend_pid()');
+        $snapshot = app(PayableOrderReader::class)->lockPayableForUpdate((int) $order->id);
+
+        expect($snapshot->totalMinor)->toBe(1000);
+
+        $worker = ordersConcurrencyStartWorker(ordersConcurrencyPayload($record, $startFile, [
+            'mode' => 'add_item',
+            'order_id' => (int) $order->id,
+            'menu_item_id' => (int) $record['menu_item']->id,
+            'backend_pid_file' => $backendPidFile,
+        ]));
+        $workerBackendPid = ordersConcurrencyWaitForBackendPid($backendPidFile);
+
+        touch($startFile);
+        ordersConcurrencyWaitUntilBlockedBy($workerBackendPid, $parentBackendPid);
+
+        DB::commit();
+    } catch (Throwable $exception) {
+        DB::rollBack();
+
+        throw $exception;
+    }
+
+    $result = ordersConcurrencyWaitFor($worker);
+    ordersConcurrencyAssertOk($result);
+
+    expect((int) Order::query()->findOrFail((int) $order->id)->total_minor)->toBe(2000);
+});
+
+it('rechecks payable state under lock after a concurrent cancellation', function (): void {
+    $record = ordersConcurrencyFixture();
+    ordersConcurrencyActingIn($record);
+    $order = app(OpenOrder::class)((int) $record['tables'][0]->id);
+    app(AddItem::class)((int) $order->id, (int) $record['menu_item']->id, 1);
+    $prefix = ordersConcurrencyPrefix('payable-lock-cancel');
+    $startFile = "{$prefix}.start";
+    $backendPidFile = "{$prefix}.pid";
+
+    DB::beginTransaction();
+
+    try {
+        $parentBackendPid = (int) DB::scalar('select pg_backend_pid()');
+        DB::statement('select id from orders where id = ? for update', [(int) $order->id]);
+
+        $worker = ordersConcurrencyStartWorker(ordersConcurrencyPayload($record, $startFile, [
+            'mode' => 'lock_payable',
+            'order_id' => (int) $order->id,
+            'backend_pid_file' => $backendPidFile,
+        ]));
+        $workerBackendPid = ordersConcurrencyWaitForBackendPid($backendPidFile);
+
+        touch($startFile);
+        ordersConcurrencyWaitUntilBlockedBy($workerBackendPid, $parentBackendPid);
+
+        DB::statement("update orders set status = 'cancelled', closed_at = now() where id = ?", [(int) $order->id]);
+        DB::commit();
+    } catch (Throwable $exception) {
+        DB::rollBack();
+
+        throw $exception;
+    }
+
+    $result = ordersConcurrencyWaitFor($worker);
+
+    expect($result['ok'])->toBeFalse()
+        ->and($result['domain_code'])->toBe('orders.order_not_open')
+        ->and(Order::query()->findOrFail((int) $order->id)->status)->toBe('cancelled');
 });
 
 it('recovers from a real PostgreSQL deadlock within bounded transaction attempts', function (): void {
@@ -513,6 +595,43 @@ function ordersConcurrencyWaitForFile(string $path): void
 
         usleep(20_000);
     }
+}
+
+function ordersConcurrencyWaitForBackendPid(string $path): int
+{
+    ordersConcurrencyWaitForFile($path);
+
+    $pid = trim((string) file_get_contents($path));
+
+    if (! ctype_digit($pid)) {
+        throw new RuntimeException("Invalid PostgreSQL backend pid in {$path}.");
+    }
+
+    return (int) $pid;
+}
+
+function ordersConcurrencyWaitUntilBlockedBy(int $blockedPid, int $blockingPid): void
+{
+    $deadline = microtime(true) + 8.0;
+
+    do {
+        $blockingPids = DB::selectOne('select pg_blocking_pids(?) as pids', [$blockedPid]);
+        $pids = $blockingPids?->pids ?? '';
+        $normalized = trim((string) $pids, '{}');
+        $ids = $normalized === ''
+            ? []
+            : array_map(static fn (string $pid): int => (int) $pid, explode(',', $normalized));
+
+        if (in_array($blockingPid, $ids, true)) {
+            expect(true)->toBeTrue();
+
+            return;
+        }
+
+        usleep(20_000);
+    } while (microtime(true) <= $deadline);
+
+    throw new RuntimeException("PostgreSQL backend {$blockedPid} was not blocked by {$blockingPid}.");
 }
 
 /**

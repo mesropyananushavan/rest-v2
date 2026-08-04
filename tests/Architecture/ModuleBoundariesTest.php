@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Modules\Orders\Application\ReadPayableOrder;
+use App\Modules\Orders\Contracts\PayableOrderReader;
+use App\Modules\Orders\Contracts\PayableOrderSnapshot;
 use Illuminate\Support\Facades\File;
 
 it('contains only the current module directories', function (): void {
@@ -56,4 +59,21 @@ it('keeps Orders free of direct Payments infrastructure dependencies', function 
         ->and($ordersSources)->not->toContain('App\Modules\Payments\Http')
         ->and($ordersSources)->not->toContain('cashboxes')
         ->and($ordersSources)->not->toContain('payments.cashboxes');
+});
+
+it('keeps future Payments to Orders dependency limited to Orders public contracts', function (): void {
+    $paymentsSources = collect(File::allFiles(app_path('Modules/Payments')))
+        ->map(fn (SplFileInfo $file): string => $file->getContents())
+        ->implode("\n");
+
+    expect($paymentsSources)->not->toContain('App\Modules\Orders\Domain')
+        ->and($paymentsSources)->not->toContain('App\Modules\Orders\Application')
+        ->and($paymentsSources)->not->toContain('App\Modules\Orders\Infrastructure')
+        ->and($paymentsSources)->not->toContain('App\Modules\Orders\Http');
+});
+
+it('keeps payable order foundation owned by Orders contracts', function (): void {
+    expect(interface_exists(PayableOrderReader::class))->toBeTrue()
+        ->and(class_exists(PayableOrderSnapshot::class))->toBeTrue()
+        ->and(app(PayableOrderReader::class))->toBeInstanceOf(ReadPayableOrder::class);
 });

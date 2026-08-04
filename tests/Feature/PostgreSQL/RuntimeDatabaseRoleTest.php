@@ -7,6 +7,7 @@ use App\Livewire\Admin\OrderWorkspace as OrderWorkspaceComponent;
 use App\Livewire\Admin\TranslationOverridesEditor;
 use App\Modules\Identity\Infrastructure\Models\User;
 use App\Modules\Identity\Infrastructure\Models\UserBranchAssignment;
+use App\Modules\Orders\Contracts\PayableOrderReader;
 use App\Modules\Orders\Infrastructure\Models\Order;
 use App\Modules\Orders\Infrastructure\Models\OrderSubtable;
 use App\Modules\Payments\Application\CreateCashbox;
@@ -304,6 +305,21 @@ it('runs translation, orders, queue, and scheduler smoke paths under the runtime
         ->where('order_id', (int) $order->id)
         ->where('name', 'Runtime Smoke')
         ->exists())->toBeTrue();
+
+    Order::query()
+        ->whereKey((int) $order->id)
+        ->update([
+            'subtotal_minor' => 1200,
+            'total_minor' => 1200,
+        ]);
+
+    DB::transaction(function () use ($order): void {
+        $snapshot = app(PayableOrderReader::class)->lockPayableForUpdate((int) $order->id);
+
+        expect($snapshot->orderId)->toBe((int) $order->id)
+            ->and($snapshot->totalMinor)->toBe(1200)
+            ->and($snapshot->currentRemainingPayableMinor())->toBe(1200);
+    });
 
     LogContext::start('runtime-role-cashbox-smoke', 'payments');
     $cashbox = app(CreateCashbox::class)('Runtime role register');
