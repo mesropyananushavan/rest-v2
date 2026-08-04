@@ -1,7 +1,7 @@
 # Worklog — Phase 3: Payments/Cashbox/Fiscal/Printing
 
-Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation approved for future implementation planning
-Branch: docs/phase-3-payment-capture-approved-plan
+Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation FCPF0 complete; FCPF1 pending owner authorization
+Branch: feature/payments-cash-payment-capture-foundation
 
 Phase 2 was closed by merge commit
 `085759f4c929e9f9ebf2fe551314996b58a95f0a` for PR #59. Phase 3 starts with
@@ -15,6 +15,9 @@ merged by PR #61 as merge commit
 
 After PR #61 merged, local `main` was fast-forward aligned with `origin/main`
 at merge commit `a019f26dec9095bf34b69cfa2a334aa78685e6a1`.
+
+After PR #63 merged, local `main` and `origin/main` were verified clean and
+aligned at merge commit `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd`.
 
 ## Approved First Slice: Cashbox Configuration Foundation
 
@@ -433,11 +436,17 @@ Expected implementation inventory:
   review and repair evidence without starting another implementation slice.
   Result: this documentation-only update is scoped to
   `docs/worklog/PHASE-3.md` on branch `docs/phase-3-pr61-post-merge`.
-- [ ] Step FCPF0: implementation branch setup from verified `main`. In a later
+- [x] Step FCPF0: implementation branch setup from verified `main`. In a later
   explicitly authorized implementation turn, fetch `origin`; verify local
   `main` and `origin/main` are aligned and clean; create the implementation
   branch from the then-current verified `main`; and do not start from this
   documentation branch.
+  Result: baseline verification passed after `git fetch origin`; PR #63 was
+  still merged at `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd`, local `main`
+  and `origin/main` matched with ahead/behind `0/0`, no existing payment-capture
+  implementation branch or code was present, and
+  `feature/payments-cash-payment-capture-foundation` was created locally from
+  the exact verified `main`. No payment capture implementation work was started.
 - [ ] Step FCPF1: financial schema migration. Add the single migration for
   `payments`, `payment_allocations`, and `cashbox_entries`, including tenant
   and branch fields, indexes, foreign keys, row-level checks, forced
@@ -565,13 +574,23 @@ Expected implementation inventory:
 - PR #61 final exact-head CI succeeded on approved head
   `14e05b36145baee494131bf648d49c2063b097f6` for both push and pull-request
   workflow runs before merge.
+- FCPF0 baseline and branch validation passed: `git fetch origin` completed;
+  local `main` and `origin/main` were both
+  `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd` with ahead/behind `0/0`; PR #63
+  was still merged; `docs/phase-3-payment-capture-approved-plan` was preserved
+  locally and remotely at `118b5d5deea60ceb90db7ee904758b11dd0dcd83`; every
+  `FCPF0` through `FCPF10` step was pending before branch creation; the new
+  local branch `feature/payments-cash-payment-capture-foundation` started at
+  the exact verified `main`; and no payment capture implementation files were
+  introduced. Final focused validation passed with `git diff --check`, and the
+  only changed file was this worklog.
 
 ## Next Steps
 
-Await separate owner authorization to begin implementation of the approved
-Full Cash Payment Capture Foundation. The exact next implementation action is
-Step FCPF0: verify the then-current `main` baseline and create the
-implementation branch from that verified `main`.
+Await separate owner authorization to begin Step FCPF1 on
+`feature/payments-cash-payment-capture-foundation`. The exact next
+implementation action is the financial schema migration for `payments`,
+`payment_allocations`, and `cashbox_entries`.
 
 No payment capture, payment schema, payment allocations, cashbox ledger,
 closing, fiscalization, printing, UI, routes, controllers, Livewire, API,
