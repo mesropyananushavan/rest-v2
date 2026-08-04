@@ -1,6 +1,6 @@
 # Worklog — Phase 3: Payments/Cashbox/Fiscal/Printing
 
-Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation FCPF0 complete; FCPF1 pending owner authorization
+Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation FCPF1 complete; FCPF2 pending owner authorization
 Branch: feature/payments-cash-payment-capture-foundation
 
 Phase 2 was closed by merge commit
@@ -447,11 +447,19 @@ Expected implementation inventory:
   implementation branch or code was present, and
   `feature/payments-cash-payment-capture-foundation` was created locally from
   the exact verified `main`. No payment capture implementation work was started.
-- [ ] Step FCPF1: financial schema migration. Add the single migration for
+- [x] Step FCPF1: financial schema migration. Add the single migration for
   `payments`, `payment_allocations`, and `cashbox_entries`, including tenant
   and branch fields, indexes, foreign keys, row-level checks, forced
   PostgreSQL RLS, append-only update/delete triggers, and insert consistency
   triggers.
+  Result: added the append-only financial schema migration for `payments`,
+  `payment_allocations`, and `cashbox_entries` with integer minor-unit money,
+  tenant/branch ownership, restrictive foreign keys, query indexes, scoped
+  idempotency key uniqueness, PostgreSQL check constraints, forced RLS,
+  update/delete rejection triggers, and insert consistency triggers; added
+  schema-focused SQLite and PostgreSQL tests. No capture action, models,
+  DTOs, authorization, UI, routes, events, outbox, fiscal, printing, or
+  concurrency worker behavior was introduced.
 - [ ] Step FCPF2: append-only financial models. Add Payment,
   PaymentAllocation, and CashboxEntry models with `BelongsToTenant`,
   `TenantScoped`, typed casts, no soft deletes, and update/delete model guards.
@@ -584,14 +592,34 @@ Expected implementation inventory:
   the exact verified `main`; and no payment capture implementation files were
   introduced. Final focused validation passed with `git diff --check`, and the
   only changed file was this worklog.
+- FCPF1 baseline validation passed after `git fetch origin`: current branch
+  was `feature/payments-cash-payment-capture-foundation` at
+  `af0e2efc501352e1191465634aafa67c948b2331` with no upstream and clean
+  worktree; local `main` and `origin/main` were both
+  `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd`; `main..HEAD` contained only the
+  FCPF0 worklog commit; PR #62 and PR #63 were still merged; the documentation
+  branch remained preserved locally and remotely at
+  `118b5d5deea60ceb90db7ee904758b11dd0dcd83`; no remote implementation branch
+  or PR existed.
+- FCPF1 focused validation passed: `make test
+  ARGS='tests/Feature/Payments/PaymentFinancialSchemaTest.php'` passed with
+  3 tests and 44 assertions; `make tenant-isolation-pgsql` passed with
+  73 tests and 403 assertions, including financial table RLS and insert
+  consistency coverage; `make test ARGS='tests/Feature/Payments'` passed with
+  16 tests, 3 skipped PostgreSQL-only tests, and 147 assertions;
+  `make runtime-role-pgsql` passed with 4 tests and 69 assertions;
+  `make pint` passed across 390 files; `make stan` passed with no errors; and
+  `git diff --check` passed.
 
 ## Next Steps
 
-Await separate owner authorization to begin Step FCPF1 on
-`feature/payments-cash-payment-capture-foundation`. The exact next
-implementation action is the financial schema migration for `payments`,
-`payment_allocations`, and `cashbox_entries`.
+Await separate owner authorization to commit the FCPF1 result or begin Step
+FCPF2 on `feature/payments-cash-payment-capture-foundation`. The exact next
+implementation action, if authorized, is the append-only financial models for
+Payment, PaymentAllocation, and CashboxEntry.
 
-No payment capture, payment schema, payment allocations, cashbox ledger,
-closing, fiscalization, printing, UI, routes, controllers, Livewire, API,
-domain events, or outbox work has begun.
+Payment financial schema now exists only as the FCPF1 migration and
+schema-focused tests. No payment capture action, financial Eloquent models,
+command/result DTOs, fingerprint support, authorization behavior, audit
+persistence, closing, fiscalization, printing, UI, routes, controllers,
+Livewire, API, domain events, outbox, or concurrency worker work has begun.
