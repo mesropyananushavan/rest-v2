@@ -10,6 +10,7 @@ use App\Modules\Menu\Infrastructure\Models\MenuItem;
 use App\Modules\Orders\Application\AddItem;
 use App\Modules\Orders\Application\OpenOrder;
 use App\Modules\Orders\Contracts\PayableOrderReader;
+use App\Modules\Orders\Domain\OrdersDomainException;
 use App\Modules\Orders\Infrastructure\Models\Order;
 use App\Modules\Orders\Infrastructure\Models\OrderItem;
 use App\Modules\Orders\Infrastructure\Models\OrderSubtable;
@@ -203,6 +204,26 @@ it('holds the payable order lock across a caller owned transaction before item m
     ordersConcurrencyAssertOk($result);
 
     expect((int) Order::query()->findOrFail((int) $order->id)->total_minor)->toBe(2000);
+});
+
+it('rejects payable order locking outside a caller owned transaction', function (): void {
+    $record = ordersConcurrencyFixture();
+    ordersConcurrencyActingIn($record);
+    $order = app(OpenOrder::class)((int) $record['tables'][0]->id);
+    app(AddItem::class)((int) $order->id, (int) $record['menu_item']->id, 1);
+    $connection = DB::connection();
+
+    expect($connection->transactionLevel())->toBe(0)
+        ->and((string) Order::query()->whereKey((int) $order->id)->value('status'))->toBe('open')
+        ->and((int) Order::query()->whereKey((int) $order->id)->value('total_minor'))->toBe(1000);
+
+    try {
+        app(PayableOrderReader::class)->lockPayableForUpdate((int) $order->id);
+        $this->fail('Expected payable locking without a caller-owned transaction to fail.');
+    } catch (OrdersDomainException $exception) {
+        expect($exception->errorCode())->toBe('orders.payable_lock_requires_transaction')
+            ->and($connection->transactionLevel())->toBe(0);
+    }
 });
 
 it('rechecks payable state under lock after a concurrent cancellation', function (): void {

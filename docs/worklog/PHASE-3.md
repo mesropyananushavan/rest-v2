@@ -1,6 +1,6 @@
 # Worklog — Phase 3: Payments/Cashbox/Fiscal/Printing
 
-Status: Cashbox Configuration Foundation merged; Payable Order Foundation implemented and verified for Draft PR
+Status: Cashbox Configuration Foundation merged; Payable Order Foundation strict-review repairs verified locally
 Branch: feature/payments-payable-order-foundation
 
 Phase 2 was closed by merge commit
@@ -132,6 +132,23 @@ Explicit non-goals:
 - No new migrations unless implementation reveals a required owner-approved
   schema prerequisite.
 
+Draft PR:
+- Branch: `feature/payments-payable-order-foundation`.
+- Original implementation commit:
+  `dd750b343a0e744fe1cc4b0bcc17ae91adc7e7ab`.
+- PR: https://github.com/mesropyananushavan/rest-v2/pull/61.
+- Strict read-only owner review verdict: `CHANGES REQUIRED`.
+
+Strict-review repair scope for PR #61:
+- Major: add a reliable PostgreSQL test proving
+  `lockPayableForUpdate()` rejects calls outside a caller-owned transaction
+  with `orders.payable_lock_requires_transaction`.
+- Minor: clarify the public contract so `findPayable()` is explicitly an
+  unlocked read-only inspection path and not a basis for payment capture or
+  other financial writes.
+- Minor: record that Draft PR #61 was opened from commit
+  `dd750b343a0e744fe1cc4b0bcc17ae91adc7e7ab`.
+
 ## Plan
 
 - [x] Step CB0: precondition verification and worklog setup. Read required
@@ -224,8 +241,12 @@ Explicit non-goals:
   then `make pint`, `make stan`, `make test`, relevant PostgreSQL targets,
   and `make fresh`; inspect the full diff; commit only this slice; push the
   branch; open a Draft PR against `main`; do not mark ready or merge.
-  Result: verification is green through `make fresh`; commit, push, and Draft
-  PR creation are the remaining terminal actions for this session.
+  Result: verification was green through `make fresh`; original implementation
+  commit `dd750b343a0e744fe1cc4b0bcc17ae91adc7e7ab` was pushed; Draft PR #61
+  was opened at https://github.com/mesropyananushavan/rest-v2/pull/61 and was
+  not marked ready or merged. Strict read-only owner review returned
+  `CHANGES REQUIRED`; the approved repair is limited to the three findings
+  recorded above.
 
 ## Gotchas
 
@@ -239,6 +260,10 @@ Explicit non-goals:
   reader intentionally rejects ambient no-transaction calls so a future payment
   capture cannot accidentally release the order lock before financial rows are
   written.
+- `RefreshDatabase` can create an ambient transaction in SQLite/application
+  tests, so the payable-lock no-transaction guard must be covered in the
+  PostgreSQL concurrency suite where transaction level zero can be asserted on
+  the same connection used by `ReadPayableOrder`.
 - PostgreSQL lock coordination tests use `pg_blocking_pids` against real
   backend PIDs instead of sleeps as assertions; this keeps blocking checks
   deterministic without introducing a new lock order.
@@ -278,11 +303,30 @@ Explicit non-goals:
   4165 assertions.
 - `make fresh` passed, including migrations, deterministic demo seeding, and
   runtime database grants.
+- PR #61 strict-review repair focused SQLite/architecture:
+  `make test ARGS='tests/Feature/Orders/PayableOrderReaderTest.php tests/Architecture/ModuleBoundariesTest.php'`
+  passed with 19 tests and 275 assertions.
+- PR #61 strict-review repair Orders PostgreSQL concurrency:
+  `make orders-concurrency-pgsql` passed with 10 tests and 60 assertions,
+  including the new outside-transaction payable-lock guard.
+- PR #61 strict-review repair `make pint` passed across 388 files.
+- PR #61 strict-review repair `make tenant-isolation-pgsql` passed with
+  72 tests and 388 assertions.
+- PR #61 strict-review repair `make runtime-role-pgsql` passed with 4 tests
+  and 69 assertions.
+- PR #61 strict-review repair `make stan` passed with no errors.
+- PR #61 strict-review repair `make test` passed with 445 tests,
+  33 skipped PostgreSQL-only tests, and 4165 assertions.
+- PR #61 strict-review repair `make fresh` passed, including migrations,
+  deterministic demo seeding, and runtime database grants.
+- The repair commit SHA is intentionally not recorded in this worklog entry to
+  avoid a self-referential documentation commit; use the final repair report
+  and PR #61 head for the exact SHA.
 
 ## Next Steps
 
-Review the Payable Order Foundation Draft PR once opened from
-`feature/payments-payable-order-foundation`. Do not mark it Ready or merge it
-without explicit owner approval, and do not implement payment capture, payment
-schema, cashbox ledger, order closing, fiscal, printing, refunds, reversals, or
-UI in this slice.
+Push the approved PR #61 repair commit, then repeat strict read-only owner
+review of the updated exact PR head before any Ready transition. Do not mark
+PR #61 Ready or merge it without explicit owner approval, and do not implement
+payment capture, payment schema, cashbox ledger, order closing, fiscal,
+printing, refunds, reversals, or UI in this slice.
