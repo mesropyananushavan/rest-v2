@@ -1,14 +1,20 @@
 # Worklog — Phase 3: Payments/Cashbox/Fiscal/Printing
 
-Status: Cashbox Configuration Foundation merged; Payable Order Foundation strict-review repairs verified locally
-Branch: feature/payments-payable-order-foundation
+Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61
+Branch: docs/phase-3-pr61-post-merge
 
 Phase 2 was closed by merge commit
 `085759f4c929e9f9ebf2fe551314996b58a95f0a` for PR #59. Phase 3 starts with
 the bounded Payments cashbox configuration slice only. Cashbox Configuration
 Foundation was merged by PR #60 as merge commit
 `b63ecbce05ed5565e94e6a8de1c49e035a132c41` from final head
-`ecfdea9b46d25ad4877325d3b30011d18a070406`.
+`ecfdea9b46d25ad4877325d3b30011d18a070406`. Payable Order Foundation was
+merged by PR #61 as merge commit
+`a019f26dec9095bf34b69cfa2a334aa78685e6a1` from approved head
+`14e05b36145baee494131bf648d49c2063b097f6`.
+
+After PR #61 merged, local `main` was fast-forward aligned with `origin/main`
+at merge commit `a019f26dec9095bf34b69cfa2a334aa78685e6a1`.
 
 ## Approved First Slice: Cashbox Configuration Foundation
 
@@ -149,6 +155,19 @@ Strict-review repair scope for PR #61:
 - Minor: record that Draft PR #61 was opened from commit
   `dd750b343a0e744fe1cc4b0bcc17ae91adc7e7ab`.
 
+Merge record for PR #61:
+- Approved head:
+  `14e05b36145baee494131bf648d49c2063b097f6`.
+- Merge commit:
+  `a019f26dec9095bf34b69cfa2a334aa78685e6a1`.
+- Final PR size: 2 commits and 15 changed files.
+- Final exact-head CI succeeded for both push and pull-request workflow runs.
+- Payable Order Foundation is complete as the second Phase 3 slice.
+- No payment capture, payment schema, payment allocations, cashbox ledger,
+  order closing, fiscalization, printing, refunds, reversals, routes,
+  controllers, Livewire, or UI work has begun.
+- No formally named third Phase 3 slice has been defined in the repository.
+
 ## Plan
 
 - [x] Step CB0: precondition verification and worklog setup. Read required
@@ -247,6 +266,20 @@ Strict-review repair scope for PR #61:
   not marked ready or merged. Strict read-only owner review returned
   `CHANGES REQUIRED`; the approved repair is limited to the three findings
   recorded above.
+- [x] Step POF5: strict-review repair, exact-head CI, and merge. Apply the
+  approved PR #61 repair only; push the repair; repeat strict review; mark the
+  PR Ready only after approval; verify exact-head CI success; merge with a
+  merge commit; and fast-forward local `main` to `origin/main`.
+  Result: PR #61 merged from approved head
+  `14e05b36145baee494131bf648d49c2063b097f6` as merge commit
+  `a019f26dec9095bf34b69cfa2a334aa78685e6a1`; final PR size was 2 commits and
+  15 files; exact-head CI succeeded for both push and pull-request workflow
+  runs; local `main` was aligned with `origin/main` at the merge commit.
+- [x] Step POF6: post-merge documentation housekeeping. Record the PR #61 merge
+  facts, replace stale continuation instructions, and preserve historical
+  review and repair evidence without starting another implementation slice.
+  Result: this documentation-only update is scoped to
+  `docs/worklog/PHASE-3.md` on branch `docs/phase-3-pr61-post-merge`.
 
 ## Gotchas
 
@@ -322,11 +355,18 @@ Strict-review repair scope for PR #61:
 - The repair commit SHA is intentionally not recorded in this worklog entry to
   avoid a self-referential documentation commit; use the final repair report
   and PR #61 head for the exact SHA.
+- PR #61 final exact-head CI succeeded on approved head
+  `14e05b36145baee494131bf648d49c2063b097f6` for both push and pull-request
+  workflow runs before merge.
 
 ## Next Steps
 
-Push the approved PR #61 repair commit, then repeat strict read-only owner
-review of the updated exact PR head before any Ready transition. Do not mark
-PR #61 Ready or merge it without explicit owner approval, and do not implement
-payment capture, payment schema, cashbox ledger, order closing, fiscal,
-printing, refunds, reversals, or UI in this slice.
+Await owner approval and planning for the first future payment-capture slice.
+Known constraints from existing decisions: full remaining balance only, cash
+only, active cashbox required, exact integer minor units, no partial payment,
+no overpayment, no mixed payment methods, and no automatic order closing.
+
+No payment capture, payment schema, payment allocations, cashbox ledger,
+closing, fiscalization, printing, or UI work has begun. Do not formally define
+or implement the next Phase 3 slice until the owner explicitly authorizes that
+planning.
