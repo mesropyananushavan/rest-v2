@@ -1,6 +1,6 @@
 # Worklog — Phase 3: Payments/Cashbox/Fiscal/Printing
 
-Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation FCPF1 complete; FCPF2 pending owner authorization
+Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation FCPF2 complete; FCPF3 pending owner authorization
 Branch: feature/payments-cash-payment-capture-foundation
 
 Phase 2 was closed by merge commit
@@ -460,9 +460,17 @@ Expected implementation inventory:
   schema-focused SQLite and PostgreSQL tests. No capture action, models,
   DTOs, authorization, UI, routes, events, outbox, fiscal, printing, or
   concurrency worker behavior was introduced.
-- [ ] Step FCPF2: append-only financial models. Add Payment,
+- [x] Step FCPF2: append-only financial models. Add Payment,
   PaymentAllocation, and CashboxEntry models with `BelongsToTenant`,
   `TenantScoped`, typed casts, no soft deletes, and update/delete model guards.
+  Result: added append-only `Payment`, `PaymentAllocation`, and `CashboxEntry`
+  Eloquent models for the FCPF1 financial schema with tenant scoping, integer
+  minor-unit casts, same-module cashbox/payment/allocation relationships, no
+  soft deletes, and persisted update/delete/force-delete guards. Query-builder
+  update/delete/increment/decrement mutation paths remain blocked by the FCPF1
+  database append-only triggers. No capture command, action, authorization,
+  allocation orchestration, audit orchestration, UI, routes, API, fiscal,
+  printing, events, outbox, or concurrency worker behavior was introduced.
 - [ ] Step FCPF3: command/result, fingerprint, errors, and translations. Add
   `CaptureCashPaymentCommand`, the capture result DTO, canonical idempotency
   fingerprint support, stable Payments domain errors, and matching `hy`, `ru`,
@@ -610,16 +618,44 @@ Expected implementation inventory:
   `make runtime-role-pgsql` passed with 4 tests and 69 assertions;
   `make pint` passed across 390 files; `make stan` passed with no errors; and
   `git diff --check` passed.
+- FCPF2 baseline validation passed after `git fetch origin`: current branch was
+  `feature/payments-cash-payment-capture-foundation` at
+  `8e69787c67d62090a438a67d4adad3f148c1c913` with no upstream and clean
+  worktree; local `main` and `origin/main` were both
+  `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd`; `main..HEAD` contained only the
+  FCPF0 and FCPF1 commits; PR #62 and PR #63 were still merged; the
+  documentation branch remained preserved locally and remotely at
+  `118b5d5deea60ceb90db7ee904758b11dd0dcd83`; no remote implementation branch
+  or PR existed; and no FCPF2 model implementation was present before work
+  began.
+- FCPF2 focused validation passed: `make test
+  ARGS='tests/Feature/Payments/PaymentFinancialModelsTest.php'` passed with
+  3 tests and 83 assertions; `make test
+  ARGS='tests/Feature/Payments/PaymentFinancialSchemaTest.php
+  tests/Feature/Payments/PaymentFinancialModelsTest.php
+  tests/Architecture/ModuleBoundariesTest.php'` passed with 17 tests and
+  384 assertions, including migration rollback/re-apply coverage and the
+  Payments-to-Orders architecture boundary; `make test
+  ARGS='tests/Feature/Payments'` passed with 19 tests, 3 skipped
+  PostgreSQL-only tests, and 230 assertions; `make tenant-isolation-pgsql`
+  passed with 73 tests and 403 assertions; `make runtime-role-pgsql` passed
+  with 4 tests and 69 assertions; `make pint` passed across 394 files and fixed
+  one style issue in the new model test; `make stan` passed with no errors; the
+  post-Pint model test rerun passed with 3 tests and 83 assertions; the
+  post-Pint Payments suite rerun passed with 19 tests, 3 skipped
+  PostgreSQL-only tests, and 230 assertions; and `git diff --check` passed.
 
 ## Next Steps
 
-Await separate owner authorization to commit the FCPF1 result or begin Step
-FCPF2 on `feature/payments-cash-payment-capture-foundation`. The exact next
-implementation action, if authorized, is the append-only financial models for
-Payment, PaymentAllocation, and CashboxEntry.
+Await separate owner authorization to commit the FCPF2 result on
+`feature/payments-cash-payment-capture-foundation`. After that commit, the
+exact next implementation action requiring separate authorization is Step FCPF3:
+command/result DTOs, canonical idempotency fingerprint support, stable Payments
+domain errors, and matching `hy`, `ru`, and `en` translation keys.
 
 Payment financial schema now exists only as the FCPF1 migration and
-schema-focused tests. No payment capture action, financial Eloquent models,
-command/result DTOs, fingerprint support, authorization behavior, audit
-persistence, closing, fiscalization, printing, UI, routes, controllers,
-Livewire, API, domain events, outbox, or concurrency worker work has begun.
+schema-focused tests, plus the FCPF2 append-only financial Eloquent models and
+model-focused tests. No payment capture action, command/result DTOs, runtime
+idempotency handling, authorization behavior, audit persistence, closing,
+fiscalization, printing, UI, routes, controllers, Livewire, API, domain events,
+outbox, or concurrency worker work has begun.
