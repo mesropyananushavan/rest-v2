@@ -40,6 +40,16 @@ final class OrdersDomainException extends RuntimeException
         return new self('orders.order_not_open', 'Only open orders can be changed.');
     }
 
+    public static function orderNotPayable(): self
+    {
+        return new self('orders.order_not_payable', 'Only open orders with a positive total can be paid.');
+    }
+
+    public static function payableLockRequiresTransaction(): self
+    {
+        return new self('orders.payable_lock_requires_transaction', 'Payable order locks require a caller-owned transaction.');
+    }
+
     public static function waiterNotAssignable(): self
     {
         return new self('orders.waiter_not_assignable', 'The selected waiter cannot take orders in this branch.');

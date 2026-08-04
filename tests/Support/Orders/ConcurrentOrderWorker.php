@@ -8,11 +8,13 @@ use App\Modules\Identity\Infrastructure\Models\User;
 use App\Modules\Orders\Application\AddItem;
 use App\Modules\Orders\Application\AddSubtable;
 use App\Modules\Orders\Application\AssignWaiter;
+use App\Modules\Orders\Application\CancelOrder;
 use App\Modules\Orders\Application\ChangeItemQty;
 use App\Modules\Orders\Application\MoveItem;
 use App\Modules\Orders\Application\MoveOrder;
 use App\Modules\Orders\Application\OpenOrder;
 use App\Modules\Orders\Application\RemoveItem;
+use App\Modules\Orders\Contracts\PayableOrderReader;
 use App\Modules\Orders\Domain\OrdersDomainException;
 use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Modules\Tenancy\Contracts\TenantResolver;
@@ -79,6 +81,8 @@ final class ConcurrentOrderWorker
             'assign_waiter' => self::assignWaiter($payload),
             'add_subtable' => self::addSubtable($payload),
             'open_order' => self::openOrder($payload),
+            'cancel_order' => self::cancelOrder($payload),
+            'lock_payable' => self::lockPayable($payload),
             'move_order' => self::moveOrder($payload),
             'retry_deadlock' => self::retryDeadlock($payload),
             default => throw new \InvalidArgumentException('Unknown worker mode.'),
@@ -173,6 +177,34 @@ final class ConcurrentOrderWorker
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
+    private static function cancelOrder(array $payload): array
+    {
+        $order = app(CancelOrder::class)((int) $payload['order_id']);
+
+        return ['order_id' => (int) $order->id];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private static function lockPayable(array $payload): array
+    {
+        return DB::transaction(function () use ($payload): array {
+            $snapshot = app(PayableOrderReader::class)->lockPayableForUpdate((int) $payload['order_id']);
+
+            return [
+                'order_id' => $snapshot->orderId,
+                'total_minor' => $snapshot->totalMinor,
+                'currency' => $snapshot->currency,
+            ];
+        });
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
     private static function moveOrder(array $payload): array
     {
         $order = app(MoveOrder::class)((int) $payload['order_id'], (int) $payload['target_table_id']);
@@ -218,6 +250,10 @@ final class ConcurrentOrderWorker
     {
         DB::statement("set lock_timeout = '1500ms'");
         DB::statement("set statement_timeout = '10000ms'");
+
+        if (isset($payload['backend_pid_file'])) {
+            file_put_contents((string) $payload['backend_pid_file'], (string) DB::scalar('select pg_backend_pid()'));
+        }
 
         app(TenantResolver::class)->set((int) $payload['tenant_id']);
         app(BranchContext::class)->set((int) $payload['branch_id']);
