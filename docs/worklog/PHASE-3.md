@@ -1,7 +1,7 @@
 # Worklog — Phase 3: Payments/Cashbox/Fiscal/Printing
 
-Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61
-Branch: docs/phase-3-pr61-post-merge
+Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation approved for future implementation planning
+Branch: docs/phase-3-payment-capture-approved-plan
 
 Phase 2 was closed by merge commit
 `085759f4c929e9f9ebf2fe551314996b58a95f0a` for PR #59. Phase 3 starts with
@@ -168,6 +168,159 @@ Merge record for PR #61:
   controllers, Livewire, or UI work has begun.
 - No formally named third Phase 3 slice has been defined in the repository.
 
+## Approved Third Slice: Full Cash Payment Capture Foundation
+
+Owner approval:
+- The owner approved this slice in the documentation/planning turn that
+  recorded this section.
+- Approved source proposal:
+  `FINALIZED PROPOSAL — NOT APPROVED`, with final verdict
+  `APPROVE PROPOSAL FOR OWNER DECISION`.
+- This approval authorizes future implementation planning only. No payment
+  capture implementation has started in this documentation branch.
+
+Objective:
+- Add the smallest durable, Application-only cash payment capture foundation
+  after the Cashbox Configuration Foundation and Payable Order Foundation.
+- Capture exactly the locked remaining payable balance for one open order,
+  using cash, through one explicit active cashbox, and persist all financial
+  facts atomically.
+
+Module ownership contract:
+- Orders owns payable eligibility, gross payable amount, currency, tenant and
+  branch identity, and the locked payable-order snapshot.
+- Payments owns captured payment facts, allocations, paid/remaining balance
+  derived from allocations, and cashbox ledger entries.
+- Payments may depend only on public Orders contracts. It must not import
+  Orders Domain, Application, Infrastructure, Http, Eloquent models, or query
+  Orders tables directly.
+- `PayableOrderSnapshot::currentRemainingPayableMinor()` remains a temporary
+  compatibility helper and must not be used by capture once payment
+  allocations exist.
+
+Approved behavior:
+- The slice is Application-only: no UI, Livewire, controller, API, route, or
+  delivery adapter.
+- Capture is cash only.
+- Capture is for the complete locked remaining balance only.
+- An explicit active `cashbox_id` is required; no implicit default cashbox
+  selection.
+- Payment capture never closes the order and never otherwise mutates order
+  workflow state.
+- Payment, allocation, cashbox-entry, and audit persistence happens atomically
+  in one database transaction.
+- No domain event or outbox is introduced until a real consumer exists.
+
+Approved command contract:
+- Add `CaptureCashPaymentCommand` with exactly:
+  `orderId`, `cashboxId`, `expectedAmountMinor`, `expectedCurrency`,
+  and `idempotencyKey`.
+- Actor comes from the authenticated runtime user.
+- Tenant comes from `TenantResolver`.
+- Branch comes from `BranchContext`.
+- The server captures the locked remaining balance. Expected amount and
+  currency are stale-client and tampering guards, not the source of captured
+  amount.
+- `idempotencyKey` is an opaque, case-sensitive string, not trimmed, 1-128
+  characters, with no leading/trailing whitespace, no control characters, and
+  no UUID-format requirement.
+
+Approved persistence contract:
+- Add append-only `payments`, `payment_allocations`, and `cashbox_entries`.
+- `payments.order_id` exists as the direct order relationship and
+  tenant/branch/order query shortcut for this order-only slice.
+- Allocations use the Blueprint shape: `payable_type = order` and
+  `payable_id`.
+- `payment_allocations` is authoritative for paid and remaining balance.
+- Cross-table consistency is protected by the approved transaction,
+  Application checks, and PostgreSQL insert triggers.
+- Append-only behavior is enforced by Eloquent model guards and PostgreSQL
+  update/delete rejection triggers.
+- Tenant and branch fields are required on all three tables with tenant,
+  branch, and query-path indexes.
+- Forced PostgreSQL RLS is required on all three tables.
+
+Approved idempotency contract:
+- Scope idempotency by tenant, branch, and key.
+- Store a canonical SHA-256 fingerprint over version, action,
+  `order_id`, `cashbox_id`, `expected_amount_minor`, and
+  `expected_currency`.
+- Identical replay returns the original committed result without duplicate
+  financial rows or audit rows.
+- A reused key with a mismatched payload returns
+  `payments.idempotency_conflict` and must never return the previous
+  successful result.
+- The same key in another tenant or branch is independent.
+- PostgreSQL unique-constraint races on the idempotency key are resolved only
+  after the failed transaction has rolled back; do not continue inside an
+  aborted PostgreSQL transaction.
+
+Approved transaction and lock order:
+- Canonical lock/write order:
+  existing idempotency lookup; selected order row through the Orders payable
+  contract; idempotency recheck; selected cashbox row; financial and audit
+  inserts.
+- The selected order row is locked before the selected cashbox row.
+- Capture must not take the cashbox branch advisory lock and must not lock
+  every cashbox in the branch.
+- Locking the selected cashbox row is required only to coordinate with
+  concurrent activation/deactivation and prove the cashbox is active at
+  capture time.
+
+Approved remaining-balance contract:
+- Remaining balance equals the Orders-owned locked gross amount minus
+  Payments-owned captured allocations for the order.
+- Include only captured allocations/payments in the sum.
+- No allocations means paid amount is zero.
+- Remaining zero rejects with `payments.order_already_fully_paid`.
+- Allocations above gross reject with `payments.order_over_allocated`.
+- All money calculations use integer minor units only.
+- Future Orders closing logic must ask Payments through a public Payments
+  contract; Orders must not import Payments internals or query Payments
+  tables.
+
+Authorization, tenancy, audit, and logging:
+- Enforce `payments.capture` inside the `CaptureCashPayment` Application
+  action.
+- Owner, manager, and cashier are permitted by the existing approved role
+  configuration; waiter is not.
+- Cross-tenant or cross-branch order/cashbox ids must use not-found
+  semantics.
+- Tenant and branch isolation apply at context, query, model/RLS, FK, and
+  consistency-trigger boundaries.
+- Audit action: `payments.payment.captured`.
+- Audit target type: `payments_payment`.
+- Audit persistence is transaction-bound: audit failure rolls back capture.
+- Idempotent replay must not create duplicate audit rows.
+- Structured logs must use stable English messages and safe redacted context.
+
+Explicit exclusions:
+- No UI, Livewire, controller, API, route, or broad payment-management screen.
+- No partial or split payments.
+- No overpayment.
+- No card, non-cash, or mixed payment methods.
+- No refunds, voids, or reversals.
+- No tips.
+- No automatic order closing.
+- No printing, fiscalization, receipts, reports, settlement flows, or
+  historical imports.
+- No domain events or outbox infrastructure.
+- No unrelated order workflow changes.
+
+Expected implementation inventory:
+- One financial-schema migration for `payments`, `payment_allocations`, and
+  `cashbox_entries`.
+- New append-only Payment, PaymentAllocation, and CashboxEntry models.
+- New command/result DTOs, fingerprint support, capture errors, and
+  translations.
+- New `CaptureCashPayment` Application action.
+- New SQLite-compatible tests for functional behavior, authorization,
+  validation, idempotency, audit, append-only behavior, and proof that order
+  workflow state does not change.
+- New PostgreSQL tests for RLS, runtime role behavior, triggers, and
+  concurrency/idempotency.
+- New payment concurrency worker and `payments-concurrency-pgsql` Make target.
+
 ## Plan
 
 - [x] Step CB0: precondition verification and worklog setup. Read required
@@ -280,6 +433,57 @@ Merge record for PR #61:
   review and repair evidence without starting another implementation slice.
   Result: this documentation-only update is scoped to
   `docs/worklog/PHASE-3.md` on branch `docs/phase-3-pr61-post-merge`.
+- [ ] Step FCPF0: implementation branch setup from verified `main`. In a later
+  explicitly authorized implementation turn, fetch `origin`; verify local
+  `main` and `origin/main` are aligned and clean; create the implementation
+  branch from the then-current verified `main`; and do not start from this
+  documentation branch.
+- [ ] Step FCPF1: financial schema migration. Add the single migration for
+  `payments`, `payment_allocations`, and `cashbox_entries`, including tenant
+  and branch fields, indexes, foreign keys, row-level checks, forced
+  PostgreSQL RLS, append-only update/delete triggers, and insert consistency
+  triggers.
+- [ ] Step FCPF2: append-only financial models. Add Payment,
+  PaymentAllocation, and CashboxEntry models with `BelongsToTenant`,
+  `TenantScoped`, typed casts, no soft deletes, and update/delete model guards.
+- [ ] Step FCPF3: command/result, fingerprint, errors, and translations. Add
+  `CaptureCashPaymentCommand`, the capture result DTO, canonical idempotency
+  fingerprint support, stable Payments domain errors, and matching `hy`, `ru`,
+  and `en` translation keys.
+- [ ] Step FCPF4: `CaptureCashPayment` Application action. Implement
+  action-level `payments.capture` authorization, tenant/branch/actor
+  resolution, command validation, order lock through the Orders public
+  contract, selected cashbox row lock, remaining-balance calculation,
+  idempotency handling, financial inserts, transaction-bound audit, and
+  structured logs.
+- [ ] Step FCPF5: SQLite-compatible coverage. Add tests for successful full
+  cash capture, authorization, validation, exact amount and currency guards,
+  idempotency replay/conflict, inactive and inaccessible cashboxes,
+  inaccessible/non-payable orders, audit rollback, append-only model guards,
+  and proof that payment capture does not change order status, closed time,
+  totals, items, or other workflow state.
+- [ ] Step FCPF6: PostgreSQL RLS, runtime-role, trigger, and concurrency
+  coverage. Add tests proving financial-table RLS isolation, runtime-role
+  capture behavior, raw update/delete trigger rejection, identical and
+  mismatched idempotency races, two different payment attempts for one order,
+  order mutation/cancellation coordination, and cashbox deactivation
+  coordination.
+- [ ] Step FCPF7: payment concurrency worker and Make target. Add a Payments
+  concurrency worker following the existing PostgreSQL worker pattern and add
+  a narrowly scoped `payments-concurrency-pgsql` Make target.
+- [ ] Step FCPF8: focused and complete verification. Run focused tests first,
+  then `make pint`, `make stan`, `make test`,
+  `make tenant-isolation-pgsql`, `make orders-concurrency-pgsql`,
+  `make cashboxes-concurrency-pgsql`, `make runtime-role-pgsql`, the new
+  `make payments-concurrency-pgsql`, and `make fresh`.
+- [ ] Step FCPF9: exact diff and inventory review. Confirm the implementation
+  diff matches the approved slice, contains no UI/delivery adapter or excluded
+  feature, and changes only expected implementation, test, translation,
+  Makefile, and worklog files.
+- [ ] Step FCPF10: commit, push, and Draft PR only with later authorization.
+  Commit the implementation and worklog update, push the implementation
+  branch, and open a Draft PR only after the owner explicitly authorizes that
+  release-flow work.
 
 ## Gotchas
 
@@ -300,6 +504,9 @@ Merge record for PR #61:
 - PostgreSQL lock coordination tests use `pg_blocking_pids` against real
   backend PIDs instead of sleeps as assertions; this keeps blocking checks
   deterministic without introducing a new lock order.
+- PostgreSQL unique-constraint violations abort the current transaction. The
+  future payment idempotency race handler must let the failed transaction roll
+  back before loading and comparing the winning committed payment row.
 
 ## Verification Results
 
@@ -361,12 +568,11 @@ Merge record for PR #61:
 
 ## Next Steps
 
-Await owner approval and planning for the first future payment-capture slice.
-Known constraints from existing decisions: full remaining balance only, cash
-only, active cashbox required, exact integer minor units, no partial payment,
-no overpayment, no mixed payment methods, and no automatic order closing.
+Await separate owner authorization to begin implementation of the approved
+Full Cash Payment Capture Foundation. The exact next implementation action is
+Step FCPF0: verify the then-current `main` baseline and create the
+implementation branch from that verified `main`.
 
 No payment capture, payment schema, payment allocations, cashbox ledger,
-closing, fiscalization, printing, or UI work has begun. Do not formally define
-or implement the next Phase 3 slice until the owner explicitly authorizes that
-planning.
+closing, fiscalization, printing, UI, routes, controllers, Livewire, API,
+domain events, or outbox work has begun.
