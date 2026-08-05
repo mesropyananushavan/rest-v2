@@ -1,7 +1,7 @@
 # Worklog — Phase 3: Payments/Cashbox/Fiscal/Printing
 
-Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation merged through PR #64; PR #65 post-merge documentation reconciliation recorded; Order Workspace Full Cash Capture Adapter Draft PR #67 open
-Branch: feature/order-workspace-full-cash-capture
+Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation merged through PR #64; Order Workspace Full Cash Capture Adapter merged through PR #67; PR #67 post-merge documentation reconciliation in progress
+Branch: docs/phase-3-pr67-post-merge
 
 Phase 2 was closed by merge commit
 `085759f4c929e9f9ebf2fe551314996b58a95f0a` for PR #59. Phase 3 starts with
@@ -42,6 +42,17 @@ PR #66 merged the PR #65 post-merge documentation housekeeping as merge commit
 
 After PR #66 merged, local `main` was fast-forward aligned with `origin/main`
 at merge commit `f7a41a3fe76201da8f72caa8c73045168c59a6e2`.
+
+PR #67 merged the Order Workspace Full Cash Capture Adapter as merge commit
+`9ef141f21844a6fc29b3f7561d4e8626c1f94e2e` from feature head
+`818fa9178eb65f07eebd71c51d2d67f05a09f436` at
+`2026-08-05T12:59:16Z`. The verified merge-parent order is:
+
+1. `f7a41a3fe76201da8f72caa8c73045168c59a6e2`
+2. `818fa9178eb65f07eebd71c51d2d67f05a09f436`
+
+After PR #67 merged, local `main` was fast-forward aligned with `origin/main`
+at merge commit `9ef141f21844a6fc29b3f7561d4e8626c1f94e2e`.
 
 ## Approved First Slice: Cashbox Configuration Foundation
 
@@ -796,11 +807,12 @@ Explicit exclusions:
   `origin/feature/order-workspace-full-cash-capture`; Draft PR #67
   (`https://github.com/mesropyananushavan/rest-v2/pull/67`) was opened
   against `main` with title
-  `feat(payments): capture full cash payment from order workspace`. This
-  final docs-only PR-facts commit is intentionally not recorded by SHA here to
-  avoid a self-referential worklog loop. No Ready transition, approval, merge,
-  force-push, rebase, reset, direct `main` push, branch deletion, or next-slice
-  implementation was performed.
+  `feat(payments): capture full cash payment from order workspace`, then was
+  merged from final head `818fa9178eb65f07eebd71c51d2d67f05a09f436` as merge
+  commit `9ef141f21844a6fc29b3f7561d4e8626c1f94e2e` at
+  `2026-08-05T12:59:16Z`. Local `main` was subsequently fast-forward aligned
+  with `origin/main` at the merge commit. No force-push, rebase, reset, direct
+  `main` push, branch deletion, or next-slice implementation was performed.
 
 ## Gotchas
 
@@ -1203,11 +1215,14 @@ Explicit exclusions:
   410 files; `make stan` passed with no errors; and the final diff review
   found no migration/schema impact, no unrelated implementation, and no
   excluded Phase 3 behavior.
-- Order Workspace Full Cash Capture Adapter Draft PR #67 was opened from
-  `feature/order-workspace-full-cash-capture` to `main` and left in Draft
-  state. Remote CI is expected to run on the final pushed head; exact initial
-  run/job state is reported in the session end report rather than recursively
-  committed here.
+- PR #67 merge verification passed: GitHub reported PR #67 merged at
+  `2026-08-05T12:59:16Z` with merge commit
+  `9ef141f21844a6fc29b3f7561d4e8626c1f94e2e`; the merge commit parents were
+  `f7a41a3fe76201da8f72caa8c73045168c59a6e2` and
+  `818fa9178eb65f07eebd71c51d2d67f05a09f436`; local `main`, `origin/main`,
+  and GitHub `main` were aligned at the merge commit with ahead/behind
+  `0/0`; the worktree, index, and untracked-file state remained clean; and
+  there were no open duplicate reconciliation PRs.
 
 ## Next Steps
 
@@ -1216,17 +1231,23 @@ through merged PR #64, PR #65, and PR #66. No FCPF implementation item remains
 pending.
 
 Order Workspace Full Cash Capture Adapter OWFCA0 through OWFCA5 is complete
-on branch `feature/order-workspace-full-cash-capture`. Draft PR #67 is open
-against `main` and remains Draft. The next lifecycle action is owner review of
-Draft PR #67 and, if acceptable, separate explicit owner authorization to
-perform Ready-state verification. Do not mark Ready or merge without that
-separate authorization.
+and merged through PR #67. The retained branch
+`feature/order-workspace-full-cash-capture` remains present; no branch cleanup
+has been approved.
 
-No subsequent Phase 3 bounded slice is approved. Fiscal/printing, split or
-partial payments, prepayments, debts, printer monitoring, refunds/reversals,
-and cashbox monitoring remain deferred broad Blueprint areas, not automatically
-authorized tasks. Retained documentation and feature branch cleanup is optional
-and requires separate explicit authorization.
+No subsequent Phase 3 bounded slice is approved. Full cash capture does not
+automatically close the order. A paid-order close gate, if considered later,
+remains an unapproved candidate requiring a separate owner/product/architecture
+decision; no permission name, allowed actor, manual-vs-automatic behavior,
+Orders-to-Payments contract, fiscal, printing, settlement, or archive behavior
+has been decided.
+
+Fiscalization, receipt and kitchen printing, printer monitoring, split or
+partial payments, other payment methods, prepayments, debts, refunds/reversals,
+cashbox reconciliation, cashbox monitoring, cashbox reporting, and retained
+documentation or feature branch cleanup remain deferred broad Blueprint areas,
+not automatically authorized tasks. The exact next lifecycle action is separate
+owner authorization for the next bounded Phase 3 slice or for branch cleanup.
 
 Payment financial schema now exists as the FCPF1 migration and schema-focused
 tests, the FCPF2 append-only financial Eloquent models and model-focused tests,
