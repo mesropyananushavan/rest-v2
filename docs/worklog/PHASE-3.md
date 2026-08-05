@@ -1,6 +1,6 @@
 # Worklog — Phase 3: Payments/Cashbox/Fiscal/Printing
 
-Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation merged through PR #64; PR #65 post-merge documentation reconciliation recorded; Order Workspace Full Cash Capture Adapter implemented and validation complete locally
+Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation merged through PR #64; PR #65 post-merge documentation reconciliation recorded; Order Workspace Full Cash Capture Adapter Draft PR #67 open
 Branch: feature/order-workspace-full-cash-capture
 
 Phase 2 was closed by merge commit
@@ -788,9 +788,19 @@ Explicit exclusions:
   `make test`, `make pint`, `make stan`, and diff/scope review. The final diff
   has no migration or schema impact and no implementation outside the approved
   adapter boundary.
-- [ ] Step OWFCA5: commit, push, and Draft PR. Commit the scoped slice, push
+- [x] Step OWFCA5: commit, push, and Draft PR. Commit the scoped slice, push
   only `feature/order-workspace-full-cash-capture`, open a Draft PR against
   `main`, verify remote PR/file/CI state, and do not mark Ready or merge.
+  Result: implementation commit
+  `56342f18ea2019257bee38b841e246a4febe6669` was created and pushed to
+  `origin/feature/order-workspace-full-cash-capture`; Draft PR #67
+  (`https://github.com/mesropyananushavan/rest-v2/pull/67`) was opened
+  against `main` with title
+  `feat(payments): capture full cash payment from order workspace`. This
+  final docs-only PR-facts commit is intentionally not recorded by SHA here to
+  avoid a self-referential worklog loop. No Ready transition, approval, merge,
+  force-push, rebase, reset, direct `main` push, branch deletion, or next-slice
+  implementation was performed.
 
 ## Gotchas
 
@@ -1193,6 +1203,11 @@ Explicit exclusions:
   410 files; `make stan` passed with no errors; and the final diff review
   found no migration/schema impact, no unrelated implementation, and no
   excluded Phase 3 behavior.
+- Order Workspace Full Cash Capture Adapter Draft PR #67 was opened from
+  `feature/order-workspace-full-cash-capture` to `main` and left in Draft
+  state. Remote CI is expected to run on the final pushed head; exact initial
+  run/job state is reported in the session end report rather than recursively
+  committed here.
 
 ## Next Steps
 
@@ -1200,12 +1215,12 @@ Full Cash Payment Capture Foundation FCPF0 through FCPF11 remains complete
 through merged PR #64, PR #65, and PR #66. No FCPF implementation item remains
 pending.
 
-Order Workspace Full Cash Capture Adapter OWFCA0 through OWFCA4 is implemented
-and validated locally on branch `feature/order-workspace-full-cash-capture`.
-OWFCA5 is the next authorized lifecycle step: commit the scoped slice, push
-only this feature branch, open a Draft PR against `main`, verify remote
-PR/file/CI state, and do not mark Ready or merge without separate owner
-authorization.
+Order Workspace Full Cash Capture Adapter OWFCA0 through OWFCA5 is complete
+on branch `feature/order-workspace-full-cash-capture`. Draft PR #67 is open
+against `main` and remains Draft. The next lifecycle action is owner review of
+Draft PR #67 and, if acceptable, separate explicit owner authorization to
+perform Ready-state verification. Do not mark Ready or merge without that
+separate authorization.
 
 No subsequent Phase 3 bounded slice is approved. Fiscal/printing, split or
 partial payments, prepayments, debts, printer monitoring, refunds/reversals,
