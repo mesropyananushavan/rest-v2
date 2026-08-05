@@ -25,6 +25,14 @@ use App\Modules\Orders\Application\RemoveItem;
 use App\Modules\Orders\Contracts\OrderPermissions;
 use App\Modules\Orders\Domain\OrdersDomainException;
 use App\Modules\Orders\Infrastructure\Models\OrderItem;
+use App\Modules\Payments\Application\CaptureCashPayment;
+use App\Modules\Payments\Application\CaptureCashPaymentCommand;
+use App\Modules\Payments\Application\CashboxCaptureOption;
+use App\Modules\Payments\Application\FullCashPaymentPreview;
+use App\Modules\Payments\Application\ListActiveCashboxesForCapture;
+use App\Modules\Payments\Application\PreviewFullCashPayment;
+use App\Modules\Payments\Contracts\PaymentPermissions;
+use App\Modules\Payments\Domain\PaymentsDomainException;
 use App\Modules\Tenancy\Contracts\BranchContext;
 use App\Support\I18n\LocalizedText;
 use App\Support\Money\Money;
@@ -32,6 +40,7 @@ use App\Support\Money\MoneyFormatter;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Lang;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
@@ -65,6 +74,14 @@ final class OrderWorkspace extends Component
 
     public string $selectedWaiterId = '';
 
+    public string $selectedCashboxId = '';
+
+    public string $cashPaymentIdempotencyKey = '';
+
+    public int $cashPaymentExpectedAmountMinor = 0;
+
+    public string $cashPaymentExpectedCurrency = '';
+
     /**
      * @var array<int, string>
      */
@@ -91,6 +108,7 @@ final class OrderWorkspace extends Component
         $this->authorizeTakingOrders();
 
         $this->orderId = $orderId;
+        $this->cashPaymentIdempotencyKey = $this->newCashPaymentIdempotencyKey();
     }
 
     public function render(): View
@@ -119,6 +137,8 @@ final class OrderWorkspace extends Component
         $assignableWaiters = app(UserDirectory::class)
             ->activeUsersAssignedToBranchWithPermission($branchId, OrderPermissions::TAKE);
         $this->syncSelectedWaiterId($workspace->assignedWaiterId);
+        $locale = app()->getLocale();
+        $paymentData = $this->cashPayment($workspace, $locale);
 
         $menu = app(MenuCatalog::class)->browseSellableInBranch(
             branchId: $branchId,
@@ -133,7 +153,7 @@ final class OrderWorkspace extends Component
         $this->menuPage = $menu->itemPage;
         $this->menuCategoryPage = $menu->categoryPage;
         $menuData = $this->menu($menu);
-        $orderData = $this->order($workspace, $assignableWaiters);
+        $orderData = $this->order($workspace, $assignableWaiters, $paymentData);
         $this->lastMenu = $menuData;
         $this->lastOrder = $orderData;
         $this->workspaceLoaded = true;
@@ -374,8 +394,53 @@ final class OrderWorkspace extends Component
         $this->redirectRoute('admin.orders.board');
     }
 
+    public function captureFullCashPayment(): void
+    {
+        $this->authorizeCapturingPayments();
+        $this->resetFeedback();
+
+        $cashboxId = $this->validatedSelectedCashboxId();
+
+        if ($cashboxId === null) {
+            return;
+        }
+
+        $this->ensureCashPaymentIdempotencyKey();
+
+        try {
+            [$expectedAmountMinor, $expectedCurrency] = $this->expectedCashPaymentPayload();
+            $result = app(CaptureCashPayment::class)(new CaptureCashPaymentCommand(
+                orderId: $this->orderId,
+                cashboxId: $cashboxId,
+                expectedAmountMinor: $expectedAmountMinor,
+                expectedCurrency: $expectedCurrency,
+                idempotencyKey: $this->cashPaymentIdempotencyKey,
+            ));
+        } catch (PaymentsDomainException $exception) {
+            $this->errorMessage = $this->paymentDomainErrorMessage($exception);
+
+            return;
+        } catch (OrdersDomainException $exception) {
+            $this->errorMessage = $this->domainErrorMessage($exception);
+
+            return;
+        } catch (ModelNotFoundException) {
+            $this->errorMessage = __('payments.workspace.errors.cashbox_unavailable');
+
+            return;
+        }
+
+        $this->cashPaymentIdempotencyKey = $this->newCashPaymentIdempotencyKey();
+        $this->cashPaymentExpectedAmountMinor = 0;
+        $this->cashPaymentExpectedCurrency = '';
+        $this->statusMessage = __('payments.workspace.flash.captured', [
+            'amount' => $this->money($result->amountMinor, $result->currency, app()->getLocale()),
+        ]);
+    }
+
     /**
      * @param  list<BranchAssignableUser>  $assignableWaiters
+     * @param  array{visible: bool, can_capture: bool, outstanding: string, cashboxes: list<array{id: int, name: string, is_default: bool}>, unavailable_message: string|null}  $payment
      * @return array{
      *     id: int,
      *     type: string,
@@ -396,10 +461,11 @@ final class OrderWorkspace extends Component
      *     line_count: int,
      *     cancel_confirmation_message: string,
      *     subtables: list<array{id: int, name: string}>,
-     *     groups: list<array{id: int|null, name: string, items: list<array{id: int, current_subtable_id: int|null, name: string, qty: int, unit_price: string, discount: string, total: string, move_targets: list<array{value: string, label: string}>}>}>
+     *     groups: list<array{id: int|null, name: string, items: list<array{id: int, current_subtable_id: int|null, name: string, qty: int, unit_price: string, discount: string, total: string, move_targets: list<array{value: string, label: string}>}>}>,
+     *     payment: array{visible: bool, can_capture: bool, outstanding: string, cashboxes: list<array{id: int, name: string, is_default: bool}>, unavailable_message: string|null}
      * }
      */
-    private function order(OrderWorkspaceData $workspace, array $assignableWaiters): array
+    private function order(OrderWorkspaceData $workspace, array $assignableWaiters, array $payment): array
     {
         $locale = app()->getLocale();
         $lineCount = count($workspace->items);
@@ -425,6 +491,7 @@ final class OrderWorkspace extends Component
             'cancel_confirmation_message' => $lineCount > 0
                 ? __('orders.workspace.confirm.cancel_order_message_with_lines', ['count' => $lineCount])
                 : __('orders.workspace.confirm.cancel_order_message_empty'),
+            'payment' => $payment,
             'subtables' => array_map(
                 fn (OrderWorkspaceSubtable $subtable): array => [
                     'id' => $subtable->id,
@@ -457,7 +524,8 @@ final class OrderWorkspace extends Component
      *     line_count: int,
      *     cancel_confirmation_message: string,
      *     subtables: list<array{id: int, name: string}>,
-     *     groups: list<array{id: int|null, name: string, items: list<array{id: int, current_subtable_id: int|null, name: string, qty: int, unit_price: string, discount: string, total: string, move_targets: list<array{value: string, label: string}>}>}>
+     *     groups: list<array{id: int|null, name: string, items: list<array{id: int, current_subtable_id: int|null, name: string, qty: int, unit_price: string, discount: string, total: string, move_targets: list<array{value: string, label: string}>}>}>,
+     *     payment: array{visible: bool, can_capture: bool, outstanding: string, cashboxes: list<array{id: int, name: string, is_default: bool}>, unavailable_message: string|null}
      * }
      */
     private function staleUnavailableOrder(): array
@@ -481,9 +549,152 @@ final class OrderWorkspace extends Component
             'stale_unavailable' => true,
             'line_count' => 0,
             'cancel_confirmation_message' => '',
+            'payment' => $this->emptyCashPayment(),
             'subtables' => [],
             'groups' => [],
         ];
+    }
+
+    /**
+     * @return array{visible: bool, can_capture: bool, outstanding: string, cashboxes: list<array{id: int, name: string, is_default: bool}>, unavailable_message: string|null}
+     */
+    private function cashPayment(OrderWorkspaceData $workspace, string $locale): array
+    {
+        if (! $this->canCapturePayments()) {
+            return $this->emptyCashPayment();
+        }
+
+        try {
+            $preview = app(PreviewFullCashPayment::class)($workspace->id);
+            $cashboxes = app(ListActiveCashboxesForCapture::class)();
+        } catch (PaymentsDomainException $exception) {
+            return $this->unavailableCashPayment(
+                $this->paymentDomainErrorMessage($exception),
+                $this->money(0, $workspace->currency, $locale),
+            );
+        } catch (OrdersDomainException $exception) {
+            return $this->unavailableCashPayment(
+                $this->domainErrorMessage($exception),
+                $this->money(0, $workspace->currency, $locale),
+            );
+        } catch (ModelNotFoundException) {
+            return $this->unavailableCashPayment(
+                __('orders.workspace.errors.generic'),
+                $this->money(0, $workspace->currency, $locale),
+            );
+        }
+
+        $this->syncSelectedCashboxId($cashboxes);
+        $this->syncCashPaymentExpectedPayload($preview);
+        $cashboxOptions = $this->cashboxOptions($cashboxes);
+
+        return [
+            'visible' => true,
+            'can_capture' => $cashboxOptions !== [],
+            'outstanding' => $this->money($preview->amountMinor, $preview->currency, $locale),
+            'cashboxes' => $cashboxOptions,
+            'unavailable_message' => $cashboxOptions === [] ? (string) __('payments.workspace.unavailable.no_cashboxes') : null,
+        ];
+    }
+
+    /**
+     * @return array{visible: bool, can_capture: bool, outstanding: string, cashboxes: list<array{id: int, name: string, is_default: bool}>, unavailable_message: string|null}
+     */
+    private function emptyCashPayment(): array
+    {
+        return [
+            'visible' => false,
+            'can_capture' => false,
+            'outstanding' => '',
+            'cashboxes' => [],
+            'unavailable_message' => null,
+        ];
+    }
+
+    /**
+     * @return array{visible: bool, can_capture: bool, outstanding: string, cashboxes: list<array{id: int, name: string, is_default: bool}>, unavailable_message: string|null}
+     */
+    private function unavailableCashPayment(string $message, string $outstanding): array
+    {
+        return [
+            'visible' => true,
+            'can_capture' => false,
+            'outstanding' => $outstanding,
+            'cashboxes' => [],
+            'unavailable_message' => $message,
+        ];
+    }
+
+    /**
+     * @param  list<CashboxCaptureOption>  $cashboxes
+     * @return list<array{id: int, name: string, is_default: bool}>
+     */
+    private function cashboxOptions(array $cashboxes): array
+    {
+        return array_map(
+            fn (CashboxCaptureOption $cashbox): array => [
+                'id' => $cashbox->id,
+                'name' => $cashbox->name,
+                'is_default' => $cashbox->isDefault,
+            ],
+            $cashboxes,
+        );
+    }
+
+    /**
+     * @param  list<CashboxCaptureOption>  $cashboxes
+     */
+    private function syncSelectedCashboxId(array $cashboxes): void
+    {
+        $ids = array_map(fn (CashboxCaptureOption $cashbox): int => $cashbox->id, $cashboxes);
+
+        if ($this->selectedCashboxId !== '' && preg_match('/^[1-9][0-9]*$/', $this->selectedCashboxId) === 1) {
+            if (in_array((int) $this->selectedCashboxId, $ids, true)) {
+                return;
+            }
+        }
+
+        $this->selectedCashboxId = count($cashboxes) === 1 ? (string) $cashboxes[0]->id : '';
+    }
+
+    private function validatedSelectedCashboxId(): ?int
+    {
+        $cashboxId = trim($this->selectedCashboxId);
+
+        if ($cashboxId === '') {
+            $this->errorMessage = __('payments.workspace.validation.cashbox_required');
+
+            return null;
+        }
+
+        if (! preg_match('/^[1-9][0-9]*$/', $cashboxId)) {
+            $this->errorMessage = __('payments.workspace.validation.cashbox_invalid');
+
+            return null;
+        }
+
+        return (int) $cashboxId;
+    }
+
+    /**
+     * @return array{0: int, 1: string}
+     */
+    private function expectedCashPaymentPayload(): array
+    {
+        if ($this->cashPaymentExpectedAmountMinor > 0 && $this->cashPaymentExpectedCurrency !== '') {
+            return [$this->cashPaymentExpectedAmountMinor, $this->cashPaymentExpectedCurrency];
+        }
+
+        $preview = app(PreviewFullCashPayment::class)($this->orderId);
+        $this->syncCashPaymentExpectedPayload($preview);
+
+        return [$preview->amountMinor, $preview->currency];
+    }
+
+    private function syncCashPaymentExpectedPayload(FullCashPaymentPreview $preview): void
+    {
+        $this->cashPaymentExpectedAmountMinor = $preview->amountMinor;
+        $this->cashPaymentExpectedCurrency = $preview->currency;
     }
 
     /**
@@ -861,9 +1072,33 @@ final class OrderWorkspace extends Component
         abort_unless($this->canCancelOrders(), 403);
     }
 
+    private function authorizeCapturingPayments(): void
+    {
+        abort_unless($this->canCapturePayments(), 403);
+    }
+
     private function canCancelOrders(): bool
     {
         return auth()->user()?->can(OrderPermissions::CANCEL) ?? false;
+    }
+
+    private function canCapturePayments(): bool
+    {
+        return auth()->user()?->can(PaymentPermissions::CAPTURE) ?? false;
+    }
+
+    private function ensureCashPaymentIdempotencyKey(): void
+    {
+        if ($this->cashPaymentIdempotencyKey !== '') {
+            return;
+        }
+
+        $this->cashPaymentIdempotencyKey = $this->newCashPaymentIdempotencyKey();
+    }
+
+    private function newCashPaymentIdempotencyKey(): string
+    {
+        return 'order-workspace:'.Str::uuid()->toString();
     }
 
     private function domainErrorMessage(OrdersDomainException $exception): string
@@ -889,5 +1124,20 @@ final class OrderWorkspace extends Component
         }
 
         return __('orders.workspace.errors.generic');
+    }
+
+    private function paymentDomainErrorMessage(PaymentsDomainException $exception): string
+    {
+        $code = $exception->errorCode();
+
+        if ($code === 'payments.expected_amount_mismatch' || $code === 'payments.expected_currency_mismatch') {
+            return __('payments.workspace.errors.stale_amount');
+        }
+
+        if (Lang::has($code)) {
+            return __($code);
+        }
+
+        return __('payments.workspace.errors.generic');
     }
 }

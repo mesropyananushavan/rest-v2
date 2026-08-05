@@ -22,6 +22,7 @@ declare(strict_types=1);
  *     stale_unavailable: bool,
  *     line_count: int,
  *     cancel_confirmation_message: string,
+ *     payment: array{visible: bool, can_capture: bool, outstanding: string, cashboxes: list<array{id: int, name: string, is_default: bool}>, unavailable_message: string|null},
  *     subtables: list<array{id: int, name: string}>,
  *     groups: list<array{id: int|null, name: string, items: list<array{id: int, current_subtable_id: int|null, name: string, qty: int, unit_price: string, discount: string, total: string, move_targets: list<array{value: string, label: string}>}>}>
  * } $order
@@ -436,6 +437,67 @@ declare(strict_types=1);
                     </div>
                 </dl>
             </x-card>
+
+            @if ($order['payment']['visible'])
+                <x-card :title="__('payments.workspace.title')">
+                    <div class="grid gap-4">
+                        <div class="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
+                            <p class="text-xs font-black uppercase tracking-[0.16em] text-smartrest-muted">
+                                {{ __('payments.workspace.fields.outstanding') }}
+                            </p>
+                            <p class="mt-1 text-2xl font-black text-smartrest-ink">
+                                {{ $order['payment']['outstanding'] }}
+                            </p>
+                            <p class="mt-1 text-sm font-semibold text-smartrest-muted">
+                                {{ __('payments.workspace.cash_only_note') }}
+                            </p>
+                        </div>
+
+                        @if ($order['payment']['unavailable_message'] !== null)
+                            <div class="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm font-semibold text-amber-950">
+                                {{ $order['payment']['unavailable_message'] }}
+                            </div>
+                        @else
+                            <div class="grid gap-2">
+                                <label for="order-workspace-cashbox" class="text-sm font-black uppercase tracking-[0.16em] text-green-800">
+                                    {{ __('payments.workspace.fields.cashbox') }}
+                                </label>
+                                <select
+                                    id="order-workspace-cashbox"
+                                    wire:model="selectedCashboxId"
+                                    class="min-h-12 w-full rounded-2xl border border-emerald-200 bg-white px-4 text-base font-semibold text-smartrest-ink shadow-sm outline-none transition focus:border-smartrest-success focus:ring-4 focus:ring-smartrest-success/15"
+                                >
+                                    @if (count($order['payment']['cashboxes']) !== 1)
+                                        <option value="">{{ __('payments.workspace.cashbox_placeholder') }}</option>
+                                    @endif
+                                    @foreach ($order['payment']['cashboxes'] as $cashbox)
+                                        <option value="{{ $cashbox['id'] }}">
+                                            {{ $cashbox['name'] }}{{ $cashbox['is_default'] ? ' - '.__('payments.workspace.default_cashbox') : '' }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <x-button
+                                type="button"
+                                variant="primary"
+                                class="w-full"
+                                wire:click="captureFullCashPayment"
+                                wire:loading.attr="disabled"
+                                wire:target="captureFullCashPayment"
+                                :disabled="! $order['payment']['can_capture'] || $selectedCashboxId === ''"
+                            >
+                                <span wire:loading.remove wire:target="captureFullCashPayment">
+                                    {{ __('payments.workspace.actions.capture_full_cash') }}
+                                </span>
+                                <span wire:loading wire:target="captureFullCashPayment">
+                                    {{ __('payments.workspace.actions.capturing') }}
+                                </span>
+                            </x-button>
+                        @endif
+                    </div>
+                </x-card>
+            @endif
         </aside>
     </div>
     @endif

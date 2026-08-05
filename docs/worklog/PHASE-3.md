@@ -1,7 +1,7 @@
 # Worklog — Phase 3: Payments/Cashbox/Fiscal/Printing
 
-Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation merged through PR #64; PR #65 post-merge documentation reconciliation recorded
-Branch: docs/phase-3-pr65-post-merge
+Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation merged through PR #64; PR #65 post-merge documentation reconciliation recorded; Order Workspace Full Cash Capture Adapter Draft PR #67 open
+Branch: feature/order-workspace-full-cash-capture
 
 Phase 2 was closed by merge commit
 `085759f4c929e9f9ebf2fe551314996b58a95f0a` for PR #59. Phase 3 starts with
@@ -34,6 +34,14 @@ PR #65 merged the PR #64 post-merge documentation housekeeping as merge commit
 After PR #65 merged, local `main` was safely fast-forwarded and verified clean
 and aligned with `origin/main` at merge commit
 `9867476a828567b6e06f5adce8ba5bfb908942d9`.
+
+PR #66 merged the PR #65 post-merge documentation housekeeping as merge commit
+`f7a41a3fe76201da8f72caa8c73045168c59a6e2` from docs head
+`ad780ce18fdeca78d072959f8771dcdce8fcd850` at
+`2026-08-05T11:47:59Z`.
+
+After PR #66 merged, local `main` was fast-forward aligned with `origin/main`
+at merge commit `f7a41a3fe76201da8f72caa8c73045168c59a6e2`.
 
 ## Approved First Slice: Cashbox Configuration Foundation
 
@@ -367,6 +375,57 @@ Merge record for PR #64:
   events, outbox, order closing, refund/reversal, branch deletion, or next
   implementation slice work was performed after merge.
 
+## Approved Fourth Slice: Order Workspace Full Cash Capture Adapter
+
+Owner approval:
+- The owner explicitly approved the bounded
+  `Order Workspace Full Cash Capture Adapter` slice after PR #66 merged.
+- This approval authorizes exposing the already completed cash-payment capture
+  foundation through the existing order workspace only.
+- No other Phase 3 implementation slice is approved.
+
+Objective:
+- Let an authorized cashier record one full cash payment for the order's
+  current outstanding payable amount from the existing order workspace.
+- Keep the workspace adapter thin and call the existing Payments Application
+  capture foundation instead of duplicating payment rules in Livewire,
+  controller, JavaScript, or views.
+
+Recovered contracts:
+- Orders owns workspace display and payable eligibility through the public
+  `PayableOrderReader` contract and `PayableOrderSnapshot` DTO.
+- Payments owns captured payment facts, allocation-derived paid/remaining
+  balance, cashbox ledger entries, idempotency, and audit.
+- `CaptureCashPayment` is the current authoritative cash-capture Application
+  action. It enforces `payments.capture`, tenant/branch/authenticated-actor
+  context, the order-before-cashbox lock order, selected active cashbox row
+  locking, allocation-derived remaining balance, exact expected amount and
+  currency guards, idempotent replay/conflict semantics, atomic financial and
+  audit inserts, append-only ledger behavior, forced PostgreSQL RLS, and no
+  order lifecycle mutation.
+- `PayableOrderSnapshot::currentRemainingPayableMinor()` is a temporary
+  compatibility helper and must not become the capture source once payment
+  allocations exist.
+
+In scope:
+- The minimum order-workspace Livewire/UI adapter for full cash capture.
+- Active current-branch cashbox option listing and explicit cashbox selection.
+- Server-side recalculation of the current outstanding amount before capture,
+  with `CaptureCashPayment` still performing the locked authoritative write
+  validation.
+- Server-issued idempotency key state compatible with the existing capture
+  fingerprint contract.
+- Focused automated tests and this worklog update.
+
+Explicit exclusions:
+- No partial, split, mixed-method, card, bank, online, gift-card, prepayment,
+  debt, overpayment, change, tip, refund, reversal, correction, void, deletion,
+  automatic order closing, settlement, fiscal receipt, fiscal-device, printing,
+  kitchen-printer, printer-monitoring, cashbox lifecycle, reconciliation,
+  reporting, public API, legacy-system, unrelated UI redesign, unrelated
+  refactor, schema, migration, event, or outbox work.
+
+
 ## Plan
 
 - [x] Step CB0: precondition verification and worklog setup. Read required
@@ -670,6 +729,78 @@ Merge record for PR #64:
   `docs/phase-3-pr64-post-merge`. That branch was later merged through PR #65
   as merge commit `9867476a828567b6e06f5adce8ba5bfb908942d9` from docs head
   `ab0a57c66d5e62fbaf8a345f0cc7f8c30ff1c8fc`.
+- [x] Step OWFCA0: reconciliation, branch setup, and worklog plan. Read the
+  required repository docs and relevant order-workspace, payable-order,
+  payment-capture, cashbox, authorization, RLS, idempotency, audit, UI, and
+  test contracts; fetch `origin`; verify clean local `main` and `origin/main`
+  at `f7a41a3fe76201da8f72caa8c73045168c59a6e2`; verify PR #66 merged with
+  expected head, merge commit, timestamp, and parent order; confirm no open PR
+  or existing implementation conflicts; create
+  `feature/order-workspace-full-cash-capture`; and write this plan before
+  code changes.
+  Result: reconciliation passed; no conflicting open PR existed; the requested
+  adapter was not already implemented; the branch was created from exact
+  synchronized `main`; no branch was deleted or rewritten.
+- [x] Step OWFCA1: Payments read support for workspace adapter. Add the minimal
+  Payments Application read objects needed by the workspace to list eligible
+  active current-branch cashboxes and preview the current allocation-derived
+  outstanding amount for an order without moving payment rules into UI code.
+  Result: added minimal Payments Application read services and DTOs for active
+  current-branch cashbox options and allocation-derived full-cash payment
+  preview. The existing `CaptureCashPayment` action now reuses the same
+  remaining-balance calculator, preserving the authoritative
+  payable-order/payment-allocation contract without duplicating payment rules
+  in the workspace.
+- [x] Step OWFCA2: Livewire order-workspace adapter and translations. Add the
+  minimum payment card, cashbox selection, full-cash capture action, generated
+  idempotency key, pending-click protection, translated feedback, and safe
+  error mapping while invoking `CaptureCashPayment`.
+  Result: the existing order workspace Livewire component now shows a
+  permission-gated cash-only payment card with current outstanding amount,
+  active cashbox selection, server-coordinated idempotency key, duplicate-click
+  disabling, translated success/error feedback, and a thin adapter method that
+  invokes `CaptureCashPayment`. No route, controller, request, public API,
+  migration, order lifecycle, fiscal, printing, split/partial payment,
+  refund/reversal, or cashbox lifecycle behavior was added.
+- [x] Step OWFCA3: focused workspace adapter coverage. Add or update tests for
+  successful full capture, permission gating, tenant/cashbox isolation,
+  inactive cashbox rejection, already-paid and stale-state handling,
+  idempotent duplicate submission, conflicting idempotency reuse, rendered
+  Livewire binding safety, and no order lifecycle mutation.
+  Result: added focused order-workspace payment coverage proving an authorized
+  cashier can capture the exact full outstanding cash amount into the selected
+  eligible cashbox; `payments.capture` is required in the UI and server path;
+  foreign orders, foreign cashboxes, inactive cashboxes, already-paid orders,
+  stale expected amounts, repeated identical submissions, and conflicting
+  idempotency-key reuse are handled safely; payment, allocation,
+  cashbox-ledger, and audit facts match the existing foundation; rendered
+  Livewire bindings remain valid; and successful payment does not close or
+  otherwise move the order lifecycle.
+- [x] Step OWFCA4: validation and diff review. Run focused tests, PostgreSQL
+  payment/order/runtime-role/tenant-isolation targets, `make pint`,
+  `make stan`, `make test`, `make fresh`, and `git diff --check`; inspect the
+  complete diff for scope compliance and no migration/schema impact.
+  Result: focused and full validation passed locally on branch
+  `feature/order-workspace-full-cash-capture`: order-workspace/payment focused
+  tests, affected order-workspace/query-count and payment capture tests,
+  PostgreSQL payment, tenant-isolation, orders-concurrency,
+  cashboxes-concurrency, and runtime-role targets, `make fresh`, full
+  `make test`, `make pint`, `make stan`, and diff/scope review. The final diff
+  has no migration or schema impact and no implementation outside the approved
+  adapter boundary.
+- [x] Step OWFCA5: commit, push, and Draft PR. Commit the scoped slice, push
+  only `feature/order-workspace-full-cash-capture`, open a Draft PR against
+  `main`, verify remote PR/file/CI state, and do not mark Ready or merge.
+  Result: implementation commit
+  `56342f18ea2019257bee38b841e246a4febe6669` was created and pushed to
+  `origin/feature/order-workspace-full-cash-capture`; Draft PR #67
+  (`https://github.com/mesropyananushavan/rest-v2/pull/67`) was opened
+  against `main` with title
+  `feat(payments): capture full cash payment from order workspace`. This
+  final docs-only PR-facts commit is intentionally not recorded by SHA here to
+  avoid a self-referential worklog loop. No Ready transition, approval, merge,
+  force-push, rebase, reset, direct `main` push, branch deletion, or next-slice
+  implementation was performed.
 
 ## Gotchas
 
@@ -1047,23 +1178,55 @@ Merge record for PR #64:
   local and remote `docs/phase-3-pr64-post-merge` and
   `feature/payments-cash-payment-capture-foundation` still existed, and no
   branch cleanup was performed.
+- Order Workspace Full Cash Capture Adapter focused coverage:
+  `make test ARGS='tests/Feature/Orders/OrderWorkspacePaymentTest.php'`
+  passed with 9 tests and 96 assertions.
+- Order Workspace Full Cash Capture Adapter affected coverage:
+  `make test ARGS='tests/Feature/Orders/OrderWorkspacePaymentTest.php
+  tests/Feature/Orders/OrderWorkspaceTest.php
+  tests/Feature/Orders/OrderWorkspaceItemWritesTest.php
+  tests/Feature/Payments/CaptureCashPaymentActionTest.php
+  tests/Feature/Payments/CaptureCashPaymentCoverageTest.php
+  tests/Feature/Payments/CaptureCashPaymentContractTest.php
+  tests/Architecture/ModuleBoundariesTest.php'` passed with 93 tests and
+  1148 assertions.
+- Order Workspace Full Cash Capture Adapter PostgreSQL verification passed:
+  `make payments-concurrency-pgsql` passed with 6 tests and 103 assertions;
+  `make tenant-isolation-pgsql` passed with 73 tests and 403 assertions;
+  `make orders-concurrency-pgsql` passed with 10 tests and 60 assertions;
+  `make cashboxes-concurrency-pgsql` passed with 3 tests and 28 assertions;
+  and `make runtime-role-pgsql` passed with 5 tests and 93 assertions.
+- Order Workspace Full Cash Capture Adapter repository gates passed:
+  `make fresh` completed migrations, deterministic demo seeding, and runtime
+  database grants; `make test` passed with 484 tests, 41 skipped
+  PostgreSQL-only tests, and 4745 assertions; `make pint` passed across
+  410 files; `make stan` passed with no errors; and the final diff review
+  found no migration/schema impact, no unrelated implementation, and no
+  excluded Phase 3 behavior.
+- Order Workspace Full Cash Capture Adapter Draft PR #67 was opened from
+  `feature/order-workspace-full-cash-capture` to `main` and left in Draft
+  state. Remote CI is expected to run on the final pushed head; exact initial
+  run/job state is reported in the session end report rather than recursively
+  committed here.
 
 ## Next Steps
 
 Full Cash Payment Capture Foundation FCPF0 through FCPF11 remains complete
-through merged PR #64, the merged PR #65 post-merge documentation
-housekeeping, and this PR #65 reconciliation branch. No FCPF implementation
-item remains pending. The previous lifecycle instruction to review CI for the
-Draft PR created from `docs/phase-3-pr64-post-merge`, then decide whether to
-mark that docs-only PR Ready and merge it, is complete and is no longer the
-next action.
+through merged PR #64, PR #65, and PR #66. No FCPF implementation item remains
+pending.
 
-No new bounded Phase 3 implementation slice is currently approved. The next
-authoritative action is owner selection and explicit approval of the next
-bounded Phase 3 slice. Fiscal/printing, split or partial payments, prepayments,
-debts, and printer monitoring remain broad Blueprint Phase 3 areas, not
-automatically authorized tasks. Retained documentation and feature branch
-cleanup is optional and requires separate explicit authorization.
+Order Workspace Full Cash Capture Adapter OWFCA0 through OWFCA5 is complete
+on branch `feature/order-workspace-full-cash-capture`. Draft PR #67 is open
+against `main` and remains Draft. The next lifecycle action is owner review of
+Draft PR #67 and, if acceptable, separate explicit owner authorization to
+perform Ready-state verification. Do not mark Ready or merge without that
+separate authorization.
+
+No subsequent Phase 3 bounded slice is approved. Fiscal/printing, split or
+partial payments, prepayments, debts, printer monitoring, refunds/reversals,
+and cashbox monitoring remain deferred broad Blueprint areas, not automatically
+authorized tasks. Retained documentation and feature branch cleanup is optional
+and requires separate explicit authorization.
 
 Payment financial schema now exists as the FCPF1 migration and schema-focused
 tests, the FCPF2 append-only financial Eloquent models and model-focused tests,

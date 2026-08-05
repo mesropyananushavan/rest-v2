@@ -407,8 +407,8 @@ it('keeps cancel-visible workspace render query count stable as line count grows
     $small = orderWorkspaceCancelRenderQueryCount(1, 'small');
     $large = orderWorkspaceCancelRenderQueryCount(8, 'large');
 
-    expect($small)->toBe(8)
-        ->and($large)->toBe(8);
+    expect($small)->toBe(9)
+        ->and($large)->toBe(9);
 });
 
 it('keeps order translation key sets identical and reuses the cancelled flash key', function (): void {

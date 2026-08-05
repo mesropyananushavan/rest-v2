@@ -879,9 +879,9 @@ it('keeps workspace render and new mutation query counts stable as lines and sub
     expect($largeLines)->toBe($small)
         ->and($largeSubtables)->toBe($small)
         ->and($small)->toBe([
-            'render' => 9,
-            'create_subtable' => 30,
-            'move_item' => 36,
+            'render' => 10,
+            'create_subtable' => 33,
+            'move_item' => 39,
         ]);
 });
 
