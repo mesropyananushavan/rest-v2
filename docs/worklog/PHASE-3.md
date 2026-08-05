@@ -1,6 +1,6 @@
 # Worklog — Phase 3: Payments/Cashbox/Fiscal/Printing
 
-Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation FCPF8 complete; FCPF9 pending owner authorization
+Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation FCPF9 complete; FCPF10 pending owner authorization
 Branch: feature/payments-cash-payment-capture-foundation
 
 Phase 2 was closed by merge commit
@@ -559,10 +559,39 @@ Expected implementation inventory:
   and seeders, runtime grants, and `git diff --check` all passed on the final
   source state. No production, test, migration, UI, route, controller, API,
   fiscal, printing, event, outbox, or FCPF9 behavior was introduced.
-- [ ] Step FCPF9: exact diff and inventory review. Confirm the implementation
+- [x] Step FCPF9: exact diff and inventory review. Confirm the implementation
   diff matches the approved slice, contains no UI/delivery adapter or excluded
   feature, and changes only expected implementation, test, translation,
   Makefile, and worklog files.
+  Result: reviewed the complete committed range from authoritative base
+  `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd` through head
+  `c4400f757d0d2948218ddc6451d48ad658797ea6`; all 10 local commits mapped to
+  their intended FCPF0-FCPF8 steps with no empty, duplicated, accidental, or
+  uncommitted-state-dependent commit. The aggregate inventory was 24 changed
+  files with 5149 insertions and 20 deletions: Payments production
+  Application/domain/model code; the public Orders payable-contract consumer
+  only; one financial migration; three payment translations; SQLite,
+  PostgreSQL, RLS/runtime-role, model/schema, architecture-adjacent tests; the
+  Payments concurrency worker and entrypoint; the `payments-concurrency-pgsql`
+  Make target; and this worklog. No deletes, renames, binaries, generated
+  artifacts, executable-bit changes, ignored files, temporary files, secrets,
+  unrelated files, UI, route, controller, API, fiscal, printing, order closing,
+  refund/reversal, event, outbox, or later-step behavior were found.
+  Architecture and scope review confirmed Payments production code imports
+  Orders only through `App\Modules\Orders\Contracts\PayableOrderReader` and
+  `PayableOrderSnapshot`, does not query Orders tables directly, preserves the
+  approved transaction/idempotency/selected-order-before-selected-cashbox lock
+  order, locks only the selected cashbox, avoids cashbox branch advisory locks,
+  keeps integer minor-unit money, and preserves append-only, audit, forced RLS,
+  restricted runtime-role, insert-consistency trigger, and real concurrency
+  contracts. Review verification commands passed: `git diff --check
+  origin/main...HEAD`; aggregate `git diff --stat`, `--name-status`,
+  `--summary`, `--numstat`, and final changed-file reads; commit-by-commit
+  `git log`, `git diff-tree`, and `git show` inspection; static `rg` searches
+  for forbidden Orders internals, direct Orders-table access, excluded
+  features, generated/secret-bearing paths, debug artifacts, and money floats;
+  and `make test ARGS='tests/Architecture/ModuleBoundariesTest.php'` with
+  11 tests and 257 assertions.
 - [ ] Step FCPF10: commit, push, and Draft PR only with later authorization.
   Commit the implementation and worklog update, push the implementation
   branch, and open a Draft PR only after the owner explicitly authorizes that
@@ -915,11 +944,10 @@ Expected implementation inventory:
 
 ## Next Steps
 
-The exact next implementation action requiring separate owner authorization is
-Step FCPF9: exact diff and inventory review. Confirm the implementation diff
-matches the approved slice, contains no UI/delivery adapter or excluded
-feature, and changes only expected implementation, test, translation,
-Makefile, and worklog files.
+The exact next release-flow action requiring separate owner authorization is
+Step FCPF10: commit, push, and Draft PR. Do not push, create an upstream,
+create or update a PR, merge, rebase, amend, or change GitHub state until the
+owner explicitly authorizes that step.
 
 Payment financial schema now exists as the FCPF1 migration and schema-focused
 tests, the FCPF2 append-only financial Eloquent models and model-focused tests,
@@ -929,6 +957,6 @@ action with minimal focused action tests, and the FCPF5 comprehensive
 SQLite-compatible coverage. FCPF6 PostgreSQL RLS/runtime-role/trigger/
 append-only/atomicity/concurrency coverage is complete. The FCPF7 Payments
 PostgreSQL concurrency worker and Make target are complete. FCPF8 focused and
-complete verification is complete. No FCPF9 exact diff/inventory review,
-closing, fiscalization, printing, UI, routes,
-controllers, Livewire, API, domain events, or outbox work has begun.
+complete verification is complete. FCPF9 exact diff and inventory review is
+complete. No FCPF10 release-flow work, closing, fiscalization, printing, UI,
+routes, controllers, Livewire, API, domain events, or outbox work has begun.
