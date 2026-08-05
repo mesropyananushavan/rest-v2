@@ -77,4 +77,33 @@ return [
             'not_default' => 'Not default',
         ],
     ],
+    'workspace' => [
+        'title' => 'Payment',
+        'cash_only_note' => 'Cash only. The server recalculates the outstanding amount before capture.',
+        'cashbox_placeholder' => 'Select cashbox',
+        'default_cashbox' => 'Default',
+        'fields' => [
+            'outstanding' => 'Outstanding',
+            'cashbox' => 'Cashbox',
+        ],
+        'actions' => [
+            'capture_full_cash' => 'Capture full cash payment',
+            'capturing' => 'Capturing...',
+        ],
+        'validation' => [
+            'cashbox_required' => 'Select an active cashbox before capturing payment.',
+            'cashbox_invalid' => 'Select a valid cashbox before capturing payment.',
+        ],
+        'unavailable' => [
+            'no_cashboxes' => 'No active cashbox is available for this branch.',
+        ],
+        'errors' => [
+            'cashbox_unavailable' => 'The selected cashbox is not available for payment capture.',
+            'generic' => 'Payment could not be captured. Refresh the workspace and try again.',
+            'stale_amount' => 'The payable amount changed before capture. Review the updated total and try again.',
+        ],
+        'flash' => [
+            'captured' => 'Cash payment captured for :amount.',
+        ],
+    ],
 ];

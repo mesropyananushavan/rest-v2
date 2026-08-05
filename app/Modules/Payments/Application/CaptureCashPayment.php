@@ -32,6 +32,7 @@ final class CaptureCashPayment
         private readonly BranchContext $branches,
         private readonly Authorizer $authorizer,
         private readonly PayableOrderReader $payableOrders,
+        private readonly CalculateOrderPaymentBalance $balances,
         private readonly CaptureCashPaymentFingerprint $fingerprints,
         private readonly AuditRecorder $audits,
     ) {}
@@ -75,7 +76,7 @@ final class CaptureCashPayment
                     throw PaymentsDomainException::cashboxUnavailable();
                 }
 
-                $remainingMinor = $this->remainingMinor($order, $tenantId, $branchId);
+                $remainingMinor = $this->balances->remainingMinor($order, $tenantId, $branchId);
 
                 if ($order->currency !== $command->expectedCurrency) {
                     throw PaymentsDomainException::expectedCurrencyMismatch();
@@ -178,33 +179,6 @@ final class CaptureCashPayment
             'currency' => $result->currency,
             'replayed' => $result->replayed,
         ]);
-    }
-
-    private function remainingMinor(PayableOrderSnapshot $order, int $tenantId, int $branchId): int
-    {
-        /** @var int|string|null $paidMinor */
-        $paidMinor = PaymentAllocation::query()
-            ->join('payments as captured_payments', 'captured_payments.id', '=', 'payment_allocations.payment_id')
-            ->where('payment_allocations.tenant_id', $tenantId)
-            ->where('payment_allocations.branch_id', $branchId)
-            ->where('payment_allocations.payable_type', 'order')
-            ->where('payment_allocations.payable_id', $order->orderId)
-            ->where('captured_payments.tenant_id', $tenantId)
-            ->where('captured_payments.branch_id', $branchId)
-            ->where('captured_payments.status', 'captured')
-            ->sum('payment_allocations.amount_minor');
-
-        $paidMinor = (int) $paidMinor;
-
-        if ($paidMinor === $order->totalMinor) {
-            throw PaymentsDomainException::orderAlreadyFullyPaid();
-        }
-
-        if ($paidMinor > $order->totalMinor) {
-            throw PaymentsDomainException::orderOverAllocated();
-        }
-
-        return $order->totalMinor - $paidMinor;
     }
 
     private function findCommittedPayment(int $tenantId, int $branchId, string $idempotencyKey): ?Payment
