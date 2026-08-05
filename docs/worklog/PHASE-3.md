@@ -1,7 +1,7 @@
 # Worklog — Phase 3: Payments/Cashbox/Fiscal/Printing
 
-Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation FCPF10 complete; Draft PR #64 opened
-Branch: feature/payments-cash-payment-capture-foundation
+Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation merged through PR #64; post-merge documentation housekeeping recorded
+Branch: docs/phase-3-pr64-post-merge
 
 Phase 2 was closed by merge commit
 `085759f4c929e9f9ebf2fe551314996b58a95f0a` for PR #59. Phase 3 starts with
@@ -18,6 +18,13 @@ at merge commit `a019f26dec9095bf34b69cfa2a334aa78685e6a1`.
 
 After PR #63 merged, local `main` and `origin/main` were verified clean and
 aligned at merge commit `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd`.
+
+Full Cash Payment Capture Foundation was merged by PR #64 as merge commit
+`db7579d5d450b0638a71a2d795770b5ca3c99858` from approved head
+`de22d6c9453aad7edba336077f6d6b598d7e15e8`.
+
+After PR #64 merged, local `main` was fast-forward aligned with `origin/main`
+at merge commit `db7579d5d450b0638a71a2d795770b5ca3c99858`.
 
 ## Approved First Slice: Cashbox Configuration Foundation
 
@@ -324,6 +331,33 @@ Expected implementation inventory:
   concurrency/idempotency.
 - New payment concurrency worker and `payments-concurrency-pgsql` Make target.
 
+Merge record for PR #64:
+- PR URL: https://github.com/mesropyananushavan/rest-v2/pull/64.
+- Approved and merged feature head:
+  `de22d6c9453aad7edba336077f6d6b598d7e15e8`.
+- Merge commit:
+  `db7579d5d450b0638a71a2d795770b5ca3c99858`.
+- Merge parents:
+  `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd` and
+  `de22d6c9453aad7edba336077f6d6b598d7e15e8`.
+- Merge method: GitHub merge commit with exact-head SHA guard.
+- Merge timestamp: `2026-08-05T10:40:01Z`.
+- Final PR size: 12 commits and 24 changed files.
+- Final exact-head CI succeeded on
+  `de22d6c9453aad7edba336077f6d6b598d7e15e8` for both push and pull-request
+  workflow runs, including `quality`, `tenant-isolation-pgsql`,
+  `orders-concurrency-pgsql`, and `runtime-role-pgsql`.
+- GitHub review/comment state at merge verification: zero reviews, zero issue
+  comments, zero review comments, and zero review threads.
+- The feature branch
+  `feature/payments-cash-payment-capture-foundation` was retained locally and
+  on `origin`; no branch cleanup was performed.
+- Full Cash Payment Capture Foundation is complete as this Phase 3 foundation
+  slice.
+- No fiscalization, printing, UI, routes, controllers, Livewire, API, domain
+  events, outbox, order closing, refund/reversal, branch deletion, or next
+  implementation slice work was performed after merge.
+
 ## Plan
 
 - [x] Step CB0: precondition verification and worklog setup. Read required
@@ -612,6 +646,19 @@ Expected implementation inventory:
   approval, branch deletion, production/test/migration/schema/UI/API change,
   or GitHub state change beyond the authorized branch push and Draft PR
   creation was performed.
+- [x] Step FCPF11: post-merge documentation housekeeping. After separate owner
+  authorization and PR #64 merge, verify the merge commit and parents,
+  fast-forward local `main` to `origin/main`, record the PR #64 merge facts in
+  this worklog on a docs-only branch, and publish that documentation branch as
+  a Draft PR without deleting branches or starting another implementation
+  slice.
+  Result: PR #64 was verified merged with merge commit
+  `db7579d5d450b0638a71a2d795770b5ca3c99858` and merged feature head
+  `de22d6c9453aad7edba336077f6d6b598d7e15e8`; local `main` was
+  fast-forwarded from `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd` to
+  `db7579d5d450b0638a71a2d795770b5ca3c99858`; this documentation-only update
+  is scoped to `docs/worklog/PHASE-3.md` on branch
+  `docs/phase-3-pr64-post-merge`.
 
 ## Gotchas
 
@@ -957,15 +1004,36 @@ Expected implementation inventory:
   verification; `make fresh` passed, including migrations, deterministic demo
   seeding, and runtime database grants; and `git diff --check` passed. No
   correction was necessary.
+- PR #64 Ready transition verification passed on exact head
+  `de22d6c9453aad7edba336077f6d6b598d7e15e8`: the PR was open/draft before
+  the authorized transition, local and remote feature-branch SHAs matched,
+  branch protection/mergeability checks were clean, zero reviews/comments/
+  threads existed, and exact-head push and pull-request CI runs had completed
+  successfully for `quality`, `tenant-isolation-pgsql`,
+  `orders-concurrency-pgsql`, and `runtime-role-pgsql`.
+- PR #64 merge verification passed: GitHub reported PR #64 merged at
+  `2026-08-05T10:40:01Z` with merge commit
+  `db7579d5d450b0638a71a2d795770b5ca3c99858`; the merge commit parents were
+  `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd` and
+  `de22d6c9453aad7edba336077f6d6b598d7e15e8`; `origin/main` contained the
+  merge; exact-head CI remained successful; and the retained local/remote
+  feature branch stayed at
+  `de22d6c9453aad7edba336077f6d6b598d7e15e8`.
+- PR #64 post-merge housekeeping validation passed: local `main` was
+  fast-forwarded to `origin/main` at
+  `db7579d5d450b0638a71a2d795770b5ca3c99858`; the housekeeping branch
+  `docs/phase-3-pr64-post-merge` was created from that synchronized `main`;
+  and this worklog update changed only `docs/worklog/PHASE-3.md`.
 
 ## Next Steps
 
-Full Cash Payment Capture Foundation FCPF0 through FCPF10 is complete on the
-local branch and Draft PR #64. The exact next lifecycle action requires
-separate owner authorization: monitor/act on PR CI or move the Draft PR toward
-review. Do not mark the PR Ready for review, request reviewers, merge, rebase,
-amend, force-push, delete branches, or perform post-FCPF10 cleanup without
-explicit owner authorization.
+Full Cash Payment Capture Foundation FCPF0 through FCPF11 is complete through
+merged PR #64 and this post-merge documentation housekeeping branch. The exact
+next lifecycle action requires separate owner authorization: review CI for the
+Draft PR created from `docs/phase-3-pr64-post-merge`, then decide whether to
+mark that docs-only PR Ready and merge it. Do not mark that PR Ready, request
+reviewers, merge it, delete the retained feature branch, or start another
+Phase 3 implementation slice without explicit owner authorization.
 
 Payment financial schema now exists as the FCPF1 migration and schema-focused
 tests, the FCPF2 append-only financial Eloquent models and model-focused tests,
@@ -977,6 +1045,5 @@ append-only/atomicity/concurrency coverage is complete. The FCPF7 Payments
 PostgreSQL concurrency worker and Make target are complete. FCPF8 focused and
 complete verification is complete. FCPF9 exact diff and inventory review is
 complete. FCPF10 pushed the reviewed branch and opened Draft PR #64. No
-post-FCPF10 Ready-for-review transition, reviewer request, merge, closing,
 fiscalization, printing, UI, routes, controllers, Livewire, API, domain events,
-outbox, or cleanup work has begun.
+outbox, branch cleanup, or next-slice implementation work has begun.
