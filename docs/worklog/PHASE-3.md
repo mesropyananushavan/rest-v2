@@ -1,6 +1,6 @@
 # Worklog — Phase 3: Payments/Cashbox/Fiscal/Printing
 
-Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation FCPF5 complete; FCPF6 pending owner authorization
+Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation FCPF6 complete; FCPF7 pending owner authorization
 Branch: feature/payments-cash-payment-capture-foundation
 
 Phase 2 was closed by merge commit
@@ -512,12 +512,26 @@ Expected implementation inventory:
   UI, routes, controllers, API, order closing, fiscalization, printing, events,
   outbox, worker, Make target, PostgreSQL RLS/runtime-role, or concurrency
   coverage was introduced.
-- [ ] Step FCPF6: PostgreSQL RLS, runtime-role, trigger, and concurrency
+- [x] Step FCPF6: PostgreSQL RLS, runtime-role, trigger, and concurrency
   coverage. Add tests proving financial-table RLS isolation, runtime-role
   capture behavior, raw update/delete trigger rejection, identical and
   mismatched idempotency races, two different payment attempts for one order,
   order mutation/cancellation coordination, and cashbox deactivation
   coordination.
+  Result: added PostgreSQL `CaptureCashPayment` coverage for forced
+  financial-table RLS isolation, insert-consistency triggers, raw append-only
+  update/delete rejection, restricted runtime-role capture execution,
+  transaction/audit/persistence rollback, order-before-cashbox lock
+  coordination, no branch-wide cashbox/advisory lock behavior, real
+  separate-process idempotency races, competing capture attempts, order
+  mutation/cancellation coordination, and selected cashbox deactivation
+  coordination. The Payments concurrency worker and
+  `payments-concurrency-pgsql` Make target were implemented early under
+  explicit owner authorization because FCPF6 could not honestly execute real
+  PostgreSQL capture races without those FCPF7 prerequisites. No production
+  correction, migration, UI, route, controller, API, order closing,
+  fiscalization, printing, refund/reversal, event, or outbox behavior was
+  introduced.
 - [ ] Step FCPF7: payment concurrency worker and Make target. Add a Payments
   concurrency worker following the existing PostgreSQL worker pattern and add
   a narrowly scoped `payments-concurrency-pgsql` Make target.
@@ -557,6 +571,12 @@ Expected implementation inventory:
 - PostgreSQL unique-constraint violations abort the current transaction. The
   future payment idempotency race handler must let the failed transaction roll
   back before loading and comparing the winning committed payment row.
+- FCPF6 required real `CaptureCashPayment` race execution, but the approved
+  plan had placed the Payments concurrency worker and
+  `payments-concurrency-pgsql` Make target in FCPF7. Owner authorization on
+  2026-08-05 allowed implementing exactly those FCPF7 prerequisites early;
+  FCPF7 remains unchecked until the owner explicitly authorizes reconciling or
+  completing that step.
 
 ## Verification Results
 
@@ -757,21 +777,71 @@ Expected implementation inventory:
   475 tests, 34 skipped PostgreSQL-only tests, and 4649 assertions; and
   `make fresh` passed, including migrations, deterministic demo seeding, and
   runtime database grants.
+- FCPF6 baseline validation passed after read-only reconciliation and
+  `git fetch origin`: current branch was
+  `feature/payments-cash-payment-capture-foundation` at
+  `de56213cd2bc47179e3335ab57564ad380549831` with no upstream and clean
+  worktree; `origin/main` was
+  `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd`; the branch was 6 commits ahead
+  and 0 behind `origin/main`; FCPF0 through FCPF5 were committed and matched
+  their approved scopes; FCPF6 was the next unchecked step; and the worklog
+  explicitly assigned the Payments concurrency worker and
+  `payments-concurrency-pgsql` Make target to FCPF7.
+- FCPF6 PostgreSQL verification passed: `make payments-concurrency-pgsql`
+  passed before and after Pint with 6 tests and 103 assertions, running on the
+  PostgreSQL tenant-test database with schema-owner setup and real
+  separate-process `CaptureCashPayment` workers. It verified forced RLS and
+  policies for `payments`, `payment_allocations`, and `cashbox_entries`;
+  direct append-only update/delete trigger rejection for all three financial
+  tables; insert-consistency trigger rejection for invalid payment,
+  allocation, and cashbox-entry relationships; PostgreSQL capture/audit
+  atomicity; rollback on audit and persistence failures; order-before-cashbox
+  locking; no worker advisory lock; selected-cashbox-only lock behavior; real
+  identical same-key replay races; different-key same-order winner/domain
+  races; same-key different-order unique-constraint conflict races with
+  transaction level restored to zero; same-key independence across tenants and
+  branches; order total mutation, order cancellation, and selected cashbox
+  deactivation coordination. `make runtime-role-pgsql` passed after adding
+  restricted runtime-role capture coverage with 5 tests and 93 assertions,
+  proving the action succeeds as the non-owner `NOBYPASSRLS` runtime role,
+  persists one payment/allocation/cashbox-entry/audit row, preserves order
+  workflow state, cannot see another tenant's financial rows, and rejects
+  forged cross-tenant financial inserts. `make tenant-isolation-pgsql` passed
+  with 73 tests and 403 assertions; `make orders-concurrency-pgsql` passed
+  with 10 tests and 60 assertions; and `make cashboxes-concurrency-pgsql`
+  passed with 3 tests and 28 assertions.
+- FCPF6 repository gates passed on the final source state: `make test
+  ARGS='tests/Feature/Payments/CaptureCashPaymentCoverageTest.php
+  tests/Feature/Payments/CaptureCashPaymentActionTest.php
+  tests/Feature/Payments/CaptureCashPaymentContractTest.php
+  tests/Feature/Payments/PaymentFinancialSchemaTest.php
+  tests/Feature/Payments/PaymentFinancialModelsTest.php
+  tests/Feature/Orders/PayableOrderReaderTest.php
+  tests/Architecture/ModuleBoundariesTest.php'` passed before and after Pint
+  with 49 tests and 759 assertions; `make test ARGS='tests/Feature/Payments'`
+  passed with 43 tests, 9 skipped PostgreSQL-only tests, and 587 assertions;
+  `make pint` passed across 404 files and fixed one style issue in the new
+  PostgreSQL test; `make stan` passed with no errors; `make test` passed with
+  475 tests, 41 skipped PostgreSQL-only tests, and 4649 assertions; and
+  `make fresh` passed, including migrations, deterministic demo seeding, and
+  runtime database grants.
 
 ## Next Steps
 
 The exact next implementation action requiring separate owner authorization is
-Step FCPF6: add PostgreSQL RLS, runtime-role, trigger, and concurrency coverage
-for financial-table isolation, restricted runtime capture behavior, raw
-update/delete trigger rejection, idempotency races, competing payment attempts,
-order mutation/cancellation coordination, and cashbox deactivation
-coordination.
+Step FCPF7 reconciliation/completion: the worklog's only apparent FCPF7
+implementation artifacts, the Payments concurrency worker and
+`payments-concurrency-pgsql` Make target, were implemented early under explicit
+owner authorization to unblock FCPF6, but FCPF7 remains unchecked by
+instruction and must not be marked complete without a separate owner
+authorization.
 
 Payment financial schema now exists as the FCPF1 migration and schema-focused
 tests, the FCPF2 append-only financial Eloquent models and model-focused tests,
 the FCPF3 command/result DTOs, canonical fingerprint helper, stable domain
 errors, translations, contract tests, the FCPF4 Application-only cash capture
 action with minimal focused action tests, and the FCPF5 comprehensive
-SQLite-compatible coverage. No PostgreSQL RLS/concurrency coverage, payment
-concurrency worker, Make target, closing, fiscalization, printing, UI, routes,
+SQLite-compatible coverage. FCPF6 PostgreSQL RLS/runtime-role/trigger/
+append-only/atomicity/concurrency coverage is complete. No FCPF7 completion
+mark, FCPF8 verification step, closing, fiscalization, printing, UI, routes,
 controllers, Livewire, API, domain events, or outbox work has begun.
