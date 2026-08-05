@@ -1,6 +1,6 @@
 # Worklog — Phase 3: Payments/Cashbox/Fiscal/Printing
 
-Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation FCPF4 complete; FCPF5 pending owner authorization
+Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation FCPF5 complete; FCPF6 pending owner authorization
 Branch: feature/payments-cash-payment-capture-foundation
 
 Phase 2 was closed by merge commit
@@ -496,12 +496,22 @@ Expected implementation inventory:
   minimal focused FCPF4 action tests. No UI, routes, controllers, API, order
   closing, fiscalization, printing, events, outbox, worker, Make target,
   PostgreSQL concurrency tests, or comprehensive FCPF5 matrix was introduced.
-- [ ] Step FCPF5: SQLite-compatible coverage. Add tests for successful full
+- [x] Step FCPF5: SQLite-compatible coverage. Add tests for successful full
   cash capture, authorization, validation, exact amount and currency guards,
   idempotency replay/conflict, inactive and inaccessible cashboxes,
   inaccessible/non-payable orders, audit rollback, append-only model guards,
   and proof that payment capture does not change order status, closed time,
   totals, items, or other workflow state.
+  Result: added comprehensive SQLite-compatible `CaptureCashPayment` coverage
+  for persisted financial/audit facts, capture-created append-only guards,
+  action-level authorization and actor/context failures, command validation,
+  cashbox selection/isolation, Orders public-contract boundaries,
+  allocation-derived remaining balance, expected-value guards, sequential
+  idempotency replay/conflict/scope, rollback atomicity, no order workflow
+  mutation, and safe structured logging. No production correction, migration,
+  UI, routes, controllers, API, order closing, fiscalization, printing, events,
+  outbox, worker, Make target, PostgreSQL RLS/runtime-role, or concurrency
+  coverage was introduced.
 - [ ] Step FCPF6: PostgreSQL RLS, runtime-role, trigger, and concurrency
   coverage. Add tests proving financial-table RLS isolation, runtime-role
   capture behavior, raw update/delete trigger rejection, identical and
@@ -709,22 +719,59 @@ Expected implementation inventory:
   34 skipped PostgreSQL-only tests, and 4407 assertions. FCPF4 intentionally
   did not add or run payment PostgreSQL/RLS/concurrency gates, which remain
   assigned to FCPF6 through FCPF8.
+- FCPF5 baseline validation passed after read-only reconciliation and
+  `git fetch origin`: current branch was
+  `feature/payments-cash-payment-capture-foundation` at
+  `4548de49272ace2b8063404a63397896028e6ae9` with no upstream and clean
+  worktree; `origin/main` was
+  `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd`; the branch was 5 commits ahead
+  and 0 behind `origin/main`; FCPF0 through FCPF4 were committed and matched
+  their approved scopes; and the worklog accurately named FCPF5 as the next
+  unfinished step.
+- FCPF5 focused validation passed: the new `make test
+  ARGS='tests/Feature/Payments/CaptureCashPaymentCoverageTest.php'` initially
+  exposed two test-fixture issues only and then passed with 14 tests and
+  242 assertions after fixture correction; `make test
+  ARGS='tests/Feature/Payments/CaptureCashPaymentActionTest.php'` passed with
+  6 tests and 57 assertions; `make test
+  ARGS='tests/Feature/Payments/CaptureCashPaymentContractTest.php'` passed
+  with 4 tests and 58 assertions; `make test
+  ARGS='tests/Feature/Payments/PaymentFinancialSchemaTest.php
+  tests/Feature/Payments/PaymentFinancialModelsTest.php'` passed with 6 tests
+  and 127 assertions; `make test
+  ARGS='tests/Feature/Orders/PayableOrderReaderTest.php'` passed with 8 tests
+  and 18 assertions; `make test
+  ARGS='tests/Architecture/ModuleBoundariesTest.php'` passed with 11 tests and
+  257 assertions; and `make test ARGS='tests/Feature/Payments'` passed with
+  43 tests, 3 skipped PostgreSQL-only tests, and 587 assertions.
+- FCPF5 repository gates passed on the final source state: `make pint` passed
+  across 401 files; the post-Pint affected rerun `make test
+  ARGS='tests/Feature/Payments/CaptureCashPaymentCoverageTest.php
+  tests/Feature/Payments/CaptureCashPaymentActionTest.php
+  tests/Feature/Payments/CaptureCashPaymentContractTest.php
+  tests/Feature/Payments/PaymentFinancialSchemaTest.php
+  tests/Feature/Payments/PaymentFinancialModelsTest.php
+  tests/Feature/Orders/PayableOrderReaderTest.php
+  tests/Architecture/ModuleBoundariesTest.php'` passed with 49 tests and
+  759 assertions; `make stan` passed with no errors; `make test` passed with
+  475 tests, 34 skipped PostgreSQL-only tests, and 4649 assertions; and
+  `make fresh` passed, including migrations, deterministic demo seeding, and
+  runtime database grants.
 
 ## Next Steps
 
 The exact next implementation action requiring separate owner authorization is
-Step FCPF5: add SQLite-compatible coverage for validation, authorization,
-exact amount and currency guards, idempotency replay/conflict, inactive and
-inaccessible cashboxes, inaccessible/non-payable orders, audit rollback,
-append-only model guards, and proof that payment capture does not change order
-status, closed time, totals, items, or other workflow state.
+Step FCPF6: add PostgreSQL RLS, runtime-role, trigger, and concurrency coverage
+for financial-table isolation, restricted runtime capture behavior, raw
+update/delete trigger rejection, idempotency races, competing payment attempts,
+order mutation/cancellation coordination, and cashbox deactivation
+coordination.
 
-Payment financial schema now exists only as the FCPF1 migration and
-schema-focused tests, the FCPF2 append-only financial Eloquent models and
-model-focused tests, and the FCPF3 command/result DTOs, canonical fingerprint
-helper, stable domain errors, translations, contract tests, and the FCPF4
-Application-only cash capture action with minimal focused action tests. No
-comprehensive FCPF5 validation/isolation matrix, PostgreSQL RLS/concurrency
-coverage, payment concurrency worker, Make target, closing, fiscalization,
-printing, UI, routes, controllers, Livewire, API, domain events, or outbox work
-has begun.
+Payment financial schema now exists as the FCPF1 migration and schema-focused
+tests, the FCPF2 append-only financial Eloquent models and model-focused tests,
+the FCPF3 command/result DTOs, canonical fingerprint helper, stable domain
+errors, translations, contract tests, the FCPF4 Application-only cash capture
+action with minimal focused action tests, and the FCPF5 comprehensive
+SQLite-compatible coverage. No PostgreSQL RLS/concurrency coverage, payment
+concurrency worker, Make target, closing, fiscalization, printing, UI, routes,
+controllers, Livewire, API, domain events, or outbox work has begun.
