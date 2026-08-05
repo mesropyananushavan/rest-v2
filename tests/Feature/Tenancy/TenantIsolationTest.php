@@ -397,6 +397,137 @@ it('enforces PostgreSQL row level security for cashbox select insert and update 
         ->and(Cashbox::query()->findOrFail((int) $cashboxB->id)->name)->toBe('Tenant B Register');
 });
 
+it('enforces PostgreSQL row level security and insert consistency for payment financial tables', function (): void {
+    if (! usesPostgresRowLevelSecurity()) {
+        $this->markTestSkipped('PostgreSQL RLS coverage runs only on pgsql.');
+    }
+
+    expect(paymentFinancialTablesForceRowLevelSecurity())->toBe([
+        'cashbox_entries' => true,
+        'payment_allocations' => true,
+        'payments' => true,
+    ])->and(paymentFinancialTenantPolicies())->toBe([
+        'cashbox_entries_tenant_isolation',
+        'payment_allocations_tenant_isolation',
+        'payments_tenant_isolation',
+    ])->and(paymentFinancialTriggerNames())->toBe([
+        'cashbox_entries_insert_consistency',
+        'cashbox_entries_no_delete',
+        'cashbox_entries_no_update',
+        'payment_allocations_insert_consistency',
+        'payment_allocations_no_delete',
+        'payment_allocations_no_update',
+        'payments_insert_consistency',
+        'payments_no_delete',
+        'payments_no_update',
+    ]);
+
+    $tenantA = tenantWithUser('tenant-financial-a', 'financial-manager-a', ['payments.cashboxes.manage']);
+    $tenantB = tenantWithUser('tenant-financial-b', 'financial-manager-b', ['payments.cashboxes.manage']);
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+    app(BranchContext::class)->set((int) $tenantA['branch']->id);
+    $cashboxA = Cashbox::query()->create([
+        'branch_id' => (int) $tenantA['branch']->id,
+        'name' => 'Tenant A Register',
+        'is_active' => true,
+        'is_default' => true,
+    ]);
+    $orderA = Order::query()->create([
+        'branch_id' => (int) $tenantA['branch']->id,
+        'type' => 'fast_food',
+        'status' => 'open',
+        'opened_at' => now(),
+        'client_count' => 1,
+        'subtotal_minor' => 5000,
+        'discount_minor' => 0,
+        'total_minor' => 5000,
+        'currency' => 'AMD',
+    ]);
+    $paymentA = insertPaymentFinancialRecord($tenantA, (int) $orderA->id, (int) $cashboxA->id, 5000, 'tenant-a-payment');
+    $allocationA = insertPaymentAllocationRecord($tenantA, $paymentA, (int) $orderA->id, 5000);
+    $entryA = insertCashboxEntryRecord($tenantA, (int) $cashboxA->id, $paymentA, 5000);
+
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+    app(BranchContext::class)->set((int) $tenantB['branch']->id);
+    $cashboxB = Cashbox::query()->create([
+        'branch_id' => (int) $tenantB['branch']->id,
+        'name' => 'Tenant B Register',
+        'is_active' => true,
+        'is_default' => true,
+    ]);
+    $orderB = Order::query()->create([
+        'branch_id' => (int) $tenantB['branch']->id,
+        'type' => 'fast_food',
+        'status' => 'open',
+        'opened_at' => now(),
+        'client_count' => 1,
+        'subtotal_minor' => 7000,
+        'discount_minor' => 0,
+        'total_minor' => 7000,
+        'currency' => 'AMD',
+    ]);
+    $paymentB = insertPaymentFinancialRecord($tenantB, (int) $orderB->id, (int) $cashboxB->id, 7000, 'tenant-b-payment');
+    $allocationB = insertPaymentAllocationRecord($tenantB, $paymentB, (int) $orderB->id, 7000);
+    $entryB = insertCashboxEntryRecord($tenantB, (int) $cashboxB->id, $paymentB, 7000);
+
+    app(BranchContext::class)->clear();
+    app(TenantResolver::class)->clear();
+
+    expect(rawPaymentFinancialIds('payments'))->toBe([])
+        ->and(rawPaymentFinancialIds('payment_allocations'))->toBe([])
+        ->and(rawPaymentFinancialIds('cashbox_entries'))->toBe([]);
+
+    app(TenantResolver::class)->set((int) $tenantA['tenant']->id);
+
+    expect(rawPaymentFinancialIds('payments'))->toBe([$paymentA])
+        ->and(rawPaymentFinancialIds('payment_allocations'))->toBe([$allocationA])
+        ->and(rawPaymentFinancialIds('cashbox_entries'))->toBe([$entryA]);
+
+    DB::statement('SAVEPOINT payment_financial_order_consistency');
+
+    try {
+        insertPaymentFinancialRecord($tenantA, (int) $orderB->id, (int) $cashboxA->id, 1000, 'forged-order-payment');
+        $this->fail('Expected PostgreSQL consistency trigger to reject a cross-tenant order payment.');
+    } catch (QueryException) {
+        expect(true)->toBeTrue();
+    } finally {
+        DB::statement('ROLLBACK TO SAVEPOINT payment_financial_order_consistency');
+        DB::statement('RELEASE SAVEPOINT payment_financial_order_consistency');
+    }
+
+    DB::statement('SAVEPOINT payment_financial_allocation_consistency');
+
+    try {
+        $overPayment = insertPaymentFinancialRecord($tenantA, (int) $orderA->id, (int) $cashboxA->id, 1, 'overpaid-order-payment');
+        insertPaymentAllocationRecord($tenantA, $overPayment, (int) $orderA->id, 1);
+        $this->fail('Expected PostgreSQL consistency trigger to reject allocations above the order total.');
+    } catch (QueryException) {
+        expect(true)->toBeTrue();
+    } finally {
+        DB::statement('ROLLBACK TO SAVEPOINT payment_financial_allocation_consistency');
+        DB::statement('RELEASE SAVEPOINT payment_financial_allocation_consistency');
+    }
+
+    DB::statement('SAVEPOINT payment_financial_cashbox_entry_consistency');
+
+    try {
+        insertCashboxEntryRecord($tenantA, (int) $cashboxA->id, $paymentA, 1, 'mismatched-payment-entry');
+        $this->fail('Expected PostgreSQL consistency trigger to reject a mismatched payment cashbox entry.');
+    } catch (QueryException) {
+        expect(true)->toBeTrue();
+    } finally {
+        DB::statement('ROLLBACK TO SAVEPOINT payment_financial_cashbox_entry_consistency');
+        DB::statement('RELEASE SAVEPOINT payment_financial_cashbox_entry_consistency');
+    }
+
+    app(TenantResolver::class)->set((int) $tenantB['tenant']->id);
+
+    expect(rawPaymentFinancialIds('payments'))->toBe([$paymentB])
+        ->and(rawPaymentFinancialIds('payment_allocations'))->toBe([$allocationB])
+        ->and(rawPaymentFinancialIds('cashbox_entries'))->toBe([$entryB]);
+});
+
 it('keeps PostgreSQL tenant slug login query shape bounded with unrelated tenants', function (): void {
     if (! usesPostgresRowLevelSecurity()) {
         $this->markTestSkipped('PostgreSQL query-shape coverage runs only on pgsql.');
@@ -1254,6 +1385,16 @@ function rawCashboxIds(): array
 /**
  * @return list<int>
  */
+function rawPaymentFinancialIds(string $table): array
+{
+    return collect(DB::select("select id from {$table} order by id"))
+        ->map(fn (object $row): int => (int) $row->id)
+        ->all();
+}
+
+/**
+ * @return list<int>
+ */
 function rawOrderIds(): array
 {
     return collect(DB::select('select id from orders order by id'))
@@ -1299,4 +1440,114 @@ function rawOrderMoveIds(): array
     return collect(DB::select('select id from order_moves order by id'))
         ->map(fn (object $row): int => (int) $row->id)
         ->all();
+}
+
+/**
+ * @return array<string, bool>
+ */
+function paymentFinancialTablesForceRowLevelSecurity(): array
+{
+    return collect(DB::select(<<<'SQL'
+        select relname, relforcerowsecurity
+        from pg_class
+        where relname in ('payments', 'payment_allocations', 'cashbox_entries')
+        order by relname
+        SQL))
+        ->mapWithKeys(fn (object $row): array => [(string) $row->relname => (bool) $row->relforcerowsecurity])
+        ->all();
+}
+
+/**
+ * @return list<string>
+ */
+function paymentFinancialTenantPolicies(): array
+{
+    return collect(DB::select(<<<'SQL'
+        select policyname
+        from pg_policies
+        where tablename in ('payments', 'payment_allocations', 'cashbox_entries')
+        order by policyname
+        SQL))
+        ->map(fn (object $row): string => (string) $row->policyname)
+        ->all();
+}
+
+/**
+ * @return list<string>
+ */
+function paymentFinancialTriggerNames(): array
+{
+    return collect(DB::select(<<<'SQL'
+        select trigger_name
+        from information_schema.triggers
+        where event_object_table in ('payments', 'payment_allocations', 'cashbox_entries')
+        order by trigger_name
+        SQL))
+        ->map(fn (object $row): string => (string) $row->trigger_name)
+        ->all();
+}
+
+/**
+ * @param  array{tenant: Tenant, branch: Branch, role: Role, user: User}  $tenant
+ */
+function insertPaymentFinancialRecord(array $tenant, int $orderId, int $cashboxId, int $amountMinor, string $idempotencyKey): int
+{
+    return (int) DB::table('payments')->insertGetId([
+        'tenant_id' => (int) $tenant['tenant']->id,
+        'branch_id' => (int) $tenant['branch']->id,
+        'order_id' => $orderId,
+        'cashbox_id' => $cashboxId,
+        'method' => 'cash',
+        'status' => 'captured',
+        'amount_minor' => $amountMinor,
+        'currency' => 'AMD',
+        'idempotency_key' => $idempotencyKey,
+        'idempotency_fingerprint' => hash('sha256', $idempotencyKey),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+}
+
+/**
+ * @param  array{tenant: Tenant, branch: Branch, role: Role, user: User}  $tenant
+ */
+function insertPaymentAllocationRecord(array $tenant, int $paymentId, int $orderId, int $amountMinor): int
+{
+    return (int) DB::table('payment_allocations')->insertGetId([
+        'tenant_id' => (int) $tenant['tenant']->id,
+        'branch_id' => (int) $tenant['branch']->id,
+        'payment_id' => $paymentId,
+        'payable_type' => 'order',
+        'payable_id' => $orderId,
+        'amount_minor' => $amountMinor,
+        'currency' => 'AMD',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+}
+
+/**
+ * @param  array{tenant: Tenant, branch: Branch, role: Role, user: User}  $tenant
+ */
+function insertCashboxEntryRecord(
+    array $tenant,
+    int $cashboxId,
+    int $paymentId,
+    int $amountMinor,
+    string $reason = 'payment_capture',
+): int {
+    return (int) DB::table('cashbox_entries')->insertGetId([
+        'tenant_id' => (int) $tenant['tenant']->id,
+        'branch_id' => (int) $tenant['branch']->id,
+        'cashbox_id' => $cashboxId,
+        'direction' => 'in',
+        'amount_minor' => $amountMinor,
+        'currency' => 'AMD',
+        'reason' => $reason,
+        'source_type' => 'payment',
+        'source_id' => $paymentId,
+        'posted_by_id' => (int) $tenant['user']->id,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
 }

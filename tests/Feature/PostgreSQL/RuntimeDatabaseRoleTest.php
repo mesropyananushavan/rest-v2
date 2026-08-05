@@ -10,9 +10,14 @@ use App\Modules\Identity\Infrastructure\Models\UserBranchAssignment;
 use App\Modules\Orders\Contracts\PayableOrderReader;
 use App\Modules\Orders\Infrastructure\Models\Order;
 use App\Modules\Orders\Infrastructure\Models\OrderSubtable;
+use App\Modules\Payments\Application\CaptureCashPayment;
+use App\Modules\Payments\Application\CaptureCashPaymentCommand;
 use App\Modules\Payments\Application\CreateCashbox;
 use App\Modules\Payments\Application\SelectDefaultCashbox;
 use App\Modules\Payments\Infrastructure\Models\Cashbox;
+use App\Modules\Payments\Infrastructure\Models\CashboxEntry;
+use App\Modules\Payments\Infrastructure\Models\Payment;
+use App\Modules\Payments\Infrastructure\Models\PaymentAllocation;
 use App\Modules\Tables\Infrastructure\Models\Table as RestaurantTable;
 use App\Modules\Tenancy\Application\SuspendOverdueTenantSubscriptions;
 use App\Modules\Tenancy\Contracts\BranchContext;
@@ -489,3 +494,80 @@ function runtimeRoleRunSchedulerDatabaseSmoke(): void
         ->and(collect($queries)->contains(fn (string $query): bool => str_contains($query, 'tenant_subscriptions')))->toBeTrue()
         ->and(runtimeRoleScalar('select current_user'))->toBe((string) config('database.connections.pgsql.username'));
 }
+
+it('captures cash payments through the restricted PostgreSQL runtime role with financial RLS enforced', function (): void {
+    $context = runtimeRoleDemoContext();
+    auth()->login($context['user']);
+    LogContext::start('runtime-role-payment-capture', 'payments');
+
+    $currentUser = runtimeRoleScalar('select current_user');
+    $owners = collect(DB::select(
+        "select c.relname, pg_get_userbyid(c.relowner) as owner
+         from pg_class c
+         join pg_namespace n on n.oid = c.relnamespace
+         where n.nspname = 'public'
+           and c.relname in ('payments', 'payment_allocations', 'cashbox_entries')
+         order by c.relname",
+    ));
+
+    expect($owners)->toHaveCount(3)
+        ->and($owners->pluck('owner')->all())->not->toContain($currentUser);
+
+    $cashbox = app(CreateCashbox::class)('Runtime capture register');
+    $order = Order::query()->create([
+        'branch_id' => $context['branch_id'],
+        'type' => 'fast_food',
+        'status' => 'open',
+        'table_id' => null,
+        'opened_at' => now(),
+        'closed_at' => null,
+        'client_count' => 1,
+        'subtotal_minor' => 4300,
+        'discount_minor' => 0,
+        'total_minor' => 4300,
+        'currency' => 'AMD',
+        'comment' => 'Runtime role payment capture',
+    ]);
+
+    $result = app(CaptureCashPayment::class)(new CaptureCashPaymentCommand(
+        orderId: (int) $order->id,
+        cashboxId: (int) $cashbox->id,
+        expectedAmountMinor: 4300,
+        expectedCurrency: 'AMD',
+        idempotencyKey: 'runtime-role-capture-key',
+    ));
+
+    expect($result->tenantId)->toBe((int) $context['tenant']->id)
+        ->and($result->branchId)->toBe($context['branch_id'])
+        ->and($result->orderId)->toBe((int) $order->id)
+        ->and($result->cashboxId)->toBe((int) $cashbox->id)
+        ->and($result->amountMinor)->toBe(4300)
+        ->and($result->currency)->toBe('AMD')
+        ->and($result->replayed)->toBeFalse()
+        ->and(Payment::query()->whereKey($result->paymentId)->count())->toBe(1)
+        ->and(PaymentAllocation::query()->whereKey($result->paymentAllocationId)->count())->toBe(1)
+        ->and(CashboxEntry::query()->whereKey($result->cashboxEntryId)->count())->toBe(1)
+        ->and(DB::table('audit_logs')->where('action', 'payments.payment.captured')->where('target_id', $result->paymentId)->count())->toBe(1)
+        ->and(Order::query()->whereKey((int) $order->id)->value('status'))->toBe('open')
+        ->and(Order::query()->whereKey((int) $order->id)->value('closed_at'))->toBeNull();
+
+    $foreignTenant = Tenant::query()->where('id', '<>', (int) $context['tenant']->id)->firstOrFail();
+    app(TenantResolver::class)->set((int) $foreignTenant->id);
+
+    expect(Payment::query()->whereKey($result->paymentId)->count())->toBe(0)
+        ->and(PaymentAllocation::query()->whereKey($result->paymentAllocationId)->count())->toBe(0)
+        ->and(CashboxEntry::query()->whereKey($result->cashboxEntryId)->count())->toBe(0);
+
+    app(TenantResolver::class)->clear();
+
+    expect(Payment::query()->whereKey($result->paymentId)->count())->toBe(0);
+
+    app(TenantResolver::class)->set((int) $foreignTenant->id);
+
+    expect(fn (): bool => DB::insert(
+        'insert into payments (tenant_id, branch_id, order_id, cashbox_id, method, status, amount_minor, currency, idempotency_key, idempotency_fingerprint, created_at, updated_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [(int) $context['tenant']->id, $context['branch_id'], (int) $order->id, (int) $cashbox->id, 'cash', 'captured', 4300, 'AMD', 'runtime-forged-payment', hash('sha256', 'runtime-forged-payment'), now(), now()],
+    ))->toThrow(QueryException::class);
+
+    expect(runtimeRoleScalar('select current_user'))->toBe($currentUser);
+});

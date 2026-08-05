@@ -1,7 +1,7 @@
 # Worklog — Phase 3: Payments/Cashbox/Fiscal/Printing
 
-Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation approved for future implementation planning
-Branch: docs/phase-3-payment-capture-approved-plan
+Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation FCPF10 complete; Draft PR #64 opened
+Branch: feature/payments-cash-payment-capture-foundation
 
 Phase 2 was closed by merge commit
 `085759f4c929e9f9ebf2fe551314996b58a95f0a` for PR #59. Phase 3 starts with
@@ -15,6 +15,9 @@ merged by PR #61 as merge commit
 
 After PR #61 merged, local `main` was fast-forward aligned with `origin/main`
 at merge commit `a019f26dec9095bf34b69cfa2a334aa78685e6a1`.
+
+After PR #63 merged, local `main` and `origin/main` were verified clean and
+aligned at merge commit `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd`.
 
 ## Approved First Slice: Cashbox Configuration Foundation
 
@@ -433,57 +436,182 @@ Expected implementation inventory:
   review and repair evidence without starting another implementation slice.
   Result: this documentation-only update is scoped to
   `docs/worklog/PHASE-3.md` on branch `docs/phase-3-pr61-post-merge`.
-- [ ] Step FCPF0: implementation branch setup from verified `main`. In a later
+- [x] Step FCPF0: implementation branch setup from verified `main`. In a later
   explicitly authorized implementation turn, fetch `origin`; verify local
   `main` and `origin/main` are aligned and clean; create the implementation
   branch from the then-current verified `main`; and do not start from this
   documentation branch.
-- [ ] Step FCPF1: financial schema migration. Add the single migration for
+  Result: baseline verification passed after `git fetch origin`; PR #63 was
+  still merged at `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd`, local `main`
+  and `origin/main` matched with ahead/behind `0/0`, no existing payment-capture
+  implementation branch or code was present, and
+  `feature/payments-cash-payment-capture-foundation` was created locally from
+  the exact verified `main`. No payment capture implementation work was started.
+- [x] Step FCPF1: financial schema migration. Add the single migration for
   `payments`, `payment_allocations`, and `cashbox_entries`, including tenant
   and branch fields, indexes, foreign keys, row-level checks, forced
   PostgreSQL RLS, append-only update/delete triggers, and insert consistency
   triggers.
-- [ ] Step FCPF2: append-only financial models. Add Payment,
+  Result: added the append-only financial schema migration for `payments`,
+  `payment_allocations`, and `cashbox_entries` with integer minor-unit money,
+  tenant/branch ownership, restrictive foreign keys, query indexes, scoped
+  idempotency key uniqueness, PostgreSQL check constraints, forced RLS,
+  update/delete rejection triggers, and insert consistency triggers; added
+  schema-focused SQLite and PostgreSQL tests. No capture action, models,
+  DTOs, authorization, UI, routes, events, outbox, fiscal, printing, or
+  concurrency worker behavior was introduced.
+- [x] Step FCPF2: append-only financial models. Add Payment,
   PaymentAllocation, and CashboxEntry models with `BelongsToTenant`,
   `TenantScoped`, typed casts, no soft deletes, and update/delete model guards.
-- [ ] Step FCPF3: command/result, fingerprint, errors, and translations. Add
+  Result: added append-only `Payment`, `PaymentAllocation`, and `CashboxEntry`
+  Eloquent models for the FCPF1 financial schema with tenant scoping, integer
+  minor-unit casts, same-module cashbox/payment/allocation relationships, no
+  soft deletes, and persisted update/delete/force-delete guards. Query-builder
+  update/delete/increment/decrement mutation paths remain blocked by the FCPF1
+  database append-only triggers. No capture command, action, authorization,
+  allocation orchestration, audit orchestration, UI, routes, API, fiscal,
+  printing, events, outbox, or concurrency worker behavior was introduced.
+- [x] Step FCPF3: command/result, fingerprint, errors, and translations. Add
   `CaptureCashPaymentCommand`, the capture result DTO, canonical idempotency
   fingerprint support, stable Payments domain errors, and matching `hy`, `ru`,
   and `en` translation keys.
-- [ ] Step FCPF4: `CaptureCashPayment` Application action. Implement
+  Result: added immutable command/result DTOs, canonical SHA-256 fingerprint
+  support over the approved capture inputs, stable Payments domain error
+  factories, matching `hy`, `ru`, and `en` translations, and focused contract
+  tests. No capture action, authorization, persistence orchestration, audit
+  orchestration, UI, routes, API, fiscal, printing, events, outbox, or
+  concurrency worker behavior was introduced.
+- [x] Step FCPF4: `CaptureCashPayment` Application action. Implement
   action-level `payments.capture` authorization, tenant/branch/actor
   resolution, command validation, order lock through the Orders public
   contract, selected cashbox row lock, remaining-balance calculation,
   idempotency handling, financial inserts, transaction-bound audit, and
   structured logs.
-- [ ] Step FCPF5: SQLite-compatible coverage. Add tests for successful full
+  Result: added the Application-only `CaptureCashPayment` action with
+  action-level authorization through the existing Identity authorizer, explicit
+  tenant/branch/authenticated-actor resolution, approved command validation,
+  canonical order-then-cashbox lock order, allocation-derived remaining balance,
+  scoped idempotency replay/conflict handling, atomic payment/allocation/
+  cashbox-entry/audit inserts, and safe structured logging. Added only the
+  minimal focused FCPF4 action tests. No UI, routes, controllers, API, order
+  closing, fiscalization, printing, events, outbox, worker, Make target,
+  PostgreSQL concurrency tests, or comprehensive FCPF5 matrix was introduced.
+- [x] Step FCPF5: SQLite-compatible coverage. Add tests for successful full
   cash capture, authorization, validation, exact amount and currency guards,
   idempotency replay/conflict, inactive and inaccessible cashboxes,
   inaccessible/non-payable orders, audit rollback, append-only model guards,
   and proof that payment capture does not change order status, closed time,
   totals, items, or other workflow state.
-- [ ] Step FCPF6: PostgreSQL RLS, runtime-role, trigger, and concurrency
+  Result: added comprehensive SQLite-compatible `CaptureCashPayment` coverage
+  for persisted financial/audit facts, capture-created append-only guards,
+  action-level authorization and actor/context failures, command validation,
+  cashbox selection/isolation, Orders public-contract boundaries,
+  allocation-derived remaining balance, expected-value guards, sequential
+  idempotency replay/conflict/scope, rollback atomicity, no order workflow
+  mutation, and safe structured logging. No production correction, migration,
+  UI, routes, controllers, API, order closing, fiscalization, printing, events,
+  outbox, worker, Make target, PostgreSQL RLS/runtime-role, or concurrency
+  coverage was introduced.
+- [x] Step FCPF6: PostgreSQL RLS, runtime-role, trigger, and concurrency
   coverage. Add tests proving financial-table RLS isolation, runtime-role
   capture behavior, raw update/delete trigger rejection, identical and
   mismatched idempotency races, two different payment attempts for one order,
   order mutation/cancellation coordination, and cashbox deactivation
   coordination.
-- [ ] Step FCPF7: payment concurrency worker and Make target. Add a Payments
+  Result: added PostgreSQL `CaptureCashPayment` coverage for forced
+  financial-table RLS isolation, insert-consistency triggers, raw append-only
+  update/delete rejection, restricted runtime-role capture execution,
+  transaction/audit/persistence rollback, order-before-cashbox lock
+  coordination, no branch-wide cashbox/advisory lock behavior, real
+  separate-process idempotency races, competing capture attempts, order
+  mutation/cancellation coordination, and selected cashbox deactivation
+  coordination. The Payments concurrency worker and
+  `payments-concurrency-pgsql` Make target were implemented early under
+  explicit owner authorization because FCPF6 could not honestly execute real
+  PostgreSQL capture races without those FCPF7 prerequisites. No production
+  correction, migration, UI, route, controller, API, order closing,
+  fiscalization, printing, refund/reversal, event, or outbox behavior was
+  introduced.
+- [x] Step FCPF7: payment concurrency worker and Make target. Add a Payments
   concurrency worker following the existing PostgreSQL worker pattern and add
   a narrowly scoped `payments-concurrency-pgsql` Make target.
-- [ ] Step FCPF8: focused and complete verification. Run focused tests first,
+  Result: reconciled and completed FCPF7. The Payments
+  `CaptureCashPayment` PostgreSQL concurrency worker and process entrypoint
+  were implemented early under explicit FCPF6 prerequisite authorization in
+  commit `8d692eee480d765acf1a98075b1712a68e598b9b`; the narrowly scoped
+  `payments-concurrency-pgsql` Make target was implemented in commit
+  `6763c85955f6d3e2162c278d7958dd4fb464ffb1`. Verification confirmed the
+  worker boots the real Laravel application, requires PostgreSQL, runs the
+  real `CaptureCashPayment` Application action through deterministic
+  process-level barriers, returns machine-readable results, avoids Orders
+  internals and direct Orders-table queries, and does not use owner-role or
+  SQLite fallback behavior. No implementation correction, production change,
+  migration, UI, route, controller, API, fiscal, printing, refund/reversal,
+  event, outbox, or FCPF8 behavior was introduced.
+- [x] Step FCPF8: focused and complete verification. Run focused tests first,
   then `make pint`, `make stan`, `make test`,
   `make tenant-isolation-pgsql`, `make orders-concurrency-pgsql`,
   `make cashboxes-concurrency-pgsql`, `make runtime-role-pgsql`, the new
   `make payments-concurrency-pgsql`, and `make fresh`.
-- [ ] Step FCPF9: exact diff and inventory review. Confirm the implementation
+  Result: focused SQLite/architecture coverage, PostgreSQL tenant-test and
+  restricted runtime-role gates, real Payments/Orders/Cashbox concurrency
+  targets, Pint, PHPStan, the full SQLite suite, fresh PostgreSQL migrations
+  and seeders, runtime grants, and `git diff --check` all passed on the final
+  source state. No production, test, migration, UI, route, controller, API,
+  fiscal, printing, event, outbox, or FCPF9 behavior was introduced.
+- [x] Step FCPF9: exact diff and inventory review. Confirm the implementation
   diff matches the approved slice, contains no UI/delivery adapter or excluded
   feature, and changes only expected implementation, test, translation,
   Makefile, and worklog files.
-- [ ] Step FCPF10: commit, push, and Draft PR only with later authorization.
+  Result: reviewed the complete committed range from authoritative base
+  `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd` through head
+  `c4400f757d0d2948218ddc6451d48ad658797ea6`; all 10 local commits mapped to
+  their intended FCPF0-FCPF8 steps with no empty, duplicated, accidental, or
+  uncommitted-state-dependent commit. The aggregate inventory was 24 changed
+  files with 5149 insertions and 20 deletions: Payments production
+  Application/domain/model code; the public Orders payable-contract consumer
+  only; one financial migration; three payment translations; SQLite,
+  PostgreSQL, RLS/runtime-role, model/schema, architecture-adjacent tests; the
+  Payments concurrency worker and entrypoint; the `payments-concurrency-pgsql`
+  Make target; and this worklog. No deletes, renames, binaries, generated
+  artifacts, executable-bit changes, ignored files, temporary files, secrets,
+  unrelated files, UI, route, controller, API, fiscal, printing, order closing,
+  refund/reversal, event, outbox, or later-step behavior were found.
+  Architecture and scope review confirmed Payments production code imports
+  Orders only through `App\Modules\Orders\Contracts\PayableOrderReader` and
+  `PayableOrderSnapshot`, does not query Orders tables directly, preserves the
+  approved transaction/idempotency/selected-order-before-selected-cashbox lock
+  order, locks only the selected cashbox, avoids cashbox branch advisory locks,
+  keeps integer minor-unit money, and preserves append-only, audit, forced RLS,
+  restricted runtime-role, insert-consistency trigger, and real concurrency
+  contracts. Review verification commands passed: `git diff --check
+  origin/main...HEAD`; aggregate `git diff --stat`, `--name-status`,
+  `--summary`, `--numstat`, and final changed-file reads; commit-by-commit
+  `git log`, `git diff-tree`, and `git show` inspection; static `rg` searches
+  for forbidden Orders internals, direct Orders-table access, excluded
+  features, generated/secret-bearing paths, debug artifacts, and money floats;
+  and `make test ARGS='tests/Architecture/ModuleBoundariesTest.php'` with
+  11 tests and 257 assertions.
+- [x] Step FCPF10: commit, push, and Draft PR only with later authorization.
   Commit the implementation and worklog update, push the implementation
   branch, and open a Draft PR only after the owner explicitly authorizes that
   release-flow work.
+  Result: after owner authorization, rechecked the clean local branch at
+  `ee1e45baf93e7015a4cac4b505771375764bf4e0` against authoritative base
+  `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd`; verified the branch was
+  11 commits ahead and 0 behind `origin/main`; confirmed no remote branch or
+  existing PR for the head branch; reran pre-push gates `git diff --check
+  origin/main...HEAD`, `make pint`, `make stan`, `make test`, and
+  `make fresh`, all passing. Pushed the branch normally to
+  `origin/feature/payments-cash-payment-capture-foundation`, created Draft PR
+  #64 (`https://github.com/mesropyananushavan/rest-v2/pull/64`) against
+  `main`, verified the PR was open/draft with base `main`, head
+  `feature/payments-cash-payment-capture-foundation`, 24 changed files, and
+  initial remote head `ee1e45baf93e7015a4cac4b505771375764bf4e0`. No
+  force-push, rebase, merge, Ready-for-review transition, reviewer request,
+  approval, branch deletion, production/test/migration/schema/UI/API change,
+  or GitHub state change beyond the authorized branch push and Draft PR
+  creation was performed.
 
 ## Gotchas
 
@@ -507,6 +635,11 @@ Expected implementation inventory:
 - PostgreSQL unique-constraint violations abort the current transaction. The
   future payment idempotency race handler must let the failed transaction roll
   back before loading and comparing the winning committed payment row.
+- FCPF6 required real `CaptureCashPayment` race execution, but the approved
+  plan had placed the Payments concurrency worker and
+  `payments-concurrency-pgsql` Make target in FCPF7. Owner authorization on
+  2026-08-05 allowed implementing exactly those FCPF7 prerequisites early;
+  FCPF7 was later reconciled and completed without changing those artifacts.
 
 ## Verification Results
 
@@ -565,14 +698,285 @@ Expected implementation inventory:
 - PR #61 final exact-head CI succeeded on approved head
   `14e05b36145baee494131bf648d49c2063b097f6` for both push and pull-request
   workflow runs before merge.
+- FCPF0 baseline and branch validation passed: `git fetch origin` completed;
+  local `main` and `origin/main` were both
+  `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd` with ahead/behind `0/0`; PR #63
+  was still merged; `docs/phase-3-payment-capture-approved-plan` was preserved
+  locally and remotely at `118b5d5deea60ceb90db7ee904758b11dd0dcd83`; every
+  `FCPF0` through `FCPF10` step was pending before branch creation; the new
+  local branch `feature/payments-cash-payment-capture-foundation` started at
+  the exact verified `main`; and no payment capture implementation files were
+  introduced. Final focused validation passed with `git diff --check`, and the
+  only changed file was this worklog.
+- FCPF1 baseline validation passed after `git fetch origin`: current branch
+  was `feature/payments-cash-payment-capture-foundation` at
+  `af0e2efc501352e1191465634aafa67c948b2331` with no upstream and clean
+  worktree; local `main` and `origin/main` were both
+  `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd`; `main..HEAD` contained only the
+  FCPF0 worklog commit; PR #62 and PR #63 were still merged; the documentation
+  branch remained preserved locally and remotely at
+  `118b5d5deea60ceb90db7ee904758b11dd0dcd83`; no remote implementation branch
+  or PR existed.
+- FCPF1 focused validation passed: `make test
+  ARGS='tests/Feature/Payments/PaymentFinancialSchemaTest.php'` passed with
+  3 tests and 44 assertions; `make tenant-isolation-pgsql` passed with
+  73 tests and 403 assertions, including financial table RLS and insert
+  consistency coverage; `make test ARGS='tests/Feature/Payments'` passed with
+  16 tests, 3 skipped PostgreSQL-only tests, and 147 assertions;
+  `make runtime-role-pgsql` passed with 4 tests and 69 assertions;
+  `make pint` passed across 390 files; `make stan` passed with no errors; and
+  `git diff --check` passed.
+- FCPF2 baseline validation passed after `git fetch origin`: current branch was
+  `feature/payments-cash-payment-capture-foundation` at
+  `8e69787c67d62090a438a67d4adad3f148c1c913` with no upstream and clean
+  worktree; local `main` and `origin/main` were both
+  `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd`; `main..HEAD` contained only the
+  FCPF0 and FCPF1 commits; PR #62 and PR #63 were still merged; the
+  documentation branch remained preserved locally and remotely at
+  `118b5d5deea60ceb90db7ee904758b11dd0dcd83`; no remote implementation branch
+  or PR existed; and no FCPF2 model implementation was present before work
+  began.
+- FCPF2 focused validation passed: `make test
+  ARGS='tests/Feature/Payments/PaymentFinancialModelsTest.php'` passed with
+  3 tests and 83 assertions; `make test
+  ARGS='tests/Feature/Payments/PaymentFinancialSchemaTest.php
+  tests/Feature/Payments/PaymentFinancialModelsTest.php
+  tests/Architecture/ModuleBoundariesTest.php'` passed with 17 tests and
+  384 assertions, including migration rollback/re-apply coverage and the
+  Payments-to-Orders architecture boundary; `make test
+  ARGS='tests/Feature/Payments'` passed with 19 tests, 3 skipped
+  PostgreSQL-only tests, and 230 assertions; `make tenant-isolation-pgsql`
+  passed with 73 tests and 403 assertions; `make runtime-role-pgsql` passed
+  with 4 tests and 69 assertions; `make pint` passed across 394 files and fixed
+  one style issue in the new model test; `make stan` passed with no errors; the
+  post-Pint model test rerun passed with 3 tests and 83 assertions; the
+  post-Pint Payments suite rerun passed with 19 tests, 3 skipped
+  PostgreSQL-only tests, and 230 assertions; and `git diff --check` passed.
+- FCPF3 baseline validation passed after read-only reconciliation and
+  `git fetch origin`: current branch was
+  `feature/payments-cash-payment-capture-foundation` at
+  `bf268b91edddd0288ba281816327eccde6c67b28` with no upstream and clean
+  worktree; local `main` and `origin/main` were both
+  `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd`; `main..HEAD` contained only the
+  FCPF0, FCPF1, and FCPF2 commits; FCPF1 and FCPF2 file contents matched the
+  approved scopes; the worklog body accurately recorded FCPF2 completion, but
+  its `Next Steps` section was stale because FCPF2 was already committed.
+- FCPF3 focused validation passed: `make test
+  ARGS='tests/Feature/Payments/CaptureCashPaymentContractTest.php'` passed
+  with 4 tests and 58 assertions; `make test
+  ARGS='tests/Feature/Payments/CaptureCashPaymentContractTest.php
+  tests/Feature/Payments/PaymentFinancialSchemaTest.php
+  tests/Feature/Payments/PaymentFinancialModelsTest.php
+  tests/Architecture/ModuleBoundariesTest.php'` passed with 21 tests and
+  442 assertions; `make test ARGS='tests/Feature/Payments'` passed with
+  23 tests, 3 skipped PostgreSQL-only tests, and 288 assertions; `make pint`
+  passed across 398 files and fixed one style issue in the new contract test;
+  the post-Pint focused rerun passed with 4 tests and 58 assertions;
+  `make stan` passed with no errors; `make test` passed with 455 tests,
+  34 skipped PostgreSQL-only tests, and 4350 assertions; and
+  `git diff --check` passed.
+- FCPF4 baseline validation passed after read-only reconciliation and
+  `git fetch origin`: current branch was
+  `feature/payments-cash-payment-capture-foundation` at
+  `1a6297573097b5484e024c34dba1d7dff3e5a00d` with no upstream and clean
+  worktree; `origin/main` was
+  `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd`; the branch was 4 commits ahead
+  and 0 behind `origin/main`; FCPF0 through FCPF3 were committed and matched
+  their approved scopes; and the worklog accurately named FCPF4 as the next
+  unfinished step.
+- FCPF4 focused validation passed: `make test
+  ARGS='tests/Feature/Payments/CaptureCashPaymentActionTest.php'` passed with
+  6 tests and 57 assertions; `make test
+  ARGS='tests/Feature/Payments/CaptureCashPaymentActionTest.php
+  tests/Feature/Payments/CaptureCashPaymentContractTest.php
+  tests/Feature/Payments/PaymentFinancialSchemaTest.php
+  tests/Feature/Payments/PaymentFinancialModelsTest.php
+  tests/Feature/Orders/PayableOrderReaderTest.php
+  tests/Architecture/ModuleBoundariesTest.php'` passed with 35 tests and
+  517 assertions before and after Pint; `make test
+  ARGS='tests/Feature/Payments'` passed with 29 tests, 3 skipped
+  PostgreSQL-only tests, and 345 assertions; `make pint` passed across
+  400 files; the first `make stan` run found one new typed-cast issue in
+  `CaptureCashPayment`, which was corrected inside the FCPF4 action; the final
+  `make stan` passed with no errors; and `make test` passed with 461 tests,
+  34 skipped PostgreSQL-only tests, and 4407 assertions. FCPF4 intentionally
+  did not add or run payment PostgreSQL/RLS/concurrency gates, which remain
+  assigned to FCPF6 through FCPF8.
+- FCPF5 baseline validation passed after read-only reconciliation and
+  `git fetch origin`: current branch was
+  `feature/payments-cash-payment-capture-foundation` at
+  `4548de49272ace2b8063404a63397896028e6ae9` with no upstream and clean
+  worktree; `origin/main` was
+  `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd`; the branch was 5 commits ahead
+  and 0 behind `origin/main`; FCPF0 through FCPF4 were committed and matched
+  their approved scopes; and the worklog accurately named FCPF5 as the next
+  unfinished step.
+- FCPF5 focused validation passed: the new `make test
+  ARGS='tests/Feature/Payments/CaptureCashPaymentCoverageTest.php'` initially
+  exposed two test-fixture issues only and then passed with 14 tests and
+  242 assertions after fixture correction; `make test
+  ARGS='tests/Feature/Payments/CaptureCashPaymentActionTest.php'` passed with
+  6 tests and 57 assertions; `make test
+  ARGS='tests/Feature/Payments/CaptureCashPaymentContractTest.php'` passed
+  with 4 tests and 58 assertions; `make test
+  ARGS='tests/Feature/Payments/PaymentFinancialSchemaTest.php
+  tests/Feature/Payments/PaymentFinancialModelsTest.php'` passed with 6 tests
+  and 127 assertions; `make test
+  ARGS='tests/Feature/Orders/PayableOrderReaderTest.php'` passed with 8 tests
+  and 18 assertions; `make test
+  ARGS='tests/Architecture/ModuleBoundariesTest.php'` passed with 11 tests and
+  257 assertions; and `make test ARGS='tests/Feature/Payments'` passed with
+  43 tests, 3 skipped PostgreSQL-only tests, and 587 assertions.
+- FCPF5 repository gates passed on the final source state: `make pint` passed
+  across 401 files; the post-Pint affected rerun `make test
+  ARGS='tests/Feature/Payments/CaptureCashPaymentCoverageTest.php
+  tests/Feature/Payments/CaptureCashPaymentActionTest.php
+  tests/Feature/Payments/CaptureCashPaymentContractTest.php
+  tests/Feature/Payments/PaymentFinancialSchemaTest.php
+  tests/Feature/Payments/PaymentFinancialModelsTest.php
+  tests/Feature/Orders/PayableOrderReaderTest.php
+  tests/Architecture/ModuleBoundariesTest.php'` passed with 49 tests and
+  759 assertions; `make stan` passed with no errors; `make test` passed with
+  475 tests, 34 skipped PostgreSQL-only tests, and 4649 assertions; and
+  `make fresh` passed, including migrations, deterministic demo seeding, and
+  runtime database grants.
+- FCPF6 baseline validation passed after read-only reconciliation and
+  `git fetch origin`: current branch was
+  `feature/payments-cash-payment-capture-foundation` at
+  `de56213cd2bc47179e3335ab57564ad380549831` with no upstream and clean
+  worktree; `origin/main` was
+  `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd`; the branch was 6 commits ahead
+  and 0 behind `origin/main`; FCPF0 through FCPF5 were committed and matched
+  their approved scopes; FCPF6 was the next unchecked step; and the worklog
+  explicitly assigned the Payments concurrency worker and
+  `payments-concurrency-pgsql` Make target to FCPF7.
+- FCPF6 PostgreSQL verification passed: `make payments-concurrency-pgsql`
+  passed before and after Pint with 6 tests and 103 assertions, running on the
+  PostgreSQL tenant-test database with schema-owner setup and real
+  separate-process `CaptureCashPayment` workers. It verified forced RLS and
+  policies for `payments`, `payment_allocations`, and `cashbox_entries`;
+  direct append-only update/delete trigger rejection for all three financial
+  tables; insert-consistency trigger rejection for invalid payment,
+  allocation, and cashbox-entry relationships; PostgreSQL capture/audit
+  atomicity; rollback on audit and persistence failures; order-before-cashbox
+  locking; no worker advisory lock; selected-cashbox-only lock behavior; real
+  identical same-key replay races; different-key same-order winner/domain
+  races; same-key different-order unique-constraint conflict races with
+  transaction level restored to zero; same-key independence across tenants and
+  branches; order total mutation, order cancellation, and selected cashbox
+  deactivation coordination. `make runtime-role-pgsql` passed after adding
+  restricted runtime-role capture coverage with 5 tests and 93 assertions,
+  proving the action succeeds as the non-owner `NOBYPASSRLS` runtime role,
+  persists one payment/allocation/cashbox-entry/audit row, preserves order
+  workflow state, cannot see another tenant's financial rows, and rejects
+  forged cross-tenant financial inserts. `make tenant-isolation-pgsql` passed
+  with 73 tests and 403 assertions; `make orders-concurrency-pgsql` passed
+  with 10 tests and 60 assertions; and `make cashboxes-concurrency-pgsql`
+  passed with 3 tests and 28 assertions.
+- FCPF6 repository gates passed on the final source state: `make test
+  ARGS='tests/Feature/Payments/CaptureCashPaymentCoverageTest.php
+  tests/Feature/Payments/CaptureCashPaymentActionTest.php
+  tests/Feature/Payments/CaptureCashPaymentContractTest.php
+  tests/Feature/Payments/PaymentFinancialSchemaTest.php
+  tests/Feature/Payments/PaymentFinancialModelsTest.php
+  tests/Feature/Orders/PayableOrderReaderTest.php
+  tests/Architecture/ModuleBoundariesTest.php'` passed before and after Pint
+  with 49 tests and 759 assertions; `make test ARGS='tests/Feature/Payments'`
+  passed with 43 tests, 9 skipped PostgreSQL-only tests, and 587 assertions;
+  `make pint` passed across 404 files and fixed one style issue in the new
+  PostgreSQL test; `make stan` passed with no errors; `make test` passed with
+  475 tests, 41 skipped PostgreSQL-only tests, and 4649 assertions; and
+  `make fresh` passed, including migrations, deterministic demo seeding, and
+  runtime database grants.
+- FCPF7 reconciliation passed after `git fetch origin`: current branch was
+  `feature/payments-cash-payment-capture-foundation` at
+  `6763c85955f6d3e2162c278d7958dd4fb464ffb1` with no upstream and clean
+  worktree; `origin/main` was
+  `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd`; the branch was 8 commits ahead
+  and 0 behind `origin/main`; FCPF0 through FCPF6 were committed and matched
+  the worklog; the authoritative FCPF7 checklist contained only the Payments
+  PostgreSQL concurrency worker and the `payments-concurrency-pgsql` Make
+  target; and both artifacts were already present from commits
+  `8d692eee480d765acf1a98075b1712a68e598b9b` and
+  `6763c85955f6d3e2162c278d7958dd4fb464ffb1`.
+- FCPF7 verification passed: PostgreSQL version was
+  `PostgreSQL 17.10` on the repository Docker service; `make
+  payments-concurrency-pgsql` passed before and after Pint with 6 tests and
+  103 assertions, using the tenant-test PostgreSQL connection with
+  privileged schema setup and real separate-process Payments workers; `make
+  runtime-role-pgsql` passed before and after Pint with 5 tests and
+  93 assertions, using the restricted non-owner `NOBYPASSRLS` runtime-test
+  role; `make tenant-isolation-pgsql` passed with 73 tests and
+  403 assertions; `make test ARGS='tests/Architecture/ModuleBoundariesTest.php'`
+  passed before and after Pint with 11 tests and 257 assertions; `make pint`
+  passed across 404 files; `make orders-concurrency-pgsql` and
+  `make cashboxes-concurrency-pgsql` initially failed only because they were
+  run in parallel against the same PostgreSQL test database and collided during
+  `migrate:fresh`, then passed when rerun sequentially with 10 tests /
+  60 assertions and 3 tests / 28 assertions respectively; `make stan` passed
+  with no errors; `make test` passed with 475 tests, 41 skipped
+  PostgreSQL-only tests, and 4649 assertions; and `make fresh` passed,
+  including migrations, deterministic demo seeding, and runtime database
+  grants.
+- FCPF8 reconciliation passed after read-only document/code inspection and
+  `git fetch origin`: current branch was
+  `feature/payments-cash-payment-capture-foundation` at
+  `62f215fa1f108f5437bfc0adcfcecc5c5df0ea5a` with no upstream and clean
+  worktree/index; `origin/main` was
+  `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd`; the branch was 9 commits ahead
+  and 0 behind `origin/main`; FCPF0 through FCPF7 were committed and matched
+  the worklog; and FCPF8 was the next unchecked verification-only step.
+- FCPF8 focused SQLite/architecture verification passed before and after Pint:
+  `make test ARGS='tests/Feature/Payments/CaptureCashPaymentActionTest.php
+  tests/Feature/Payments/CaptureCashPaymentCoverageTest.php
+  tests/Feature/Payments/CaptureCashPaymentContractTest.php
+  tests/Feature/Payments/PaymentFinancialSchemaTest.php
+  tests/Feature/Payments/PaymentFinancialModelsTest.php
+  tests/Feature/Orders/PayableOrderReaderTest.php
+  tests/Architecture/ModuleBoundariesTest.php'` passed with 49 tests and
+  759 assertions both times, covering the committed capture action, FCPF5
+  SQLite matrix, FCPF3 contracts, financial schema/models, payable-order
+  reader, and module boundaries.
+- FCPF8 PostgreSQL verification passed sequentially on PostgreSQL `17.10`:
+  `make payments-concurrency-pgsql` passed before and after Pint with 6 tests
+  and 103 assertions, using the tenant-test PostgreSQL database with
+  privileged schema preparation and real separate-process Payments workers;
+  `make tenant-isolation-pgsql` passed with 73 tests and 403 assertions,
+  including financial forced RLS, tenant isolation, insert-consistency,
+  trigger, and append-only coverage; `make orders-concurrency-pgsql` passed
+  with 10 tests and 60 assertions; `make cashboxes-concurrency-pgsql` passed
+  with 3 tests and 28 assertions; and `make runtime-role-pgsql` passed before
+  and after Pint with 5 tests and 93 assertions, using privileged
+  migration/setup followed by the restricted non-owner `NOBYPASSRLS`
+  runtime-test role. No PostgreSQL target was run concurrently in FCPF8, so
+  the known shared test-database contention did not recur.
+- FCPF8 repository-wide gates passed on the final source state: `make pint`
+  passed across 404 files; `make stan` passed with no errors; `make test`
+  passed with 475 tests, 41 skipped PostgreSQL-only tests, and
+  4649 assertions, with those SQLite-suite skips not counted as PostgreSQL
+  verification; `make fresh` passed, including migrations, deterministic demo
+  seeding, and runtime database grants; and `git diff --check` passed. No
+  correction was necessary.
 
 ## Next Steps
 
-Await separate owner authorization to begin implementation of the approved
-Full Cash Payment Capture Foundation. The exact next implementation action is
-Step FCPF0: verify the then-current `main` baseline and create the
-implementation branch from that verified `main`.
+Full Cash Payment Capture Foundation FCPF0 through FCPF10 is complete on the
+local branch and Draft PR #64. The exact next lifecycle action requires
+separate owner authorization: monitor/act on PR CI or move the Draft PR toward
+review. Do not mark the PR Ready for review, request reviewers, merge, rebase,
+amend, force-push, delete branches, or perform post-FCPF10 cleanup without
+explicit owner authorization.
 
-No payment capture, payment schema, payment allocations, cashbox ledger,
-closing, fiscalization, printing, UI, routes, controllers, Livewire, API,
-domain events, or outbox work has begun.
+Payment financial schema now exists as the FCPF1 migration and schema-focused
+tests, the FCPF2 append-only financial Eloquent models and model-focused tests,
+the FCPF3 command/result DTOs, canonical fingerprint helper, stable domain
+errors, translations, contract tests, the FCPF4 Application-only cash capture
+action with minimal focused action tests, and the FCPF5 comprehensive
+SQLite-compatible coverage. FCPF6 PostgreSQL RLS/runtime-role/trigger/
+append-only/atomicity/concurrency coverage is complete. The FCPF7 Payments
+PostgreSQL concurrency worker and Make target are complete. FCPF8 focused and
+complete verification is complete. FCPF9 exact diff and inventory review is
+complete. FCPF10 pushed the reviewed branch and opened Draft PR #64. No
+post-FCPF10 Ready-for-review transition, reviewer request, merge, closing,
+fiscalization, printing, UI, routes, controllers, Livewire, API, domain events,
+outbox, or cleanup work has begun.
