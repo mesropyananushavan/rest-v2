@@ -1,6 +1,6 @@
 # Worklog — Phase 3: Payments/Cashbox/Fiscal/Printing
 
-Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation FCPF6 complete; FCPF7 pending owner authorization
+Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation FCPF7 complete; FCPF8 pending owner authorization
 Branch: feature/payments-cash-payment-capture-foundation
 
 Phase 2 was closed by merge commit
@@ -532,9 +532,22 @@ Expected implementation inventory:
   correction, migration, UI, route, controller, API, order closing,
   fiscalization, printing, refund/reversal, event, or outbox behavior was
   introduced.
-- [ ] Step FCPF7: payment concurrency worker and Make target. Add a Payments
+- [x] Step FCPF7: payment concurrency worker and Make target. Add a Payments
   concurrency worker following the existing PostgreSQL worker pattern and add
   a narrowly scoped `payments-concurrency-pgsql` Make target.
+  Result: reconciled and completed FCPF7. The Payments
+  `CaptureCashPayment` PostgreSQL concurrency worker and process entrypoint
+  were implemented early under explicit FCPF6 prerequisite authorization in
+  commit `8d692eee480d765acf1a98075b1712a68e598b9b`; the narrowly scoped
+  `payments-concurrency-pgsql` Make target was implemented in commit
+  `6763c85955f6d3e2162c278d7958dd4fb464ffb1`. Verification confirmed the
+  worker boots the real Laravel application, requires PostgreSQL, runs the
+  real `CaptureCashPayment` Application action through deterministic
+  process-level barriers, returns machine-readable results, avoids Orders
+  internals and direct Orders-table queries, and does not use owner-role or
+  SQLite fallback behavior. No implementation correction, production change,
+  migration, UI, route, controller, API, fiscal, printing, refund/reversal,
+  event, outbox, or FCPF8 behavior was introduced.
 - [ ] Step FCPF8: focused and complete verification. Run focused tests first,
   then `make pint`, `make stan`, `make test`,
   `make tenant-isolation-pgsql`, `make orders-concurrency-pgsql`,
@@ -825,16 +838,45 @@ Expected implementation inventory:
   475 tests, 41 skipped PostgreSQL-only tests, and 4649 assertions; and
   `make fresh` passed, including migrations, deterministic demo seeding, and
   runtime database grants.
+- FCPF7 reconciliation passed after `git fetch origin`: current branch was
+  `feature/payments-cash-payment-capture-foundation` at
+  `6763c85955f6d3e2162c278d7958dd4fb464ffb1` with no upstream and clean
+  worktree; `origin/main` was
+  `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd`; the branch was 8 commits ahead
+  and 0 behind `origin/main`; FCPF0 through FCPF6 were committed and matched
+  the worklog; the authoritative FCPF7 checklist contained only the Payments
+  PostgreSQL concurrency worker and the `payments-concurrency-pgsql` Make
+  target; and both artifacts were already present from commits
+  `8d692eee480d765acf1a98075b1712a68e598b9b` and
+  `6763c85955f6d3e2162c278d7958dd4fb464ffb1`.
+- FCPF7 verification passed: PostgreSQL version was
+  `PostgreSQL 17.10` on the repository Docker service; `make
+  payments-concurrency-pgsql` passed before and after Pint with 6 tests and
+  103 assertions, using the tenant-test PostgreSQL connection with
+  privileged schema setup and real separate-process Payments workers; `make
+  runtime-role-pgsql` passed before and after Pint with 5 tests and
+  93 assertions, using the restricted non-owner `NOBYPASSRLS` runtime-test
+  role; `make tenant-isolation-pgsql` passed with 73 tests and
+  403 assertions; `make test ARGS='tests/Architecture/ModuleBoundariesTest.php'`
+  passed before and after Pint with 11 tests and 257 assertions; `make pint`
+  passed across 404 files; `make orders-concurrency-pgsql` and
+  `make cashboxes-concurrency-pgsql` initially failed only because they were
+  run in parallel against the same PostgreSQL test database and collided during
+  `migrate:fresh`, then passed when rerun sequentially with 10 tests /
+  60 assertions and 3 tests / 28 assertions respectively; `make stan` passed
+  with no errors; `make test` passed with 475 tests, 41 skipped
+  PostgreSQL-only tests, and 4649 assertions; and `make fresh` passed,
+  including migrations, deterministic demo seeding, and runtime database
+  grants.
 
 ## Next Steps
 
 The exact next implementation action requiring separate owner authorization is
-Step FCPF7 reconciliation/completion: the worklog's only apparent FCPF7
-implementation artifacts, the Payments concurrency worker and
-`payments-concurrency-pgsql` Make target, were implemented early under explicit
-owner authorization to unblock FCPF6, but FCPF7 remains unchecked by
-instruction and must not be marked complete without a separate owner
-authorization.
+Step FCPF8: focused and complete verification. Run focused tests first, then
+`make pint`, `make stan`, `make test`, `make tenant-isolation-pgsql`,
+`make orders-concurrency-pgsql`, `make cashboxes-concurrency-pgsql`,
+`make runtime-role-pgsql`, `make payments-concurrency-pgsql`, and
+`make fresh`.
 
 Payment financial schema now exists as the FCPF1 migration and schema-focused
 tests, the FCPF2 append-only financial Eloquent models and model-focused tests,
@@ -842,6 +884,7 @@ the FCPF3 command/result DTOs, canonical fingerprint helper, stable domain
 errors, translations, contract tests, the FCPF4 Application-only cash capture
 action with minimal focused action tests, and the FCPF5 comprehensive
 SQLite-compatible coverage. FCPF6 PostgreSQL RLS/runtime-role/trigger/
-append-only/atomicity/concurrency coverage is complete. No FCPF7 completion
-mark, FCPF8 verification step, closing, fiscalization, printing, UI, routes,
+append-only/atomicity/concurrency coverage is complete. The FCPF7 Payments
+PostgreSQL concurrency worker and Make target are complete. No FCPF8
+verification step, closing, fiscalization, printing, UI, routes,
 controllers, Livewire, API, domain events, or outbox work has begun.
