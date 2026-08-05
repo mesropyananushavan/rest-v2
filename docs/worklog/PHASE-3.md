@@ -1,6 +1,6 @@
 # Worklog — Phase 3: Payments/Cashbox/Fiscal/Printing
 
-Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation FCPF2 complete; FCPF3 pending owner authorization
+Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation FCPF3 complete; FCPF4 pending owner authorization
 Branch: feature/payments-cash-payment-capture-foundation
 
 Phase 2 was closed by merge commit
@@ -471,10 +471,16 @@ Expected implementation inventory:
   database append-only triggers. No capture command, action, authorization,
   allocation orchestration, audit orchestration, UI, routes, API, fiscal,
   printing, events, outbox, or concurrency worker behavior was introduced.
-- [ ] Step FCPF3: command/result, fingerprint, errors, and translations. Add
+- [x] Step FCPF3: command/result, fingerprint, errors, and translations. Add
   `CaptureCashPaymentCommand`, the capture result DTO, canonical idempotency
   fingerprint support, stable Payments domain errors, and matching `hy`, `ru`,
   and `en` translation keys.
+  Result: added immutable command/result DTOs, canonical SHA-256 fingerprint
+  support over the approved capture inputs, stable Payments domain error
+  factories, matching `hy`, `ru`, and `en` translations, and focused contract
+  tests. No capture action, authorization, persistence orchestration, audit
+  orchestration, UI, routes, API, fiscal, printing, events, outbox, or
+  concurrency worker behavior was introduced.
 - [ ] Step FCPF4: `CaptureCashPayment` Application action. Implement
   action-level `payments.capture` authorization, tenant/branch/actor
   resolution, command validation, order lock through the Orders public
@@ -644,18 +650,43 @@ Expected implementation inventory:
   post-Pint model test rerun passed with 3 tests and 83 assertions; the
   post-Pint Payments suite rerun passed with 19 tests, 3 skipped
   PostgreSQL-only tests, and 230 assertions; and `git diff --check` passed.
+- FCPF3 baseline validation passed after read-only reconciliation and
+  `git fetch origin`: current branch was
+  `feature/payments-cash-payment-capture-foundation` at
+  `bf268b91edddd0288ba281816327eccde6c67b28` with no upstream and clean
+  worktree; local `main` and `origin/main` were both
+  `6a7b38890c7350e48b0c2b5c0d3fd263a30376fd`; `main..HEAD` contained only the
+  FCPF0, FCPF1, and FCPF2 commits; FCPF1 and FCPF2 file contents matched the
+  approved scopes; the worklog body accurately recorded FCPF2 completion, but
+  its `Next Steps` section was stale because FCPF2 was already committed.
+- FCPF3 focused validation passed: `make test
+  ARGS='tests/Feature/Payments/CaptureCashPaymentContractTest.php'` passed
+  with 4 tests and 58 assertions; `make test
+  ARGS='tests/Feature/Payments/CaptureCashPaymentContractTest.php
+  tests/Feature/Payments/PaymentFinancialSchemaTest.php
+  tests/Feature/Payments/PaymentFinancialModelsTest.php
+  tests/Architecture/ModuleBoundariesTest.php'` passed with 21 tests and
+  442 assertions; `make test ARGS='tests/Feature/Payments'` passed with
+  23 tests, 3 skipped PostgreSQL-only tests, and 288 assertions; `make pint`
+  passed across 398 files and fixed one style issue in the new contract test;
+  the post-Pint focused rerun passed with 4 tests and 58 assertions;
+  `make stan` passed with no errors; `make test` passed with 455 tests,
+  34 skipped PostgreSQL-only tests, and 4350 assertions; and
+  `git diff --check` passed.
 
 ## Next Steps
 
-Await separate owner authorization to commit the FCPF2 result on
-`feature/payments-cash-payment-capture-foundation`. After that commit, the
-exact next implementation action requiring separate authorization is Step FCPF3:
-command/result DTOs, canonical idempotency fingerprint support, stable Payments
-domain errors, and matching `hy`, `ru`, and `en` translation keys.
+The exact next implementation action requiring separate owner authorization is
+Step FCPF4: implement the `CaptureCashPayment` Application action with
+action-level `payments.capture` authorization, tenant/branch/actor resolution,
+command validation, order lock through the Orders public contract, selected
+cashbox row lock, remaining-balance calculation, idempotency handling,
+financial inserts, transaction-bound audit, and structured logs.
 
 Payment financial schema now exists only as the FCPF1 migration and
-schema-focused tests, plus the FCPF2 append-only financial Eloquent models and
-model-focused tests. No payment capture action, command/result DTOs, runtime
-idempotency handling, authorization behavior, audit persistence, closing,
-fiscalization, printing, UI, routes, controllers, Livewire, API, domain events,
-outbox, or concurrency worker work has begun.
+schema-focused tests, the FCPF2 append-only financial Eloquent models and
+model-focused tests, and the FCPF3 command/result DTOs, canonical fingerprint
+helper, stable domain errors, translations, and contract tests. No payment
+capture action, runtime idempotency handling, authorization behavior, audit
+persistence, closing, fiscalization, printing, UI, routes, controllers,
+Livewire, API, domain events, outbox, or concurrency worker work has begun.
