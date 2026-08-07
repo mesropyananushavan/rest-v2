@@ -1,7 +1,7 @@
 # Worklog — Phase 3: Payments/Cashbox/Fiscal/Printing
 
-Status: Cashbox Configuration Foundation merged through PR #60; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation merged through PR #64; Order Workspace Full Cash Capture Adapter merged through PR #67; PR #68 post-merge documentation reconciliation merged; Paid Order Manual Close Gate POCG0 documentation prepared for owner review
-Branch: docs/phase-3-paid-order-manual-close-plan
+Status: Cashbox Configuration Foundation merged through PR #60; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation merged through PR #64; Order Workspace Full Cash Capture Adapter merged through PR #67; PR #68 post-merge documentation reconciliation merged; Paid Order Manual Close Gate POCG0 documentation merged through PR #69
+Branch: docs/phase-3-pr69-post-merge
 
 Phase 2 was closed by merge commit
 `085759f4c929e9f9ebf2fe551314996b58a95f0a` for PR #59. Phase 3 starts with
@@ -65,6 +65,20 @@ The verified merge-parent order is:
 During POCG0 reconciliation on 2026-08-07, local `HEAD`, local `main`,
 `origin/main`, and GitHub `main` were verified clean and aligned at PR #68
 merge commit `6e6bd80dd0f3cfeca042e3de06c7bad5664fbf6c`.
+
+PR #69 merged the Paid Order Manual Close Gate POCG0 documentation plan as
+merge commit `a8d0ddf1fd3c3874a34bd959c753e40d12f75dee` from docs head
+`822d69d83092e3ed58a00311eb30e6bf0a4d3793` at `2026-08-07T07:25:19Z`.
+The verified merge-parent order is:
+
+1. `6e6bd80dd0f3cfeca042e3de06c7bad5664fbf6c`
+2. `822d69d83092e3ed58a00311eb30e6bf0a4d3793`
+
+After PR #69 merged, local `main` was fast-forward aligned with `origin/main`
+and GitHub `main` at merge commit
+`a8d0ddf1fd3c3874a34bd959c753e40d12f75dee`. The source branch
+`docs/phase-3-paid-order-manual-close-plan` remains retained locally and on
+`origin`; no branch cleanup was performed.
 
 ## Approved First Slice: Cashbox Configuration Foundation
 
@@ -453,11 +467,11 @@ Explicit exclusions:
 Owner approval:
 - The owner explicitly approved the bounded `Paid Order Manual Close Gate`
   slice with step prefix `POCG`.
-- This turn authorizes POCG0 documentation and post-PR #68 worklog
-  reconciliation only.
+- POCG0 documentation and post-PR #68 worklog reconciliation is complete and
+  merged through PR #69.
 - POCG1 implementation has not started. No contract, action, permission, UI,
-  translations, tests, migration, runtime behavior, push, PR, merge, or branch
-  deletion is authorized in POCG0.
+  translation, test, migration, or runtime behavior has been introduced, and
+  no branch deletion was performed.
 
 Objective:
 - Add the smallest Orders-owned manual close gate for paid open orders after
@@ -903,10 +917,12 @@ Explicit non-goals:
   Phase 3 header; record the approved Paid Order Manual Close Gate slice,
   owner decisions, module ownership, lock order, non-goals, and POCG1-POCG5
   pending plan; and do not begin implementation.
-  Result: POCG0 documentation is prepared for a local documentation commit on
-  `docs/phase-3-paid-order-manual-close-plan` and changes only this worklog.
-  No implementation, test, migration, runtime behavior, push, PR, merge, or
-  branch deletion was performed.
+  Result: POCG0 documentation was committed, pushed, opened as PR #69, and
+  merged as merge commit `a8d0ddf1fd3c3874a34bd959c753e40d12f75dee` from docs
+  head `822d69d83092e3ed58a00311eb30e6bf0a4d3793`. Local `main`,
+  `origin/main`, and GitHub `main` were subsequently verified aligned at the
+  merge commit. No implementation, test, migration, runtime behavior, branch
+  deletion, or POCG1 work was performed.
 - [ ] Step POCG1: Payments public balance-read contract, DTO, implementation
   binding, and architecture coverage.
 - [ ] Step POCG2: Orders close action, permission, audit, translations, role
@@ -1342,11 +1358,13 @@ branch `feature/order-workspace-full-cash-capture` remains present; no branch
 cleanup has been approved.
 
 Paid Order Manual Close Gate is approved as the next bounded Phase 3 slice.
-POCG0 documentation and post-PR #68 worklog reconciliation is prepared for
-owner review. The precise next pending step is POCG1: Payments public
-balance-read contract, immutable DTO, implementation binding, and architecture
-coverage. Do not begin POCG1 until the owner explicitly authorizes
-implementation.
+POCG0 documentation and post-PR #68 worklog reconciliation is complete and
+merged through PR #69; local `main`, `origin/main`, and GitHub `main` were
+subsequently verified aligned at
+`a8d0ddf1fd3c3874a34bd959c753e40d12f75dee`. The precise next pending step is
+POCG1: Payments public balance-read contract, immutable DTO, implementation
+binding, and architecture coverage. Do not begin POCG1 until the owner
+explicitly authorizes implementation.
 
 Fiscalization, receipt and kitchen printing, printer monitoring, split or
 partial payments, other payment methods, prepayments, debts, refunds/reversals,
