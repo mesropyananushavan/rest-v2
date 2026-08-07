@@ -1,7 +1,7 @@
 # Worklog — Phase 3: Payments/Cashbox/Fiscal/Printing
 
-Status: Cashbox Configuration Foundation merged; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation merged through PR #64; Order Workspace Full Cash Capture Adapter merged through PR #67; PR #67 post-merge documentation reconciliation in progress
-Branch: docs/phase-3-pr67-post-merge
+Status: Cashbox Configuration Foundation merged through PR #60; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation merged through PR #64; Order Workspace Full Cash Capture Adapter merged through PR #67; PR #68 post-merge documentation reconciliation merged; Paid Order Manual Close Gate POCG0 documentation prepared for owner review
+Branch: docs/phase-3-paid-order-manual-close-plan
 
 Phase 2 was closed by merge commit
 `085759f4c929e9f9ebf2fe551314996b58a95f0a` for PR #59. Phase 3 starts with
@@ -53,6 +53,18 @@ PR #67 merged the Order Workspace Full Cash Capture Adapter as merge commit
 
 After PR #67 merged, local `main` was fast-forward aligned with `origin/main`
 at merge commit `9ef141f21844a6fc29b3f7561d4e8626c1f94e2e`.
+
+PR #68 merged the PR #67 post-merge documentation reconciliation as merge
+commit `6e6bd80dd0f3cfeca042e3de06c7bad5664fbf6c` from docs head
+`6f35a79f04cafadac3dfdb84e4c566df019c5952` at `2026-08-05T13:34:33Z`.
+The verified merge-parent order is:
+
+1. `9ef141f21844a6fc29b3f7561d4e8626c1f94e2e`
+2. `6f35a79f04cafadac3dfdb84e4c566df019c5952`
+
+During POCG0 reconciliation on 2026-08-07, local `HEAD`, local `main`,
+`origin/main`, and GitHub `main` were verified clean and aligned at PR #68
+merge commit `6e6bd80dd0f3cfeca042e3de06c7bad5664fbf6c`.
 
 ## Approved First Slice: Cashbox Configuration Foundation
 
@@ -393,7 +405,7 @@ Owner approval:
   `Order Workspace Full Cash Capture Adapter` slice after PR #66 merged.
 - This approval authorizes exposing the already completed cash-payment capture
   foundation through the existing order workspace only.
-- No other Phase 3 implementation slice is approved.
+- That approval did not authorize any other Phase 3 implementation slice.
 
 Objective:
 - Let an authorized cashier record one full cash payment for the order's
@@ -435,6 +447,75 @@ Explicit exclusions:
   kitchen-printer, printer-monitoring, cashbox lifecycle, reconciliation,
   reporting, public API, legacy-system, unrelated UI redesign, unrelated
   refactor, schema, migration, event, or outbox work.
+
+## Approved Fifth Slice: Paid Order Manual Close Gate
+
+Owner approval:
+- The owner explicitly approved the bounded `Paid Order Manual Close Gate`
+  slice with step prefix `POCG`.
+- This turn authorizes POCG0 documentation and post-PR #68 worklog
+  reconciliation only.
+- POCG1 implementation has not started. No contract, action, permission, UI,
+  translations, tests, migration, runtime behavior, push, PR, merge, or branch
+  deletion is authorized in POCG0.
+
+Objective:
+- Add the smallest Orders-owned manual close gate for paid open orders after
+  the completed full cash capture and order-workspace payment adapter.
+- Preserve payment capture as a separate explicit action: successful payment
+  capture must not automatically close an order.
+
+Approved behavior:
+- Closing remains an explicit manual Orders action.
+- Add permission `orders.close`.
+- Grant `orders.close` by default to owner, manager, and cashier.
+- Do not grant `orders.close` to waiter by default.
+- An order may close only when it belongs to the current tenant and branch, is
+  currently open, and Payments authoritatively reports zero remaining balance.
+- Unpaid or partially paid orders must be rejected with a stable translated
+  domain error and no mutation.
+- Already closed or cancelled orders must be rejected as non-open; do not
+  return idempotent success.
+- Overallocated or otherwise inconsistent payment balance must be treated as
+  an invariant/domain failure, not as successful eligibility to close.
+- Successful close sets `status = closed` and `closed_at` to the authoritative
+  application timestamp.
+- Successful close writes the repository-consistent audit fact
+  `orders.order.closed`.
+- No schema migration is approved or expected for this slice.
+
+Module ownership and contracts:
+- Orders owns close eligibility, the open-to-closed status transition, the
+  order-row lock, the close timestamp, authorization, and order audit.
+- Payments owns captured allocations and the authoritative paid and remaining
+  balance derived from those allocations.
+- Orders consumes only a public Payments contract.
+- Orders must not query Payments tables, import Payments Domain/Application/
+  Infrastructure/Http/Eloquent internals, or duplicate Payments allocation
+  rules.
+- Add a public Payments balance-read contract and immutable DTO for Orders to
+  ask whether an order has zero remaining balance.
+
+Required transaction and lock order:
+- The close transaction locks the order row first and retains that lock while
+  checking the authoritative Payments balance and updating the order.
+- The required lock order is: order row first, then Payments balance read
+  inside the same transaction.
+- Payment/close race coverage must prove this order-first boundary prevents a
+  close from observing stale payment state while a payment or order mutation is
+  in flight.
+
+Explicit non-goals:
+- No automatic order closing after payment capture.
+- No fiscalization, receipt printing, kitchen printing, printer monitoring, or
+  durable fiscal/printing outbox-backed event.
+- No synchronous domain event merely for future use.
+- No stock movement, settlement, cashbox lifecycle change, cashbox
+  reconciliation/reporting, refunds, reversals, voids, corrections, deletion,
+  archive behavior, external calls, public API, or broad payment-management UI.
+- No partial, split, mixed-method, card, bank, online, gift-card, prepayment,
+  debt, overpayment, change, tip, schema migration, or branch cleanup.
+- No physical or remote branch may be deleted without separate authorization.
 
 
 ## Plan
@@ -813,6 +894,29 @@ Explicit exclusions:
   `2026-08-05T12:59:16Z`. Local `main` was subsequently fast-forward aligned
   with `origin/main` at the merge commit. No force-push, rebase, reset, direct
   `main` push, branch deletion, or next-slice implementation was performed.
+- [x] Step POCG0: approved plan and post-PR #68 worklog reconciliation. Read
+  required docs; fetch `origin`; verify clean local `HEAD`, local `main`,
+  `origin/main`, and GitHub `main` at expected PR #68 merge commit
+  `6e6bd80dd0f3cfeca042e3de06c7bad5664fbf6c`; verify PR #68 merge facts;
+  confirm no open PRs; inspect retained unmerged branches without modifying
+  them; create `docs/phase-3-paid-order-manual-close-plan`; reconcile the stale
+  Phase 3 header; record the approved Paid Order Manual Close Gate slice,
+  owner decisions, module ownership, lock order, non-goals, and POCG1-POCG5
+  pending plan; and do not begin implementation.
+  Result: POCG0 documentation is prepared for a local documentation commit on
+  `docs/phase-3-paid-order-manual-close-plan` and changes only this worklog.
+  No implementation, test, migration, runtime behavior, push, PR, merge, or
+  branch deletion was performed.
+- [ ] Step POCG1: Payments public balance-read contract, DTO, implementation
+  binding, and architecture coverage.
+- [ ] Step POCG2: Orders close action, permission, audit, translations, role
+  grants, and focused domain tests.
+- [ ] Step POCG3: minimal Order Workspace close adapter and rendered
+  authorization coverage.
+- [ ] Step POCG4: PostgreSQL concurrency, RLS, restricted runtime-role,
+  isolation, rollback, and no-side-effect coverage.
+- [ ] Step POCG5: full validation, scope review, and PR preparation only when
+  separately authorized.
 
 ## Gotchas
 
@@ -1231,23 +1335,25 @@ through merged PR #64, PR #65, and PR #66. No FCPF implementation item remains
 pending.
 
 Order Workspace Full Cash Capture Adapter OWFCA0 through OWFCA5 is complete
-and merged through PR #67. The retained branch
-`feature/order-workspace-full-cash-capture` remains present; no branch cleanup
-has been approved.
+and merged through PR #67. PR #68 merged the post-PR #67 documentation
+reconciliation, and local `main`, `origin/main`, and GitHub `main` were later
+verified aligned at `6e6bd80dd0f3cfeca042e3de06c7bad5664fbf6c`. The retained
+branch `feature/order-workspace-full-cash-capture` remains present; no branch
+cleanup has been approved.
 
-No subsequent Phase 3 bounded slice is approved. Full cash capture does not
-automatically close the order. A paid-order close gate, if considered later,
-remains an unapproved candidate requiring a separate owner/product/architecture
-decision; no permission name, allowed actor, manual-vs-automatic behavior,
-Orders-to-Payments contract, fiscal, printing, settlement, or archive behavior
-has been decided.
+Paid Order Manual Close Gate is approved as the next bounded Phase 3 slice.
+POCG0 documentation and post-PR #68 worklog reconciliation is prepared for
+owner review. The precise next pending step is POCG1: Payments public
+balance-read contract, immutable DTO, implementation binding, and architecture
+coverage. Do not begin POCG1 until the owner explicitly authorizes
+implementation.
 
 Fiscalization, receipt and kitchen printing, printer monitoring, split or
 partial payments, other payment methods, prepayments, debts, refunds/reversals,
 cashbox reconciliation, cashbox monitoring, cashbox reporting, and retained
 documentation or feature branch cleanup remain deferred broad Blueprint areas,
-not automatically authorized tasks. The exact next lifecycle action is separate
-owner authorization for the next bounded Phase 3 slice or for branch cleanup.
+not automatically authorized tasks. Branch cleanup remains forbidden without
+separate authorization.
 
 Payment financial schema now exists as the FCPF1 migration and schema-focused
 tests, the FCPF2 append-only financial Eloquent models and model-focused tests,
@@ -1260,4 +1366,4 @@ PostgreSQL concurrency worker and Make target are complete. FCPF8 focused and
 complete verification is complete. FCPF9 exact diff and inventory review is
 complete. FCPF10 pushed the reviewed branch and opened Draft PR #64. No
 fiscalization, printing, UI, routes, controllers, Livewire, API, domain events,
-outbox, branch cleanup, or next-slice implementation work has begun.
+outbox, branch cleanup, or POCG1 implementation work has begun.
