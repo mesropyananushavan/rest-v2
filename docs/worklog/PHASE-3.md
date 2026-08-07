@@ -1,6 +1,6 @@
 # Worklog — Phase 3: Payments/Cashbox/Fiscal/Printing
 
-Status: Cashbox Configuration Foundation merged through PR #60; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation merged through PR #64; Order Workspace Full Cash Capture Adapter merged through PR #67; PR #68 post-merge documentation reconciliation merged; Paid Order Manual Close Gate POCG0 documentation merged through PR #69; PR #70 post-merge documentation reconciliation merged through PR #71; PR #71 post-merge documentation reconciliation merged through PR #72; PR #72 post-merge documentation reconciliation merged through PR #73; PR #73 post-merge documentation reconciliation merged through PR #74; PR #74 post-merge documentation reconciliation merged through PR #75; PR #75 post-merge documentation reconciliation is the current local docs-only task
+Status: Cashbox Configuration Foundation merged through PR #60; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation merged through PR #64; Order Workspace Full Cash Capture Adapter merged through PR #67; PR #68 post-merge documentation reconciliation merged; Paid Order Manual Close Gate POCG0 documentation merged through PR #69; PR #70 post-merge documentation reconciliation merged through PR #71; PR #71 post-merge documentation reconciliation merged through PR #72; PR #72 post-merge documentation reconciliation merged through PR #73; PR #73 post-merge documentation reconciliation merged through PR #74; PR #74 post-merge documentation reconciliation merged through PR #75; PR #75 post-merge documentation reconciliation is published as Draft PR #76
 Branch: docs/phase-3-pr75-post-merge
 
 Phase 2 was closed by merge commit
@@ -1031,12 +1031,18 @@ Explicit non-goals:
   `origin/main`, and GitHub `main` were subsequently verified aligned at the
   merge commit. No implementation, test, migration, runtime behavior, branch
   deletion, or POCG1 work was performed.
-- Current docs-only task: reconcile the Phase 3 worklog after merged
-  PR #75 on branch `docs/phase-3-pr75-post-merge`. Scope is limited to this
-  worklog, records PR #75 merge facts, post-merge CI, and local-main
-  alignment, and does not start POCG1 or change the approved POCG1-POCG5
-  implementation scope. This reconciliation has not been pushed and no PR has
-  been opened for it.
+- Current docs-only task: review Draft PR #76 for the Phase 3 worklog
+  reconciliation after merged PR #75 on branch
+  `docs/phase-3-pr75-post-merge`. Scope is limited to this worklog, records
+  PR #75 merge facts, post-merge CI, and local-main alignment, and does not
+  start POCG1 or change the approved POCG1-POCG5 implementation scope. The
+  reconciliation branch was pushed and Draft PR #76 was opened; PR #76 remains
+  Draft and has not been marked Ready or merged. Exact-head CI for original
+  head `30025adfb9f97a915d8d3c02f0a382c3598842a9` passed in push run
+  `31183761530` and pull-request run `31183810196`, with required jobs
+  `quality`, `tenant-isolation-pgsql`, `orders-concurrency-pgsql`, and
+  `runtime-role-pgsql` successful in both runs. POCG1 has not started. This
+  repair commit is not yet CI-verified.
 - [ ] Step POCG1: Payments public balance-read contract, DTO, implementation
   binding, and architecture coverage.
 - [ ] Step POCG2: Orders close action, permission, audit, translations, role
@@ -1505,9 +1511,15 @@ post-merge CI passed on exact merge head
 and GitHub `main` were subsequently verified aligned at
 `f02e2aa86d75148c09f6e3478e3af0cdc6cde9ab`. The retained branch
 `docs/phase-3-pr74-post-merge` remains present; no branch cleanup has been
-approved. This PR #75 post-merge reconciliation is a local docs-only task on
-`docs/phase-3-pr75-post-merge`; it has not been pushed and no PR has been
-opened for it. The precise next pending implementation step remains POCG1:
+approved. This PR #75 post-merge reconciliation is a documentation-only task on
+`docs/phase-3-pr75-post-merge`; it was pushed as Draft PR #76, and PR #76
+remains Draft, has not been marked Ready, and has not been merged. Exact-head
+CI for original head `30025adfb9f97a915d8d3c02f0a382c3598842a9` passed in
+push run `31183761530` and pull-request run `31183810196`, with required jobs
+`quality`, `tenant-isolation-pgsql`, `orders-concurrency-pgsql`, and
+`runtime-role-pgsql` successful in both runs. POCG1 has not started. This
+repair commit is not yet CI-verified. The precise next pending implementation
+step remains POCG1:
 Payments public balance-read contract, immutable DTO, implementation binding,
 and architecture coverage. Do not begin POCG1 until the owner explicitly
 authorizes implementation.
