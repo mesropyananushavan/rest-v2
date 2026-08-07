@@ -1041,8 +1041,12 @@ Explicit non-goals:
   head `30025adfb9f97a915d8d3c02f0a382c3598842a9` passed in push run
   `31183761530` and pull-request run `31183810196`, with required jobs
   `quality`, `tenant-isolation-pgsql`, `orders-concurrency-pgsql`, and
-  `runtime-role-pgsql` successful in both runs. POCG1 has not started. This
-  repair commit is not yet CI-verified.
+  `runtime-role-pgsql` successful in both runs. Repair commit
+  `365ed1a10324555dbd22ec2530efe31dc78bce58` passed exact-head CI in push run
+  `31185161801` and pull-request run `31185164463`, with the same four
+  required jobs successful in both runs. PR #76 remains open and Draft, has
+  not been marked Ready, and has not been merged. POCG1 has not started. This
+  CI-status repair commit is not yet CI-verified.
 - [ ] Step POCG1: Payments public balance-read contract, DTO, implementation
   binding, and architecture coverage.
 - [ ] Step POCG2: Orders close action, permission, audit, translations, role
@@ -1517,7 +1521,11 @@ remains Draft, has not been marked Ready, and has not been merged. Exact-head
 CI for original head `30025adfb9f97a915d8d3c02f0a382c3598842a9` passed in
 push run `31183761530` and pull-request run `31183810196`, with required jobs
 `quality`, `tenant-isolation-pgsql`, `orders-concurrency-pgsql`, and
-`runtime-role-pgsql` successful in both runs. POCG1 has not started. This
+`runtime-role-pgsql` successful in both runs. Repair commit
+`365ed1a10324555dbd22ec2530efe31dc78bce58` passed exact-head CI in push run
+`31185161801` and pull-request run `31185164463`, with the same four required
+jobs successful in both runs. PR #76 remains open and Draft, has not been
+marked Ready, and has not been merged. POCG1 has not started. This CI-status
 repair commit is not yet CI-verified. The precise next pending implementation
 step remains POCG1:
 Payments public balance-read contract, immutable DTO, implementation binding,
