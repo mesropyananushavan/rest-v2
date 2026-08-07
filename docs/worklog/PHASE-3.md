@@ -1,7 +1,7 @@
 # Worklog — Phase 3: Payments/Cashbox/Fiscal/Printing
 
-Status: Cashbox Configuration Foundation merged through PR #60; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation merged through PR #64; Order Workspace Full Cash Capture Adapter merged through PR #67; PR #68 post-merge documentation reconciliation merged; Paid Order Manual Close Gate POCG0 documentation merged through PR #69; PR #70 post-merge documentation reconciliation merged through PR #71; PR #71 post-merge documentation reconciliation merged through PR #72; PR #72 post-merge documentation reconciliation is the current docs-only task
-Branch: docs/phase-3-pr72-post-merge
+Status: Cashbox Configuration Foundation merged through PR #60; Payable Order Foundation merged through PR #61; Full Cash Payment Capture Foundation merged through PR #64; Order Workspace Full Cash Capture Adapter merged through PR #67; PR #68 post-merge documentation reconciliation merged; Paid Order Manual Close Gate POCG0 documentation merged through PR #69; PR #70 post-merge documentation reconciliation merged through PR #71; PR #71 post-merge documentation reconciliation merged through PR #72; PR #72 post-merge documentation reconciliation merged through PR #73; PR #73 post-merge documentation reconciliation is the current docs-only task
+Branch: docs/phase-3-pr73-post-merge
 
 Phase 2 was closed by merge commit
 `085759f4c929e9f9ebf2fe551314996b58a95f0a` for PR #59. Phase 3 starts with
@@ -126,6 +126,26 @@ After PR #72 merged and post-merge CI passed, local `main` was fast-forward
 aligned with `origin/main` and GitHub `main` at merge commit
 `5e60715a47182cb568364d95cdd10f1e080e85af`. The source branch
 `docs/phase-3-pr71-post-merge` remains retained locally and on `origin`; no
+branch cleanup was performed.
+
+PR #73 merged the PR #72 post-merge documentation reconciliation as merge
+commit `f181ad8c7f7233745c3c15c1a82f54fc7abe41b3` from docs head
+`6fc517411d6043ae6e76ed016ce1f275a570eadc` at `2026-08-07T11:57:57Z` by
+`mesropyananushavan`. The verified merge-parent order is:
+
+1. `5e60715a47182cb568364d95cdd10f1e080e85af`
+2. `6fc517411d6043ae6e76ed016ce1f275a570eadc`
+
+Post-merge CI push run `31176210668` tested exact merge head
+`f181ad8c7f7233745c3c15c1a82f54fc7abe41b3` on `main` and completed
+successfully. Required jobs `quality`, `tenant-isolation-pgsql`,
+`orders-concurrency-pgsql`, and `runtime-role-pgsql` all completed with
+success.
+
+After PR #73 merged and post-merge CI passed, local `main` was fast-forward
+aligned with `origin/main` and GitHub `main` at merge commit
+`f181ad8c7f7233745c3c15c1a82f54fc7abe41b3`. The source branch
+`docs/phase-3-pr72-post-merge` remains retained locally and on `origin`; no
 branch cleanup was performed.
 
 ## Approved First Slice: Cashbox Configuration Foundation
@@ -972,8 +992,8 @@ Explicit non-goals:
   merge commit. No implementation, test, migration, runtime behavior, branch
   deletion, or POCG1 work was performed.
 - Current docs-only task: reconcile the Phase 3 worklog after merged
-  PR #72 on branch `docs/phase-3-pr72-post-merge`. Scope is limited to this
-  worklog, records PR #72 merge facts, post-merge CI, and local-main
+  PR #73 on branch `docs/phase-3-pr73-post-merge`. Scope is limited to this
+  worklog, records PR #73 merge facts, post-merge CI, and local-main
   alignment, and does not
   start POCG1 or change the approved POCG1-POCG5 implementation scope.
 - [ ] Step POCG1: Payments public balance-read contract, DTO, implementation
@@ -1426,8 +1446,14 @@ head `5e60715a47182cb568364d95cdd10f1e080e85af`, and local `main`,
 `origin/main`, and GitHub `main` were subsequently verified aligned at
 `5e60715a47182cb568364d95cdd10f1e080e85af`. The retained branch
 `docs/phase-3-pr71-post-merge` remains present; no branch cleanup has been
-approved. This PR #72 post-merge reconciliation is a docs-only task on
-`docs/phase-3-pr72-post-merge`. The precise next pending implementation step
+approved. PR #73 merged the follow-up post-merge documentation reconciliation,
+post-merge CI passed on exact merge head
+`f181ad8c7f7233745c3c15c1a82f54fc7abe41b3`, and local `main`, `origin/main`,
+and GitHub `main` were subsequently verified aligned at
+`f181ad8c7f7233745c3c15c1a82f54fc7abe41b3`. The retained branch
+`docs/phase-3-pr72-post-merge` remains present; no branch cleanup has been
+approved. This PR #73 post-merge reconciliation is a docs-only task on
+`docs/phase-3-pr73-post-merge`. The precise next pending implementation step
 remains POCG1: Payments public balance-read contract, immutable DTO,
 implementation binding, and architecture coverage. Do not begin POCG1 until
 the owner explicitly authorizes implementation.
